@@ -1,4 +1,14 @@
-# Komari
+# Komari Monitor Lite
+
+这是 Komari 的监控专用精简版，保留节点指标与历史、Ping、离线/流量通知、消息渠道、备份、本地登录和 2FA。通过 `KOMARI_LITE=1` 启用精简模式。
+
+精简模式关闭远程任务/脚本、文件管理/终端、剪贴板、主题/插件市场、负载告警、性能分析和 OAuth/OIDC；数据库表保留以兼容已有数据，不执行破坏性删表。
+
+构建：先在 `komari-web` 执行 `npm ci && npm run build`，将 `dist` 打包到 `web/public/defaultTheme/dist.tar.zst`，复制 `komari-theme.json`，再使用 `CGO_ENABLED=1 go build -tags sqlite_omit_load_extension .` 构建后端。
+
+原始项目：<https://github.com/komari-monitor/komari>
+
+---
 
 ![Badge](https://hitscounter.dev/api/hit?url=https%3A%2F%2Fgithub.com%2Fkomari-monitor%2Fkomari&label=&icon=github&color=%23a370f7&message=&style=flat&tz=UTC)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/komari-monitor/komari)

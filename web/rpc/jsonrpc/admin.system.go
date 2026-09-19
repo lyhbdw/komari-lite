@@ -38,12 +38,16 @@ func init() {
 		},
 		Returns: "{ logs: Log[], total: number }",
 	})
-	reg("exec", adminExec, "Execute a command on clients")
+	if !config.LiteMode() {
+		reg("exec", adminExec, "Execute a command on clients")
+	}
 
 	reg("testSendMessage", adminTestSendMessage, "Send a test notification")
 	reg("testGeoip", adminTestGeoip, "Test GeoIP lookup")
 	// 远程命令执行属敏感操作：除 admin 角色外，还需通过敏感操作二次验证。
-	rpc.MarkSensitive("admin:exec")
+	if !config.LiteMode() {
+		rpc.MarkSensitive("admin:exec")
+	}
 }
 
 func adminGetLogs(_ context.Context, req *rpc.JsonRpcRequest) (any, *rpc.JsonRpcError) {

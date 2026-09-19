@@ -68,6 +68,9 @@ type ThemeConfig struct {
 }
 
 func init() {
+	if config.LiteMode() {
+		return
+	}
 	reg("getXtermjsSettings", adminGetXtermjs, "Get xterm.js terminal settings")
 	RegisterWithGroupAndMeta("setXtermjsSettings", rpc.RoleAdmin, adminSetXtermjs, &rpc.MethodMeta{
 		Name:    "admin:setXtermjsSettings",

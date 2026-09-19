@@ -97,13 +97,20 @@ func (a *App) BuildRouter() error {
 	})
 	router.Register(r)
 
-	// Plugins are loaded after the router exists so server.route can bind
-	// routes; a failed plugin only disables itself and is logged.
-	plugin.Init(r)
-	if err := plugin.LoadAll(); err != nil {
-		logger.ErrorArgs("server", "Failed to load some plugins:", err)
+	if !config.LiteMode() {
+		// Plugins are loaded after the router exists so server.route can bind
+		// routes; a failed plugin only disables itself and is logged.
+		plugin.Init(r)
+		if err := plugin.LoadAll(); err != nil {
+			logger.ErrorArgs("server", "Failed to load some plugins:", err)
+		}
 	}
-	a.addCleanup("plugins", func(context.Context) error { return plugin.CloseAll() })
+	a.addCleanup("plugins", func(context.Context) error {
+		if config.LiteMode() {
+			return nil
+		}
+		return plugin.CloseAll()
+	})
 
 	a.registerReloadHandlers(cors)
 	a.reload.Start()
@@ -188,8 +195,10 @@ func registerScheduledWork() {
 	if err := tasks.ReloadPingSchedule(); err != nil {
 		logger.ErrorArgs("server", "Failed to reload ping schedule:", err)
 	}
-	if err := d_notification.ReloadLoadNotificationSchedule(); err != nil {
-		logger.ErrorArgs("server", "Failed to reload load notification schedule:", err)
+	if !config.LiteMode() {
+		if err := d_notification.ReloadLoadNotificationSchedule(); err != nil {
+			logger.ErrorArgs("server", "Failed to reload load notification schedule:", err)
+		}
 	}
 	if err := scheduler.AddFunc("records:cleanup", "@every 30m", cleanupScheduledData); err != nil {
 		logger.ErrorArgs("server", "Failed to add cleanup scheduled task:", err)
@@ -203,8 +212,10 @@ func registerScheduledWork() {
 	if err := scheduler.AddFunc("notifier:traffic", "@every 1m", notifier.CheckTraffic); err != nil {
 		logger.ErrorArgs("server", "Failed to add traffic notification task:", err)
 	}
-	if err := scheduler.AddFunc("notifier:expire", "0 0 9 * * *", notifier.CheckExpireScheduledWork); err != nil {
-		logger.ErrorArgs("server", "Failed to add expire notification task:", err)
+	if !config.LiteMode() {
+		if err := scheduler.AddFunc("notifier:expire", "0 0 9 * * *", notifier.CheckExpireScheduledWork); err != nil {
+			logger.ErrorArgs("server", "Failed to add expire notification task:", err)
+		}
 	}
 }
 

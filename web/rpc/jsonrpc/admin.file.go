@@ -10,11 +10,15 @@ import (
 
 	"github.com/komari-monitor/komari/database/auditlog"
 	"github.com/komari-monitor/komari/database/clients"
+	"github.com/komari-monitor/komari/internal/config"
 	"github.com/komari-monitor/komari/pkg/rpc"
 	"github.com/komari-monitor/komari/web/filemanager"
 )
 
 func init() {
+	if config.LiteMode() {
+		return
+	}
 	reg("fileList", adminFileList, "List a directory on an agent")
 	reg("fileListRoots", adminFileListRoots, "List filesystem roots exposed by an agent")
 	reg("fileStat", adminFileStat, "Read file metadata from an agent")

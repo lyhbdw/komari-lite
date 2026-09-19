@@ -7,6 +7,7 @@ import (
 	"github.com/komari-monitor/komari/database/dbcore"
 	"github.com/komari-monitor/komari/database/models"
 	"github.com/komari-monitor/komari/database/notification"
+	"github.com/komari-monitor/komari/internal/config"
 	"github.com/komari-monitor/komari/pkg/rpc"
 	"github.com/komari-monitor/komari/utils/messageSender"
 	"gorm.io/gorm/clause"
@@ -16,11 +17,13 @@ import (
 // 通知相关 RPC2 方法（admin 命名空间）：负载告警、离线通知。
 
 func init() {
-	// load notifications
-	reg("addLoadNotification", adminAddLoadNotification, "Create a load notification")
-	reg("deleteLoadNotification", adminDeleteLoadNotification, "Delete load notifications by ids")
-	reg("editLoadNotification", adminEditLoadNotification, "Edit load notifications")
-	reg("getAllLoadNotifications", adminGetAllLoadNotifications, "List all load notifications")
+	if !config.LiteMode() {
+		// load notifications are outside the monitoring-only feature set.
+		reg("addLoadNotification", adminAddLoadNotification, "Create a load notification")
+		reg("deleteLoadNotification", adminDeleteLoadNotification, "Delete load notifications by ids")
+		reg("editLoadNotification", adminEditLoadNotification, "Edit load notifications")
+		reg("getAllLoadNotifications", adminGetAllLoadNotifications, "List all load notifications")
+	}
 	// offline notifications
 	reg("listOfflineNotifications", adminListOfflineNotifications, "List offline notifications")
 	reg("editOfflineNotification", adminEditOfflineNotification, "Edit offline notifications")

@@ -5,6 +5,7 @@ import (
 
 	"github.com/komari-monitor/komari/database/models"
 	"github.com/komari-monitor/komari/database/tasks"
+	"github.com/komari-monitor/komari/internal/config"
 	"github.com/komari-monitor/komari/pkg/rpc"
 )
 
@@ -12,6 +13,9 @@ import (
 // 任务查询 RPC2 方法（admin 命名空间）。
 
 func init() {
+	if config.LiteMode() {
+		return
+	}
 	reg("getTasks", adminGetTasks, "List all exec tasks with results")
 	reg("getTaskById", adminGetTaskById, "Get an exec task by task_id")
 	reg("getTasksByClientId", adminGetTasksByClientId, "List tasks assigned to a client")

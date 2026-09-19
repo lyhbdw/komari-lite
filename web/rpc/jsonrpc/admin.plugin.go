@@ -5,11 +5,15 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/komari-monitor/komari/internal/config"
 	"github.com/komari-monitor/komari/internal/plugin"
 	"github.com/komari-monitor/komari/pkg/rpc"
 )
 
 func init() {
+	if config.LiteMode() {
+		return
+	}
 	RegisterWithGroupAndMeta("listPlugins", rpc.RoleAdmin, adminListPlugins, &rpc.MethodMeta{
 		Name:    "admin:listPlugins",
 		Summary: "List installed plugins with enabled/running state",

@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/komari-monitor/komari/database/auditlog"
+	"github.com/komari-monitor/komari/internal/config"
 	"github.com/komari-monitor/komari/utils/geoip"
 	logger "github.com/komari-monitor/komari/utils/log"
 	"github.com/komari-monitor/komari/utils/messageSender"
@@ -13,7 +14,9 @@ import (
 
 // InitProviders initializes providers needed by the normal application.
 func (a *App) InitProviders() error {
-	a.initOAuth()
+	if !config.LiteMode() {
+		a.initOAuth()
+	}
 
 	go geoip.InitGeoIp()
 	a.addCleanup("geoip", func(context.Context) error { return geoip.Shutdown() })

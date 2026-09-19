@@ -7,6 +7,7 @@ import (
 	"github.com/komari-monitor/komari/database/auditlog"
 	clipboardDB "github.com/komari-monitor/komari/database/clipboard"
 	"github.com/komari-monitor/komari/database/models"
+	"github.com/komari-monitor/komari/internal/config"
 	"github.com/komari-monitor/komari/pkg/rpc"
 )
 
@@ -14,6 +15,9 @@ import (
 // 剪贴板 RPC2 方法（admin 命名空间）。
 
 func init() {
+	if config.LiteMode() {
+		return
+	}
 	reg("getClipboard", adminGetClipboard, "Get a clipboard entry by id")
 	reg("listClipboard", adminListClipboard, "List clipboard entries")
 	reg("createClipboard", adminCreateClipboard, "Create a clipboard entry")

@@ -19,8 +19,10 @@ import (
 func init() {
 	reg("getMessageSenderProvider", adminGetMessageSender, "Get message sender provider config or templates")
 	reg("setMessageSenderProvider", adminSetMessageSender, "Set message sender provider config")
-	reg("getOidcProvider", adminGetOidc, "Get OIDC provider config or templates")
-	reg("setOidcProvider", adminSetOidc, "Set OIDC provider config")
+	if !config.LiteMode() {
+		reg("getOidcProvider", adminGetOidc, "Get OIDC provider config or templates")
+		reg("setOidcProvider", adminSetOidc, "Set OIDC provider config")
+	}
 }
 
 func adminGetMessageSender(_ context.Context, req *rpc.JsonRpcRequest) (any, *rpc.JsonRpcError) {
