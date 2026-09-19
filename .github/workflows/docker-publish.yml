@@ -48,7 +48,9 @@ jobs:
           CGO_ENABLED: 1
           GIN_MODE: release
         run: |
-          VERSION="${{ github.ref_name }}"
+          # The lite fork tracks the 1.5.0-fix1 protocol/API baseline. Keep
+          # main builds comparable with the upstream release checker.
+          VERSION="1.5.0-fix1"
           VERSION_HASH="${{ github.sha }}"
           LDFLAGS="-s -w -X github.com/komari-monitor/komari/utils.CurrentVersion=${VERSION} -X github.com/komari-monitor/komari/utils.VersionHash=${VERSION_HASH}"
 
