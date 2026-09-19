@@ -1,0 +1,38 @@
+import React from "react";
+import {
+  Activity,
+  AtSign,
+  Bell,
+  Bolt,
+  Book,
+  Database,
+  Ellipsis,
+  FileText,
+  Home,
+  LayoutDashboard,
+  MessageCircleMore,
+  Server,
+  TrendingUp,
+  Unplug,
+  UserCircle,
+  Users,
+} from "lucide-react";
+
+export const iconMap: Record<string, React.ComponentType<any>> = {
+  Activity,
+  AtSign,
+  Bell,
+  Bolt,
+  Book,
+  Database,
+  Ellipsis,
+  FileText,
+  Home,
+  LayoutDashboard,
+  MessageCircleMore,
+  Server,
+  TrendingUp,
+  Unplug,
+  UserCircle,
+  Users,
+};
