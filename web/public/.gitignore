@@ -1,0 +1,4 @@
+dist/*
+defaultTheme/*
+!defaultTheme/dist.tar.zst
+!defaultTheme/komari-theme.json
