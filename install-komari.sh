@@ -56,15 +56,11 @@ BACKUP_DIR="$INSTALL_DIR/backup"
 DATA_BACKUP_DIR="$DATA_DIR/data/backup"
 DEFAULT_PORT="25774"
 LISTEN_PORT=""
-STANDARD_REPO="komari-monitor/komari"
-LITE_REPO="nuomiiiii/komari"
-REPO="$STANDARD_REPO"
-# 发行版本: standard（标准版）或 lite（Lite 轻量版）
-EDITION="standard"
-EDITION_NAME=""
-# 发布通道: stable（稳定版）或 snapshot（快照版）；Lite 仅支持 stable
+REPO="Tumb1er1376/komari-monitor-lite"
+EDITION="lite"
+EDITION_NAME="Komari Monitor Lite"
 CHANNEL="stable"
-CHANNEL_NAME=""
+CHANNEL_NAME="stable"
 # 语言: en（English）或 zh（简体中文）
 LANGUAGE="zh"
 # 非交互输出只绘制一次横幅，交互终端则在每个步骤前刷新屏幕。
@@ -147,34 +143,7 @@ msg() {
             en_text='Please run this script as root.'
             zh_text='请使用 root 权限运行此脚本。'
             ;;
-        edition_title)
-            en_text='Choose an edition'
-            zh_text='选择安装版本'
-            ;;
-        edition_prompt)
-            en_text='Komari has multiple editions with different features and performance profiles. Choose the one that fits your controller.\n\nChoose the edition to install [default 1]:'
-            zh_text='Komari 目前提供多个版本，不同版本在功能和性能上有所差异，请根据主控配置选择。\n\n请选择安装的版本（默认 1）：'
-            ;;
-        edition_standard)
-            en_text='Standard edition'
-            zh_text='标准版本'
-            ;;
-        edition_lite)
-            en_text='Lite edition - optimized for low-resource controllers with a streamlined feature set (maintained by @nuomiiiii)'
-            zh_text='Lite 版本 - 改善低配置主控下的性能，精简复杂功能（由 @nuomiiiii 维护）'
-            ;;
-        edition_name_standard)
-            en_text='Komari Standard'
-            zh_text='Komari 标准版'
-            ;;
-        edition_name_lite)
-            en_text='Komari Lite'
-            zh_text='Komari Lite 轻量版'
-            ;;
-        selected_edition)
-            en_text='Selected edition: %s'
-            zh_text='已选择版本：%s'
-            ;;
+
         channel_title)
             en_text='Choose a release channel'
             zh_text='选择发布通道'
@@ -203,13 +172,13 @@ msg() {
             en_text='Selected channel: %s'
             zh_text='已选择通道：%s'
             ;;
-        progress_edition_standard)
-            en_text='Standard edition'
-            zh_text='标准版'
+        selected_edition)
+            en_text='Selected edition: %s'
+            zh_text='已选择版本：%s'
             ;;
         progress_edition_lite)
-            en_text='Lite edition'
-            zh_text='Lite 版本'
+            en_text='Monitoring-only edition'
+            zh_text='监控专用版本'
             ;;
         progress_download)
             en_text='Download Komari'
@@ -322,6 +291,10 @@ msg() {
         download_failed)
             en_text='Download failed. Check your network connection.'
             zh_text='下载失败，请检查网络连接。'
+            ;;
+        checksum_failed)
+            en_text='Downloaded binary checksum verification failed.'
+            zh_text='下载的二进制文件校验失败。'
             ;;
         binary_installed)
             en_text='%s binary installed at %s'
@@ -782,68 +755,16 @@ ASCII_ART
 }
 
 
-# 设置发行版本，结果写入全局变量 EDITION / REPO。
+# This installer always installs the monitoring-only release.
 select_edition() {
-    local choice
-    choice=$(ui_menu "$(msg edition_title)" "$(msg edition_prompt)" \
-        "1" "$(msg edition_standard)" \
-        "2" "$(msg edition_lite)")
-
-    case "$choice" in
-        lite|2)
-            EDITION="lite"
-            EDITION_NAME="$(msg edition_name_lite)"
-            REPO="$LITE_REPO"
-            ;;
-        standard|1|"")
-            EDITION="standard"
-            EDITION_NAME="$(msg edition_name_standard)"
-            REPO="$STANDARD_REPO"
-            ;;
-        *)
-            EDITION="standard"
-            EDITION_NAME="$(msg edition_name_standard)"
-            REPO="$STANDARD_REPO"
-            ;;
-    esac
-    if [ "$EDITION" = "lite" ]; then
-        progress_add "$(msg progress_edition_lite)"
-    else
-        progress_add "$(msg progress_edition_standard)"
-    fi
+    progress_add "$(msg progress_edition_lite)"
     log_info "$(msg selected_edition "$EDITION_NAME")"
 }
 
 # 设置发布通道，结果写入全局变量 CHANNEL。
 select_channel() {
-    local choice
-
-    if [ "$EDITION" = "lite" ]; then
-        CHANNEL="stable"
-        CHANNEL_NAME="$(msg channel_name_stable)"
-        progress_add "$CHANNEL_NAME"
-        log_info "$(msg selected_channel "$CHANNEL_NAME")"
-        return 0
-    fi
-
-    choice=$(ui_menu "$(msg channel_title)" "$(msg channel_prompt)" \
-        "1" "$(msg channel_stable)" \
-        "2" "$(msg channel_snapshot)")
-
-    case "$choice" in
-        snapshot|2)
-            CHANNEL="snapshot"
-            CHANNEL_NAME="$(msg channel_name_snapshot)"
-            ;;
-        stable|1|"")
-            CHANNEL="stable"
-            CHANNEL_NAME="$(msg channel_name_stable)"
-            ;;
-        *)
-            CHANNEL="stable"
-            CHANNEL_NAME="$(msg channel_name_stable)"
-            ;;
-    esac
+    CHANNEL="stable"
+    CHANNEL_NAME="$(msg channel_name_stable)"
     progress_add "$CHANNEL_NAME"
     log_info "$(msg selected_channel "$CHANNEL_NAME")"
 }
@@ -1089,7 +1010,21 @@ download_file() {
         downloaded_bytes=$(stat -c '%s' "$target" 2>/dev/null || printf '0')
     fi
     print_download_progress "$label" "$downloaded_bytes" "$total_bytes" 1
-    return "$download_status"
+    if [ "$download_status" -ne 0 ]; then
+        return "$download_status"
+    fi
+
+    local expected_checksum
+    expected_checksum=$(curl -fsSL --max-time 30 "${url}.sha256" 2>/dev/null | awk 'NF { print $1; exit }') || return 1
+    if ! [[ "$expected_checksum" =~ ^[0-9a-fA-F]{64}$ ]]; then
+        return 1
+    fi
+    local actual_checksum
+    actual_checksum=$(sha256sum "$target" | awk '{print $1}') || return 1
+    if [ "${actual_checksum,,}" != "${expected_checksum,,}" ]; then
+        return 1
+    fi
+    return 0
 }
 
 # ==========================================================
@@ -1137,6 +1072,18 @@ install_binary() {
 
     log_step "$(msg create_data_dir "$DATA_DIR")"
     mkdir -p "$DATA_DIR"
+    if ! id -u komari >/dev/null 2>&1; then
+        if command -v useradd >/dev/null 2>&1; then
+            useradd --system --home-dir "$INSTALL_DIR" --shell /usr/sbin/nologin komari
+        elif command -v adduser >/dev/null 2>&1; then
+            adduser --system --home "$INSTALL_DIR" --shell /sbin/nologin komari
+        else
+            log_error "No supported system-user management command found (useradd/adduser)."
+            return 1
+        fi
+    fi
+    mkdir -p "$DATA_DIR/data"
+    chown -R komari:komari "$DATA_DIR/data"
 
     local download_url=$(get_download_url "$arch")
     if [ $? -ne 0 ]; then
@@ -1196,10 +1143,16 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=${BINARY_PATH} server -l 0.0.0.0:${port}
+ExecStart=${BINARY_PATH} server -l 127.0.0.1:${port}
 WorkingDirectory=${DATA_DIR}
 Restart=always
-User=root
+User=komari
+Group=komari
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=${DATA_DIR}/data
 
 [Install]
 WantedBy=multi-user.target

@@ -88,8 +88,7 @@ var publicPaths = []string{
 	"/api/public",
 	"/api/login",
 	"/api/me",
-	"/api/oauth",
-	"/api/oauth_callback",
+
 	"/api/version",
 	"/api/recent",
 	"/api/admin",    // 由 RequireRole 处理

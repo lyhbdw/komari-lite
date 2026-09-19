@@ -1280,8 +1280,7 @@ const LoadChart = ({ data = [], onRealtimeActiveChange }: LoadChartProps) => {
   };
 
   const saveGlobalTemplate = async () => {
-    const theme = publicInfo?.theme;
-    if (!theme) return;
+    if (!publicInfo) return;
 
     setSavingGlobalTemplate(true);
     try {
@@ -1291,17 +1290,16 @@ const LoadChart = ({ data = [], onRealtimeActiveChange }: LoadChartProps) => {
         !Array.isArray(publicInfo.theme_settings)
           ? publicInfo.theme_settings
           : {};
-      const response = await fetch(
-        `/api/admin/theme/settings?theme=${encodeURIComponent(theme)}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
+      const response = await fetch("/api/admin/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          theme_settings: {
             ...existingSettings,
             [DASHBOARD_TEMPLATE_KEY]: JSON.stringify(charts, null, 2),
-          }),
-        },
-      );
+          },
+        }),
+      });
       if (!response.ok) {
         const result = await response.json().catch(() => null);
         throw new Error(result?.message || `HTTP ${response.status}`);

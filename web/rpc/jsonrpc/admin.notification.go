@@ -6,24 +6,15 @@ import (
 
 	"github.com/komari-monitor/komari/database/dbcore"
 	"github.com/komari-monitor/komari/database/models"
-	"github.com/komari-monitor/komari/database/notification"
-	"github.com/komari-monitor/komari/internal/config"
 	"github.com/komari-monitor/komari/pkg/rpc"
 	"github.com/komari-monitor/komari/utils/messageSender"
 	"gorm.io/gorm/clause"
 )
 
 // admin.notification.go
-// 通知相关 RPC2 方法（admin 命名空间）：负载告警、离线通知。
+// 通知相关 RPC2 方法（admin 命名空间）：离线通知。
 
 func init() {
-	if !config.LiteMode() {
-		// load notifications are outside the monitoring-only feature set.
-		reg("addLoadNotification", adminAddLoadNotification, "Create a load notification")
-		reg("deleteLoadNotification", adminDeleteLoadNotification, "Delete load notifications by ids")
-		reg("editLoadNotification", adminEditLoadNotification, "Edit load notifications")
-		reg("getAllLoadNotifications", adminGetAllLoadNotifications, "List all load notifications")
-	}
 	// offline notifications
 	reg("listOfflineNotifications", adminListOfflineNotifications, "List offline notifications")
 	reg("editOfflineNotification", adminEditOfflineNotification, "Edit offline notifications")
@@ -54,67 +45,6 @@ func adminSendNotification(_ context.Context, req *rpc.JsonRpcRequest) (any, *rp
 // reg 是 admin 命名空间方法的注册便捷封装。
 func reg(name string, h rpc.Handler, summary string) {
 	RegisterWithGroupAndMeta(name, rpc.RoleAdmin, h, &rpc.MethodMeta{Name: "admin:" + name, Summary: summary})
-}
-
-func adminAddLoadNotification(_ context.Context, req *rpc.JsonRpcRequest) (any, *rpc.JsonRpcError) {
-	var params struct {
-		Clients   []string `json:"clients"`
-		Name      string   `json:"name"`
-		Metric    string   `json:"metric"`
-		Threshold float32  `json:"threshold"`
-		Ratio     float32  `json:"ratio"`
-		Interval  int      `json:"interval"`
-	}
-	req.BindParams(&params)
-	if len(params.Clients) == 0 || params.Metric == "" || params.Threshold == 0 || params.Ratio == 0 || params.Interval == 0 {
-		return nil, rpc.MakeError(rpc.InvalidParams, "clients, metric, threshold, ratio and interval are required", nil)
-	}
-	if params.Interval > 4*60 || params.Interval <= 0 {
-		return nil, rpc.MakeError(rpc.InvalidParams, "Interval must be between 1 and 240 minutes", nil)
-	}
-	if params.Ratio <= 0 || params.Ratio > 1 {
-		return nil, rpc.MakeError(rpc.InvalidParams, "Ratio must be between 0 and 1", nil)
-	}
-	taskID, err := notification.AddLoadNotification(params.Clients, params.Name, params.Metric, params.Threshold, params.Ratio, params.Interval)
-	if err != nil {
-		return nil, rpc.MakeError(rpc.InternalError, err.Error(), nil)
-	}
-	return map[string]any{"task_id": taskID}, nil
-}
-
-func adminDeleteLoadNotification(_ context.Context, req *rpc.JsonRpcRequest) (any, *rpc.JsonRpcError) {
-	var params struct {
-		ID []uint `json:"id"`
-	}
-	req.BindParams(&params)
-	if len(params.ID) == 0 {
-		return nil, rpc.MakeError(rpc.InvalidParams, "id is required", nil)
-	}
-	if err := notification.DeleteLoadNotification(params.ID); err != nil {
-		return nil, rpc.MakeError(rpc.InternalError, err.Error(), nil)
-	}
-	return nil, nil
-}
-
-func adminEditLoadNotification(_ context.Context, req *rpc.JsonRpcRequest) (any, *rpc.JsonRpcError) {
-	var params struct {
-		Notifications []*models.LoadNotification `json:"notifications"`
-	}
-	if err := req.BindParams(&params); err != nil {
-		return nil, rpc.MakeError(rpc.InvalidParams, "Invalid request data", nil)
-	}
-	if err := notification.EditLoadNotification(params.Notifications); err != nil {
-		return nil, rpc.MakeError(rpc.InternalError, err.Error(), nil)
-	}
-	return nil, nil
-}
-
-func adminGetAllLoadNotifications(_ context.Context, _ *rpc.JsonRpcRequest) (any, *rpc.JsonRpcError) {
-	list, err := notification.GetAllLoadNotifications()
-	if err != nil {
-		return nil, rpc.MakeError(rpc.InternalError, err.Error(), nil)
-	}
-	return list, nil
 }
 
 func adminListOfflineNotifications(_ context.Context, _ *rpc.JsonRpcRequest) (any, *rpc.JsonRpcError) {

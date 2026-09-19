@@ -1,21 +1,6 @@
 package config
 
-import (
-	"os"
-	"strings"
-	"time"
-)
-
-// LiteMode disables optional control-plane features while keeping monitoring,
-// history, ping checks, notifications, backups, and local authentication.
-func LiteMode() bool {
-	switch strings.ToLower(strings.TrimSpace(os.Getenv("KOMARI_LITE"))) {
-	case "1", "true", "yes", "on":
-		return true
-	default:
-		return false
-	}
-}
+import "time"
 
 type Settings struct {
 	ID                     uint   `json:"id,omitempty"`                                        // 1

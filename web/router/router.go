@@ -2,13 +2,10 @@ package router
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/komari-monitor/komari/internal/config"
 	"github.com/komari-monitor/komari/web/api"
 	"github.com/komari-monitor/komari/web/api/admin"
 	"github.com/komari-monitor/komari/web/api/client"
 	public_api "github.com/komari-monitor/komari/web/api/public"
-	"github.com/komari-monitor/komari/web/api/terminal"
-	"github.com/komari-monitor/komari/web/filemanager"
 	"github.com/komari-monitor/komari/web/public"
 	jsonRpc "github.com/komari-monitor/komari/web/rpc/jsonrpc"
 )
@@ -36,12 +33,7 @@ func registerPublicRoutes(r *gin.Engine) {
 	// 非 JSON / 特殊流程，保留 REST handler。
 	r.POST("/api/login", public_api.Login)
 	r.GET("/api/logout", public_api.Logout)
-	if !config.LiteMode() {
-		r.GET("/api/oauth", public_api.OAuth)
-		r.GET("/api/oauth_callback", public_api.OAuthCallback)
-	} else {
-		registerLiteDisabledRoutes(r)
-	}
+	registerLiteDisabledRoutes(r)
 	// /api/clients 是 WebSocket 端点（客户端发 "get"/"get <uuid>" 拉取在线列表与最新上报），
 	// 非 JSON-RPC，保留为 WS handler。
 	r.GET("/api/clients", api.GetClients)
@@ -71,7 +63,7 @@ func registerLiteDisabledRoutes(r *gin.Engine) {
 		"/api/admin/pprof",
 		"/api/admin/settings/xtermjs",
 		"/api/admin/settings/oidc",
-		"/api/admin/notification/load",
+
 		"/api/admin/clipboard",
 		"/api/admin/plugin",
 		"/api/admin/theme",
@@ -83,7 +75,9 @@ func registerLiteDisabledRoutes(r *gin.Engine) {
 		"/api/clients/transfer/*path",
 		"/api/admin/pprof/*path",
 		"/api/admin/oauth2/*path",
+		"/api/admin/notification/load",
 		"/api/admin/notification/load/*path",
+
 		"/api/admin/clipboard/*path",
 		"/api/admin/plugin/*path",
 		"/api/admin/theme/*path",
@@ -105,21 +99,12 @@ func registerAgentRoutes(r *gin.Engine) {
 		// Agent 上报统一使用 v2 JSON-RPC。
 		tokenAuthorized.GET("/v2/rpc", client.WebSocketV2RPC)
 		tokenAuthorized.POST("/v2/rpc", client.UploadV2RPC)
-		if !config.LiteMode() {
-			// File data uses a short-lived, raw HTTP stream opened by a file RPC.
-			tokenAuthorized.GET("/transfer/:id", filemanager.AgentTransfer)
-			tokenAuthorized.POST("/transfer/:id", filemanager.AgentTransfer)
-			tokenAuthorized.GET("/terminal", terminal.EstablishConnection)
-		}
 	}
 }
 
 // registerAdminRoutes 管理员路由。除二进制/流类外全部经 Bind 绑定到 admin: 命名空间方法。
 func registerAdminRoutes(r *gin.Engine) {
 	g := r.Group("/api/admin", api.RequireRole(api.RoleAdmin))
-	if !config.LiteMode() {
-		admin.RegisterPprofRoutes(g)
-	}
 
 	// --- 二进制/流/重定向类，保留 REST handler ---
 	g.GET("/download/backup", admin.DownloadBackup)
@@ -138,25 +123,6 @@ func registerAdminRoutes(r *gin.Engine) {
 	g.PUT("/update/favicon", admin.UploadFavicon)
 	g.POST("/update/favicon", admin.DeleteFavicon)
 
-	if !config.LiteMode() {
-		// Theme installation and theme-market endpoints are optional control-plane features.
-		theme := g.Group("/theme")
-		{
-			theme.GET("/list", admin.ListThemes)
-			theme.POST("/delete", admin.DeleteTheme)
-			theme.GET("/set", admin.SetTheme)
-			theme.POST("/update", admin.UpdateTheme)
-			theme.POST("/import", admin.ImportTheme)
-			theme.POST("/settings", admin.UpdateThemeSettings)
-			theme.GET("/market/sources", admin.ListThemeMarketSources)
-			theme.POST("/market/sources", admin.CreateThemeMarketSource)
-			theme.PUT("/market/sources/:id", admin.UpdateThemeMarketSource)
-			theme.DELETE("/market/sources/:id", admin.DeleteThemeMarketSource)
-			theme.GET("/market/catalog", admin.ListThemeMarketCatalog)
-			theme.POST("/market/install", admin.InstallThemeFromMarket)
-		}
-	}
-
 	// 2FA 含二维码 PNG / 敏感操作，保留 REST handler。
 	twoFactor := g.Group("/2fa")
 	{
@@ -165,41 +131,13 @@ func registerAdminRoutes(r *gin.Engine) {
 		twoFactor.POST("/disable", api.RequireSensitive2FA(), admin.Disable2FA)
 	}
 
-	if !config.LiteMode() {
-		// oauth2 binding uses redirects and is disabled in the monitoring-only build.
-		oauth2 := g.Group("/oauth2")
-		{
-			oauth2.GET("/bind", admin.BindingExternalAccount)
-			oauth2.POST("/unbind", admin.UnbindExternalAccount)
-		}
-	}
-
 	// --- 以下全部 JSON -> RPC2 ---
-
-	if !config.LiteMode() {
-		// Remote execution task endpoints are disabled in the monitoring-only build.
-		task := g.Group("/task")
-		{
-			task.GET("/all", jsonRpc.Bind("admin:getTasks"))
-			task.POST("/exec", api.RequireSensitive2FA(), jsonRpc.Bind("admin:exec"))
-			task.GET("/:task_id", jsonRpc.Bind("admin:getTaskById", jsonRpc.WithPath("task_id")))
-			task.GET("/:task_id/result", jsonRpc.Bind("admin:getTaskResultsByTaskId", jsonRpc.WithPath("task_id")))
-			task.GET("/:task_id/result/:uuid", jsonRpc.Bind("admin:getSpecificTaskResult", jsonRpc.WithPath("task_id", "uuid")))
-			task.GET("/client/:uuid", jsonRpc.Bind("admin:getTasksByClientId", jsonRpc.WithPath("uuid")))
-		}
-	}
 
 	// settings
 	settings := g.Group("/settings")
 	{
 		settings.GET("/", jsonRpc.Bind("admin:getSettings"))
 		settings.POST("/", jsonRpc.Bind("admin:editSettings"))
-		if !config.LiteMode() {
-			settings.GET("/xtermjs", jsonRpc.Bind("admin:getXtermjsSettings"))
-			settings.POST("/xtermjs", jsonRpc.Bind("admin:setXtermjsSettings", jsonRpc.WithMessage("settings saved")))
-			settings.POST("/oidc", jsonRpc.Bind("admin:setOidcProvider"))
-			settings.GET("/oidc", jsonRpc.Bind("admin:getOidcProvider", jsonRpc.WithQuery("provider")))
-		}
 		settings.POST("/message-sender", jsonRpc.Bind("admin:setMessageSenderProvider"))
 		settings.GET("/message-sender", jsonRpc.Bind("admin:getMessageSenderProvider", jsonRpc.WithQuery("provider")))
 	}
@@ -221,14 +159,6 @@ func registerAdminRoutes(r *gin.Engine) {
 		clientGroup.POST("/:uuid/remove", jsonRpc.Bind("admin:removeClient", jsonRpc.WithPath("uuid")))
 		clientGroup.GET("/:uuid/token", jsonRpc.Bind("admin:getClientToken", jsonRpc.WithPath("uuid"), jsonRpc.WithFlat()))
 		clientGroup.POST("/order", jsonRpc.Bind("admin:orderClients"))
-		if !config.LiteMode() {
-			// File and terminal control endpoints are disabled in the monitoring-only build.
-			clientGroup.GET("/:uuid/terminal", terminal.RequestTerminal)
-			clientGroup.POST("/:uuid/file/upload", filemanager.Upload)
-			clientGroup.GET("/:uuid/file/download", filemanager.Download)
-			clientGroup.HEAD("/:uuid/file/download", filemanager.Download)
-			clientGroup.GET("/:uuid/file/preview-token", filemanager.CreatePreviewToken)
-		}
 	}
 
 	// records
@@ -248,37 +178,6 @@ func registerAdminRoutes(r *gin.Engine) {
 
 	g.GET("/logs", jsonRpc.Bind("admin:getLogs", jsonRpc.WithQuery("limit", "page")))
 
-	if !config.LiteMode() {
-		clipboardGroup := g.Group("/clipboard")
-		{
-			clipboardGroup.GET("/:id", jsonRpc.Bind("admin:getClipboard", jsonRpc.WithPath("id")))
-			clipboardGroup.GET("", jsonRpc.Bind("admin:listClipboard"))
-			clipboardGroup.POST("", jsonRpc.Bind("admin:createClipboard"))
-			clipboardGroup.POST("/:id", jsonRpc.Bind("admin:updateClipboard", jsonRpc.WithPath("id")))
-			clipboardGroup.POST("/remove", jsonRpc.Bind("admin:batchDeleteClipboard"))
-			clipboardGroup.POST("/:id/remove", jsonRpc.Bind("admin:deleteClipboard", jsonRpc.WithPath("id")))
-		}
-	}
-
-	if !config.LiteMode() {
-		pluginGroup := g.Group("/plugin")
-		{
-			pluginGroup.GET("/list", jsonRpc.Bind("admin:listPlugins"))
-			pluginGroup.POST("/enabled", jsonRpc.Bind("admin:setPluginEnabled"))
-			pluginGroup.GET("/logs", jsonRpc.Bind("admin:getPluginLogs", jsonRpc.WithQuery("short")))
-			pluginGroup.GET("/market/sources", admin.ListPluginMarketSources)
-			pluginGroup.POST("/market/sources", admin.CreatePluginMarketSource)
-			pluginGroup.PUT("/market/sources/:id", admin.UpdatePluginMarketSource)
-			pluginGroup.DELETE("/market/sources/:id", admin.DeletePluginMarketSource)
-			pluginGroup.GET("/market/catalog", admin.ListPluginMarketCatalog)
-			pluginGroup.POST("/market/install", admin.InstallPluginFromMarket)
-			pluginGroup.POST("/delete", jsonRpc.Bind("admin:deletePlugin"))
-			pluginGroup.GET("/configuration", jsonRpc.Bind("admin:getPluginConfiguration", jsonRpc.WithQuery("short")))
-			pluginGroup.POST("/configuration", jsonRpc.Bind("admin:setPluginConfiguration"))
-			pluginGroup.GET("/:short/*filepath", admin.ServePluginFile)
-		}
-	}
-
 	// notifications
 	notificationGroup := g.Group("/notification")
 	{
@@ -286,15 +185,6 @@ func registerAdminRoutes(r *gin.Engine) {
 		notificationGroup.POST("/offline/edit", jsonRpc.Bind("admin:editOfflineNotification"))
 		notificationGroup.POST("/offline/enable", jsonRpc.Bind("admin:enableOfflineNotification"))
 		notificationGroup.POST("/offline/disable", jsonRpc.Bind("admin:disableOfflineNotification"))
-		if !config.LiteMode() {
-			loadAlert := notificationGroup.Group("/load")
-			{
-				loadAlert.GET("/", jsonRpc.Bind("admin:getAllLoadNotifications"))
-				loadAlert.POST("/add", jsonRpc.Bind("admin:addLoadNotification"))
-				loadAlert.POST("/delete", jsonRpc.Bind("admin:deleteLoadNotification"))
-				loadAlert.POST("/edit", jsonRpc.Bind("admin:editLoadNotification"))
-			}
-		}
 	}
 
 	// ping tasks

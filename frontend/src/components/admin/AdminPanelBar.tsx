@@ -53,9 +53,6 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
   const ishttps = window.location.protocol === "https:";
   const [t] = useTranslation();
   const location = useLocation();
-  const isConfigFormPage =
-    location.pathname === "/admin/theme_managed" ||
-    location.pathname === "/admin/plugins/config";
   const { publicInfo } = usePublicInfo();
 
   //const navigate = useNavigate();
@@ -80,8 +77,6 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [releasesSince, setReleasesSince] = useState<GithubReleaseInfo[]>([]);
 
-  const extraMenuItems: ExtendedMenuItem[] = [];
-  const pluginMenuItems: ExtendedMenuItem[] = [];
 
   useEffect(() => {
     const fetchVersionInfo = async () => {
@@ -171,30 +166,14 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
     return () => window.removeEventListener("resize", handleResize);
   }, [isMobile]);
 
-  // 主题配置和插件注入页面分别作为“主题”“插件”主菜单的二级菜单。
   const mergedBaseMenuItems: ExtendedMenuItem[] = useMemo(() => {
-    return baseMenuItems.map((item) => {
-      if (item.labelKey === "theme.menu" && extraMenuItems.length > 0) {
-        return {
-          ...item,
-          children: [...(item.children || []), ...extraMenuItems],
-        };
-      }
-      if (item.labelKey === "plugin.title" && pluginMenuItems.length > 0) {
-        return {
-          ...item,
-          children: [...(item.children || []), ...pluginMenuItems],
-        };
-      }
-      return item;
-    });
+    return baseMenuItems;
   }, []);
   const bottomStartPath = mergedBaseMenuItems.find(
     (item) => item.bottom,
   )?.path;
 
-  // 根据路径自动展开子菜单（包含动态扩展项；plugin-page 用 query 定位文件，
-  // 因此子菜单匹配基于 pathname 部分）
+  // 根据当前路径展开对应的菜单分组。
   useEffect(() => {
     const newState: { [key: string]: boolean } = {};
     const combined: ExtendedMenuItem[] = mergedBaseMenuItems;
@@ -645,9 +624,8 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
               minHeight: 0,
               borderRadius: "0",
               padding: isMobile ? "8px" : "16px",
-              overflowY: isConfigFormPage ? "hidden" : "auto",
-              display: isConfigFormPage ? "flex" : "block",
-              flexDirection: isConfigFormPage ? "column" : undefined,
+              overflowY: "auto",
+              display: "block",
               boxSizing: "border-box",
             }}
           >
@@ -670,11 +648,7 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
                 </Text>
               </Callout.Text>
             </Callout.Root>
-            {isConfigFormPage ? (
-              <div className="min-h-0 flex-1">{content}</div>
-            ) : (
-              content
-            )}
+            {content}
           </div>
         </motion.div>
       </Grid>
@@ -702,9 +676,7 @@ const SidebarItem = ({
 }) => {
   const location = useLocation();
   const isExternalLink = to.startsWith("http://") || to.startsWith("https://");
-  // 带 query 的菜单项（如 /admin/plugin-page?short=x）做全匹配；不带 query
-  // 的菜单项只比 pathname（如 /admin/plugins/config?short=x 点亮“插件配置”），
-  // 同时避免前缀兄弟路由（/admin/plugins 与 /admin/plugins/config）同时点亮。
+  // Compare the pathname for local menu items and use exact matching for queries.
   const isActive =
     !isExternalLink &&
     to !== "/" &&

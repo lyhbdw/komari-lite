@@ -11,22 +11,19 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/komari-monitor/komari/database"
 	"github.com/komari-monitor/komari/database/accounts"
 	"github.com/komari-monitor/komari/database/auditlog"
-	d_notification "github.com/komari-monitor/komari/database/notification"
+
 	"github.com/komari-monitor/komari/database/tasks"
 	"github.com/komari-monitor/komari/internal/config"
 	"github.com/komari-monitor/komari/internal/lifecycle"
 	"github.com/komari-monitor/komari/internal/metricstore"
-	"github.com/komari-monitor/komari/internal/plugin"
 	"github.com/komari-monitor/komari/internal/scheduler"
 	"github.com/komari-monitor/komari/utils/geoip"
 	logger "github.com/komari-monitor/komari/utils/log"
 	"github.com/komari-monitor/komari/utils/messageSender"
 	"github.com/komari-monitor/komari/utils/notifier"
 	"github.com/komari-monitor/komari/web/api"
-	"github.com/komari-monitor/komari/web/oauth"
 	recoveryweb "github.com/komari-monitor/komari/web/recovery"
 	"github.com/komari-monitor/komari/web/router"
 	"github.com/komari-monitor/komari/web/security"
@@ -55,22 +52,6 @@ func (a *App) StartBackground() error {
 }
 
 func (a *App) registerReloadHandlers(cors *security.CorsController) {
-	a.reload.Register("oauth-provider", func(event config.ConfigEvent) {
-		if ok, providerName := config.IsChangedT[string](event, config.OAuthProviderKey); ok {
-			if providerName == "" || providerName == "none" {
-				providerName = "github"
-			}
-			oidcProvider, err := database.GetOidcConfigByName(providerName)
-			if err != nil {
-				logger.Errorf("server", "Failed to get OIDC provider config: %v", err)
-				return
-			}
-			logger.Infof("server", "Using %s as OIDC provider", oidcProvider.Name)
-			if err := oauth.LoadProvider(oidcProvider.Name, oidcProvider.Addition); err != nil {
-				auditlog.EventLog("error", fmt.Sprintf("Failed to load OIDC provider: %v", err))
-			}
-		}
-	})
 	a.reload.Register("geoip-provider", func(event config.ConfigEvent) {
 		if event.IsChanged(config.GeoIpProviderKey) {
 			go geoip.InitGeoIp()
@@ -97,21 +78,6 @@ func (a *App) BuildRouter() error {
 	})
 	router.Register(r)
 
-	if !config.LiteMode() {
-		// Plugins are loaded after the router exists so server.route can bind
-		// routes; a failed plugin only disables itself and is logged.
-		plugin.Init(r)
-		if err := plugin.LoadAll(); err != nil {
-			logger.ErrorArgs("server", "Failed to load some plugins:", err)
-		}
-	}
-	a.addCleanup("plugins", func(context.Context) error {
-		if config.LiteMode() {
-			return nil
-		}
-		return plugin.CloseAll()
-	})
-
 	a.registerReloadHandlers(cors)
 	a.reload.Start()
 	a.engine = r
@@ -123,7 +89,7 @@ func (a *App) Run() error {
 	// The HTML injector runs outside the hook chain so it sees the final
 	// response: plugin hooks can still rewrite the body, then the registered
 	// head/body fragments are embedded into every text/html page.
-	a.server = &http.Server{Addr: a.listenAddr, Handler: plugin.HTMLInjectHandler(plugin.WrapHandler(a.engine))}
+	a.server = &http.Server{Addr: a.listenAddr, Handler: a.engine}
 	serverErr := make(chan error, 1)
 	logger.Infof("server", "Starting server on %s ...", a.listenAddr)
 	go func() {
@@ -195,11 +161,7 @@ func registerScheduledWork() {
 	if err := tasks.ReloadPingSchedule(); err != nil {
 		logger.ErrorArgs("server", "Failed to reload ping schedule:", err)
 	}
-	if !config.LiteMode() {
-		if err := d_notification.ReloadLoadNotificationSchedule(); err != nil {
-			logger.ErrorArgs("server", "Failed to reload load notification schedule:", err)
-		}
-	}
+
 	if err := scheduler.AddFunc("records:cleanup", "@every 30m", cleanupScheduledData); err != nil {
 		logger.ErrorArgs("server", "Failed to add cleanup scheduled task:", err)
 	}
@@ -211,11 +173,6 @@ func registerScheduledWork() {
 	}
 	if err := scheduler.AddFunc("notifier:traffic", "@every 1m", notifier.CheckTraffic); err != nil {
 		logger.ErrorArgs("server", "Failed to add traffic notification task:", err)
-	}
-	if !config.LiteMode() {
-		if err := scheduler.AddFunc("notifier:expire", "0 0 9 * * *", notifier.CheckExpireScheduledWork); err != nil {
-			logger.ErrorArgs("server", "Failed to add expire notification task:", err)
-		}
 	}
 }
 

@@ -13,24 +13,7 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  resolve-release:
-    runs-on: ubuntu-latest
-    outputs:
-      frontend_ref: ${{ steps.release.outputs.frontend_ref }}
-
-    steps:
-      - id: release
-        env:
-          TAG: ${{ github.event.release.tag_name }}
-        run: |
-          frontend_ref=""
-          if [[ "$TAG" =~ ^(.+)-fix[0-9]+$ ]]; then
-            frontend_ref="${BASH_REMATCH[1]}"
-          fi
-          echo "frontend_ref=$frontend_ref" >> "$GITHUB_OUTPUT"
-
   build-frontend:
-    needs: resolve-release
     runs-on: ubuntu-latest
 
     steps:
@@ -41,7 +24,6 @@ jobs:
         uses: ./.github/actions/build-frontend
         with:
           artifact-name: komari-frontend
-          ref: ${{ needs.resolve-release.outputs.frontend_ref }}
 
   build-and-attach-binaries:
     needs: build-frontend
@@ -102,7 +84,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.23"
+          go-version: "1.25"
 
       - name: Install Zig cross-compiler toolchain
         uses: ./.github/actions/setup-zig
@@ -122,6 +104,7 @@ jobs:
           VERSION="${{ github.event.release.tag_name }}"
           VERSION_HASH="${{ github.sha }}" # Use commit SHA for hash
           go build -trimpath -ldflags="-s -w -X github.com/komari-monitor/komari/utils.CurrentVersion=${VERSION} -X github.com/komari-monitor/komari/utils.VersionHash=${VERSION_HASH}" -o $BINARY_NAME
+          sha256sum "$BINARY_NAME" > "$BINARY_NAME.sha256"
 
       - name: Upload binary as artifact
         uses: actions/upload-artifact@v4
@@ -139,7 +122,7 @@ jobs:
             BINARY_NAME=${BINARY_NAME}.exe
           fi
           # Upload the binary as a release asset using GitHub CLI
-          gh release upload ${{ github.event.release.tag_name }} $BINARY_NAME --repo ${{ github.repository }}
+          gh release upload ${{ github.event.release.tag_name }} "$BINARY_NAME" "$BINARY_NAME.sha256" --repo ${{ github.repository }}
         shell: bash
 
   build-and-push-docker:

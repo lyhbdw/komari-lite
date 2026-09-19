@@ -3,7 +3,7 @@ description: Build the bundled lite frontend from frontend/ and optionally uploa
 
 inputs:
   node-version:
-    description: Node.js version used to build komari-web.
+    description: Node.js version used to build the bundled frontend.
     default: "23"
 
   artifact-name:
