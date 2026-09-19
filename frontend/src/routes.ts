@@ -167,6 +167,16 @@ export const routes: RouteObject[] = [
         path: "logs",
         element: React.createElement(lazy(() => import("./pages/admin/log"))),
       },
+      {
+        path: "themes",
+        element: React.createElement(lazy(() => import("./pages/admin/themes"))),
+      },
+      {
+        path: "themes/settings",
+        element: React.createElement(
+          lazy(() => import("./pages/admin/theme_settings")),
+        ),
+      },
     ],
   },
 

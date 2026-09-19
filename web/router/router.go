@@ -66,8 +66,11 @@ func registerLiteDisabledRoutes(r *gin.Engine) {
 
 		"/api/admin/clipboard",
 		"/api/admin/plugin",
-		"/api/admin/theme",
 		"/api/admin/task",
+		"/api/admin/theme",
+		"/api/admin/theme/delete",
+		"/api/admin/theme/import",
+		"/api/admin/theme/update",
 	} {
 		r.Any(path, disabled)
 	}
@@ -80,7 +83,7 @@ func registerLiteDisabledRoutes(r *gin.Engine) {
 
 		"/api/admin/clipboard/*path",
 		"/api/admin/plugin/*path",
-		"/api/admin/theme/*path",
+		"/api/admin/theme/market/*path",
 		"/api/admin/task/*path",
 		"/api/admin/client/:uuid/terminal",
 		"/api/admin/client/:uuid/file/*path",
@@ -122,6 +125,14 @@ func registerAdminRoutes(r *gin.Engine) {
 	g.POST("/update/user", admin.UpdateUser)
 	g.PUT("/update/favicon", admin.UploadFavicon)
 	g.POST("/update/favicon", admin.DeleteFavicon)
+
+	// 本地主题选择和设置保留；远程市场、导入、删除和在线更新已关闭。
+	theme := g.Group("/theme")
+	{
+		theme.GET("/list", admin.ListThemes)
+		theme.GET("/set", admin.SetTheme)
+		theme.POST("/settings", admin.UpdateThemeSettings)
+	}
 
 	// 2FA 含二维码 PNG / 敏感操作，保留 REST handler。
 	twoFactor := g.Group("/2fa")
