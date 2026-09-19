@@ -1,67 +1,130 @@
-# Komari
+# Komari Monitor Lite
 
-![Badge](https://hitscounter.dev/api/hit?url=https%3A%2F%2Fgithub.com%2Fkomari-monitor%2Fkomari&label=&icon=github&color=%23a370f7&message=&style=flat&tz=UTC)
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/komari-monitor/komari)
+Komari Monitor Lite is a self-hosted monitoring panel for personal servers and small infrastructure deployments. It focuses on node status, historical metrics, Ping quality, and notifications, while excluding remote control features.
 
-![komari](https://socialify.git.ci/komari-monitor/komari/image?description=1&font=Inter&forks=1&issues=1&language=1&logo=https%3A%2F%2Fraw.githubusercontent.com%2Fkomari-monitor%2Fkomari-web%2Fd54ce1288df41ead08aa19f8700186e68028a889%2Fpublic%2Ffavicon.png&name=1&owner=1&pattern=Plus&pulls=1&stargazers=1&theme=Auto)
+Current first independent release: `1.0.0`
 
-[English](./README.md) | [简体中文](./README_zh-cn.md)
+## Scope
 
-Komari is a lightweight, self-hosted server monitoring solution. It provides a simple and efficient way to track server performance through a web interface, with metrics collected by a lightweight agent.
+This edition is intended for deployments that need to inspect data, receive alerts, and review history:
 
-> [!WARNING]
-> Komari is a self-hosted monitoring and control application. Deploy it only on systems you own or are authorized to manage. You are solely responsible for how you deploy and use Komari. The developers accept no liability for unauthorized access, persistence, command execution, other misuse, or any resulting consequences.
+- Lightweight agent-based node monitoring
+- Web dashboard for node status and live data
+- Historical CPU, memory, disk, and network metrics
+- Ping task configuration and latency history
+- Offline and traffic notifications
+- Message channel management
+- Data backup and recovery
+- Local account login and two-factor authentication (2FA)
 
-[Documentation](https://www.komari.wiki/) | [Telegram Group](https://t.me/komari_monitor)
+## Disabled Features
 
-## Features
+The following features are disabled to reduce the runtime surface and maintenance cost:
 
-- **Real-time monitoring**: Displays monitoring data at one-second intervals.
-- **Lightweight and efficient**: Uses minimal system resources and works well on servers of any size.
-- **Self-hosted**: Keeps you in control of your data and privacy.
-- **Web interface**: Provides an intuitive, easy-to-use monitoring dashboard.
-- **Extensible**: Supports custom themes and plugins.
+- Remote tasks and script execution
+- Web terminal
+- Remote file management and file transfer
+- Clipboard
+- Load alerts
+- Plugin installation and plugin marketplace
+- Theme marketplace and remote theme management
+- OAuth/OIDC login
+- pprof profiling endpoints
+
+These features are removed from the admin menu and disabled at the HTTP route, JSON-RPC, and runtime module layers when `KOMARI_LITE=1` is enabled. Disabled endpoints return `404` or permission denied.
+
+## Data Compatibility
+
+Lite mode does not delete existing database tables or perform destructive schema cleanup. Existing nodes, historical metrics, Ping tasks, notification settings, and local accounts remain available.
+
+Enable Lite mode with:
+
+```bash
+KOMARI_LITE=1
+```
+
+Removing the variable restores full route and feature registration, subject to the build you are running. Back up the data directory before switching modes.
 
 ## Quick Start
 
-| Platform                                                                                                                                                                                                  | Description                                                                                                                                                                                           |
-| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| <a href="https://app.rainyun.com/apps/rca/store/6780/NzYxNzAz_"><img src="https://rainyun-apps.cn-nb1.rains3.com/materials/deploy-on-rainyun-cn.svg" alt="Rainyun" width="180"></a>                       | Deploy websites, databases, and hundreds of popular apps in seconds with flexible hourly billing. [Get started for just ¥5/month. Deploy now!](https://app.rainyun.com/apps/rca/store/6780/NzYxNzAz_) |
-| <a href="https://apps.fit2cloud.com/1panel/komari"><img src="https://raw.githubusercontent.com/komari-monitor/public/refs/heads/main/images/1panel-logo-blue.png" alt="1Panel App Store" width="180"></a> | A modern, open-source Linux server management panel for websites, databases, containers, files, backups, security, and AI, with one-click deployment from its app store.                              |
+### Build from Source
 
-For instructions on Docker deployment, binary installation, building from source, and updates, see the [installation guide](https://www.komari.wiki/en/install/quick-start).
+Requirements:
 
-## Screenshots
+- Go 1.25 or a compatible version
+- Node.js 23 or a compatible version
+- npm
+- A CGO build environment
+- zstd for repacking frontend assets
 
-| Page                | Screenshot                                                                                                                                                             |
-| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Home Dashboard      | <img src="https://b2.akz.moe/awesome-pictures/komari-screenshot/%E4%B8%BB%E9%A1%B5%E4%BB%AA%E8%A1%A8%E7%9B%98-en.webp" width="800" alt="Home Dashboard">               |
-| Admin Dashboard     | <img src="https://b2.akz.moe/awesome-pictures/komari-screenshot/%E5%90%8E%E5%8F%B0%E4%BB%AA%E8%A1%A8%E7%9B%98-en.webp" width="800" alt="Admin Dashboard">              |
-| History Charts      | <img src="https://b2.akz.moe/awesome-pictures/komari-screenshot/%E5%8E%86%E5%8F%B2%E5%9B%BE%E8%A1%A8-en.webp" width="800" alt="History Charts">                        |
-| Web Terminal        | <img src="https://b2.akz.moe/awesome-pictures/komari-screenshot/%E7%BD%91%E9%A1%B5%E7%BB%88%E7%AB%AF.webp" width="800" alt="Web Terminal">                             |
-| Customizable Themes | <img src="https://b2.akz.moe/awesome-pictures/komari-screenshot/%E4%B8%BB%E9%A2%98%E5%8F%AF%E8%87%AA%E5%AE%9A%E4%B9%89-en.webp" width="800" alt="Customizable Themes"> |
-| Theme Market        | <img src="https://b2.akz.moe/awesome-pictures/komari-screenshot/%E4%B8%BB%E9%A2%98%E5%B8%82%E5%9C%BA-en.webp" width="800" alt="Theme Market">                          |
+The frontend source is included in this repository. To rebuild the embedded frontend:
 
-## Sponsors
+```bash
+cd frontend
+npm ci
+npm run build
+mkdir -p ../web/public/defaultTheme
+tar -cf /tmp/komari-dist.tar -C dist .
+zstd -19 -T0 -q -f /tmp/komari-dist.tar -o ../web/public/defaultTheme/dist.tar.zst
+cp komari-theme.json ../web/public/defaultTheme/komari-theme.json
+```
 
-Interested in sponsoring Komari? Contact the developer via [email](mailto:komari@akz.moe) or [Telegram](https://t.me/mamomoe).
+Build the backend:
 
-| Sponsor                                                                                                                                                                                          | Description                                                                                                                                                                                                                                                                   |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| <a href="https://axisnow.io/zh?utm=komari"><img src="https://raw.githubusercontent.com/komari-monitor/public/refs/heads/main/images/AxisNow.jpg" alt="AxisNow" width="180"></a> | [Self-Hosted Private CDN \| Subscription-Based CDN-Like Service \| A Fully Controlled, Flexible, Modular CDN Network](https://axisnow.io/zh?utm=komari) |
-| <a href="https://whmcs.as211392.com/aff.php?aff=110"><img src="https://raw.githubusercontent.com/komari-monitor/public/refs/heads/main/images/dreamcloud.png" alt="Dream Cloud" width="180"></a> | Cost-effective Asia-Pacific hosting with direct connectivity and robust DDoS protection, backed by transparent capacity claims.                                                                                                                                               |
-| <a href="https://sharon.io"><img src="https://raw.githubusercontent.com/komari-monitor/public/refs/heads/main/images/sharon-networks.webp" alt="Sharon Networks" width="180"></a>                | Premium China-optimized connectivity from Asia-Pacific data centers, featuring low latency, high bandwidth, and Tbps-scale local DDoS mitigation. Join the [Telegram community](https://t.me/SharonNetwork) to participate in charitable initiatives and community giveaways. |
+```bash
+cd ..
+CGO_ENABLED=1 go build \
+  -tags sqlite_omit_load_extension \
+  -ldflags "-s -w -X github.com/komari-monitor/komari/utils.CurrentVersion=1.0.0" \
+  -o komari .
+```
 
-## Contributors
+Run the service:
 
-Thanks to everyone who has contributed code, themes, plugins, documentation, translations, bug reports, or feedback to Komari.
+```bash
+KOMARI_LITE=1 ./komari server
+```
 
-<a href="https://github.com/komari-monitor/komari/graphs/contributors"><img src="https://contributors-img.web.app/image?repo=komari-monitor/komari" alt="Komari contributors" width="600"></a>
+The default listen address is `0.0.0.0:25774`, and the default data directory is `data/` below the working directory. In production, use an HTTPS reverse proxy and restrict access to the admin entry point.
 
-## Support the Project
+### Docker Build
 
-If Komari has been useful to you, consider buying me a coffee. Thank you for your support!
+```bash
+# First build the Linux amd64 binary as shown above
+CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build \
+  -tags sqlite_omit_load_extension \
+  -ldflags "-s -w -X github.com/komari-monitor/komari/utils.CurrentVersion=1.0.0" \
+  -o komari-linux-amd64 .
 
-| WeChat Pay                                                                                                   | TRON Network                                                                                |
-| ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------- |
-| ![WeChat Pay QR code](https://b2.akz.moe/awesome-pictures/%E5%BE%AE%E4%BF%A1%E8%B5%9E%E8%B5%8F%E7%A0%81.png) | ![TRON Network QR code](https://b2.akz.moe/awesome-pictures/PixPin_2026-08-07_15-16-52.png) |
+docker build \
+  --build-arg TARGETOS=linux \
+  --build-arg TARGETARCH=amd64 \
+  -t komari-monitor-lite:1.0.0 .
+
+docker run -d \
+  --name komari \
+  -e KOMARI_LITE=1 \
+  -p 25774:25774 \
+  -v "$(pwd)/data:/app/data" \
+  --restart unless-stopped \
+  komari-monitor-lite:1.0.0
+```
+
+## Deployment Notes
+
+- Back up the entire `data/` directory before production upgrades.
+- Do not commit databases, backups, environment files, credentials, or build outputs to Git.
+- This project does not provide remote command execution. Use a separate, controlled administration tool when server operations are required.
+- Deploy and use this project only on systems you own or are authorized to manage.
+
+## Relationship to the Original Project
+
+This project is derived from Komari:
+
+<https://github.com/komari-monitor/komari>
+
+The Lite edition uses its own version series and repository. Its first release is `1.0.0`. Upstream changes are not merged automatically; synchronize only after testing, backing up the database, and running a functional regression check.
+
+## License
+
+See `LICENSE` and `NOTICE` for the license and original copyright notices.
