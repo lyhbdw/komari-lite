@@ -6,7 +6,6 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
 	"math"
 	"net/http"
@@ -182,7 +181,7 @@ func runV2PullLoop(ctx context.Context) {
 		pullID := fmt.Sprintf("pull-%d", time.Now().UnixNano())
 		ackIDs := snapshotV2AckEventIDs()
 		payload := v2.NewRequest(pullID, v2.MethodAgentPull, map[string]interface{}{
-			"capabilities":  []string{"ping", "message", "event"},
+			"capabilities":  []string{"ping"},
 			"ack_event_ids": ackIDs,
 		})
 		resp, err := postV2RequestContext(ctx, payload)
@@ -234,7 +233,7 @@ func postV2RequestContext(ctx context.Context, payload []byte) (*v2.Response, er
 		return nil, err
 	}
 	defer resp.Body.Close()
-	bytesBody, err := io.ReadAll(resp.Body)
+	bytesBody, err := readBoundedBody(resp.Body)
 	if err != nil {
 		return nil, err
 	}
@@ -295,6 +294,11 @@ func addV2AckEventID(id string) {
 	}
 	v2AckMu.Lock()
 	defer v2AckMu.Unlock()
+	for _, existing := range v2AckEventIDs {
+		if existing == id {
+			return
+		}
+	}
 	v2AckEventIDs = append(v2AckEventIDs, id)
 }
 
@@ -363,7 +367,7 @@ func handleWebSocketMessages(conn *ws.SafeConn, done chan<- struct{}) {
 			log.Printf("Bad v2 ws message version %q", message.JSONRPC)
 			continue
 		}
-		processV2Event(conn, message.Method, message.Params, "")
+		processV2Event(conn, message.Method, message.Params, requestEventID(message.ID))
 	}
 }
 
@@ -384,9 +388,6 @@ func processV2Event(conn *ws.SafeConn, method string, params interface{}, eventI
 		} else {
 			log.Printf("bad v2 ping params: %v", err)
 		}
-	case v2.MethodAgentMessage, v2.MethodAgentEvent:
-		log.Printf("received v2 %s: %+v", method, params)
-		return true
 	default:
 		log.Printf("unknown v2 event method %s", method)
 	}

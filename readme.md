@@ -35,7 +35,6 @@ export AGENT_TOKEN="your-token"
   "endpoint": "https://example.com",
   "token": "your-token",
   "interval": 3,
-  "disable_auto_update": false,
   "ignore_unsafe_cert": false
 }
 ```
@@ -44,14 +43,13 @@ export AGENT_TOKEN="your-token"
 
 常用配置项：
 
-Lite 版本从 `1.0.0` 开始。Agent Token 只通过 `Authorization: Bearer` 请求头发送。
+Lite 版本从 `1.0.1` 开始。Agent Token 只通过 `Authorization` 请求头发送。Agent Lite 不包含自更新功能。
 
 | JSON 字段 | 环境变量 | 命令行参数 | 说明 | 支持版本 |
 | --- | --- | --- | --- | --- |
 | `endpoint` | `AGENT_ENDPOINT` | `--endpoint`, `-e` | 面板地址 | `0.0.9` |
 | `token` | `AGENT_TOKEN` | `--token`, `-t` | agent token | `0.0.9` |
 | `interval` | `AGENT_INTERVAL` | `--interval`, `-i` | 数据采集间隔，单位秒 | `0.0.9` |
-| `disable_auto_update` | `AGENT_DISABLE_AUTO_UPDATE` | `--disable-auto-update` | 禁用自动更新 | `0.0.9` |
 
 | `ignore_unsafe_cert` | `AGENT_IGNORE_UNSAFE_CERT` | `--ignore-unsafe-cert`, `-u` | 忽略不安全证书 | `0.0.9` |
 | `include_nics` | `AGENT_INCLUDE_NICS` | `--include-nics` | 仅统计指定网卡，逗号分隔 | `0.0.22` |

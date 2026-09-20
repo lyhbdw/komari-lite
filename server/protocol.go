@@ -3,10 +3,30 @@ package server
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 
 	v2 "github.com/komari-monitor/komari-agent/protocol/v2"
 )
+
+const maxAgentResponseBytes = 1 << 20
+
+func readBoundedBody(r io.Reader) ([]byte, error) {
+	return io.ReadAll(io.LimitReader(r, maxAgentResponseBytes))
+}
+
+func requestEventID(id interface{}) string {
+	switch value := id.(type) {
+	case string:
+		return value
+	case json.Number:
+		return value.String()
+	case float64:
+		return fmt.Sprintf("%g", value)
+	default:
+		return ""
+	}
+}
 
 type httpStatusError struct {
 	StatusCode int

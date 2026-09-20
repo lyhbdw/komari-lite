@@ -1,31 +1,86 @@
 package flags_pkg
 
-type Config struct {
-	DisableAutoUpdate   bool    `json:"disable_auto_update" env:"AGENT_DISABLE_AUTO_UPDATE"`       // 禁用自动更新
-	MemoryModeAvailable bool    `json:"memory_mode_available" env:"AGENT_MEMORY_MODE_AVAILABLE"`   // [deprecated] 已弃用，请使用 MemoryIncludeCache
-	Token               string  `json:"token" env:"AGENT_TOKEN"`                                   // Token
-	Endpoint            string  `json:"endpoint" env:"AGENT_ENDPOINT"`                             // 面板地址
-	Interval            float64 `json:"interval" env:"AGENT_INTERVAL"`                             // 数据采集间隔，单位秒
-	IgnoreUnsafeCert    bool    `json:"ignore_unsafe_cert" env:"AGENT_IGNORE_UNSAFE_CERT"`         // 忽略不安全的证书
-	MaxRetries          int     `json:"max_retries" env:"AGENT_MAX_RETRIES"`                       // 最大重试次数
-	ReconnectInterval   int     `json:"reconnect_interval" env:"AGENT_RECONNECT_INTERVAL"`         // 重连间隔，单位秒
-	InfoReportInterval  int     `json:"info_report_interval" env:"AGENT_INFO_REPORT_INTERVAL"`     // 基础信息上报间隔，单位分钟
-	IncludeNics         string  `json:"include_nics" env:"AGENT_INCLUDE_NICS"`                     // 仅统计网卡，逗号分隔的网卡名称列表，支持通配符
-	ExcludeNics         string  `json:"exclude_nics" env:"AGENT_EXCLUDE_NICS"`                     // 统计时排除的网卡，逗号分隔的网卡名称列表，支持通配符
-	IncludeMountpoints  string  `json:"include_mountpoints" env:"AGENT_INCLUDE_MOUNTPOINTS"`       // 磁盘统计的包含挂载点列表，使用分号分隔
-	MonthRotate         int     `json:"month_rotate" env:"AGENT_MONTH_ROTATE"`                     // 流量统计的月份重置日期（0表示禁用）
-	MemoryIncludeCache  bool    `json:"memory_include_cache" env:"AGENT_MEMORY_INCLUDE_CACHE"`     // 包括缓存/缓冲区的内存使用情况
-	MemoryReportRawUsed bool    `json:"memory_report_raw_used" env:"AGENT_MEMORY_REPORT_RAW_USED"` // 使用原始内存使用情况报告
-	CustomDNS           string  `json:"custom_dns" env:"AGENT_CUSTOM_DNS"`                         // 使用的自定义DNS服务器
-	EnableGPU           bool    `json:"enable_gpu" env:"AGENT_ENABLE_GPU"`                         // 启用详细GPU监控
-	CustomIpv4          string  `json:"custom_ipv4" env:"AGENT_CUSTOM_IPV4"`                       // 自定义 IPv4 地址
-	CustomIpv6          string  `json:"custom_ipv6" env:"AGENT_CUSTOM_IPV6"`                       // 自定义 IPv6 地址
-	GetIpAddrFromNic    bool    `json:"get_ip_addr_from_nic" env:"AGENT_GET_IP_ADDR_FROM_NIC"`     // 从网卡获取IP地址
-	HostProc            string  `json:"host_proc" env:"HOST_PROC"`                                 // 容器环境下宿主机/proc目录的挂载点，用于监控宿主机进程
-	ConfigFile          string  `json:"config_file" env:"AGENT_CONFIG_FILE"`                       // JSON配置文件路径
-	DisableCompression  bool    `json:"disable_compression" env:"AGENT_DISABLE_COMPRESSION"`       // 禁用v2传输压缩
-	PreferIPVersion     string  `json:"prefer_ip_version" env:"AGENT_PREFER_IP_VERSION"`           // 面板连接优先使用的 IP 版本：4 或 6
+import (
+	"fmt"
+	"net"
+	"net/url"
+	"strings"
+)
 
+type Config struct {
+	MemoryModeAvailable bool    `json:"memory_mode_available" env:"AGENT_MEMORY_MODE_AVAILABLE"`
+	Token               string  `json:"token" env:"AGENT_TOKEN"`
+	Endpoint            string  `json:"endpoint" env:"AGENT_ENDPOINT"`
+	Interval            float64 `json:"interval" env:"AGENT_INTERVAL"`
+	IgnoreUnsafeCert    bool    `json:"ignore_unsafe_cert" env:"AGENT_IGNORE_UNSAFE_CERT"`
+	MaxRetries          int     `json:"max_retries" env:"AGENT_MAX_RETRIES"`
+	ReconnectInterval   int     `json:"reconnect_interval" env:"AGENT_RECONNECT_INTERVAL"`
+	InfoReportInterval  int     `json:"info_report_interval" env:"AGENT_INFO_REPORT_INTERVAL"`
+	IncludeNics         string  `json:"include_nics" env:"AGENT_INCLUDE_NICS"`
+	ExcludeNics         string  `json:"exclude_nics" env:"AGENT_EXCLUDE_NICS"`
+	IncludeMountpoints  string  `json:"include_mountpoints" env:"AGENT_INCLUDE_MOUNTPOINTS"`
+	MonthRotate         int     `json:"month_rotate" env:"AGENT_MONTH_ROTATE"`
+	MemoryIncludeCache  bool    `json:"memory_include_cache" env:"AGENT_MEMORY_INCLUDE_CACHE"`
+	MemoryReportRawUsed bool    `json:"memory_report_raw_used" env:"AGENT_MEMORY_REPORT_RAW_USED"`
+	CustomDNS           string  `json:"custom_dns" env:"AGENT_CUSTOM_DNS"`
+	EnableGPU           bool    `json:"enable_gpu" env:"AGENT_ENABLE_GPU"`
+	CustomIpv4          string  `json:"custom_ipv4" env:"AGENT_CUSTOM_IPV4"`
+	CustomIpv6          string  `json:"custom_ipv6" env:"AGENT_CUSTOM_IPV6"`
+	GetIpAddrFromNic    bool    `json:"get_ip_addr_from_nic" env:"AGENT_GET_IP_ADDR_FROM_NIC"`
+	HostProc            string  `json:"host_proc" env:"HOST_PROC"`
+	ConfigFile          string  `json:"config_file" env:"AGENT_CONFIG_FILE"`
+	DisableCompression  bool    `json:"disable_compression" env:"AGENT_DISABLE_COMPRESSION"`
+	PreferIPVersion     string  `json:"prefer_ip_version" env:"AGENT_PREFER_IP_VERSION"`
+	MigrationReadyFile  string  `json:"migration_ready_file" env:"AGENT_MIGRATION_READY_FILE"`
+}
+
+func (c Config) Validate() error {
+	if strings.TrimSpace(c.Endpoint) == "" {
+		return fmt.Errorf("endpoint is required")
+	}
+	u, err := url.ParseRequestURI(c.Endpoint)
+	if err != nil || u.Host == "" || (u.Scheme != "http" && u.Scheme != "https") || u.User != nil {
+		return fmt.Errorf("endpoint must be an http or https URL with a host")
+	}
+	if strings.TrimSpace(c.Token) == "" {
+		return fmt.Errorf("token is required")
+	}
+	if c.Interval <= 0 {
+		return fmt.Errorf("interval must be positive")
+	}
+	if c.MaxRetries <= 0 {
+		return fmt.Errorf("max-retries must be positive")
+	}
+	if c.ReconnectInterval <= 0 {
+		return fmt.Errorf("reconnect-interval must be positive")
+	}
+	if c.InfoReportInterval <= 0 {
+		return fmt.Errorf("info-report-interval must be positive")
+	}
+	if c.MonthRotate < 0 || c.MonthRotate > 31 {
+		return fmt.Errorf("month-rotate must be 0 through 31")
+	}
+	if c.CustomIpv4 != "" {
+		ip := net.ParseIP(strings.TrimSpace(c.CustomIpv4))
+		if ip == nil || ip.To4() == nil {
+			return fmt.Errorf("custom-ipv4 must be a valid IPv4 address")
+		}
+	}
+	if c.CustomIpv6 != "" {
+		ip := net.ParseIP(strings.TrimSpace(c.CustomIpv6))
+		if ip == nil || ip.To4() != nil {
+			return fmt.Errorf("custom-ipv6 must be a valid IPv6 address")
+		}
+	}
+	if c.CustomDNS != "" {
+		for _, server := range strings.Split(c.CustomDNS, ",") {
+			ip := net.ParseIP(strings.TrimSpace(server))
+			if ip == nil {
+				return fmt.Errorf("custom-dns must contain only valid IP addresses")
+			}
+		}
+	}
+	return nil
 }
 
 var GlobalConfig = &Config{}

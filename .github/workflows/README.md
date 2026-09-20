@@ -33,12 +33,11 @@ Dockerfile:
 The agent version is embedded with:
 
 ```sh
--ldflags="-X github.com/komari-monitor/komari-agent/update.CurrentVersion=${VERSION}"
+-ldflags="-X github.com/komari-monitor/komari-agent/version.Current=${VERSION}"
 ```
 
-Do not remove this without changing the agent update and reporting logic. The
-agent uses `update.CurrentVersion` for update checks and reports it as part of
-basic info.
+Do not remove this without changing the agent reporting logic. The agent uses
+`version.Current` for basic-info reporting; Agent Lite has no self-update path.
 
 Prefer `go-version-file: go.mod` for release-producing workflows so Actions uses
 the Go version declared by the project.

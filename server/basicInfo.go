@@ -2,9 +2,10 @@ package server
 
 import (
 	"bytes"
-	"io"
+	"errors"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -12,7 +13,7 @@ import (
 	monitoring "github.com/komari-monitor/komari-agent/monitoring/unit"
 	"github.com/komari-monitor/komari-agent/protocol/transport"
 	v2 "github.com/komari-monitor/komari-agent/protocol/v2"
-	"github.com/komari-monitor/komari-agent/update"
+	"github.com/komari-monitor/komari-agent/version"
 
 	pkg_flags "github.com/komari-monitor/komari-agent/cmd/flags"
 )
@@ -57,7 +58,7 @@ func uploadBasicInfo() error {
 		"disk_total":         monitoring.Disk().Total,
 		"gpu_name":           monitoring.GpuName(),
 		"virtualization":     monitoring.Virtualized(),
-		"version":            update.CurrentVersion,
+		"version":            version.Current,
 	}
 
 	return tryUploadData(data)
@@ -97,7 +98,7 @@ func tryUploadDataWithProtocol(data map[string]interface{}) error {
 	}
 	defer resp.Body.Close()
 
-	respBody, err := io.ReadAll(resp.Body)
+	respBody, err := readBoundedBody(resp.Body)
 	if err != nil {
 		return err
 	}
@@ -111,6 +112,28 @@ func tryUploadDataWithProtocol(data map[string]interface{}) error {
 			return err
 		}
 	}
+	markMigrationReady()
 
 	return nil
+}
+
+func markMigrationReady() {
+	path := strings.TrimSpace(flags.MigrationReadyFile)
+	if path == "" {
+		return
+	}
+	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
+	if err != nil {
+		if errors.Is(err, os.ErrExist) {
+			return
+		}
+		log.Printf("Unable to write migration readiness marker: %v", err)
+		return
+	}
+	if _, err := file.WriteString("ready\n"); err != nil {
+		log.Printf("Unable to write migration readiness marker: %v", err)
+	}
+	if err := file.Close(); err != nil {
+		log.Printf("Unable to close migration readiness marker: %v", err)
+	}
 }

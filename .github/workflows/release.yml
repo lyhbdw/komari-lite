@@ -37,12 +37,15 @@ jobs:
           VERSION: ${{ github.event.release.tag_name }}
         run: |
           BINARY_NAME=komari-agent-linux-${{ matrix.goarch }}
-          go build -trimpath -ldflags="-X github.com/komari-monitor/komari-agent/update.CurrentVersion=${VERSION}" -o $BINARY_NAME
+          go build -trimpath -ldflags="-X github.com/komari-monitor/komari-agent/version.Current=${VERSION}" -o $BINARY_NAME
+
+      - name: Generate checksum
+        run: sha256sum komari-agent-linux-${{ matrix.goarch }} > komari-agent-linux-${{ matrix.goarch }}.sha256
 
       - name: Upload binary to release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           BINARY_NAME=komari-agent-linux-${{ matrix.goarch }}
-          gh release upload ${{ github.event.release.tag_name }} $BINARY_NAME --repo ${{ github.repository }}
+          gh release upload ${{ github.event.release.tag_name }} $BINARY_NAME "$BINARY_NAME.sha256" --repo ${{ github.repository }}
         shell: bash

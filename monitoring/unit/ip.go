@@ -68,7 +68,7 @@ func GetIPv4Address() (string, error) {
 		if err != nil {
 			continue
 		}
-		body, err := io.ReadAll(resp.Body)
+		body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 		_ = resp.Body.Close() // 获取后立即关闭防止堵塞
 		if err != nil {
 			continue
@@ -103,7 +103,7 @@ func GetIPv6Address() (string, error) {
 		if err != nil {
 			continue
 		}
-		body, err := io.ReadAll(resp.Body)
+		body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 		_ = resp.Body.Close() // 获取后立即关闭防止堵塞
 		if err != nil {
 			continue

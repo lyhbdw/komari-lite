@@ -6,7 +6,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"io"
 	"log"
 	"net"
 	"net/http"
@@ -54,7 +53,7 @@ func icmpPing(target string, timeout time.Duration) (int64, error) {
 	}
 	pinger.Count = 1
 	pinger.Timeout = timeout
-	pinger.SetPrivileged(true)
+	pinger.SetPrivileged(false)
 	err = pinger.Run()
 	if err != nil {
 		return -1, err
@@ -244,7 +243,7 @@ func postV2RPC(payload interface{}) error {
 		return err
 	}
 	defer resp.Body.Close()
-	respBody, err := io.ReadAll(resp.Body)
+	respBody, err := readBoundedBody(resp.Body)
 	if err != nil {
 		return err
 	}

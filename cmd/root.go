@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -19,7 +18,7 @@ import (
 	"github.com/komari-monitor/komari-agent/monitoring/netstatic"
 	monitoring "github.com/komari-monitor/komari-agent/monitoring/unit"
 	"github.com/komari-monitor/komari-agent/server"
-	"github.com/komari-monitor/komari-agent/update"
+	"github.com/komari-monitor/komari-agent/version"
 	"github.com/spf13/cobra"
 
 	pkg_flags "github.com/komari-monitor/komari-agent/cmd/flags"
@@ -47,6 +46,9 @@ var RootCmd = &cobra.Command{
 		}
 		if flags.PreferIPVersion != "" && flags.PreferIPVersion != "4" && flags.PreferIPVersion != "6" {
 			return fmt.Errorf("invalid --prefer-ip-version value %q: expected 4 or 6", flags.PreferIPVersion)
+		}
+		if err := flags.Validate(); err != nil {
+			return fmt.Errorf("invalid configuration: %w", err)
 		}
 		// 捕获中止信号，优雅退出
 		stopCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -76,8 +78,7 @@ var RootCmd = &cobra.Command{
 			}
 		}
 
-		log.Println("Komari Agent", update.CurrentVersion)
-		log.Println("Github Repo:", update.Repo)
+		log.Println("Komari Agent", version.Current)
 
 		// 设置 DNS 解析行为
 		if flags.CustomDNS != "" {
@@ -103,16 +104,6 @@ var RootCmd = &cobra.Command{
 		if flags.IgnoreUnsafeCert {
 			http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 		}
-		// 自动更新
-		if !flags.DisableAutoUpdate {
-			err := update.CheckAndUpdate()
-			if handleUpdateCheckResult(err, shutdown) {
-				return nil
-			}
-			go update.DoUpdateWorks(func() {
-				shutdown.shutdown(42)
-			})
-		}
 		go server.DoUploadBasicInfoWorks()
 		for {
 			server.UpdateBasicInfo()
@@ -121,25 +112,8 @@ var RootCmd = &cobra.Command{
 	},
 }
 
-func handleUpdateCheckResult(err error, shutdown *shutdownCoordinator) bool {
-	if errors.Is(err, update.ErrRestartRequired) {
-		shutdown.shutdown(42)
-		return true
-	}
-	if err != nil {
-		log.Println("[ERROR]", err)
-	}
-	return false
-}
-
 func Execute() {
 	for i, arg := range os.Args {
-		if arg == "-autoUpdate" || arg == "--autoUpdate" {
-			log.Println("WARNING: The -autoUpdate flag is deprecated in version 0.0.9 and later. Use --disable-auto-update to configure auto-update behavior.")
-			// 从参数列表中移除该参数，防止cobra解析错误
-			os.Args = append(os.Args[:i], os.Args[i+1:]...)
-			break
-		}
 		if arg == "-memory-mode-available" || arg == "--memory-mode-available" {
 			//flags.MemoryIncludeCache = true
 			log.Println("WARNING: The --memory-mode-available flag is deprecated in version 1.0.70 and later. Use --memory-include-cache to report memory usage including cache/buffer.")
@@ -155,10 +129,7 @@ func Execute() {
 
 func init() {
 	RootCmd.PersistentFlags().StringVarP(&flags.Token, "token", "t", "", "API token")
-	//RootCmd.MarkPersistentFlagRequired("token")
 	RootCmd.PersistentFlags().StringVarP(&flags.Endpoint, "endpoint", "e", "", "API endpoint")
-	//RootCmd.MarkPersistentFlagRequired("endpoint")
-	RootCmd.PersistentFlags().BoolVar(&flags.DisableAutoUpdate, "disable-auto-update", false, "Disable automatic updates")
 	//RootCmd.PersistentFlags().BoolVar(&flags.MemoryModeAvailable, "memory-mode-available", false, "[deprecated]Report memory as available instead of used.")
 	RootCmd.PersistentFlags().Float64VarP(&flags.Interval, "interval", "i", 3.0, "Interval in seconds")
 	RootCmd.PersistentFlags().BoolVarP(&flags.IgnoreUnsafeCert, "ignore-unsafe-cert", "u", false, "Ignore unsafe certificate errors")
@@ -179,6 +150,7 @@ func init() {
 	RootCmd.PersistentFlags().StringVar(&flags.ConfigFile, "config", "", "Path to the configuration file")
 	RootCmd.PersistentFlags().BoolVar(&flags.DisableCompression, "disable-compression", false, "Disable v2 gzip/permessage-deflate compression")
 	RootCmd.PersistentFlags().StringVar(&flags.PreferIPVersion, "prefer-ip-version", "", "Prefer IP version for dashboard connections: 4 or 6")
+	RootCmd.PersistentFlags().StringVar(&flags.MigrationReadyFile, "migration-ready-file", "", "Write a one-time readiness marker after the first successful panel report")
 	RootCmd.PersistentFlags().ParseErrorsWhitelist.UnknownFlags = true
 }
 
