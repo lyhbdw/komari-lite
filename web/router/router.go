@@ -60,6 +60,9 @@ func registerLiteDisabledRoutes(r *gin.Engine) {
 	for _, path := range []string{
 		"/api/oauth",
 		"/api/oauth_callback",
+		"/api/admin/terminal",
+		"/api/admin/plugins",
+		"/api/admin/backup/restore",
 		"/api/admin/pprof",
 		"/api/admin/settings/xtermjs",
 		"/api/admin/settings/oidc",
@@ -94,9 +97,6 @@ func registerLiteDisabledRoutes(r *gin.Engine) {
 
 // registerAgentRoutes agent（客户端）上报与拉取路由。
 func registerAgentRoutes(r *gin.Engine) {
-	// AutoDiscovery 注册使用独立的 Authorization key 鉴权，保留 REST handler。
-	r.POST("/api/clients/register", client.RegisterClient)
-
 	tokenAuthorized := r.Group("/api/clients", api.RequireRole(api.RoleAdmin, api.RoleClient))
 	{
 		// Agent 上报统一使用 v2 JSON-RPC。
@@ -111,20 +111,10 @@ func registerAdminRoutes(r *gin.Engine) {
 
 	// --- 二进制/流/重定向类，保留 REST handler ---
 	g.GET("/download/backup", admin.DownloadBackup)
-	uploadHandler := admin.NewArchiveUploadHandler()
-	uploadGroup := g.Group("/upload")
-	{
-		uploadGroup.POST("/init", uploadHandler.Init)
-		uploadGroup.POST("/chunk", uploadHandler.Chunk)
-		uploadGroup.POST("/merge", uploadHandler.Merge)
-		uploadGroup.POST("/cancel", uploadHandler.Cancel)
-	}
 	g.GET("/test/geoip", jsonRpc.Bind("admin:testGeoip", jsonRpc.WithQuery("ip")))
 	g.POST("/test/sendMessage", jsonRpc.Bind("admin:testSendMessage"))
 	g.POST("/update/mmdb", admin.UpdateMmdbGeoIP)
 	g.POST("/update/user", admin.UpdateUser)
-	g.PUT("/update/favicon", admin.UploadFavicon)
-	g.POST("/update/favicon", admin.DeleteFavicon)
 
 	// 本地主题选择和设置保留；远程市场、导入、删除和在线更新已关闭。
 	theme := g.Group("/theme")

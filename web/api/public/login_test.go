@@ -87,11 +87,7 @@ func TestLogin(t *testing.T) {
 				// 对于成功的情况，我们只检查响应结构，不检查具体的 session token
 				assert.Equal(t, "success", response["status"])
 				assert.Equal(t, "", response["message"])
-				data, ok := response["data"].(map[string]interface{})
-				assert.True(t, ok)
-				setCookie, ok := data["set-cookie"].(map[string]interface{})
-				assert.True(t, ok)
-				assert.NotEmpty(t, setCookie["session_token"])
+				assert.NotContains(t, string(w.Body.Bytes()), "session_token")
 				assert.Contains(t, strings.Join(w.Header().Values("Set-Cookie"), "\n"), "session_token=")
 			} else {
 				assert.Equal(t, tt.expectedBody, response)

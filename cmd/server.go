@@ -38,59 +38,9 @@ func RunServer() {
 		logger.Fatalf("server", "server startup failed at %q: %v", "bootstrap", err)
 	}
 
-	installRequired, err := app.InstallRequired()
-	if err != nil {
-		_ = app.Shutdown()
-		logger.Fatalf("server", "server startup failed at %q: %v", "detect-first-run-install", err)
-	}
-	if installRequired {
-		completed, err := app.RunInstallGuide()
-		if err != nil {
-			_ = app.Shutdown()
-			logger.Fatalf("server", "server startup failed at %q: %v", "run-first-run-install", err)
-		}
-		if !completed {
-			return
-		}
-	}
-
-	for {
-		requirement, err := app.DatabaseMigrationRequired()
-		if err != nil {
-			completed, recoveryErr := app.RunMetricStoreRecovery(err)
-			if recoveryErr != nil {
-				_ = app.Shutdown()
-				logger.Fatalf("server", "server startup failed at %q: %v", "database-migration-detection-recovery", recoveryErr)
-			}
-			if !completed {
-				return
-			}
-			continue
-		}
-		if !requirement.Required() {
-			break
-		}
-		completed, err := app.RunDatabaseMigration(requirement)
-		if err != nil {
-			_ = app.Shutdown()
-			logger.Fatalf("server", "server startup failed at %q: %v", "run-database-migration", err)
-		}
-		if !completed {
-			return
-		}
-	}
-
-	// Metric store 是唯一允许进入恢复向导的启动阶段：主库已经在
-	// Bootstrap 中就绪，因此可以保留登录能力并让管理员修正 DSN。
 	if err := app.ConnectMetricStoreWithRetry(); err != nil {
-		completed, recoveryErr := app.RunMetricStoreRecovery(err)
-		if recoveryErr != nil {
-			_ = app.Shutdown()
-			logger.Fatalf("server", "server startup failed at %q: %v", "metric-store-recovery", recoveryErr)
-		}
-		if !completed {
-			return
-		}
+		_ = app.Shutdown()
+		logger.Fatalf("server", "server startup failed at %q: %v", "connect-metric-store", err)
 	}
 
 	// 其余初始化阶段：任一步失败都不应继续对外服务。

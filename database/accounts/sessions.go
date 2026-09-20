@@ -1,6 +1,7 @@
 package accounts
 
 import (
+	"crypto/sha256"
 	"errors"
 	"fmt"
 	"net"
@@ -14,6 +15,25 @@ import (
 	"github.com/komari-monitor/komari/utils/geoip"
 	"github.com/komari-monitor/komari/utils/messageSender"
 )
+
+func SessionIdentifier(session string) string {
+	sum := sha256.Sum256([]byte(session))
+	return fmt.Sprintf("%x", sum[:8])
+}
+
+func DeleteSessionByIdentifier(identifier string) error {
+	db := dbcore.GetDBInstance()
+	var sessions []models.Session
+	if err := db.Find(&sessions).Error; err != nil {
+		return err
+	}
+	for _, session := range sessions {
+		if SessionIdentifier(session.Session) == identifier {
+			return DeleteSession(session.Session)
+		}
+	}
+	return nil
+}
 
 // GetAllSessions 获取所有会话
 func GetAllSessions() (sessions []models.Session, err error) {

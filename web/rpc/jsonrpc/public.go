@@ -72,10 +72,6 @@ func publicGetPublicSettings(ctx context.Context, _ *rpc.JsonRpcRequest) (any, *
 	if e != nil {
 		return nil, rpc.MakeError(rpc.InternalError, e.Error(), nil)
 	}
-	// 临时访问许可由 transport 层在 meta 标注；此处沿用原逻辑判断 temp_key。
-	if meta := rpc.MetaFromContext(ctx); meta != nil && meta.TempShareValid {
-		p["private_site"] = false
-	}
 	return p, nil
 }
 

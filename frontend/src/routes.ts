@@ -23,22 +23,7 @@ export const routes: RouteObject[] = [
 
     ],
   },
-  {
-    path: "/admin/database-migration",
-    element: React.createElement(
-      lazy(() => import("./pages/database_migration")),
-    ),
-  },
-  {
-    path: "/install",
-    element: React.createElement(lazy(() => import("./pages/install"))),
-  },
-  {
-    path: "/database-recovery",
-    element: React.createElement(
-      lazy(() => import("./pages/database_recovery")),
-    ),
-  },
+
   {
     path: "/admin",
     element: React.createElement(AdminLayout),
@@ -85,12 +70,6 @@ export const routes: RouteObject[] = [
             ),
           },
 
-          {
-            path: "custom",
-            element: React.createElement(
-              lazy(() => import("./pages/admin/settings/custom"))
-            ),
-          },
 
           {
             path: "notification",
@@ -106,12 +85,7 @@ export const routes: RouteObject[] = [
             ),
           },
 
-          {
-            path: "metrics",
-            element: React.createElement(
-              lazy(() => import("./pages/admin/settings/metrics"))
-            ),
-          },
+
         ],
       },
       {

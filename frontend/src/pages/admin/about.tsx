@@ -1,26 +1,13 @@
-import { useState, useEffect } from "react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-import "github-markdown-css/github-markdown.css";
-import Loading from "@/components/loading";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { SquareArrowOutUpRight } from "lucide-react";
 import { SegmentedControl } from "@radix-ui/themes";
 import { Apache2_LICENSE, MIT_LICENSE } from "@/utils/field";
 import { getEula } from "@/utils/eula";
 import { SettingCardCollapse } from "@/components/admin/SettingCard";
 
 export default function AboutPage() {
-  const [markdown, setMarkdown] = useState("");
   const { t, i18n } = useTranslation();
   const [view, setView] = useState("open_source");
-  useEffect(() => {
-    fetch(
-      "https://raw.githubusercontent.com/komari-monitor/komari/refs/heads/main/README.md"
-    )
-      .then((res) => res.text())
-      .then(setMarkdown);
-  }, []);
 
   const open_source_licenses = {
     "Apache-2.0 License": [
@@ -60,19 +47,16 @@ export default function AboutPage() {
       "@types/uuid",
       "class-variance-authority",
       "clsx",
-      "github-markdown-css",
       "http-proxy-middleware",
       "i18next",
-      "i18next-browser-languagedetector",
+
       "motion",
       "next-themes",
       "react",
       "react-dom",
       "react-i18next",
-      "react-markdown",
       "react-toastify",
       "recharts",
-      "remark-gfm",
       "sonner",
       "tailwind-merge",
       "tailwindcss",
@@ -80,10 +64,7 @@ export default function AboutPage() {
       "twemoji",
       "uuid",
       "vaul",
-      "@xterm/xterm",
-      "@xterm/addon-fit",
-      "@xterm/addon-search",
-      "@xterm/addon-web-links",
+
       "@eslint/js",
       "@types/lodash",
       "@types/react",
@@ -99,7 +80,7 @@ export default function AboutPage() {
       "typescript-eslint",
       "vite",
       "vite-plugin-pages",
-      "vite-plugin-pwa",
+
       "github.com/UserExistsError/conpty",
       "github.com/blang/semver",
       "github.com/creack/pty",
@@ -129,7 +110,7 @@ export default function AboutPage() {
         <SegmentedControl.Item value="eula">
           {t("eula.title")}
         </SegmentedControl.Item>
-        <SegmentedControl.Item value="readme">Readme</SegmentedControl.Item>
+
       </SegmentedControl.Root>
       {(() => {
         switch (view) {
@@ -178,30 +159,7 @@ export default function AboutPage() {
                 </div>
               </>
             );
-          case "readme":
-            return (
-              <>
-                <div className="km-about-changelog markdown-body border border-muted/20 rounded-md">
-                  {markdown ? (
-                    <ReactMarkdown
-                      remarkPlugins={[remarkGfm]}
-                      children={markdown}
-                    />
-                  ) : (
-                    <Loading />
-                  )}
-                </div>
-                <a
-                  href="https://github.com/komari-monitor/komari/blob/main/README.md"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex flex-row gap-2 text-sm items-center"
-                >
-                  {t("about.readme_open_in_new_tab")}
-                  <SquareArrowOutUpRight size="16"></SquareArrowOutUpRight>
-                </a>
-              </>
-            );
+
         }
       })()}
     </div>

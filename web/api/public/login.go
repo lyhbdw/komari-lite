@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"sync"
+	"time"
 
 	"github.com/komari-monitor/komari/database/accounts"
 	"github.com/komari-monitor/komari/database/auditlog"
@@ -21,6 +23,35 @@ type LoginRequest struct {
 }
 
 const sessionCookieMaxAge = 2592000
+
+const (
+	loginWindow       = 5 * time.Minute
+	loginMaxAttempts  = 8
+	loginMaxBodyBytes = 16 << 10
+)
+
+var loginLimiter = struct {
+	sync.Mutex
+	attempts map[string][]time.Time
+}{attempts: make(map[string][]time.Time)}
+
+func loginAllowed(key string, now time.Time) bool {
+	loginLimiter.Lock()
+	defer loginLimiter.Unlock()
+	cutoff := now.Add(-loginWindow)
+	entries := loginLimiter.attempts[key][:0]
+	for _, at := range loginLimiter.attempts[key] {
+		if at.After(cutoff) {
+			entries = append(entries, at)
+		}
+	}
+	if len(entries) >= loginMaxAttempts {
+		loginLimiter.attempts[key] = entries
+		return false
+	}
+	loginLimiter.attempts[key] = append(entries, now)
+	return true
+}
 
 func setSessionCookie(c *gin.Context, value string, maxAge int) {
 	http.SetCookie(c.Writer, &http.Cookie{
@@ -41,9 +72,17 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	bodyBytes, err := io.ReadAll(c.Request.Body)
+	if !loginAllowed(c.ClientIP(), time.Now()) {
+		api.RespondError(c, http.StatusTooManyRequests, "Too many login attempts")
+		return
+	}
+	bodyBytes, err := io.ReadAll(io.LimitReader(c.Request.Body, loginMaxBodyBytes+1))
 	if err != nil {
 		api.RespondError(c, http.StatusBadRequest, "Invalid request body: "+err.Error())
+		return
+	}
+	if len(bodyBytes) > loginMaxBodyBytes {
+		api.RespondError(c, http.StatusRequestEntityTooLarge, "Request body too large")
 		return
 	}
 	var data LoginRequest
@@ -54,6 +93,11 @@ func Login(c *gin.Context) {
 	}
 	if data.Username == "" || data.Password == "" {
 		api.RespondError(c, http.StatusBadRequest, "Invalid request body: Username and password are required")
+		return
+	}
+
+	if !loginAllowed(c.ClientIP()+"\x00"+data.Username, time.Now()) {
+		api.RespondError(c, http.StatusTooManyRequests, "Too many login attempts")
 		return
 	}
 
@@ -82,7 +126,7 @@ func Login(c *gin.Context) {
 	}
 	setSessionCookie(c, session, sessionCookieMaxAge)
 	auditlog.Log(c.ClientIP(), uuid, "logged in (password)", "login")
-	api.RespondSuccess(c, gin.H{"set-cookie": gin.H{"session_token": session}})
+	api.RespondSuccess(c, nil)
 }
 func Logout(c *gin.Context) {
 	session, _ := c.Cookie("session_token")

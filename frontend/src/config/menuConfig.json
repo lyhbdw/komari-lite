@@ -64,11 +64,7 @@
           "path": "/admin/settings/general",
           "icon": "Ellipsis"
         },
-        {
-          "labelKey": "settings.metrics.title",
-          "path": "/admin/settings/metrics",
-          "icon": "Database"
-        },
+
         {
           "labelKey": "logs.title",
           "path": "/admin/logs",

@@ -1,6 +1,6 @@
 import ThemeSwitch from "./ThemeSwitch";
 import ColorSwitch from "./ColorSwitch";
-import LanguageSwitch from "./Language";
+
 import LoginDialog from "./Login";
 import { IconButton } from "@radix-ui/themes";
 import { GitHubLogoIcon } from "@radix-ui/react-icons";
@@ -44,20 +44,14 @@ const NavBar = () => {
 
         <ThemeSwitch />
         <ColorSwitch />
-        <LanguageSwitch />
-        {publicInfo?.private_site && !document.cookie.includes("temp_key") ? (
-          <LoginDialog
-            autoOpen={
-              publicInfo?.private_site && !document.cookie.includes("temp_key")
-            }
-            info={t("common.private_site")}
-            onLoginSuccess={() => {
-              window.location.reload();
-            }}
-          />
-        ) : (
-          <LoginDialog />
-        )}
+
+        <LoginDialog
+          autoOpen={Boolean(publicInfo?.private_site)}
+          info={publicInfo?.private_site ? t("common.private_site") : undefined}
+          onLoginSuccess={() => {
+            window.location.reload();
+          }}
+        />
       </div>
     </nav>
   );

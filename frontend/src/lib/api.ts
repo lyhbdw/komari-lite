@@ -11,10 +11,7 @@ export interface SettingsResponse {
   cors_origin_check_enabled: boolean;
   geo_ip_enabled: boolean;
   geo_ip_provider: string;
-  o_auth_provider: string;
-  o_auth_enabled: boolean;
   ssrf_protection_enabled: boolean;
-  custom_head: string;
   metric_rollup_minute_retention_minutes?: number;
   metric_rollup_five_minute_retention_minutes?: number;
   metric_rollup_hour_retention_hours?: number;
@@ -23,54 +20,6 @@ export interface SettingsResponse {
   [key: string]: any;
 }
 
-type SettingsRestart = {
-  guidePath: string;
-};
-
-const migrationGuideStatusPath = "/api/admin/database-migration/auth";
-const migrationGuidePollInterval = 500;
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function settingsRestartFrom(responseData: unknown): SettingsRestart | undefined {
-  if (!isRecord(responseData) || !isRecord(responseData.data)) {
-    return undefined;
-  }
-
-  const { restart_required: restartRequired, guide_path: guidePath } =
-    responseData.data;
-  if (
-    restartRequired !== true ||
-    typeof guidePath !== "string" ||
-    !guidePath.startsWith("/") ||
-    guidePath.startsWith("//")
-  ) {
-    return undefined;
-  }
-  return { guidePath };
-}
-
-function waitForMigrationGuide(guidePath: string) {
-  const check = async () => {
-    try {
-      const response = await fetch(migrationGuideStatusPath, {
-        cache: "no-store",
-      });
-      const payload: unknown = await response.json();
-      if (response.ok && isRecord(payload) && payload.status === "success") {
-        window.location.replace(guidePath);
-        return;
-      }
-    } catch {
-      // The previous process may still be stopping or the replacement may not be ready.
-    }
-    window.setTimeout(check, migrationGuidePollInterval);
-  };
-
-  window.setTimeout(check, migrationGuidePollInterval);
-}
 
 /**
  * Fetch settings from the API
@@ -116,7 +65,7 @@ export async function getSettings(): Promise<SettingsResponse> {
  */
 export async function updateSettings(
   settings: Partial<SettingsResponse>
-): Promise<SettingsRestart | undefined> {
+): Promise<void> {
   const response = await fetch("/api/admin/settings", {
     method: "POST",
     headers: {
@@ -141,28 +90,20 @@ export async function updateSettings(
     throw new Error(message);
   }
 
-  let responseData: unknown;
   try {
-    responseData = await response.json();
+    await response.json();
   } catch {
-    return undefined;
+    return;
   }
-
-  const restart = settingsRestartFrom(responseData);
-  if (restart) {
-    waitForMigrationGuide(restart.guidePath);
-  }
-  return restart;
 }
+
 export async function updateSettingsWithToast(
   settings: Partial<SettingsResponse>,
   t: (key: string) => string
 ): Promise<void> {
   try {
-    const restart = await updateSettings(settings);
-    if (!restart) {
-      toast.success(t("settings.settings_saved"));
-    }
+    await updateSettings(settings);
+    toast.success(t("settings.settings_saved"));
   } catch (error) {
     toast.error(t("settings.settings_save_failed") + ": " + error);
     throw error;
@@ -180,7 +121,7 @@ export async function updateSingleSetting<K extends keyof SettingsResponse>(
   key: K,
   value: SettingsResponse[K],
   currentSettings: SettingsResponse
-): Promise<SettingsRestart | undefined> {
+): Promise<void> {
   const updatedSettings = { ...currentSettings, [key]: value };
   return updateSettings(updatedSettings);
 }
@@ -195,10 +136,7 @@ export function useSettings() {
     cors_origin_check_enabled: true,
     geo_ip_enabled: false,
     geo_ip_provider: "",
-    o_auth_provider: "",
-    o_auth_enabled: false,
     ssrf_protection_enabled: false,
-    custom_head: "",
     CreatedAt: "",
     UpdatedAt: "",
   });
@@ -232,11 +170,8 @@ export function useSettings() {
     value: SettingsResponse[K]
   ) => {
     try {
-      const restart = await updateSingleSetting(key, value, settings);
-      if (!restart) {
-        setSettings((prev) => ({ ...prev, [key]: value }));
-      }
-      return restart;
+      await updateSingleSetting(key, value, settings);
+      setSettings((prev) => ({ ...prev, [key]: value }));
     } catch (err) {
       setError(
         err instanceof Error ? err.message : `Failed to update ${String(key)}`
@@ -251,11 +186,8 @@ export function useSettings() {
   ) => {
     try {
       const updatedSettings = { ...settings, ...newSettings };
-      const restart = await updateSettings(updatedSettings);
-      if (!restart) {
-        setSettings(updatedSettings);
-      }
-      return restart;
+      await updateSettings(updatedSettings);
+      setSettings(updatedSettings);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Failed to update settings"

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/json"
+	"fmt"
 	logger "github.com/komari-monitor/komari/utils/log"
 	"io"
 	"net/http"
@@ -12,14 +13,14 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
-	"github.com/komari-monitor/komari/database/clients"
-
 	v2 "github.com/komari-monitor/komari/protocol/v2"
 	"github.com/komari-monitor/komari/utils/notifier"
 	agent_runtime "github.com/komari-monitor/komari/web/agent"
 	"github.com/komari-monitor/komari/web/api"
 	"github.com/komari-monitor/komari/web/connection"
 )
+
+const maxAgentBodyBytes int64 = 4 << 20
 
 func readMaybeCompressedBody(r *http.Request) ([]byte, error) {
 	defer r.Body.Close()
@@ -29,9 +30,20 @@ func readMaybeCompressedBody(r *http.Request) ([]byte, error) {
 			return nil, err
 		}
 		defer zr.Close()
-		return io.ReadAll(zr)
+		return readLimited(zr, maxAgentBodyBytes)
 	}
-	return io.ReadAll(r.Body)
+	return readLimited(r.Body, maxAgentBodyBytes)
+}
+
+func readLimited(r io.Reader, limit int64) ([]byte, error) {
+	data, err := io.ReadAll(io.LimitReader(r, limit+1))
+	if err != nil {
+		return nil, err
+	}
+	if int64(len(data)) > limit {
+		return nil, fmt.Errorf("request body exceeds %d bytes", limit)
+	}
+	return data, nil
 }
 
 func bindV2Params[T any](raw any, target *T) error {
@@ -133,6 +145,7 @@ func WebSocketV2RPC(c *gin.Context) {
 		return
 	}
 	defer conn.Close()
+	conn.GetConn().SetReadLimit(maxAgentBodyBytes)
 
 	uuid, ok := clientUUIDFromContext(c)
 	if !ok {
@@ -203,12 +216,7 @@ func clientUUIDFromContext(c *gin.Context) (string, bool) {
 			return uuid, true
 		}
 	}
-	token := c.Query("token")
-	if token == "" {
-		return "", false
-	}
-	uuid, err := clients.GetClientUUIDByToken(token)
-	return uuid, err == nil && uuid != ""
+	return "", false
 }
 
 func notifierOnline(uuid string, connID int64) {

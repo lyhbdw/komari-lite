@@ -1,11 +1,12 @@
 package client
 
 import (
-	"net"
-
+	"fmt"
 	"github.com/komari-monitor/komari/database/clients"
 	"github.com/komari-monitor/komari/internal/config"
 	"github.com/komari-monitor/komari/utils/geoip"
+	"net"
+	"strings"
 )
 
 func getClientIPType(ip net.IP) int {
@@ -21,10 +22,49 @@ func getClientIPType(ip net.IP) int {
 }
 
 func saveClientBasicInfo(info map[string]interface{}, uuid string, fallbackIP string) error {
-	info["uuid"] = uuid
-	applyFallbackClientIP(info, fallbackIP)
-	appendClientRegionFromGeoIP(info)
-	return clients.SaveClientInfo(info)
+	allowed := map[string]interface{}{}
+	stringFields := map[string]int{
+		"cpu_name": 100, "virtualization": 50, "arch": 50, "os": 100,
+		"kernel_version": 100, "gpu_name": 100, "ipv4": 100, "ipv6": 100, "version": 100,
+	}
+	for key, maxLen := range stringFields {
+		if value, ok := info[key]; ok {
+			text, ok := value.(string)
+			if !ok || len(text) > maxLen {
+				return fmt.Errorf("invalid basic info field %s", key)
+			}
+			allowed[key] = strings.TrimSpace(text)
+		}
+	}
+	for _, key := range []string{"cpu_cores", "cpu_physical_cores", "mem_total", "swap_total", "disk_total"} {
+		if value, ok := info[key]; ok {
+			number, ok := numericBasicInfo(value)
+			if !ok || number < 0 {
+				return fmt.Errorf("invalid basic info field %s", key)
+			}
+			allowed[key] = number
+		}
+	}
+	allowed["uuid"] = uuid
+	applyFallbackClientIP(allowed, fallbackIP)
+	appendClientRegionFromGeoIP(allowed)
+	return clients.SaveClientInfo(allowed)
+}
+
+func numericBasicInfo(value interface{}) (int64, bool) {
+	switch number := value.(type) {
+	case float64:
+		if number != float64(int64(number)) || number > float64(^uint64(0)>>1) {
+			return 0, false
+		}
+		return int64(number), true
+	case int:
+		return int64(number), true
+	case int64:
+		return number, true
+	default:
+		return 0, false
+	}
 }
 
 func applyFallbackClientIP(info map[string]interface{}, fallbackIP string) {

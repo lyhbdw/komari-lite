@@ -1,24 +1,14 @@
 package v2
 
-import (
-	"encoding/json"
-	"time"
-)
+import "time"
 
 const (
 	Version               = "2.0"
 	MethodAgentReport     = "agent.report"
 	MethodAgentBasicInfo  = "agent.basicInfo"
 	MethodAgentPingResult = "agent.pingResult"
-	MethodAgentTaskResult = "agent.taskResult"
-	MethodAgentExec       = "agent.exec"
 	MethodAgentPing       = "agent.ping"
-	MethodAgentMessage    = "agent.message"
-	MethodAgentEvent      = "agent.event"
-	MethodAgentTerminal   = "agent.terminal.request"
 	MethodAgentPull       = "agent.pull"
-	MethodAgentFile       = "agent.file"
-	MethodAgentFileResult = "agent.file.result"
 )
 
 type Request struct {
@@ -52,13 +42,6 @@ type RPCError struct {
 type ReportParams struct {
 	Report      Report   `json:"report"`
 	AckEventIDs []string `json:"ack_event_ids,omitempty"`
-}
-
-type Message struct {
-	Type      string `json:"type"`
-	Content   string `json:"content"`
-	Sender    string `json:"sender"`
-	Timestamp int64  `json:"timestamp"`
 }
 
 type IPAddress struct {
@@ -143,60 +126,14 @@ type PingResultParams struct {
 	FinishedAt time.Time `json:"finished_at"`
 }
 
-type TaskResultParams struct {
-	TaskID     string    `json:"task_id"`
-	Result     string    `json:"result"`
-	ExitCode   int       `json:"exit_code"`
-	FinishedAt time.Time `json:"finished_at"`
-}
-
 type PullParams struct {
-	Capabilities []string `json:"capabilities,omitempty"`
-	AckEventIDs  []string `json:"ack_event_ids,omitempty"`
-	LastEventID  string   `json:"last_event_id,omitempty"`
-}
-
-type ExecParams struct {
-	TaskID  string `json:"task_id"`
-	Command string `json:"command"`
+	AckEventIDs []string `json:"ack_event_ids,omitempty"`
 }
 
 type PingParams struct {
 	TaskID uint   `json:"ping_task_id"`
 	Type   string `json:"ping_type"`
 	Target string `json:"ping_target"`
-}
-
-type MessageParams struct {
-	Type    string `json:"type"`
-	Message string `json:"message"`
-	Data    any    `json:"data,omitempty"`
-}
-
-type EventParams struct {
-	Type string `json:"type"`
-	Data any    `json:"data,omitempty"`
-}
-
-type TerminalRequestParams struct {
-	RequestID string `json:"request_id"`
-}
-
-// FileOperation is metadata-only. File contents travel through the dedicated
-// HTTP transfer endpoint rather than through JSON-RPC.
-type FileOperation struct {
-	UUID      string         `json:"uuid"`
-	RequestID string         `json:"request_id"`
-	Op        string         `json:"op"`
-	Args      map[string]any `json:"args,omitempty"`
-}
-
-type FileResult struct {
-	UUID      string          `json:"uuid"`
-	RequestID string          `json:"request_id"`
-	OK        bool            `json:"ok"`
-	Result    json.RawMessage `json:"result,omitempty"`
-	Error     string          `json:"error,omitempty"`
 }
 
 func Success(id any, result any) Response {

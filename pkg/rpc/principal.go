@@ -1,7 +1,7 @@
 package rpc
 
 // principal.go
-// 调用主体(Principal)定义。区分不同主体类型(匿名/agent/用户/API Key),
+// 调用主体(Principal)定义。区分不同主体类型(匿名/agent/用户),
 // 替代原先的单一 group string,使身份信息更结构化、便于后续能力模型扩展。
 
 // PrincipalType 调用主体类型
@@ -14,8 +14,6 @@ const (
 	PrincipalAgent
 	// PrincipalUser 通过 session cookie 认证的管理员用户
 	PrincipalUser
-	// PrincipalAPIKey 通过 API Key 认证的调用方
-	PrincipalAPIKey
 )
 
 // Principal 调用主体,携带身份信息和能力。
@@ -26,12 +24,10 @@ type Principal struct {
 	UserUUID string
 	// ClientUUID agent 客户端 UUID(PrincipalAgent 时存在)
 	ClientUUID string
-	// IsAPIKey 是否为 API Key 调用(快速判定,等价于 Type==PrincipalAPIKey)
-	IsAPIKey bool
 	// Roles 角色/能力集。默认由 Type 推导:
 	//   - PrincipalAnonymous → [RoleGuest]
 	//   - PrincipalAgent → [RoleClient]
-	//   - PrincipalUser / PrincipalAPIKey → [RoleAdmin]
+	//   - PrincipalUser → [RoleAdmin]
 	// 未来可扩展为多角色(只读 admin / API Key scope 等)。
 	Roles []string
 }
@@ -58,15 +54,6 @@ func NewUserPrincipal(userUUID string) *Principal {
 	return &Principal{
 		Type:     PrincipalUser,
 		UserUUID: userUUID,
-		Roles:    []string{RoleAdmin},
-	}
-}
-
-// NewAPIKeyPrincipal 创建 API Key 调用主体
-func NewAPIKeyPrincipal() *Principal {
-	return &Principal{
-		Type:     PrincipalAPIKey,
-		IsAPIKey: true,
 		Roles:    []string{RoleAdmin},
 	}
 }
@@ -103,7 +90,9 @@ func (p *Principal) HasRole(role string) bool {
 
 // PrincipalFromRole 按角色构造一个最小主体,用于内部调用(OnInternalRequest)等
 // 仅知道角色、无具体身份信息的场景。Type 按角色合理推断:
-//   guest → Anonymous, client → Agent, admin → User。
+//
+//	guest → Anonymous, client → Agent, admin → User。
+//
 // 注意:此构造不携带 UUID/token,仅用于权限判定与兜底,不应据此做审计 actor 归属。
 func PrincipalFromRole(role string) *Principal {
 	switch role {
@@ -115,4 +104,3 @@ func PrincipalFromRole(role string) *Principal {
 		return NewAnonymousPrincipal()
 	}
 }
-

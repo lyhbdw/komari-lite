@@ -800,14 +800,9 @@ detect_arch() {
         aarch64)
             echo "arm64"
             ;;
-        i386|i686)
-            echo "386"
-            ;;
-        riscv64)
-            echo "riscv64"
-            ;;
-        loongarch64|loong64)
-            echo "loong64"
+        i386|i686|riscv64|loongarch64|loong64)
+            log_error "$(msg unsupported_arch "$arch")"
+            exit 1
             ;;
         *)
             log_error "$(msg unsupported_arch "$arch")"

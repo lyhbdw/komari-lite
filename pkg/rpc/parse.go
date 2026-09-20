@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 )
 
+const maxJSONRPCBatchRequests = 32
+
 // ParseRequest 解析单个 JSON-RPC 请求。返回请求与错误（解析层面）。
 func ParseRequest(data []byte) (*JsonRpcRequest, *JsonRpcError) {
 	requests, err := ParseRequests(data)
@@ -42,6 +44,9 @@ func ParseRequests(data []byte) ([]*JsonRpcRequest, *JsonRpcError) {
 		}
 		if len(arr) == 0 {
 			return nil, &JsonRpcError{Code: InvalidRequest, Message: "empty batch"}
+		}
+		if len(arr) > maxJSONRPCBatchRequests {
+			return nil, &JsonRpcError{Code: InvalidRequest, Message: "batch too large"}
 		}
 		res := make([]*JsonRpcRequest, 0, len(arr))
 		for i := range arr {

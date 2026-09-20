@@ -3,6 +3,7 @@ package geoip
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"time"
@@ -54,7 +55,7 @@ func (s *GeoJSService) GetGeoInfo(ip net.IP) (*GeoInfo, error) {
 	}
 
 	var apiResp geoJSResponse
-	if err := json.NewDecoder(resp.Body).Decode(&apiResp); err != nil {
+	if err := json.NewDecoder(io.LimitReader(resp.Body, 64<<10)).Decode(&apiResp); err != nil {
 		return nil, fmt.Errorf("failed to decode geojs.io response: %w", err)
 	}
 

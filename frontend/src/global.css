@@ -167,68 +167,12 @@ body, * {
   scrollbar-color: rgba(80,80,80,0.4) transparent;
 }
 
-.km-terminal-session .xterm-scrollable-element > .scrollbar {
-  width: 4px !important;
-  background: transparent !important;
-}
-
-.km-terminal-session .xterm-viewport {
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-
-.km-terminal-session .xterm-viewport::-webkit-scrollbar {
-  display: none;
-}
-
-.km-terminal-session .xterm-decoration-overview-ruler {
-  display: none !important;
-  visibility: hidden !important;
-  background: transparent !important;
-}
-
-.km-terminal-session .xterm-scrollable-element > .scrollbar > .track {
-  width: 4px !important;
-}
-
-.km-terminal-session .xterm-scrollable-element > .scrollbar > .slider {
-  width: 4px !important;
-  border-radius: 2px;
-}
-
-.km-terminal-session .xterm-scrollable-element > .scrollbar > .scra,
-.km-terminal-session .xterm-scrollable-element > .scrollbar > .arrow-background {
-  display: none !important;
-}
-
-/* 主题/插件配置页顶部 Tab 栏：覆盖 Radix 默认隐藏滚动条，窄屏时可横向滚动 */
-.km-config-form-tabs-list {
-  scrollbar-width: thin;
-  scrollbar-color: var(--gray-a6) transparent;
-}
-.km-config-form-tabs-list::-webkit-scrollbar {
-  height: 6px;
-}
-.km-config-form-tabs-list::-webkit-scrollbar-thumb {
-  border-radius: 9999px;
-  background-color: var(--gray-a6);
-}
-.km-config-form-tabs-list::-webkit-scrollbar-track {
-  background: transparent;
-}
-.km-config-form-tabs-list::-webkit-scrollbar-button {
-  display: none;
-}
+/* Shared menu and overlay styling. */
 
 .km-ui-dropdown-content,
 .km-ui-dropdown-content ~ *,
 .z-\[100000\] {
   z-index: 100000;
-}
-
-.km-file-editor ~ [data-radix-popper-content-wrapper],
-.km-file-editor ~ .rt-DialogOverlay {
-  z-index: 20 !important;
 }
 
 [data-km-toaster-portal] {
@@ -254,8 +198,6 @@ body, * {
   z-index: 2147483646 !important;
 }
 
-.km-file-editor,
-.km-file-editor [data-radix-popper-content-wrapper],
 [data-radix-popper-content-wrapper] .rt-PopoverContent,
 [role="menu"] {
   font-family: var(
@@ -264,8 +206,4 @@ body, * {
     "Noto Sans SC",
     monospace
   );
-}
-
-.km-file-editor {
-  z-index: 10;
 }

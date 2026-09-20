@@ -24,7 +24,6 @@ import (
 	"github.com/komari-monitor/komari/utils/messageSender"
 	"github.com/komari-monitor/komari/utils/notifier"
 	"github.com/komari-monitor/komari/web/api"
-	recoveryweb "github.com/komari-monitor/komari/web/recovery"
 	"github.com/komari-monitor/komari/web/router"
 	"github.com/komari-monitor/komari/web/security"
 )
@@ -72,10 +71,6 @@ func (a *App) BuildRouter() error {
 	cors := security.NewCorsController(a.settings.CorsOriginCheckEnabled, a.settings.CorsAllowedOrigins)
 	r.Use(cors.Middleware(), api.IdentityMiddleware(), api.PrivateSiteMiddleware(), noStoreAPIResponses())
 
-	// The recovery UI belongs only to its temporary restricted listener.
-	r.GET(recoveryweb.PagePath, func(c *gin.Context) {
-		c.Redirect(http.StatusTemporaryRedirect, "/")
-	})
 	router.Register(r)
 
 	a.registerReloadHandlers(cors)
@@ -176,13 +171,7 @@ func registerScheduledWork() {
 	}
 }
 
-const taskResultRetentionDays = 30
-
 func cleanupScheduledData() {
-	before := time.Now().UTC().Add(-24 * time.Hour * taskResultRetentionDays)
-	if err := tasks.ClearTaskResultsByTimeBefore(before); err != nil {
-		logger.Errorf("server", "Failed to clean expired task results: %v", err)
-	}
 	auditlog.RemoveOldLogs()
 	accounts.RemoveExpiredSessions()
 }

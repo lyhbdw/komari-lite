@@ -53,7 +53,7 @@ func init() {
 	RegisterWithGroupAndMeta("editSettings", rpc.RoleAdmin, adminEditSettings, &rpc.MethodMeta{
 		Name:    "admin:editSettings",
 		Summary: "Update settings (partial)",
-		Returns: "null | { restart_required: true, guide_path: string }",
+		Returns: "null | { restart_required: true }",
 	})
 	RegisterWithGroupAndMeta("clearAllRecords", rpc.RoleAdmin, adminClearAllRecords, &rpc.MethodMeta{
 		Name:    "admin:clearAllRecords",
@@ -74,20 +74,35 @@ func adminGetSessions(ctx context.Context, _ *rpc.JsonRpcRequest) (any, *rpc.Jso
 	}
 	current := ""
 	if meta := rpc.MetaFromContext(ctx); meta != nil {
-		current = meta.SessionToken
+		current = accounts.SessionIdentifier(meta.SessionToken)
 	}
-	return map[string]any{"current": current, "data": ss}, nil
+	data := make([]map[string]any, 0, len(ss))
+	for _, session := range ss {
+		data = append(data, map[string]any{
+			"id":                accounts.SessionIdentifier(session.Session),
+			"uuid":              session.UUID,
+			"user_agent":        session.UserAgent,
+			"ip":                session.Ip,
+			"login_method":      session.LoginMethod,
+			"latest_online":     session.LatestOnline,
+			"latest_ip":         session.LatestIp,
+			"latest_user_agent": session.LatestUserAgent,
+			"expires":           session.Expires,
+			"created_at":        session.CreatedAt,
+		})
+	}
+	return map[string]any{"current": current, "data": data}, nil
 }
 
 func adminDeleteSession(ctx context.Context, req *rpc.JsonRpcRequest) (any, *rpc.JsonRpcError) {
 	var params struct {
-		Session string `json:"session"`
+		ID string `json:"id"`
 	}
 	req.BindParams(&params)
-	if params.Session == "" {
-		return nil, rpc.MakeError(rpc.InvalidParams, "session is required", nil)
+	if params.ID == "" {
+		return nil, rpc.MakeError(rpc.InvalidParams, "id is required", nil)
 	}
-	if err := accounts.DeleteSession(params.Session); err != nil {
+	if err := accounts.DeleteSessionByIdentifier(params.ID); err != nil {
 		return nil, rpc.MakeError(rpc.InternalError, "Failed to delete session: "+err.Error(), nil)
 	}
 	actor, ip := auditActor(ctx)
@@ -192,7 +207,6 @@ func adminEditSettings(ctx context.Context, req *rpc.JsonRpcRequest) (any, *rpc.
 				lifecycle.RequestRestart(lifecycle.RestartForMetricStoreStructureUpgrade)
 				return map[string]any{
 					"restart_required": true,
-					"guide_path":       "/admin/database-migration",
 				}, nil
 			}
 			return nil, rpc.MakeError(rpc.InternalError,

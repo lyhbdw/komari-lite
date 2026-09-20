@@ -32,6 +32,8 @@ type bindConfig struct {
 	queryParams []string // 合并到参数对象的查询参数名
 }
 
+const maxBridgeBodyBytes int64 = 1 << 20
+
 // BindOption 配置 Bind 行为。
 type BindOption func(*bindConfig)
 
@@ -79,7 +81,10 @@ func Bind(method string, opts ...BindOption) gin.HandlerFunc {
 func assembleParams(c *gin.Context, cfg *bindConfig) (any, bool) {
 	var bodyVal any
 	if c.Request.Body != nil {
-		if raw, err := io.ReadAll(c.Request.Body); err == nil && len(raw) > 0 {
+		if raw, err := io.ReadAll(io.LimitReader(c.Request.Body, maxBridgeBodyBytes+1)); err == nil && len(raw) > 0 {
+			if int64(len(raw)) > maxBridgeBodyBytes {
+				return nil, false
+			}
 			if err := json.Unmarshal(raw, &bodyVal); err != nil {
 				return nil, false
 			}

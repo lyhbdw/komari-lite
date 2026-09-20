@@ -1,13 +1,9 @@
 package api
 
 import (
-	"bytes"
 	"database/sql"
-	"encoding/json"
-	"io"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/komari-monitor/komari/database/accounts"
@@ -25,8 +21,8 @@ const (
 
 // IdentityMiddleware 统一身份识别中间件，在路由栈最外层运行。
 // 负责识别当前请求者身份（Admin / Client / Guest），并写入 Context。
-// 身份识别统一委托给 IdentifyPrincipal;同时保留旧的 c.Set 键(role/uuid/
-// api_key/session/client_uuid)以兼容现有 handler 与中间件。
+// 身份识别统一委托给 IdentifyPrincipal，同时保留现有 handler 使用的
+// role/uuid/session/client_uuid 字段。
 func IdentityMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		p := IdentifyPrincipal(c)
@@ -35,11 +31,6 @@ func IdentityMiddleware() gin.HandlerFunc {
 		// 写入兼容字段。
 		c.Set("role", p.PrimaryRole())
 		switch p.Type {
-		case rpc.PrincipalAPIKey:
-			// 旧逻辑:API Key 时记录裸 key 与固定占位 uuid。
-			apiKey := c.GetHeader("Authorization")
-			c.Set("api_key", apiKey[len("Bearer "):])
-			c.Set("uuid", "00000000-0000-0000-0000-000000000000")
 		case rpc.PrincipalUser:
 			if session, err := c.Cookie("session_token"); err == nil && session != "" {
 				c.Set("session", session)
@@ -134,66 +125,26 @@ func PrivateSiteMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		// 临时访问许可
-		if hasTempAccess(c) {
-			c.Next()
-			return
-		}
-
 		RespondError(c, http.StatusUnauthorized, "Private site is enabled, please login first.")
 		c.Abort()
 	}
 }
 
-func hasTempAccess(c *gin.Context) bool {
-	tempKey, err := c.Cookie("temp_key")
-	if err != nil {
-		return false
-	}
-	expireAt, err := config.GetAs[int64]("tempory_share_token_expire_at", 0)
-	if err != nil {
-		return false
-	}
-	allowKey, err := config.GetAs[string]("tempory_share_token", "")
-	if err != nil {
-		return false
-	}
-	if allowKey == "" || tempKey != allowKey {
-		return false
-	}
-	return expireAt >= time.Now().Unix()
+func extractClientToken(c *gin.Context) string {
+	return extractClientTokenFromRequest(c.Request)
 }
 
-func extractClientToken(c *gin.Context) string {
-	token := c.Query("token")
-	if token != "" {
-		return token
+func extractClientTokenFromRequest(r *http.Request) string {
+	const prefix = "Bearer "
+	authorization := strings.TrimSpace(r.Header.Get("Authorization"))
+	if !strings.HasPrefix(authorization, prefix) {
+		return ""
 	}
-	// rpc2 约定:agent 经 ?Authorization=<token> 传入 client token。
-	if token := c.Query("Authorization"); token != "" {
-		return token
+	token := strings.TrimSpace(strings.TrimPrefix(authorization, prefix))
+	if token == "" || strings.ContainsAny(token, " 	\r\n") {
+		return ""
 	}
-
-	if c.Request.Method != http.MethodGet {
-		bodyBytes, err := io.ReadAll(c.Request.Body)
-		if err != nil {
-			return ""
-		}
-		c.Request.Body = io.NopCloser(bytes.NewReader(bodyBytes))
-
-		var bodyMap map[string]interface{}
-		if len(bodyBytes) > 0 {
-			if err := json.Unmarshal(bodyBytes, &bodyMap); err == nil {
-				if tokenVal, exists := bodyMap["token"]; exists {
-					if str, ok := tokenVal.(string); ok && str != "" {
-						return str
-					}
-				}
-			}
-		}
-	}
-
-	return ""
+	return token
 }
 
 func checkTokenAndGetUUID(token string) (string, error) {
@@ -209,16 +160,4 @@ func checkTokenAndGetUUID(token string) (string, error) {
 		return "", err
 	}
 	return uuid, nil
-}
-
-func isApiKeyValid(apiKey string) bool {
-	apiKeyConfig, err := config.GetAs[string](config.ApiKeyKey, "")
-	if err != nil {
-		return false
-	}
-
-	if apiKeyConfig == "" || len(apiKeyConfig) < 12 {
-		return false
-	}
-	return apiKey == "Bearer "+apiKeyConfig
 }

@@ -20,33 +20,13 @@ import { useRoutes } from "react-router-dom";
 import { routes } from "./routes";
 import Loading from "./components/loading";
 import { PublicInfoProvider } from "./contexts/PublicInfoContext";
-import { PWAInstallPrompt } from "./components/PWAInstallPrompt";
-import { PWAUpdatePrompt } from "./components/PWAUpdatePrompt";
-import { OfflineIndicator } from "./components/OfflineIndicator";
+
+
 import { Toaster } from "./components/ui/sonner";
 import { RPC2Provider } from "./contexts/RPC2Context";
 import { NodeListProvider } from "./contexts/NodeListContext";
 const App = () => {
-  const restrictedPath = window.location.pathname.replace(/\/$/, "");
-  const isRestrictedGuideRoute = [
-    "/admin/database-migration",
-    "/install",
-    "/database-recovery",
-  ].includes(restrictedPath);
-  React.useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const tempKey = params.get("temp_key");
 
-    if (tempKey) {
-      document.cookie = `temp_key=${tempKey}; path=/; max-age=${60 * 60 * 24 * 365 * 100}`;
-      params.delete("temp_key");
-      window.history.replaceState(
-        {},
-        document.title,
-        `${window.location.pathname}${params.toString() ? "?" + params.toString() : ""}`,
-      );
-    }
-  }, []);
   const [appearance, setAppearance] = useLocalStorage<Appearance>(
     "appearance",
     THEME_DEFAULTS.appearance,
@@ -87,24 +67,14 @@ const App = () => {
             minHeight: "100vh",
           }}
         >
-          {isRestrictedGuideRoute ? (
-            <>
-              <Toaster />
-              {routing}
-            </>
-          ) : (
-            <RPC2Provider>
-              <PublicInfoProvider>
-                <NodeListProvider>
-                  <Toaster />
-                  <OfflineIndicator />
-                  {routing}
-                  <PWAInstallPrompt />
-                  <PWAUpdatePrompt />
-                </NodeListProvider>
-              </PublicInfoProvider>
-            </RPC2Provider>
-          )}
+          <RPC2Provider>
+            <PublicInfoProvider>
+              <NodeListProvider>
+                <Toaster />
+                {routing}
+              </NodeListProvider>
+            </PublicInfoProvider>
+          </RPC2Provider>
         </Theme>
       </ThemeContext.Provider>
     </Suspense>

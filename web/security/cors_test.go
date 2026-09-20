@@ -59,25 +59,6 @@ func TestCorsMiddlewareValidatesAPIOrigins(t *testing.T) {
 	}
 }
 
-func TestCorsMiddlewareAllowsAPIKeyRequestsFromAnyOrigin(t *testing.T) {
-	setupCORSConfigDB(t, "123456789012")
-	router := setupCORSRouter(true, "")
-
-	request := httptest.NewRequest(http.MethodGet, "/api/ping", nil)
-	request.Host = "api.example"
-	request.Header.Set("Origin", "https://evil.example")
-	request.Header.Set("Authorization", "Bearer 123456789012")
-	response := httptest.NewRecorder()
-	router.ServeHTTP(response, request)
-
-	if response.Code != http.StatusOK {
-		t.Fatalf("status = %d, want %d", response.Code, http.StatusOK)
-	}
-	if got := response.Header().Get("Access-Control-Allow-Origin"); got != "https://evil.example" {
-		t.Fatalf("Access-Control-Allow-Origin = %q, want %q", got, "https://evil.example")
-	}
-}
-
 func TestCorsMiddlewareHandlesAPIPreflight(t *testing.T) {
 	setupCORSConfigDB(t, "")
 	router := setupCORSRouter(true, "https://allowed.example")
@@ -96,7 +77,7 @@ func TestCorsMiddlewareHandlesAPIPreflight(t *testing.T) {
 	}
 }
 
-func TestCorsMiddlewareAllowsAuthorizationPreflightFromAnyOrigin(t *testing.T) {
+func TestCorsMiddlewareRejectsAuthorizationPreflightFromUnknownOrigin(t *testing.T) {
 	setupCORSConfigDB(t, "")
 	router := setupCORSRouter(true, "")
 
@@ -107,11 +88,11 @@ func TestCorsMiddlewareAllowsAuthorizationPreflightFromAnyOrigin(t *testing.T) {
 	response := httptest.NewRecorder()
 	router.ServeHTTP(response, request)
 
-	if response.Code != http.StatusNoContent {
-		t.Fatalf("status = %d, want %d", response.Code, http.StatusNoContent)
+	if response.Code != http.StatusForbidden {
+		t.Fatalf("status = %d, want %d", response.Code, http.StatusForbidden)
 	}
-	if got := response.Header().Get("Access-Control-Allow-Origin"); got != "https://evil.example" {
-		t.Fatalf("Access-Control-Allow-Origin = %q, want %q", got, "https://evil.example")
+	if got := response.Header().Get("Access-Control-Allow-Origin"); got != "" {
+		t.Fatalf("Access-Control-Allow-Origin = %q, want empty", got)
 	}
 	if got := response.Header().Get("Access-Control-Allow-Credentials"); got != "" {
 		t.Fatalf("Access-Control-Allow-Credentials = %q, want empty", got)
@@ -157,7 +138,7 @@ func setupCORSRouter(enabled bool, allowlist string) *gin.Engine {
 	return router
 }
 
-func setupCORSConfigDB(t *testing.T, apiKey string) {
+func setupCORSConfigDB(t *testing.T, _ string) {
 	t.Helper()
 
 	name := strings.NewReplacer("/", "_", " ", "_").Replace(t.Name())
@@ -175,11 +156,6 @@ func setupCORSConfigDB(t *testing.T, apiKey string) {
 	})
 
 	config.SetDb(db)
-	if apiKey != "" {
-		if err := config.Set(config.ApiKeyKey, apiKey); err != nil {
-			t.Fatalf("set api key: %v", err)
-		}
-	}
 }
 
 func performCORSRequest(handler http.Handler, method, path, host, origin string) *httptest.ResponseRecorder {

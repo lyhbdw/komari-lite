@@ -3,6 +3,7 @@ package api
 import (
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/komari-monitor/komari/database/accounts"
@@ -25,6 +26,8 @@ func GetClients(c *gin.Context) {
 		return
 	}
 	defer conn.Close()
+	conn.GetConn().SetReadLimit(1 << 20)
+	_ = conn.SetReadDeadline(time.Now().Add(60 * time.Second))
 
 	// 初始化用户信息
 	var (
@@ -63,6 +66,7 @@ func GetClients(c *gin.Context) {
 		if err != nil {
 			return
 		}
+		_ = conn.SetReadDeadline(time.Now().Add(60 * time.Second))
 		message := string(data)
 
 		uuID := ""

@@ -9,7 +9,6 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/komari-monitor/komari/internal/config"
@@ -141,10 +140,9 @@ func static(r *gin.RouterGroup, noRoute func(handlers ...gin.HandlerFunc), force
 	getConfig := func() map[string]any {
 		cfg, _ := config.GetMany(map[string]any{
 			config.DescriptionKey: "A simple server monitor tool.",
-			config.CustomHeadKey:  "",
-			config.CustomBodyKey:  "",
-			config.SitenameKey:    "Komari Monitor",
-			config.ThemeKey:       DefaultTheme,
+
+			config.SitenameKey: "Komari Monitor",
+			config.ThemeKey:    DefaultTheme,
 		})
 		return cfg
 	}
@@ -239,8 +237,6 @@ func static(r *gin.RouterGroup, noRoute func(handlers ...gin.HandlerFunc), force
 		replacer := strings.NewReplacer(
 			"<title>Komari Monitor</title>", "<title>"+cfg[config.SitenameKey].(string)+"</title>",
 			"A simple server monitor tool.", cfg[config.DescriptionKey].(string),
-			"</head>", cfg[config.CustomHeadKey].(string)+"</head>",
-			"</body>", cfg[config.CustomBodyKey].(string)+"</body>",
 		)
 
 		c.Data(http.StatusOK, "text/html; charset=utf-8", []byte(replacer.Replace(htmlStr)))
@@ -303,42 +299,6 @@ func static(r *gin.RouterGroup, noRoute func(handlers ...gin.HandlerFunc), force
 			c.Status(http.StatusNotFound)
 			return
 		}
-		//
-		func() {
-			tempKey := c.Query("temp_key")
-			if tempKey == "" {
-				return
-			}
-
-			tempKeyExpireTime, err := config.GetAs[int64]("tempory_share_token_expire_at", 0)
-			if err != nil {
-				return
-			}
-			allowTempKey, err := config.GetAs[string]("tempory_share_token", "")
-			if err != nil {
-				return
-			}
-
-			if allowTempKey == "" || tempKey != allowTempKey {
-				return
-			}
-			now := time.Now().Unix()
-			if tempKeyExpireTime < now {
-				return
-			}
-			expireSeconds := int(tempKeyExpireTime - now)
-			if expireSeconds > 0 {
-				c.SetCookie(
-					"temp_key",    // key
-					tempKey,       // value
-					expireSeconds, // maxAge（秒）
-					"/",           // path
-					"",            // domain
-					false,         // secure
-					false,         // httpOnly
-				)
-			}
-		}()
 		reqPath := c.Request.URL.Path
 		cfg := getConfig()
 		currentTheme := cfg[config.ThemeKey].(string)

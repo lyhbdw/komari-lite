@@ -107,7 +107,7 @@ func SendTextMessage(message string, title string) error {
 }
 
 // SendNotification 是通知发送的统一实现：解析事件中的客户端 UUID（外部传入可只含
-// UUID 字段）后委托 SendEvent。内部调用与 admin:sendNotification RPC 共用此实现。
+// UUID 字段）后委托 SendEvent。
 func SendNotification(event models.EventMessage) error {
 	if len(event.Clients) > 0 {
 		eventClients := make([]models.Client, 0, len(event.Clients))

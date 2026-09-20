@@ -2,12 +2,11 @@ package jsonrpc
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/komari-monitor/komari/database/dbcore"
 	"github.com/komari-monitor/komari/database/models"
 	"github.com/komari-monitor/komari/pkg/rpc"
-	"github.com/komari-monitor/komari/utils/messageSender"
+
 	"gorm.io/gorm/clause"
 )
 
@@ -20,26 +19,6 @@ func init() {
 	reg("editOfflineNotification", adminEditOfflineNotification, "Edit offline notifications")
 	reg("enableOfflineNotification", adminEnableOfflineNotification, "Enable offline notifications for clients")
 	reg("disableOfflineNotification", adminDisableOfflineNotification, "Disable offline notifications for clients")
-	// send notification
-	reg("sendNotification", adminSendNotification, "Send a notification")
-}
-
-// adminSendNotification 发送一条通知。仅供外部（插件/脚本）通过 RPC 调用，
-// 内部通知逻辑（notifier/renewal/session 等）直接调用 messageSender.SendNotification。
-func adminSendNotification(_ context.Context, req *rpc.JsonRpcRequest) (any, *rpc.JsonRpcError) {
-	var params struct {
-		Event models.EventMessage `json:"event"`
-	}
-	if err := req.BindParams(&params); err != nil {
-		return nil, rpc.MakeError(rpc.InvalidParams, "Invalid request data: "+err.Error(), nil)
-	}
-	if fmt.Sprint(params.Event.Event) == "" {
-		return nil, rpc.MakeError(rpc.InvalidParams, "event is required", nil)
-	}
-	if err := messageSender.SendNotification(params.Event); err != nil {
-		return nil, rpc.MakeError(rpc.InternalError, "Failed to send notification: "+err.Error(), nil)
-	}
-	return nil, nil
 }
 
 // reg 是 admin 命名空间方法的注册便捷封装。

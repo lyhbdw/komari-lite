@@ -8,12 +8,10 @@ func TestPrincipalConstructors(t *testing.T) {
 		p        *Principal
 		wantType PrincipalType
 		wantRole string
-		wantKey  bool
 	}{
-		{"anonymous", NewAnonymousPrincipal(), PrincipalAnonymous, RoleGuest, false},
-		{"agent", NewAgentPrincipal("c-uuid"), PrincipalAgent, RoleClient, false},
-		{"user", NewUserPrincipal("u-uuid"), PrincipalUser, RoleAdmin, false},
-		{"apikey", NewAPIKeyPrincipal(), PrincipalAPIKey, RoleAdmin, true},
+		{"anonymous", NewAnonymousPrincipal(), PrincipalAnonymous, RoleGuest},
+		{"agent", NewAgentPrincipal("c-uuid"), PrincipalAgent, RoleClient},
+		{"user", NewUserPrincipal("u-uuid"), PrincipalUser, RoleAdmin},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -23,9 +21,7 @@ func TestPrincipalConstructors(t *testing.T) {
 			if got := tc.p.PrimaryRole(); got != tc.wantRole {
 				t.Errorf("PrimaryRole() = %q, want %q", got, tc.wantRole)
 			}
-			if tc.p.IsAPIKey != tc.wantKey {
-				t.Errorf("IsAPIKey = %v, want %v", tc.p.IsAPIKey, tc.wantKey)
-			}
+
 		})
 	}
 }
@@ -85,9 +81,7 @@ func TestCheckPrincipal(t *testing.T) {
 		{"user->admin", NewUserPrincipal("u1"), "admin:addClient", true},
 		{"user->common", NewUserPrincipal("u1"), "common:getNodes", true},
 		{"user->client", NewUserPrincipal("u1"), "client:report", false},
-		// api key 主体:等同 admin 能力
-		{"apikey->admin", NewAPIKeyPrincipal(), "admin:addClient", true},
-		{"apikey->client", NewAPIKeyPrincipal(), "client:report", false},
+
 		// 匿名主体:仅公共方法
 		{"anon->common", NewAnonymousPrincipal(), "common:getNodes", true},
 		{"anon->admin", NewAnonymousPrincipal(), "admin:addClient", false},
@@ -104,4 +98,3 @@ func TestCheckPrincipal(t *testing.T) {
 		})
 	}
 }
-

@@ -3,6 +3,7 @@ package geoip
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"time"
@@ -57,7 +58,7 @@ func (s *IPAPIService) GetGeoInfo(ip net.IP) (*GeoInfo, error) {
 	defer resp.Body.Close()
 
 	var apiResp ipAPIResponse
-	if err := json.NewDecoder(resp.Body).Decode(&apiResp); err != nil {
+	if err := json.NewDecoder(io.LimitReader(resp.Body, 64<<10)).Decode(&apiResp); err != nil {
 		return nil, fmt.Errorf("failed to decode ip-api.com response: %w", err)
 	}
 

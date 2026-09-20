@@ -102,9 +102,6 @@ func Run(ctx Context) error {
 	}
 
 	if legacyConfigTable {
-		if err := migrateLegacyOidcConfig(db); err != nil {
-			return err
-		}
 		if err := migrateLegacyMessageSenderConfig(db); err != nil {
 			return err
 		}
@@ -148,6 +145,12 @@ func migrateRemovedCompatibilityConfig(db *gorm.DB) error {
 		return nil
 	}
 	return db.Delete(&appconfig.ConfigItem{}, "key IN ?", []string{
+		"api_key",
+		"auto_discovery_key",
+		"o_auth_enabled",
+		"o_auth_provider",
+		"custom_head",
+		"custom_body",
 		"nezha_compat_enabled",
 		"nezha_compat_listen",
 		"low_resource_mode",
@@ -181,43 +184,6 @@ func migrateLegacyLoadNotification(db *gorm.DB) error {
 		return db.Migrator().DropTable(&models.LoadNotification{})
 	}
 	return nil
-}
-
-func migrateLegacyOidcConfig(db *gorm.DB) error {
-	if db.Migrator().HasTable(&models.OidcProvider{}) {
-		return nil
-	}
-
-	logger.InfoArgs("migration", "[>1.0.2] Merge OidcProvider table....")
-	var oldData struct {
-		OAuthClientID     string `gorm:"column:o_auth_client_id"`
-		OAuthClientSecret string `gorm:"column:o_auth_client_secret"`
-	}
-	if err := db.Raw("SELECT * FROM configs LIMIT 1").Scan(&oldData).Error; err != nil {
-		return fmt.Errorf("get legacy OIDC config: %w", err)
-	}
-
-	if err := db.AutoMigrate(&models.OidcProvider{}); err != nil {
-		return err
-	}
-	addition, err := json.Marshal(map[string]string{
-		"client_id":     oldData.OAuthClientID,
-		"client_secret": oldData.OAuthClientSecret,
-	})
-	if err != nil {
-		return fmt.Errorf("marshal legacy OIDC config: %w", err)
-	}
-	if err := db.Save(&models.OidcProvider{
-		Name:     "github",
-		Addition: string(addition),
-	}).Error; err != nil {
-		return err
-	}
-
-	if err := db.AutoMigrate(&legacyModelConfig{}); err != nil {
-		return err
-	}
-	return db.Model(&legacyModelConfig{}).Where("id = 1").Update("o_auth_provider", "github").Error
 }
 
 func migrateLegacyMessageSenderConfig(db *gorm.DB) error {
@@ -260,32 +226,10 @@ func migrateLegacyMessageSenderConfig(db *gorm.DB) error {
 		}
 	}
 
-	if oldData.NotificationMethod == "email" && oldData.EmailHost != "" {
-		emailConfig := map[string]interface{}{
-			"host":     oldData.EmailHost,
-			"port":     oldData.EmailPort,
-			"username": oldData.EmailUsername,
-			"password": oldData.EmailPassword,
-			"sender":   oldData.EmailSender,
-			"receiver": oldData.EmailReceiver,
-			"use_ssl":  oldData.EmailUseSSL,
-		}
-		if err := saveLegacyMessageSenderConfig(db, "email", emailConfig); err != nil {
-			return err
-		}
-	}
-
 	for _, column := range []string{
 		"telegram_bot_token",
 		"telegram_chat_id",
 		"telegram_endpoint",
-		"email_host",
-		"email_port",
-		"email_username",
-		"email_password",
-		"email_sender",
-		"email_receiver",
-		"email_use_ssl",
 	} {
 		if hasTableColumn(db, "configs", column) {
 			if err := db.Migrator().DropColumn(&legacyModelConfig{}, column); err != nil {

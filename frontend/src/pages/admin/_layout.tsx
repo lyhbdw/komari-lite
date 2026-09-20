@@ -7,22 +7,20 @@ import { updateSettingsWithToast, useSettings } from "@/lib/api";
 import { Button, Dialog } from "@radix-ui/themes";
 import { useEffect, useState } from "react";
 import { getEula } from "@/utils/eula";
-import { normalizeLanguage, readStoredLanguage } from "@/utils/language";
+
 import { useTranslation } from "react-i18next";
 const AdminLayout = () => {
   const { t, i18n } = useTranslation();
   const { settings, loading, error, setSettings } = useSettings();
-  const lang = readStoredLanguage() || "en";
+
   const [open, setOpen] = useState(false);
   useEffect(() => {
     if (loading || error || !settings || settings.eula_accepted !== false) {
       setOpen(false);
       return;
     }
-    if (normalizeLanguage(lang).startsWith("zh")) {
-      setOpen(true);
-    }
-  }, [loading, error, settings, lang]);
+    setOpen(true);
+  }, [loading, error, settings]);
   return (
     <>
       <Dialog.Root open={open}>

@@ -4,11 +4,13 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/komari-monitor/komari/database/dbcore"
 	"github.com/komari-monitor/komari/database/models"
+	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
 
@@ -25,7 +27,13 @@ func CheckPassword(username, passwd string) (uuid string, success bool) {
 		// 静默处理错误，不显示日志
 		return "", false
 	}
-	if hashPasswd(passwd) != user.Passwd {
+	if strings.HasPrefix(user.Passwd, "$2a$") || strings.HasPrefix(user.Passwd, "$2b$") || strings.HasPrefix(user.Passwd, "$2y$") {
+		if bcrypt.CompareHashAndPassword([]byte(user.Passwd), []byte(passwd)) != nil {
+			return "", false
+		}
+	} else if hashPasswd(passwd) == user.Passwd {
+		_ = db.Model(&models.User{}).Where("uuid = ?", user.UUID).Update("passwd", hashPassword(passwd)).Error
+	} else {
 		return "", false
 	}
 	return user.UUID, true
@@ -34,7 +42,7 @@ func CheckPassword(username, passwd string) (uuid string, success bool) {
 // ForceResetPassword 强制重置用户密码
 func ForceResetPassword(username, passwd string) (err error) {
 	db := dbcore.GetDBInstance()
-	result := db.Model(&models.User{}).Where("username = ?", username).Update("passwd", hashPasswd(passwd))
+	result := db.Model(&models.User{}).Where("username = ?", username).Update("passwd", hashPassword(passwd))
 	if result.Error != nil {
 		return result.Error
 	}
@@ -53,12 +61,20 @@ func hashPasswd(passwd string) string {
 	return hashedPassword
 }
 
+func hashPassword(passwd string) string {
+	hash, err := bcrypt.GenerateFromPassword([]byte(passwd), bcrypt.DefaultCost)
+	if err != nil {
+		return ""
+	}
+	return string(hash)
+}
+
 func CreateAccount(username, passwd string) (user models.User, err error) {
 	return CreateAccountWithDB(dbcore.GetDBInstance(), username, passwd)
 }
 
 func CreateAccountWithDB(db *gorm.DB, username, passwd string) (user models.User, err error) {
-	hashedPassword := hashPasswd(passwd)
+	hashedPassword := hashPassword(passwd)
 	user = models.User{
 		UUID:     uuid.New().String(),
 		Username: username,
@@ -106,7 +122,7 @@ func UpdateUser(uuid string, name, password *string) error {
 		updates["username"] = *name
 	}
 	if password != nil {
-		updates["passwd"] = hashPasswd(*password)
+		updates["passwd"] = hashPassword(*password)
 	}
 
 	updates["updated_at"] = time.Now().UTC()

@@ -2,6 +2,7 @@ package jsonrpc
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"math"
 	"sort"
@@ -51,6 +52,29 @@ type publicMetricQueryParams struct {
 	Algorithm           string            `json:"algorithm"`
 	AggregationByMetric map[string]string `json:"aggregation_by_metric"`
 	AlgorithmByMetric   map[string]string `json:"algorithm_by_metric"`
+}
+
+type metricDefinitionResponse struct {
+	Name          string            `json:"name"`
+	Description   any               `json:"description,omitempty"`
+	Type          string            `json:"type"`
+	Unit          string            `json:"unit,omitempty"`
+	RetentionDays int               `json:"retention_days"`
+	Metadata      map[string]string `json:"metadata,omitempty"`
+	CreatedAt     time.Time         `json:"created_at"`
+	UpdatedAt     time.Time         `json:"updated_at"`
+}
+
+func metricDescriptionValue(raw string) any {
+	desc := strings.TrimSpace(raw)
+	if desc == "" {
+		return ""
+	}
+	var dict map[string]string
+	if err := json.Unmarshal([]byte(desc), &dict); err == nil && len(dict) > 0 {
+		return dict
+	}
+	return raw
 }
 
 type publicMetricPoint struct {

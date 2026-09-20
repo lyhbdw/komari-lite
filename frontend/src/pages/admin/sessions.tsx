@@ -16,7 +16,7 @@ type Resp = {
   current: string;
   data: Array<{
     uuid: string;
-    session: string;
+    id: string;
     user_agent: string;
     ip: string;
     login_method: string;
@@ -53,7 +53,7 @@ export default function Sessions() {
     fetch("/api/admin/session/remove", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ session: sessionId }),
+      body: JSON.stringify({ id: sessionId }),
     })
       .then((response) => response.json())
       .then((data) => {
@@ -65,7 +65,7 @@ export default function Sessions() {
           }
           setSessions((prev) => ({
             ...prev!,
-            data: prev?.data.filter((s) => s.session !== sessionId) || [],
+            data: prev?.data.filter((s) => s.id !== sessionId) || [],
           }));
         } else {
           console.error("Failed to delete session:", data);
@@ -146,14 +146,14 @@ export default function Sessions() {
           </TableHeader>
           <TableBody>
             {sessions.data.map((s) => {
-              const isCurrent = s.session === sessions.current;
+              const isCurrent = s.id === sessions.current;
               return (
                 <TableRow key={s.uuid} className="km-session-item">
                   <TableCell>
                     <Dialog.Root>
                       <Dialog.Trigger>
                         <label className="hover:underline cursor-pointer">
-                          {s.session.slice(0, 8)}...
+                          {s.id.slice(0, 8)}...
                           {isCurrent && (
                             <span className="ml-2 text-sm text-blue-600">
                               {t("sessions.current")}
@@ -169,7 +169,7 @@ export default function Sessions() {
                           <label className="text-base font-bold">
                             {t("sessions.session_id")}
                           </label>
-                          <label className="text-sm">{s.session}</label>
+                          <label className="text-sm">{s.id}</label>
                           <label className="text-base font-bold">
                             IP / {t("sessions.latest_ip")}
                           </label>
@@ -257,7 +257,7 @@ export default function Sessions() {
                           <Dialog.Trigger>
                             <Button
                               color="red"
-                              onClick={() => deleteSession(s.session)}
+                              onClick={() => deleteSession(s.id)}
                             >
                               {t("common.delete")}
                             </Button>

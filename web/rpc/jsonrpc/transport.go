@@ -6,13 +6,16 @@ import (
 	"errors"
 	"io"
 	"net/http"
-	"time"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/komari-monitor/komari/database/accounts"
-	"github.com/komari-monitor/komari/internal/config"
 	"github.com/komari-monitor/komari/pkg/rpc"
 	"github.com/komari-monitor/komari/web/api"
+)
+
+const (
+	maxJSONRPCBodyBytes = 1 << 20
 )
 
 // OnRpcRequest 是 /api/rpc2 的统一入口：GET 升级为 WebSocket，POST 处理单条/批量 JSON-RPC。
@@ -40,7 +43,7 @@ func CallFromGin(c *gin.Context, method string, params any) *rpc.JsonRpcResponse
 
 // dispatchWithSensitive 在统一分发前对敏感方法补充二次验证，使各调用入口行为一致。
 // 对已通过命名空间权限校验的敏感方法，要求调用方满足敏感操作 2FA。
-// 校验基于 Principal(API Key 放行、未配置 2FA 的账号放行),Dispatch 仍为权威鉴权点。
+// 校验基于当前用户 Principal，Dispatch 仍为权威鉴权点。
 //
 // 2FA code 按"每请求"提取:优先取自本条 RPC 请求的 params(2fa_code/two_factor_code/otp),
 // 这对 WebSocket 长连接尤其重要——每条敏感消息携带新鲜的 TOTP 码,避免连接级握手码过期或被复用;
@@ -54,7 +57,7 @@ func dispatchWithSensitive(ctx context.Context, c *gin.Context, meta *rpc.Contex
 		if code == "" && c != nil {
 			code = headerOrQueryTwoFACode(c)
 		}
-		if err := api.VerifySensitive2FACore(meta.Principal.UserUUID, code, meta.Principal.IsAPIKey); err != nil {
+		if err := api.VerifySensitive2FACore(meta.Principal.UserUUID, code); err != nil {
 			return rpc.ErrorResponse(req.ID, rpc.PermissionDenied, err.Error(), nil)
 		}
 	}
@@ -95,6 +98,7 @@ func serveWebSocket(c *gin.Context) {
 		return
 	}
 	defer conn.Close()
+	conn.GetConn().SetReadLimit(maxJSONRPCBodyBytes)
 
 	meta := buildContextMeta(c)
 	for {
@@ -119,9 +123,13 @@ func serveWebSocket(c *gin.Context) {
 }
 
 func servePost(c *gin.Context) {
-	body, err := io.ReadAll(c.Request.Body)
+	body, err := io.ReadAll(io.LimitReader(c.Request.Body, maxJSONRPCBodyBytes+1))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, rpc.ErrorResponse(nil, rpc.ParseError, "read body error", err.Error()))
+		return
+	}
+	if len(body) > maxJSONRPCBodyBytes {
+		c.JSON(http.StatusRequestEntityTooLarge, rpc.ErrorResponse(nil, rpc.ParseError, "request body too large", nil))
 		return
 	}
 	requests, jerr := rpc.ParseRequests(body)
@@ -172,33 +180,11 @@ func buildContextMeta(c *gin.Context) *rpc.ContextMeta {
 		}
 	case rpc.PrincipalAgent:
 		meta.ClientUUID = p.ClientUUID
-		// 尝试提取 client token(用于某些 handler 需要原始 token 的场景)。
-		// 优先查询参数 ?Authorization=<token>，再尝试 Bearer header。
-		if token := c.Query("Authorization"); token != "" {
-			meta.ClientToken = token
-		} else if auth := c.GetHeader("Authorization"); auth != "" && len(auth) > len("Bearer ") {
-			meta.ClientToken = auth[len("Bearer "):]
+		// Client tokens are accepted only from Authorization: Bearer <token>.
+		if auth := c.GetHeader("Authorization"); strings.HasPrefix(auth, "Bearer ") {
+			meta.ClientToken = strings.TrimSpace(strings.TrimPrefix(auth, "Bearer "))
 		}
 	}
 
-	// 临时分享访问许可。
-	meta.TempShareValid = hasTempShareAccess(c)
 	return meta
-}
-
-// hasTempShareAccess 校验 temp_key cookie 是否为有效的临时分享访问许可。
-func hasTempShareAccess(c *gin.Context) bool {
-	tempKey, err := c.Cookie("temp_key")
-	if err != nil || tempKey == "" {
-		return false
-	}
-	expireAt, err := config.GetAs[int64]("tempory_share_token_expire_at", 0)
-	if err != nil {
-		return false
-	}
-	allowKey, err := config.GetAs[string]("tempory_share_token", "")
-	if err != nil || allowKey == "" || tempKey != allowKey {
-		return false
-	}
-	return expireAt >= time.Now().Unix()
 }
