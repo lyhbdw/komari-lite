@@ -42,6 +42,7 @@ EUID=${EUID:-$(id -u)}
 service_name="komari-agent"
 target_dir="/opt/komari"
 install_version="" # New parameter for specifying version
+migration_mode=false
 install_dir_specified=false
 service_user="${SUDO_USER:-$(id -un)}"
 user_service=false
@@ -63,6 +64,10 @@ komari_args=""
 # [[ ]] -> [ ] (POSIX)
 while [ $# -gt 0 ]; do
     case $1 in
+        --migrate-legacy)
+            migration_mode=true
+            shift
+            ;;
         --install-dir)
             target_dir="$2"
             install_dir_specified=true
@@ -102,6 +107,81 @@ fi
 
 komari_agent_path="${target_dir}/agent"
 
+# A migration reuses the existing service command so the node UUID and token stay unchanged.
+# The token is read locally from the service definition and is never printed by this script.
+if [ "$migration_mode" = true ]; then
+    detect_legacy_service() {
+        if command -v systemctl >/dev/null 2>&1 && systemctl list-unit-files >/dev/null 2>&1; then
+            legacy_unit=$(systemctl list-unit-files --type=service --no-legend 2>/dev/null |
+                awk '$1 ~ /^komari.*agent.*\\.service$/ {print $1; exit}')
+            if [ -n "$legacy_unit" ]; then
+                service_name="${legacy_unit%.service}"
+                legacy_init="systemd"
+                return 0
+            fi
+        fi
+        for candidate in /etc/init.d/komari-agent /etc/init.d/komari; do
+            if [ -f "$candidate" ]; then
+                service_name=$(basename "$candidate")
+                legacy_init="openrc"
+                return 0
+            fi
+        done
+        return 1
+    }
+
+    if ! detect_legacy_service; then
+        log_error "No existing Komari Agent service was found"
+        exit 1
+    fi
+
+    if [ "$legacy_init" = "systemd" ]; then
+        legacy_exec=$(systemctl cat "${service_name}.service" 2>/dev/null |
+            sed -n 's/^ExecStart=//p' | tail -n 1)
+        if [ -z "$legacy_exec" ]; then
+            log_error "Could not read ExecStart from ${service_name}.service"
+            exit 1
+        fi
+        legacy_binary=$(printf '%s\\n' "$legacy_exec" | awk '{print $1}')
+        if [ -z "$legacy_binary" ] || [ ! -x "$legacy_binary" ]; then
+            log_error "Could not locate the existing Agent binary"
+            exit 1
+        fi
+        target_dir=$(dirname "$legacy_binary")
+        komari_agent_path="${target_dir}/agent"
+        komari_args=${legacy_exec#"$legacy_binary"}
+        komari_args="${komari_args# }"
+        detected_user=$(systemctl show "${service_name}.service" -p User --value 2>/dev/null || true)
+        if [ -n "$detected_user" ]; then
+            service_user="$detected_user"
+        else
+            service_user="root"
+        fi
+    else
+        legacy_file="/etc/init.d/${service_name}"
+        legacy_binary=$(sed -n 's/^command=//p' "$legacy_file" | tail -n 1)
+        legacy_args=$(sed -n 's/^command_args=//p' "$legacy_file" | tail -n 1)
+        if [ -z "$legacy_binary" ] || [ ! -x "$legacy_binary" ]; then
+            log_error "Could not locate the existing Agent binary"
+            exit 1
+        fi
+        target_dir=$(dirname "$legacy_binary")
+        komari_agent_path="${target_dir}/agent"
+        komari_args="$legacy_args"
+    fi
+
+    case " $komari_args " in
+        *" -e "*|*" --endpoint "*) ;;
+        *) log_error "The existing Agent service has no panel endpoint"; exit 1 ;;
+    esac
+    case " $komari_args " in
+        *" -t "*|*" --token "*) ;;
+        *) log_error "The existing Agent service has no token"; exit 1 ;;
+    esac
+    log_config "Migration source: ${GREEN}${service_name}${NC}"
+    log_config "Install directory: ${GREEN}${target_dir}${NC}"
+fi
+
 # User services are the only service type a non-root Linux installation can manage.
 if [ "$EUID" -ne 0 ] && [ "$os_name" = "linux" ]; then
     if command -v systemctl >/dev/null 2>&1 && systemctl --user show-environment >/dev/null 2>&1; then
@@ -121,7 +201,7 @@ log_config "Installation configuration:"
 log_config "  Service name: ${GREEN}$service_name${NC}"
 log_config "  Service user: ${GREEN}$service_user${NC}"
 log_config "  Install directory: ${GREEN}$target_dir${NC}"
-log_config "  Binary arguments: ${GREEN}$komari_args${NC}"
+log_config "  Binary arguments: ${GREEN}configured${NC}"
 if [ -n "$install_version" ]; then
     log_config "  Specified agent version: ${GREEN}$install_version${NC}"
 else
