@@ -60,6 +60,14 @@ func registerLiteDisabledRoutes(r *gin.Engine) {
 	for _, path := range []string{
 		"/api/oauth",
 		"/api/oauth_callback",
+		"/api/terminal",
+		"/api/plugins",
+		"/api/restore",
+		"/api/upload",
+		"/api/file",
+		"/api/clipboard",
+		"/api/tasks",
+		"/api/pprof",
 		"/api/admin/terminal",
 		"/api/admin/plugins",
 		"/api/admin/backup/restore",
@@ -78,6 +86,14 @@ func registerLiteDisabledRoutes(r *gin.Engine) {
 		r.Any(path, disabled)
 	}
 	for _, path := range []string{
+		"/api/terminal/*path",
+		"/api/plugins/*path",
+		"/api/restore/*path",
+		"/api/upload/*path",
+		"/api/file/*path",
+		"/api/clipboard/*path",
+		"/api/tasks/*path",
+		"/api/pprof/*path",
 		"/api/clients/transfer/*path",
 		"/api/admin/pprof/*path",
 		"/api/admin/oauth2/*path",
