@@ -68,7 +68,7 @@ func tryUploadData(data map[string]interface{}) error {
 }
 
 func tryUploadDataWithProtocol(data map[string]interface{}) error {
-	endpoint := strings.TrimSuffix(flags.Endpoint, "/") + "/api/clients/v2/rpc?token=" + flags.Token
+	endpoint := strings.TrimSuffix(flags.Endpoint, "/") + "/api/clients/v2/rpc"
 	payload := v2.BuildBasicInfoPayload(data)
 	body := payload
 	compressed := false
@@ -84,6 +84,7 @@ func tryUploadDataWithProtocol(data map[string]interface{}) error {
 		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
+	addAgentAuthorization(req)
 	if compressed {
 		req.Header.Set("Content-Encoding", "gzip")
 	}

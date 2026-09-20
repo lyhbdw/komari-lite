@@ -120,8 +120,7 @@ func TestExpectedAssetName(t *testing.T) {
 		want   string
 	}{
 		{"linux", "amd64", "komari-agent-linux-amd64"},
-		{"darwin", "arm64", "komari-agent-darwin-arm64"},
-		{"windows", "amd64", "komari-agent-windows-amd64.exe"},
+		{"linux", "arm64", "komari-agent-linux-arm64"},
 	}
 
 	for _, tt := range tests {
@@ -236,8 +235,8 @@ func TestSnapshotUpdateReturnsRestartRequired(t *testing.T) {
 		},
 	}
 	lister := func(owner, repo string) ([]githubRelease, error) {
-		if owner != "komari-monitor" || repo != "komari-agent" {
-			t.Fatalf("list releases repo = %s/%s, want komari-monitor/komari-agent", owner, repo)
+		if owner != "Tumb1er1376" || repo != "komari-agent-lite" {
+			t.Fatalf("list releases repo = %s/%s, want Tumb1er1376/komari-agent-lite", owner, repo)
 		}
 		return []githubRelease{release}, nil
 	}

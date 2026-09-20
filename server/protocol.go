@@ -3,6 +3,7 @@ package server
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
 
 	v2 "github.com/komari-monitor/komari-agent/protocol/v2"
 )
@@ -26,6 +27,9 @@ func (e *httpStatusError) Error() string {
 	return fmt.Sprintf("status code: %d", e.StatusCode)
 }
 
+func addAgentAuthorization(req *http.Request) {
+	req.Header.Set("Authorization", "Bearer "+flags.Token)
+}
 func parseV2Response(body []byte) (*v2.Response, error) {
 	var rpcResp v2.Response
 	if err := json.Unmarshal(body, &rpcResp); err != nil {

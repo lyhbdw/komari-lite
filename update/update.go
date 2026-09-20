@@ -22,8 +22,8 @@ import (
 var ErrRestartRequired = errors.New("update installed; restart required")
 
 var (
-	CurrentVersion string = "0.0.1"
-	Repo           string = "komari-monitor/komari-agent"
+	CurrentVersion string = "1.0.0"
+	Repo           string = "Tumb1er1376/komari-agent-lite"
 )
 
 const (
@@ -94,14 +94,9 @@ func detectBuildTrack(version string) buildTrack {
 	return stableTrack
 }
 
-func expectedAssetName(goos, goarch string) string {
-	name := fmt.Sprintf("komari-agent-%s-%s", goos, goarch)
-	if goos == "windows" {
-		name += ".exe"
-	}
-	return name
+func expectedAssetName(_ string, goarch string) string {
+	return fmt.Sprintf("komari-agent-linux-%s", goarch)
 }
-
 func findReleaseAsset(release githubRelease, assetName string) (githubReleaseAsset, bool) {
 	for _, asset := range release.Assets {
 		if asset.Name == assetName {
@@ -214,10 +209,6 @@ func currentExecutablePath() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if runtime.GOOS == "windows" && !strings.HasSuffix(cmdPath, ".exe") {
-		cmdPath += ".exe"
-	}
-
 	stat, err := os.Lstat(cmdPath)
 	if err != nil {
 		return "", fmt.Errorf("failed to stat %q: %w", cmdPath, err)

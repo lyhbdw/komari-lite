@@ -41,37 +41,19 @@ EUID=${EUID:-$(id -u)}
 # Default values
 service_name="komari-agent"
 target_dir="/opt/komari"
-github_proxy=""
 install_version="" # New parameter for specifying version
 install_dir_specified=false
-install_no_mirror=false # 关闭自动加速镜像
 service_user="${SUDO_USER:-$(id -un)}"
 user_service=false
 
 # Detect OS
 os_type=$(uname -s)
 case $os_type in
-    Darwin)
-        os_name="darwin"
-        target_dir="/usr/local/komari"  # Use /usr/local on macOS
-        # Check if we can write to /usr/local, fallback to user directory
-        if [ ! -w "/usr/local" ] && [ "$EUID" -ne 0 ]; then
-            target_dir="$HOME/.komari"
-            log_info "No write permission to /usr/local, using user directory: $target_dir"
-        fi
-        ;;
     Linux)
         os_name="linux"
         ;;
-    FreeBSD)
-        os_name="freebsd"
-        ;;
-    MINGW*|MSYS*|CYGWIN*)
-        os_name="windows"
-        target_dir="/c/komari"  # Use C:\komari on Windows
-        ;;
     *)
-        log_error "Unsupported operating system: $os_type"
+        log_error "Komari Agent Lite supports Linux only"
         exit 1
         ;;
 esac
@@ -90,17 +72,9 @@ while [ $# -gt 0 ]; do
             service_name="$2"
             shift 2
             ;;
-        --install-ghproxy)
-            github_proxy="$2"
-            shift 2
-            ;;
         --install-version)
             install_version="$2"
             shift 2
-            ;;
-        --install-no-mirror) # 新增: 关闭自动加速镜像
-            install_no_mirror=true
-            shift
             ;;
         --install*)
             log_warning "Unknown install parameter: $1"
@@ -120,7 +94,7 @@ komari_args="${komari_args# }"
 # A direct, unprivileged installation belongs entirely to the invoking user.
 if [ "$EUID" -ne 0 ] && [ "$install_dir_specified" = false ]; then
     case "$os_name" in
-        linux|freebsd)
+        linux)
             target_dir="${XDG_DATA_HOME:-$HOME/.local/share}/komari"
             ;;
     esac
@@ -147,7 +121,6 @@ log_config "Installation configuration:"
 log_config "  Service name: ${GREEN}$service_name${NC}"
 log_config "  Service user: ${GREEN}$service_user${NC}"
 log_config "  Install directory: ${GREEN}$target_dir${NC}"
-log_config "  GitHub proxy: ${GREEN}${github_proxy:-(direct)}${NC}"
 log_config "  Binary arguments: ${GREEN}$komari_args${NC}"
 if [ -n "$install_version" ]; then
     log_config "  Specified agent version: ${GREEN}$install_version${NC}"
@@ -189,22 +162,6 @@ uninstall_previous() {
         log_info "Stopping and removing existing upstart service..."
         initctl stop ${service_name}
         rm -f "/etc/init/${service_name}.conf"
-    elif [ "$os_name" = "darwin" ] && command -v launchctl >/dev/null 2>&1; then
-        # macOS launchd service - check both system and user locations
-        system_plist="/Library/LaunchDaemons/com.komari.${service_name}.plist"
-        user_plist="$HOME/Library/LaunchAgents/com.komari.${service_name}.plist"
-        
-        if [ -f "$system_plist" ]; then
-            log_info "Stopping and removing existing system launchd service..."
-            launchctl bootout system "$system_plist" 2>/dev/null || true
-            rm -f "$system_plist"
-        fi
-        
-        if [ -f "$user_plist" ]; then
-            log_info "Stopping and removing existing user launchd service..."
-            launchctl bootout gui/$(id -u) "$user_plist" 2>/dev/null || true
-            rm -f "$user_plist"
-        fi
     fi
     
     # Remove old binary if it exists
@@ -249,11 +206,8 @@ install_dependencies() {
             log_info "Using opkg to install dependencies (OpenWrt/iStoreOS)..."
             opkg update
             opkg install $missing_deps
-        elif command -v brew >/dev/null 2>&1; then
-            log_info "Using Homebrew to install dependencies..."
-            brew install $missing_deps
         else
-            log_error "No supported package manager found (apt/yum/apk/opkg/brew)"
+            log_error "No supported package manager found (apt/yum/apk/opkg)"
             exit 1
         fi
         
@@ -276,7 +230,7 @@ install_dependencies
 
  
 
-# Architecture detection with platform-specific support
+# Architecture detection
 arch=$(uname -m)
 case $arch in
     x86_64)
@@ -285,35 +239,8 @@ case $arch in
     aarch64|arm64)
         arch="arm64"
         ;;
-    loongarch64|loong64)
-        arch="loong64"
-        ;;
-    i386|i686)
-        # x86 (32-bit) support
-        case $os_name in
-            freebsd|linux|windows)
-                arch="386"
-                ;;
-            *)
-                log_error "32-bit x86 architecture not supported on $os_name"
-                exit 1
-                ;;
-        esac
-        ;;
-    armv7*|armv6*)
-        # ARM 32-bit support
-        case $os_name in
-            freebsd|linux)
-                arch="arm"
-                ;;
-            *)
-                log_error "32-bit ARM architecture not supported on $os_name"
-                exit 1
-                ;;
-        esac
-        ;;
     *)
-        log_error "Unsupported architecture: $arch on $os_name"
+        log_error "Komari Agent Lite supports Linux amd64 and arm64 only"
         exit 1
         ;;
 esac
@@ -322,36 +249,22 @@ log_info "Detected OS: ${GREEN}$os_name${NC}, Architecture: ${GREEN}$arch${NC}"
 file_name="komari-agent-${os_name}-${arch}"
 
 resolve_snapshot_version() {
-    snapshot_api_url="https://api.github.com/repos/komari-monitor/komari-agent/releases?per_page=100"
-    if [ -n "$github_proxy" ]; then
-        snapshot_api_urls="${github_proxy}/${snapshot_api_url} ${snapshot_api_url}"
-    else
-        snapshot_api_urls="$snapshot_api_url"
+    snapshot_api_url="https://api.github.com/repos/Tumb1er1376/komari-agent-lite/releases?per_page=100"
+    if ! releases_json=$(curl -fsSL --connect-timeout 15 \
+        -H "Accept: application/vnd.github+json" \
+        -H "User-Agent: komari-agent-installer" \
+        "$snapshot_api_url"); then
+        return 1
     fi
 
-    for api_url in $snapshot_api_urls; do
-        if ! releases_json=$(curl -fsSL --connect-timeout 15 \
-            -H "Accept: application/vnd.github+json" \
-            -H "User-Agent: komari-agent-installer" \
-            "$api_url"); then
-            releases_json=""
-        fi
-
-        if [ -n "$releases_json" ]; then
-            RESOLVED_SNAPSHOT_VERSION=$(printf '%s\n' "$releases_json" |
-                grep -o '"tag_name":[[:space:]]*"Snapshot-[^"]*"' |
-                sed 's/.*"\(Snapshot-[^"]*\)".*/\1/' |
-                LC_ALL=C sort -r |
-                head -n 1)
-            if [ -n "$RESOLVED_SNAPSHOT_VERSION" ]; then
-                return 0
-            fi
-        fi
-
-        if [ "$api_url" != "$snapshot_api_url" ]; then
-            log_warning "Failed to resolve snapshot releases through GitHub proxy, retrying directly."
-        fi
-    done
+    RESOLVED_SNAPSHOT_VERSION=$(printf '%s\n' "$releases_json" |
+        grep -o '"tag_name":[[:space:]]*"Snapshot-[^"]*"' |
+        sed 's/.*"\(Snapshot-[^"]*\)".*/\1/' |
+        LC_ALL=C sort -r |
+        head -n 1)
+    if [ -n "$RESOLVED_SNAPSHOT_VERSION" ]; then
+        return 0
+    fi
 
     return 1
 }
@@ -381,13 +294,7 @@ else
     download_path="download/${version_to_install}"
 fi
 
-if [ -n "$github_proxy" ]; then
-    # Use proxy for GitHub releases
-    download_url="${github_proxy}/https://github.com/komari-monitor/komari-agent/releases/${download_path}/${file_name}"
-else
-    # Direct access to GitHub releases
-    download_url="https://github.com/komari-monitor/komari-agent/releases/${download_path}/${file_name}"
-fi
+download_url="https://github.com/Tumb1er1376/komari-agent-lite/releases/${download_path}/${file_name}"
 
 log_step "Creating installation directory: ${GREEN}$target_dir${NC}"
 mkdir -p "$target_dir"
@@ -395,33 +302,12 @@ if [ "$EUID" -eq 0 ] && [ "$service_user" != "root" ]; then
     chown "$service_user" "$target_dir"
 fi
 
-# Download with automatic mirror fallback.
-# 直连失败自动依次尝试常见 GitHub 加速镜像, 可用 --install-no-mirror 关闭.
-if [ -n "$github_proxy" ] || [ "$install_no_mirror" = "true" ]; then
-    download_urls="$download_url"
-else
-    download_urls="
-${download_url}
-https://ghfast.top/${download_url}
-https://gh-proxy.com/${download_url}
-https://ghproxy.net/${download_url}
-"
-fi
-
-dl_ok=""
-for u in $download_urls; do
-    log_step "Downloading $file_name ..."
-    log_info "URL: ${CYAN}$u${NC}"
-    if curl -fL --connect-timeout 15 -o "$komari_agent_path" "$u" && [ -s "$komari_agent_path" ]; then
-        dl_ok=1
-        break
-    fi
+log_step "Downloading $file_name ..."
+log_info "URL: ${CYAN}$download_url${NC}"
+if ! curl --fail --location --proto '=https' --tlsv1.2 --connect-timeout 15 \
+    -o "$komari_agent_path" "$download_url" || [ ! -s "$komari_agent_path" ]; then
     rm -f "$komari_agent_path"
-done
-
-if [ -z "$dl_ok" ]; then
-    log_error "Download failed from all sources (direct + mirrors)"
-    log_error "Retry later, or specify --install-ghproxy <mirror-prefix> manually"
+    log_error "Download failed from GitHub Releases"
     exit 1
 fi
 
@@ -495,12 +381,7 @@ detect_init_system() {
         return
     fi
     
-    # Check for macOS launchd
-    if [ "$os_name" = "darwin" ] && command -v launchctl >/dev/null 2>&1; then
-        echo "launchd"
-        return
-    fi
-    
+
     # Fallback: if systemctl exists and appears functional, assume systemd
     if command -v systemctl >/dev/null 2>&1; then
         if systemctl list-units >/dev/null 2>&1; then
@@ -668,87 +549,6 @@ EOF
     /etc/init.d/${service_name} enable
     /etc/init.d/${service_name} start
     log_success "procd service configured and started"
-elif [ "$init_system" = "launchd" ]; then
-    # macOS launchd service configuration
-    log_info "Using launchd for service management"
-    
-    # [[ =~ ]] -> case (POSIX); 判定用户级还是系统级安装
-    is_user_install=false
-    case "$target_dir" in
-        /Users/*) is_user_install=true ;;
-    esac
-    [ "$EUID" -ne 0 ] && is_user_install=true
-    
-    if [ "$is_user_install" = true ]; then
-        # User-level service (LaunchAgent)
-        plist_dir="$HOME/Library/LaunchAgents"
-        plist_file="$plist_dir/com.komari.${service_name}.plist"
-        log_info "Installing as user-level service (LaunchAgent)"
-        mkdir -p "$plist_dir"
-        service_user="$(whoami)"
-        log_dir="$HOME/Library/Logs"
-    else
-        # System-level service (LaunchDaemon)
-        plist_dir="/Library/LaunchDaemons"
-        plist_file="$plist_dir/com.komari.${service_name}.plist"
-        log_info "Installing as system-level service (LaunchDaemon)"
-        log_dir="/var/log"
-    fi
-    
-    # Create the launchd plist file
-    cat > "$plist_file" << EOF
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>Label</key>
-    <string>com.komari.${service_name}</string>
-    <key>ProgramArguments</key>
-    <array>
-        <string>${komari_agent_path}</string>
-EOF
-    
-    # Add program arguments if provided
-    if [ -n "$komari_args" ]; then
-        echo "$komari_args" | xargs -n1 printf "        <string>%s</string>\n" >> "$plist_file"
-    fi
-    
-    cat >> "$plist_file" << EOF
-    </array>
-    <key>WorkingDirectory</key>
-    <string>${target_dir}</string>
-    <key>RunAtLoad</key>
-    <true/>
-    <key>KeepAlive</key>
-    <true/>
-    <key>UserName</key>
-    <string>${service_user}</string>
-    <key>StandardOutPath</key>
-    <string>${log_dir}/${service_name}.log</string>
-    <key>StandardErrorPath</key>
-    <string>${log_dir}/${service_name}.log</string>
-</dict>
-</plist>
-EOF
-    
-    # Load and start the service
-    if [ "$is_user_install" = true ]; then
-        # User-level service
-        if launchctl bootstrap gui/$(id -u) "$plist_file"; then
-            log_success "User-level launchd service configured and started"
-        else
-            log_error "Failed to load user-level launchd service"
-            exit 1
-        fi
-    else
-        # System-level service
-        if launchctl bootstrap system "$plist_file"; then
-            log_success "System-level launchd service configured and started"
-        else
-            log_error "Failed to load system-level launchd service"
-            exit 1
-        fi
-    fi
 elif [ "$init_system" = "upstart" ]; then
     # Upstart service configuration
     log_info "Using upstart for service management"
@@ -784,7 +584,7 @@ EOF
     log_success "Upstart service configured and started"
 else
     log_error "Unsupported or unknown init system detected: $init_system"
-    log_error "Supported init systems: systemd, openrc, procd, launchd"
+    log_error "Supported init systems: systemd, openrc, procd, upstart"
     exit 1
 fi
 

@@ -133,11 +133,6 @@ func GetMemGopsutil() RamInfo {
 func CallFree() RamInfo {
 	raminfo := RamInfo{Mode: "callFree"}
 
-	// Only works on Linux/Unix systems
-	if runtime.GOOS != "linux" && runtime.GOOS != "freebsd" {
-		return raminfo
-	}
-
 	// Execute 'free -b' command to get memory in bytes
 	cmd := exec.Command("free", "-b")
 	var out bytes.Buffer
