@@ -130,7 +130,7 @@ if [ "$migration_mode" = true ]; then
     detect_legacy_service() {
         if command -v systemctl >/dev/null 2>&1 && systemctl list-unit-files >/dev/null 2>&1; then
             legacy_unit=$(systemctl list-unit-files --type=service --no-legend 2>/dev/null |
-                awk '$1 ~ /^komari.*agent.*\\.service$/ && $1 !~ /^komari-agent-lite\\.service$/ {print $1; exit}')
+                awk '$1 ~ /^komari.*agent.*[.]service$/ && $1 !~ /^komari-agent-lite[.]service$/ {print $1; exit}')
             if [ -n "$legacy_unit" ]; then
                 legacy_service_name="${legacy_unit%.service}"
                 legacy_service="$legacy_service_name"
