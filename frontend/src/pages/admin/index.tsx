@@ -1,4 +1,5 @@
 import { quoteShellArgs } from "@/utils/shellQuote";
+import { buildAgentInstallArgs } from "@/utils/agentInstallCommand";
 import React, { useEffect, useState } from "react";
 import {
   NodeDetailsProvider,
@@ -67,6 +68,7 @@ import { formatBytes, stringToBytes } from "@/utils/unitHelper";
 import PriceTags from "@/components/PriceTags";
 import Loading from "@/components/loading";
 import Tips from "@/components/ui/tips";
+
 import {
   SettingCardCollapse,
   SettingCardSelect,
@@ -599,19 +601,9 @@ function DeleteButton({ node }: { node: NodeDetail }) {
   );
 }
 type InstallOptions = {
-  disableAutoUpdate: boolean;
-  ignoreUnsafeCert: boolean;
-  memoryIncludeCache: boolean;
-  getIpAddrFromNic: boolean;
-  enableGpu: boolean;
-  dir: string;
-  serviceName: string;
   includeNics: string;
   excludeNics: string;
-  includeMountpoints: string;
   interval: string;
-  monthRotate: string;
-  installVersion: string;
 };
 function MigrateCommandButton() {
   const { t } = useTranslation();
@@ -652,30 +644,14 @@ function GenerateCommandButton({
   settings: any;
 }) {
   const [installOptions, setInstallOptions] = React.useState<InstallOptions>({
-    disableAutoUpdate: false,
-    ignoreUnsafeCert: false,
-    memoryIncludeCache: false,
-    getIpAddrFromNic: false,
-    enableGpu: false,
-    dir: "",
-    serviceName: "",
     includeNics: "",
     excludeNics: "",
-    includeMountpoints: "",
     interval: "",
-    monthRotate: "",
-    installVersion: "",
   });
 
-  const [enableCustomDir, setEnableCustomDir] = React.useState(false);
-  const [enableCustomServiceName, setEnableCustomServiceName] =
-    React.useState(false);
   const [enableIncludeNics, setEnableIncludeNics] = React.useState(false);
   const [enableExcludeNics, setEnableExcludeNics] = React.useState(false);
-  const [enableIncludeMountpoints, setEnableIncludeMountpoints] =
-    React.useState(false);
   const [enableInterval, setEnableInterval] = React.useState(false);
-  const [enableMonthRotate, setEnableMonthRotate] = React.useState(false);
   const generateCommand = () => {
     const host = function () {
       if (!settings.script_domain) {
@@ -686,59 +662,12 @@ function GenerateCommandButton({
       }
       return `http://${settings.script_domain.replace(/\/+$/, "")}`;
     }();
-    const args = ["-e", host];
-    // 仅生成监控 Agent 的安装参数，不在命令中展示节点 Token。
-    if (installOptions.disableAutoUpdate) {
-      args.push("--disable-auto-update");
-    }
-    if (installOptions.ignoreUnsafeCert) {
-      args.push("--ignore-unsafe-cert");
-    }
-    if (installOptions.memoryIncludeCache) {
-      args.push("--memory-include-cache");
-    }
-    if (installOptions.getIpAddrFromNic) {
-      args.push("--get-ip-addr-from-nic");
-    }
-    if (installOptions.enableGpu) {
-      args.push("--gpu");
-    }
-    const installDir = installOptions.dir.trim();
-    if (enableCustomDir && installDir) {
-      args.push(`--install-dir`);
-      args.push(installDir);
-    }
-    const serviceName = installOptions.serviceName.trim();
-    if (enableCustomServiceName && serviceName) {
-      args.push(`--install-service-name`);
-      args.push(serviceName);
-    }
-
-    const includeNics = installOptions.includeNics.trim();
-    if (enableIncludeNics && includeNics) {
-      args.push(`--include-nics`);
-      args.push(includeNics);
-    }
-    const excludeNics = installOptions.excludeNics.trim();
-    if (enableExcludeNics && excludeNics) {
-      args.push(`--exclude-nics`);
-      args.push(excludeNics);
-    }
-    const includeMountpoints = installOptions.includeMountpoints.trim();
-    if (enableIncludeMountpoints && includeMountpoints) {
-      args.push(`--include-mountpoint`);
-      args.push(includeMountpoints);
-    }
-    if (enableInterval) {
-      const intervalVal = Number.parseFloat((installOptions.interval || "").trim());
-      args.push("-i");
-      args.push(Number.isFinite(intervalVal) && intervalVal >= 1 ? String(intervalVal) : "1");
-    }
-    if (enableMonthRotate) {
-      const rotateVal = (installOptions.monthRotate || "").trim() || "1"; // 默认 1
-      args.push(`--month-rotate`);
-      args.push(rotateVal);
-    }
+    const args = buildAgentInstallArgs({
+      endpoint: host,
+      interval: enableInterval ? installOptions.interval : undefined,
+      includeNics: enableIncludeNics ? installOptions.includeNics : undefined,
+      excludeNics: enableExcludeNics ? installOptions.excludeNics : undefined,
+    });
     const scriptUrl = `${window.location.origin}/download/agent-migration.sh`;
     const downloadBase = `${window.location.origin}/download/agent/1.0.5`;
     return `read -r -s -p 'Agent token: ' KOMARI_AGENT_TOKEN && echo && curl --fail --proto '=https' --tlsv1.2 --location ${JSON.stringify(scriptUrl)} | sudo bash -s -- ${quoteShellArgs(args)} --install-version 1.0.5 --download-base ${JSON.stringify(downloadBase)} -t "$KOMARI_AGENT_TOKEN"`;
@@ -770,212 +699,9 @@ function GenerateCommandButton({
             <label className="text-base font-bold">
               {t("admin.nodeTable.installOptions", "安装选项")}
             </label>
-            <div className="grid grid-cols-2 gap-2">
-
-              <Flex gap="2" align="center">
-                <Checkbox
-                  checked={installOptions.disableAutoUpdate}
-                  onCheckedChange={(checked) => {
-                    setInstallOptions((prev) => ({
-                      ...prev,
-                      disableAutoUpdate: Boolean(checked),
-                    }));
-                  }}
-                ></Checkbox>
-                <label
-                  className="text-sm font-normal"
-                  onClick={() => {
-                    setInstallOptions((prev) => ({
-                      ...prev,
-                      disableAutoUpdate: !prev.disableAutoUpdate,
-                    }));
-                  }}
-                >
-                  {t("admin.nodeTable.disableAutoUpdate", "禁用自动更新")}
-                </label>
-              </Flex>
-              <Flex gap="2" align="center">
-                <Checkbox
-                  checked={installOptions.ignoreUnsafeCert}
-                  onCheckedChange={(checked) => {
-                    setInstallOptions((prev) => ({
-                      ...prev,
-                      ignoreUnsafeCert: Boolean(checked),
-                    }));
-                  }}
-                />
-                <label
-                  className="text-sm font-normal"
-                  onClick={() => {
-                    setInstallOptions((prev) => ({
-                      ...prev,
-                      ignoreUnsafeCert: !prev.ignoreUnsafeCert,
-                    }));
-                  }}
-                >
-                  {t("admin.nodeTable.ignoreUnsafeCert", "忽略不安全证书")}
-                </label>
-              </Flex>
-              <Flex gap="2" align="center">
-                <Checkbox
-                  checked={installOptions.memoryIncludeCache}
-                  onCheckedChange={(checked) => {
-                    setInstallOptions((prev) => ({
-                      ...prev,
-                      memoryIncludeCache: Boolean(checked),
-                    }));
-                  }}
-                />
-                <label
-                  className="text-sm font-normal"
-                  onClick={() => {
-                    setInstallOptions((prev) => ({
-                      ...prev,
-                      memoryIncludeCache: !prev.memoryIncludeCache,
-                    }));
-                  }}
-                >
-                  {t("admin.nodeTable.memoryModeAvailable", "监测可用内存")}
-                </label>
-                <Tips size="14">
-                  {t("admin.nodeTable.memoryModeAvailable_tip")}
-                </Tips>
-              </Flex>
-              <Flex gap="2" align="center">
-                <Checkbox
-                  checked={installOptions.getIpAddrFromNic}
-                  onCheckedChange={(checked) => {
-                    setInstallOptions((prev) => ({
-                      ...prev,
-                      getIpAddrFromNic: Boolean(checked),
-                    }));
-                  }}
-                />
-                <label
-                  className="text-sm font-normal"
-                  onClick={() => {
-                    setInstallOptions((prev) => ({
-                      ...prev,
-                      getIpAddrFromNic: !prev.getIpAddrFromNic,
-                    }));
-                  }}
-                >
-                  {t("admin.nodeTable.getIpAddrFromNic", "从网卡获取 IP 地址")}
-                </label>
-              </Flex>
-              <Flex gap="2" align="center">
-                <Checkbox
-                  checked={installOptions.enableGpu}
-                  onCheckedChange={(checked) => {
-                    setInstallOptions((prev) => ({
-                      ...prev,
-                      enableGpu: Boolean(checked),
-                    }));
-                  }}
-                />
-                <label
-                  className="text-sm font-normal"
-                  onClick={() => {
-                    setInstallOptions((prev) => ({
-                      ...prev,
-                      enableGpu: !prev.enableGpu,
-                    }));
-                  }}
-                >
-                  {t("admin.nodeTable.enableGpuMonitoring", "启用详细 GPU 监控")}
-                </label>
-              </Flex>
-            </div>
             <Flex direction="column" gap="2">
 
 
-              <Flex gap="2" align="center">
-                <Checkbox
-                  checked={enableCustomDir}
-                  onCheckedChange={(checked) => {
-                    setEnableCustomDir(Boolean(checked));
-                    if (!checked) {
-                      setInstallOptions((prev) => ({
-                        ...prev,
-                        dir: "",
-                      }));
-                    }
-                  }}
-                />
-                <label
-                  className="text-sm font-bold cursor-pointer"
-                  onClick={() => {
-                    setEnableCustomDir(!enableCustomDir);
-                    if (enableCustomDir) {
-                      setInstallOptions((prev) => ({
-                        ...prev,
-                        dir: "",
-                      }));
-                    }
-                  }}
-                >
-                  {t("admin.nodeTable.install_dir", "安装目录")}
-                </label>
-              </Flex>
-              {enableCustomDir && (
-                <TextField.Root
-                  placeholder={t(
-                    "admin.nodeTable.install_dir_placeholder",
-                    "安装目录，为空则使用默认目录(/opt/komari-agent)"
-                  )}
-                  value={installOptions.dir}
-                  onChange={(e) =>
-                    setInstallOptions((prev) => ({
-                      ...prev,
-                      dir: e.target.value,
-                    }))
-                  }
-                />
-              )}
-
-              <Flex gap="2" align="center">
-                <Checkbox
-                  checked={enableCustomServiceName}
-                  onCheckedChange={(checked) => {
-                    setEnableCustomServiceName(Boolean(checked));
-                    if (!checked) {
-                      setInstallOptions((prev) => ({
-                        ...prev,
-                        serviceName: "",
-                      }));
-                    }
-                  }}
-                />
-                <label
-                  className="text-sm font-bold cursor-pointer"
-                  onClick={() => {
-                    setEnableCustomServiceName(!enableCustomServiceName);
-                    if (enableCustomServiceName) {
-                      setInstallOptions((prev) => ({
-                        ...prev,
-                        serviceName: "",
-                      }));
-                    }
-                  }}
-                >
-                  {t("admin.nodeTable.serviceName", "服务名称")}
-                </label>
-              </Flex>
-              {enableCustomServiceName && (
-                <TextField.Root
-                  placeholder={t(
-                    "admin.nodeTable.serviceName_placeholder",
-                    "服务名称，为空则使用默认名称(komari-agent)"
-                  )}
-                  value={installOptions.serviceName}
-                  onChange={(e) =>
-                    setInstallOptions((prev) => ({
-                      ...prev,
-                      serviceName: e.target.value,
-                    }))
-                  }
-                />
-              )}
               <Flex gap="2" align="center">
                 <Checkbox
                   checked={enableIncludeNics}
@@ -1064,46 +790,7 @@ function GenerateCommandButton({
                   }
                 />
               )}
-              <Flex gap="2" align="center">
-                <Checkbox
-                  checked={enableIncludeMountpoints}
-                  onCheckedChange={(checked) => {
-                    setEnableIncludeMountpoints(Boolean(checked));
-                    if (!checked) {
-                      setInstallOptions((prev) => ({
-                        ...prev,
-                        includeMountpoints: "",
-                      }));
-                    }
-                  }}
-                />
-                <label
-                  className="text-sm font-bold cursor-pointer"
-                  onClick={() => {
-                    setEnableIncludeMountpoints(!enableIncludeMountpoints);
-                    if (enableIncludeMountpoints) {
-                      setInstallOptions((prev) => ({
-                        ...prev,
-                        includeMountpoints: "",
-                      }));
-                    }
-                  }}
-                >
-                  {t("admin.nodeTable.includeMountpoints", "只监测特定挂载点")}
-                </label>
-              </Flex>
-              {enableIncludeMountpoints && (
-                <TextField.Root
-                  placeholder="/;/home;/var"
-                  value={installOptions.includeMountpoints}
-                  onChange={(e) =>
-                    setInstallOptions((prev) => ({
-                      ...prev,
-                      includeMountpoints: e.target.value,
-                    }))
-                  }
-                />
-              )}
+
               <Flex gap="2" align="center">
                 <Checkbox
                   checked={enableInterval}
@@ -1159,65 +846,7 @@ function GenerateCommandButton({
                   }
                 />
               )}
-              <Flex gap="2" align="center">
-                <Checkbox
-                  checked={enableMonthRotate}
-                  onCheckedChange={(checked) => {
-                    const enabled = Boolean(checked);
-                    setEnableMonthRotate(enabled);
-                    if (!enabled) {
-                      setInstallOptions((prev) => ({
-                        ...prev,
-                        monthRotate: "",
-                      }));
-                    } else {
-                      setInstallOptions((prev) => ({
-                        ...prev,
-                        monthRotate: prev.monthRotate?.trim()
-                          ? prev.monthRotate
-                          : "1",
-                      }));
-                    }
-                  }}
-                />
-                <label
-                  className="text-sm font-bold cursor-pointer"
-                  onClick={() => {
-                    const willEnable = !enableMonthRotate;
-                    setEnableMonthRotate(willEnable);
-                    if (!willEnable) {
-                      setInstallOptions((prev) => ({
-                        ...prev,
-                        monthRotate: "",
-                      }));
-                    } else {
-                      setInstallOptions((prev) => ({
-                        ...prev,
-                        monthRotate: prev.monthRotate?.trim()
-                          ? prev.monthRotate
-                          : "1",
-                      }));
-                    }
-                  }}
-                >
-                  {t("admin.nodeTable.monthRotate", "网络统计月重置")}
-                </label>
-              </Flex>
-              {enableMonthRotate && (
-                <TextField.Root
-                  placeholder="1"
-                  type="number"
-                  min="1"
-                  max="31"
-                  value={installOptions.monthRotate}
-                  onChange={(e) =>
-                    setInstallOptions((prev) => ({
-                      ...prev,
-                      monthRotate: e.target.value,
-                    }))
-                  }
-                />
-              )}
+
             </Flex>
           </Flex>
           <Flex direction="column" gap="2">
