@@ -42,6 +42,7 @@ EUID=${EUID:-$(id -u)}
 service_name="komari-agent"
 target_dir="/opt/komari"
 install_version=""
+local_binary=""
 sha256_expected="${AGENT_SHA256:-}"
 migration_mode=false
 install_dir_specified=false
@@ -92,6 +93,10 @@ while [ $# -gt 0 ]; do
             ;;
         --install-version)
             install_version="$2"
+            shift 2
+            ;;
+        --local-binary)
+            local_binary="$2"
             shift 2
             ;;
         --sha256)
@@ -245,6 +250,12 @@ extract_token_argument() {
             --token=*)
                 agent_token=${arg#--token=}
                 ;;
+            --disable-web-ssh|--web-ssh|--enable-web-ssh|--websocket|--enable-auto-update|--auto-update)
+                log_info "Dropping legacy control flag: $arg"
+                ;;
+            --disable-web-ssh=*|--web-ssh=*|--enable-web-ssh=*|--websocket=*|--enable-auto-update=*|--auto-update=*)
+                log_info "Dropping legacy control flag: ${arg%%=*}"
+                ;;
             *)
                 quoted=$(shell_quote "$arg")
                 if [ -n "$rebuilt" ]; then rebuilt="$rebuilt "; fi
@@ -280,9 +291,22 @@ fi
 credential_file="${target_dir}/.agent.env"
 runner_file="${target_dir}/run-agent.sh"
 if [ "$migration_mode" = true ]; then
-    migration_ready_file="${target_dir}/.migration-ready"
+    migration_ready_file="${KOMARI_MIGRATION_READY_FILE:-${target_dir}/.migration-ready}"
+    migration_ready_dir=$(dirname "$migration_ready_file")
+    mkdir -p "$migration_ready_dir"
+    if [ "$EUID" -eq 0 ] && [ "$service_user" != "root" ]; then
+        chown "$service_user" "$migration_ready_dir"
+    fi
+    chmod 0750 "$migration_ready_dir"
     rm -f -- "$migration_ready_file"
 fi
+
+cleanup_target_on_exit() {
+    if [ "${migration_mode}" = true ] && [ "${migration_finalized}" != true ] && [ "${migration_cleanup_active}" = true ] && [ -n "${target_dir}" ]; then
+        rm -rf -- "$target_dir"
+    fi
+}
+trap cleanup_target_on_exit EXIT INT TERM
 
 # User services are the only service type a non-root Linux installation can manage.
 if [ "$EUID" -ne 0 ] && [ "$os_name" = "linux" ]; then
@@ -317,6 +341,7 @@ cleanup_new_installation() {
             systemctl stop "${service_name}.service" >/dev/null 2>&1 || true
             systemctl disable "${service_name}.service" >/dev/null 2>&1 || true
             rm -f "/etc/systemd/system/${service_name}.service"
+            rm -rf "/etc/systemd/system/${service_name}.service.d"
             systemctl daemon-reload >/dev/null 2>&1 || true
             ;;
         systemd-user)
@@ -394,12 +419,14 @@ cleanup_legacy_installation() {
 
     if ! wait_for_migration_ready; then
         log_error "New Agent did not report successfully; keeping legacy Agent"
+        migration_cleanup_active=true
         cleanup_new_installation
         return 1
     fi
 
     if ! new_service_is_active; then
         log_error "New Agent service is not active; keeping legacy Agent"
+        migration_cleanup_active=true
         cleanup_new_installation
         return 1
     fi
@@ -411,10 +438,12 @@ cleanup_legacy_installation() {
             systemctl disable "${legacy_service_name}.service" >/dev/null 2>&1 || true
             if legacy_service_is_active; then
                 log_error "Legacy Agent service is still active; keeping legacy files"
+                migration_cleanup_active=true
                 cleanup_new_installation
                 return 1
             fi
             rm -f -- "$legacy_service_file"
+            rm -rf -- "${legacy_service_file}.d"
             systemctl daemon-reload >/dev/null 2>&1 || true
             ;;
         openrc|procd)
@@ -422,6 +451,7 @@ cleanup_legacy_installation() {
             rc-update del "$legacy_service_name" default >/dev/null 2>&1 || true
             if legacy_service_is_active; then
                 log_error "Legacy Agent service is still active; keeping legacy files"
+                migration_cleanup_active=true
                 cleanup_new_installation
                 return 1
             fi
@@ -429,6 +459,7 @@ cleanup_legacy_installation() {
             ;;
         *)
             log_error "Cannot remove legacy service safely; keeping legacy Agent"
+            migration_cleanup_active=true
             cleanup_new_installation
             return 1
             ;;
@@ -437,7 +468,7 @@ cleanup_legacy_installation() {
     if [ -n "$legacy_binary" ] && [ -f "$legacy_binary" ] && [ "$legacy_binary" != "$komari_agent_path" ]; then
         rm -f -- "$legacy_binary"
     fi
-    if [ -e "$legacy_service_file" ] || [ -e "$legacy_binary" ]; then
+    if [ -e "$legacy_service_file" ] || [ -e "$legacy_binary" ] || [ -e "${legacy_service_file}.d" ]; then
         log_error "Legacy Agent cleanup was incomplete; inspect the old service manually"
         return 1
     fi
@@ -615,15 +646,35 @@ if [ "$EUID" -eq 0 ] && [ "$service_user" != "root" ]; then
     chown "$service_user" "$target_dir"
 fi
 
-log_step "Downloading $file_name ..."
-log_info "URL: ${CYAN}$download_url${NC}"
+log_step "Preparing $file_name ..."
 download_tmp=$(mktemp "${target_dir}/.agent-download.XXXXXX")
-cleanup_download() { rm -f "$download_tmp"; }
+cleanup_download() {
+    rm -f "$download_tmp"
+    cleanup_target_on_exit
+}
 trap cleanup_download EXIT INT TERM
-if ! curl --fail --location --proto '=https' --tlsv1.2 --connect-timeout 15 \
-    -o "$download_tmp" "$download_url" || [ ! -s "$download_tmp" ]; then
-    log_error "Download failed from GitHub Releases"
-    exit 1
+if [ -n "$local_binary" ]; then
+    if [ ! -f "$local_binary" ] || [ ! -r "$local_binary" ]; then
+        log_error "Local binary does not exist or is not readable"
+        exit 1
+    fi
+    if [ -z "$sha256_expected" ]; then
+        log_error "--local-binary requires --sha256"
+        exit 1
+    fi
+    log_info "Using caller-provided local binary"
+    if ! cp -- "$local_binary" "$download_tmp" || [ ! -s "$download_tmp" ]; then
+        log_error "Could not stage the local binary"
+        exit 1
+    fi
+else
+    log_step "Downloading $file_name ..."
+    log_info "URL: ${CYAN}$download_url${NC}"
+    if ! curl --fail --location --proto '=https' --tlsv1.2 --connect-timeout 15 \
+        -o "$download_tmp" "$download_url" || [ ! -s "$download_tmp" ]; then
+        log_error "Download failed from GitHub Releases"
+        exit 1
+    fi
 fi
 
 if [ -z "$sha256_expected" ]; then
@@ -659,7 +710,8 @@ if ! mv -f "$download_tmp" "$komari_agent_path"; then
     log_error "Could not install verified binary"
     exit 1
 fi
-trap - EXIT INT TERM
+# Keep the migration cleanup trap active after the verified binary is installed.
+trap cleanup_target_on_exit EXIT INT TERM
 
 # Service cleanup happens only after the verified binary is in place.
 uninstall_previous
@@ -670,7 +722,7 @@ if [ "$EUID" -eq 0 ] && [ "$service_user" != "root" ]; then
     chown "$service_user" "$komari_agent_path"
 fi
 umask 077
-printf 'AGENT_TOKEN=%s\n' "$(shell_quote "$agent_token")" > "$credential_file"
+printf 'export AGENT_TOKEN=%s\n' "$(shell_quote "$agent_token")" > "$credential_file"
 chmod 0600 "$credential_file"
 if [ "$migration_mode" = true ]; then
     runner_args=" --migration-ready-file $(shell_quote "$migration_ready_file")"
@@ -875,6 +927,7 @@ CapabilityBoundingSet=
 ProtectSystem=strict
 ProtectHome=true
 PrivateTmp=true
+ReadWritePaths=${target_dir}
 User=${service_user}
 
 [Install]
