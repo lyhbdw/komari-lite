@@ -8,7 +8,7 @@ import (
 	"github.com/komari-monitor/komari/pkg/metric"
 )
 
-const defaultBuiltinMetricRetentionDays = 1
+const defaultBuiltinMetricRetentionDays = 30
 
 // RetentionSummary is the compatibility view of all persisted metric policies.
 type RetentionSummary struct {
@@ -86,15 +86,9 @@ func createMetricDefinitionsWithDefaultRetention(ctx context.Context, s *metric.
 	}
 
 	for _, def := range definitions {
-		existing, err := s.GetMetric(ctx, def.Name)
+		_, err := s.GetMetric(ctx, def.Name)
 		if err != nil && !errors.Is(err, metric.ErrNotFound) {
 			return fmt.Errorf("failed to get metric %s: %w", def.Name, err)
-		}
-		if err == nil {
-			if existing.RetentionDays == 0 {
-				continue
-			}
-			def.RetentionDays = existing.RetentionDays
 		}
 		if err := s.UpsertMetric(ctx, def); err != nil {
 			return fmt.Errorf("failed to create metric %s: %w", def.Name, err)

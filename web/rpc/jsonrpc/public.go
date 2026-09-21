@@ -147,6 +147,9 @@ func publicGetRecordsByUUID(ctx context.Context, req *rpc.JsonRpcRequest) (any, 
 	if err != nil {
 		return nil, rpc.MakeError(rpc.InvalidParams, "Invalid hours parameter", nil)
 	}
+	if hoursInt > maxPublicMetricQueryHours {
+		hoursInt = maxPublicMetricQueryHours
+	}
 	validLoadTypes := map[string]bool{
 		"cpu": true, "ram": true, "swap": true,
 		"load": true, "temp": true, "disk": true, "network": true,

@@ -16,7 +16,6 @@ import (
 
 	"github.com/komari-monitor/komari/database/tasks"
 	"github.com/komari-monitor/komari/internal/config"
-	"github.com/komari-monitor/komari/internal/lifecycle"
 	"github.com/komari-monitor/komari/internal/metricstore"
 	"github.com/komari-monitor/komari/internal/scheduler"
 	"github.com/komari-monitor/komari/utils/geoip"
@@ -28,17 +27,22 @@ import (
 	"github.com/komari-monitor/komari/web/security"
 )
 
-// ErrRestartRequested is returned after a clean shutdown when a configuration
-// change requires the next startup to enter a restricted guide.
-var ErrRestartRequested = errors.New("server restart requested")
-
 const (
 	// Give in-flight HTTP requests time to finish before the listener closes.
 	httpShutdownTimeout = 10 * time.Second
 	// Keep an independent budget for report flushing and store teardown. Reusing
 	// the HTTP deadline here can skip queued metric writes after a slow request.
 	resourceCleanupTimeout = 30 * time.Second
+	httpReadHeaderTimeout  = 10 * time.Second
+	httpReadTimeout        = 30 * time.Second
+	httpWriteTimeout       = 60 * time.Second
+	httpIdleTimeout        = 120 * time.Second
+	httpMaxHeaderBytes     = 1 << 20
 )
+
+func newHTTPServer(addr string, handler http.Handler) *http.Server {
+	return &http.Server{Addr: addr, Handler: handler, ReadHeaderTimeout: httpReadHeaderTimeout, ReadTimeout: httpReadTimeout, WriteTimeout: httpWriteTimeout, IdleTimeout: httpIdleTimeout, MaxHeaderBytes: httpMaxHeaderBytes}
+}
 
 // StartBackground starts scheduled work after all stores are ready.
 func (a *App) StartBackground() error {
@@ -84,7 +88,7 @@ func (a *App) Run() error {
 	// The HTML injector runs outside the hook chain so it sees the final
 	// response: plugin hooks can still rewrite the body, then the registered
 	// head/body fragments are embedded into every text/html page.
-	a.server = &http.Server{Addr: a.listenAddr, Handler: a.engine}
+	a.server = newHTTPServer(a.listenAddr, a.engine)
 	serverErr := make(chan error, 1)
 	logger.Infof("server", "Starting server on %s ...", a.listenAddr)
 	go func() {
@@ -100,12 +104,6 @@ func (a *App) Run() error {
 	case err := <-serverErr:
 		a.onFatal(err)
 		return fmt.Errorf("listen: %w", err)
-	case reason := <-lifecycle.RestartRequests():
-		logger.Infof("server", "Restarting service for %s", reason)
-		if err := a.Shutdown(); err != nil {
-			logger.Errorf("server", "Cleanup before restart failed: %v", err)
-		}
-		return fmt.Errorf("%w: %s", ErrRestartRequested, reason)
 	case <-quit:
 		return a.Shutdown()
 	}

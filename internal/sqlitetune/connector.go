@@ -106,7 +106,11 @@ func (c *connector) Driver() driver.Driver {
 
 func applyDriverConn(conn *sqlite3.SQLiteConn, options Options) error {
 	for _, pragma := range pragmas(options) {
-		if _, err := conn.Exec(pragma, nil); err != nil {
+		execer, ok := any(conn).(driver.ExecerContext)
+		if !ok {
+			return fmt.Errorf("sqlite tune: connection does not support context execution")
+		}
+		if _, err := execer.ExecContext(context.Background(), pragma, nil); err != nil {
 			return fmt.Errorf("sqlite tune: apply %q: %w", pragma, err)
 		}
 	}

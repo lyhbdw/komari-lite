@@ -18,7 +18,13 @@ import (
 	"github.com/komari-monitor/komari/pkg/rpc"
 )
 
-const defaultMetricQueryPoints = 500
+const (
+	defaultMetricQueryPoints     = 500
+	maxPublicMetricQueryPoints   = 5000
+	maxPublicMetricQueryHours    = 24 * 365
+	maxPublicMetricQueryKeys     = 32
+	maxPublicMetricQueryEntities = 128
+)
 
 func init() {
 	regPublic("listMetricDefinitions", publicListMetricDefinitions, "List public metric definitions")
@@ -183,6 +189,9 @@ func publicQueryMetrics(ctx context.Context, req *rpc.JsonRpcRequest) (any, *rpc
 	if len(metricKeys) == 0 {
 		return nil, rpc.MakeError(rpc.InvalidParams, "metric_keys is required", nil)
 	}
+	if len(metricKeys) > maxPublicMetricQueryKeys {
+		return nil, rpc.MakeError(rpc.InvalidParams, "too many metric keys", nil)
+	}
 
 	queryNow := time.Now().UTC()
 	end := metricQueryTimeOrDefault(firstMetricQueryTime(params.End, params.EndTime), queryNow)
@@ -193,6 +202,9 @@ func publicQueryMetrics(ctx context.Context, req *rpc.JsonRpcRequest) (any, *rpc
 	}
 
 	requestedEntityIDs := normalizeStringList(params.EntityIDs, []string{params.EntityID})
+	if len(requestedEntityIDs) > maxPublicMetricQueryEntities {
+		return nil, rpc.MakeError(rpc.InvalidParams, "too many entities", nil)
+	}
 	entityIDs, rpcErr := publicMetricEntityIDs(ctx, requestedEntityIDs)
 	if rpcErr != nil {
 		return nil, rpcErr
@@ -449,6 +461,9 @@ func publicGetPingMetricStats(ctx context.Context, req *rpc.JsonRpcRequest) (any
 	}
 
 	requestedEntities := normalizeStringList(params.EntityIDs, []string{firstNonEmpty(params.EntityID, params.UUID)})
+	if len(requestedEntities) > maxPublicMetricQueryEntities {
+		return nil, rpc.MakeError(rpc.InvalidParams, "too many entities", nil)
+	}
 	entityIDs, rpcErr := publicMetricEntityIDs(ctx, requestedEntities)
 	if rpcErr != nil {
 		return nil, rpcErr
@@ -734,6 +749,9 @@ func metricQueryHours(hours float64) time.Duration {
 	if hours <= 0 {
 		return 4 * time.Hour
 	}
+	if hours > maxPublicMetricQueryHours {
+		hours = maxPublicMetricQueryHours
+	}
 	return time.Duration(hours * float64(time.Hour))
 }
 
@@ -750,6 +768,9 @@ func resolveMetricMaxPoints(metricKey string, params publicMetricQueryParams) (i
 	}
 	if maxPoints <= 0 {
 		return 0, fmt.Errorf("max points for %s must be a positive integer", metricKey)
+	}
+	if maxPoints > maxPublicMetricQueryPoints {
+		maxPoints = maxPublicMetricQueryPoints
 	}
 	return maxPoints, nil
 }

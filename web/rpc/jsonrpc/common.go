@@ -445,19 +445,15 @@ func getMe(ctx context.Context, _ *rpc.JsonRpcRequest) (any, *rpc.JsonRpcError) 
 		resp.LoggedIn = false
 		return resp, nil
 	case rpc.PrincipalAgent:
-		resp.LoggedIn = true
-
-		resp.Username = "client"
-		resp.UUID = meta.ClientToken
-		client, err := clients.GetClientUUIDByToken(meta.ClientToken)
-		if err != nil {
-			resp.UUID = client
-		}
-		return resp, nil
+		return publicAgentIdentity(meta), nil
 	default:
 		resp.LoggedIn = false
 		return resp, nil
 	}
+}
+
+func publicAgentIdentity(meta *rpc.ContextMeta) map[string]any {
+	return map[string]any{"username": "client", "logged_in": true, "uuid": meta.ClientUUID}
 }
 
 func getVersion(_ context.Context, _ *rpc.JsonRpcRequest) (any, *rpc.JsonRpcError) {

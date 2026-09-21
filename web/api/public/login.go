@@ -25,9 +25,10 @@ type LoginRequest struct {
 const sessionCookieMaxAge = 2592000
 
 const (
-	loginWindow       = 5 * time.Minute
-	loginMaxAttempts  = 8
-	loginMaxBodyBytes = 16 << 10
+	loginWindow            = 5 * time.Minute
+	loginMaxAttempts       = 8
+	loginMaxBodyBytes      = 16 << 10
+	loginLimiterMaxEntries = 4096
 )
 
 var loginLimiter = struct {
@@ -39,17 +40,37 @@ func loginAllowed(key string, now time.Time) bool {
 	loginLimiter.Lock()
 	defer loginLimiter.Unlock()
 	cutoff := now.Add(-loginWindow)
-	entries := loginLimiter.attempts[key][:0]
-	for _, at := range loginLimiter.attempts[key] {
-		if at.After(cutoff) {
-			entries = append(entries, at)
+	for existingKey, oldEntries := range loginLimiter.attempts {
+		entries := oldEntries[:0]
+		for _, at := range oldEntries {
+			if at.After(cutoff) {
+				entries = append(entries, at)
+			}
+		}
+		if len(entries) == 0 {
+			delete(loginLimiter.attempts, existingKey)
+		} else {
+			loginLimiter.attempts[existingKey] = entries
 		}
 	}
+	entries := loginLimiter.attempts[key]
 	if len(entries) >= loginMaxAttempts {
 		loginLimiter.attempts[key] = entries
 		return false
 	}
 	loginLimiter.attempts[key] = append(entries, now)
+	if len(loginLimiter.attempts) > loginLimiterMaxEntries {
+		oldestKey := ""
+		var oldest time.Time
+		for candidate, candidateEntries := range loginLimiter.attempts {
+			if len(candidateEntries) > 0 && (oldestKey == "" || candidateEntries[len(candidateEntries)-1].Before(oldest)) {
+				oldestKey, oldest = candidate, candidateEntries[len(candidateEntries)-1]
+			}
+		}
+		if oldestKey != "" {
+			delete(loginLimiter.attempts, oldestKey)
+		}
+	}
 	return true
 }
 

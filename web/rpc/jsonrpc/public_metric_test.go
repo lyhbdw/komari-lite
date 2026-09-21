@@ -3,6 +3,7 @@ package jsonrpc
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"math"
 	"path/filepath"
 	"strings"
@@ -40,6 +41,36 @@ func TestMetricQueryParamsRequireRFC3339Time(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestPublicMetricQueryLimitsHoursAndPoints(t *testing.T) {
+	if got := metricQueryHours(10_000).Hours(); got > maxPublicMetricQueryHours {
+		t.Fatalf("hours = %v, want <= %v", got, maxPublicMetricQueryHours)
+	}
+	params := publicMetricQueryParams{MaxPoints: 10_000}
+	points, err := resolveMetricMaxPoints("cpu.usage", params)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if points > maxPublicMetricQueryPoints {
+		t.Fatalf("max points = %d, want <= %d", points, maxPublicMetricQueryPoints)
+	}
+}
+
+func TestPublicMetricQueryLimitsKeysAndEntities(t *testing.T) {
+	params := publicMetricQueryParams{}
+	for i := 0; i < maxPublicMetricQueryKeys+1; i++ {
+		params.MetricKeys = append(params.MetricKeys, fmt.Sprintf("metric-%d", i))
+	}
+	for i := 0; i < maxPublicMetricQueryEntities+1; i++ {
+		params.EntityIDs = append(params.EntityIDs, fmt.Sprintf("entity-%d", i))
+	}
+	if len(normalizeStringList(params.MetricKeys)) <= maxPublicMetricQueryKeys {
+		t.Fatal("test must construct too many metric keys")
+	}
+	if len(normalizeStringList(params.EntityIDs)) <= maxPublicMetricQueryEntities {
+		t.Fatal("test must construct too many entities")
 	}
 }
 

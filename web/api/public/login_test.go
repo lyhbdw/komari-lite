@@ -3,10 +3,12 @@ package public
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/komari-monitor/komari/database/accounts"
@@ -132,5 +134,31 @@ func TestSessionCookieSecureFollowsRequestScheme(t *testing.T) {
 				assert.NotContains(t, setCookie, "Secure")
 			}
 		})
+	}
+}
+
+func TestLoginLimiterExpiresEntriesAndCapsCapacity(t *testing.T) {
+	loginLimiter.Lock()
+	loginLimiter.attempts = map[string][]time.Time{"stale": {time.Unix(0, 0)}}
+	loginLimiter.Unlock()
+
+	now := time.Now()
+	if !loginAllowed("fresh", now) {
+		t.Fatal("fresh key should be allowed")
+	}
+	loginLimiter.Lock()
+	if _, ok := loginLimiter.attempts["stale"]; ok {
+		loginLimiter.Unlock()
+		t.Fatal("expired limiter entry was not cleaned")
+	}
+	for i := 0; i < 2048; i++ {
+		loginLimiter.attempts[fmt.Sprintf("unique-%d", i)] = []time.Time{now}
+	}
+	loginLimiter.Unlock()
+	loginAllowed("capacity-trigger", now)
+	loginLimiter.Lock()
+	defer loginLimiter.Unlock()
+	if len(loginLimiter.attempts) > loginLimiterMaxEntries {
+		t.Fatalf("limiter entries = %d, want <= %d", len(loginLimiter.attempts), loginLimiterMaxEntries)
 	}
 }

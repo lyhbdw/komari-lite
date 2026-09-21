@@ -32,6 +32,9 @@ func Register(r *gin.Engine) {
 func registerPublicRoutes(r *gin.Engine) {
 	// 非 JSON / 特殊流程，保留 REST handler。
 	r.POST("/api/login", public_api.Login)
+	r.GET("/download/agent-migration.sh", func(c *gin.Context) {
+		c.Data(200, "text/x-shellscript; charset=utf-8", public.AgentMigrationScript)
+	})
 	r.GET("/api/logout", public_api.Logout)
 	registerLiteDisabledRoutes(r)
 	// /api/clients 是 WebSocket 端点（客户端发 "get"/"get <uuid>" 拉取在线列表与最新上报），
@@ -58,6 +61,7 @@ func registerLiteDisabledRoutes(r *gin.Engine) {
 		c.AbortWithStatusJSON(404, gin.H{"status": "error", "message": "Not found"})
 	}
 	for _, path := range []string{
+		"/api/clients/v1/rpc",
 		"/api/oauth",
 		"/api/oauth_callback",
 		"/api/terminal",
@@ -69,6 +73,10 @@ func registerLiteDisabledRoutes(r *gin.Engine) {
 		"/api/tasks",
 		"/api/pprof",
 		"/api/admin/terminal",
+		"/api/admin/backup/create",
+		"/api/admin/backup/status",
+		"/api/admin/dbquery",
+		"/api/admin/database",
 		"/api/admin/plugins",
 		"/api/admin/backup/restore",
 		"/api/admin/pprof",
@@ -99,6 +107,7 @@ func registerLiteDisabledRoutes(r *gin.Engine) {
 		"/api/admin/oauth2/*path",
 		"/api/admin/notification/load",
 		"/api/admin/notification/load/*path",
+		"/api/admin/backup/status/*path",
 
 		"/api/admin/clipboard/*path",
 		"/api/admin/plugin/*path",
@@ -157,13 +166,6 @@ func registerAdminRoutes(r *gin.Engine) {
 		settings.POST("/", jsonRpc.Bind("admin:editSettings"))
 		settings.POST("/message-sender", jsonRpc.Bind("admin:setMessageSenderProvider"))
 		settings.GET("/message-sender", jsonRpc.Bind("admin:getMessageSenderProvider", jsonRpc.WithQuery("provider")))
-	}
-
-	// database storage inspection and maintenance
-	databaseGroup := g.Group("/database")
-	{
-		databaseGroup.GET("/size", jsonRpc.Bind("admin:getDatabaseSize"))
-		databaseGroup.POST("/vacuum", jsonRpc.Bind("admin:vacuumDatabase"))
 	}
 
 	// clients

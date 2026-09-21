@@ -2,12 +2,18 @@ package admin
 
 import (
 	"image/png"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/komari-monitor/komari/database/accounts"
+	"github.com/komari-monitor/komari/utils"
 	"github.com/komari-monitor/komari/web/api"
 	"github.com/pquerna/otp/totp"
 )
+
+func setTwoFactorCookie(c *gin.Context, value string, maxAge int) {
+	http.SetCookie(c.Writer, &http.Cookie{Name: "2fa_secret", Value: value, Path: "/", MaxAge: maxAge, Secure: utils.GetScheme(c) == "https", HttpOnly: true, SameSite: http.SameSiteStrictMode})
+}
 
 func Generate2FA(c *gin.Context) {
 	secret, img, err := accounts.Generate2Fa()
@@ -15,7 +21,7 @@ func Generate2FA(c *gin.Context) {
 		api.RespondError(c, 500, "Failed to generate 2FA: "+err.Error())
 		return
 	}
-	c.SetCookie("2fa_secret", secret, 1800, "/", "", false, true)
+	setTwoFactorCookie(c, secret, 1800)
 	c.Header("Content-Type", "image/png")
 	c.Writer.WriteHeader(200)
 	png.Encode(c.Writer, img)
@@ -38,8 +44,7 @@ func Enable2FA(c *gin.Context) {
 		api.RespondError(c, 500, "Failed to enable 2FA: "+err.Error())
 		return
 	}
-	c.SetCookie("2fa_secret", "", -1, "/", "", false, true)
-
+	setTwoFactorCookie(c, "", -1)
 	api.RespondSuccess(c, "2FA enabled successfully")
 }
 

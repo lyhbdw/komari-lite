@@ -109,6 +109,10 @@ func GetUserBySession(session string) (models.User, error) {
 	if err != nil {
 		return models.User{}, err
 	}
+	if time.Now().UTC().After(sessionRecord.Expires) {
+		_ = DeleteSession(session)
+		return models.User{}, errors.New("session expired")
+	}
 	return GetUserByUUID(sessionRecord.UUID)
 }
 

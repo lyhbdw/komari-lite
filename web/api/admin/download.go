@@ -123,126 +123,117 @@ func backupSQLiteTo(destDBPath string) error {
 	return nil
 }
 
-// DownloadBackup 使用白名单打包 ./data 及数据库文件为 zip 并下载，
-// 同时归档到 ./data/backup/ 确保 Docker 挂载后备份文件可持久化。
-//
-// 归档文件由前端后续统一管理，服务端只负责生成并保存。
-func DownloadBackup(c *gin.Context) {
+// createBackupArchive creates and durably publishes a backup archive on the data volume.
+// It intentionally does not write the archive to the HTTP response, so callers can
+// run it asynchronously without waiting for a large ZIP download through a proxy.
+func createBackupArchive() (string, string, error) {
 	backupDir := filepath.Join(".", "data", "backup")
-
-	// 1) 创建临时目录，内容隔离到 content/ 子目录
-	tempDir, err := os.MkdirTemp("", "komari-backup-*")
+	tempRoot := filepath.Join(".", "data", ".komari-backup-tmp")
+	if err := os.MkdirAll(tempRoot, 0o700); err != nil {
+		return "", "", fmt.Errorf("error creating backup work directory: %w", err)
+	}
+	tempDir, err := os.MkdirTemp(tempRoot, "komari-backup-*")
 	if err != nil {
-		api.RespondError(c, http.StatusInternalServerError, fmt.Sprintf("Error creating temporary directory: %v", err))
-		return
+		return "", "", fmt.Errorf("error creating temporary directory: %w", err)
 	}
 	defer os.RemoveAll(tempDir)
 
 	contentDir := filepath.Join(tempDir, "content")
 	if err := os.MkdirAll(contentDir, 0o755); err != nil {
-		api.RespondError(c, http.StatusInternalServerError, fmt.Sprintf("Error creating content directory: %v", err))
-		return
+		return "", "", fmt.Errorf("error creating content directory: %w", err)
 	}
-
-	// 2) 复制白名单文件到 content 目录
 	if err := copyWhitelistedFiles(contentDir); err != nil {
-		api.RespondError(c, http.StatusInternalServerError, fmt.Sprintf("Error copying data to temp: %v", err))
-		return
+		return "", "", fmt.Errorf("error copying data to temp: %w", err)
 	}
 
-	// 3) 处理数据库备份 -> content/komari.db
 	destDB := filepath.Join(contentDir, "komari.db")
 	dbFilePath := flags.DatabaseFile
-
 	if flags.IsSQLite() {
 		if err := backupSQLiteTo(destDB); err != nil {
-			api.RespondError(c, http.StatusInternalServerError, fmt.Sprintf("Error backing up sqlite database: %v", err))
-			return
+			return "", "", fmt.Errorf("error backing up sqlite database: %w", err)
 		}
 	} else if dbFilePath != "" {
 		if _, err := os.Stat(dbFilePath); err == nil {
 			if err := copyFile(dbFilePath, destDB); err != nil {
-				api.RespondError(c, http.StatusInternalServerError, fmt.Sprintf("Error copying database file: %v", err))
-				return
+				return "", "", fmt.Errorf("error copying database file: %w", err)
 			}
 		} else if !os.IsNotExist(err) {
-			api.RespondError(c, http.StatusInternalServerError, fmt.Sprintf("Error stating database file: %v", err))
-			return
+			return "", "", fmt.Errorf("error stating database file: %w", err)
 		}
 	}
 
-	// 4) 打包到临时 ZIP（放在 tempDir 下，与 content 平级）
 	tempZipPath := filepath.Join(tempDir, "output.zip")
 	tempZip, err := os.Create(tempZipPath)
 	if err != nil {
-		api.RespondError(c, http.StatusInternalServerError, fmt.Sprintf("Error creating temp zip: %v", err))
-		return
+		return "", "", fmt.Errorf("error creating temp zip: %w", err)
 	}
 	zipWriter := zip.NewWriter(tempZip)
-
-	// 只 walk content 目录，避免 output.zip 被打包进去
 	if err := walkDirToZip(zipWriter, contentDir); err != nil {
-		zipWriter.Close()
-		tempZip.Close()
-		api.RespondError(c, http.StatusInternalServerError, fmt.Sprintf("Error archiving temp folder: %v", err))
-		return
+		_ = zipWriter.Close()
+		_ = tempZip.Close()
+		return "", "", fmt.Errorf("error archiving temp folder: %w", err)
 	}
-
 	if err := writeBackupMarkup(zipWriter); err != nil {
-		zipWriter.Close()
-		tempZip.Close()
-		api.RespondError(c, http.StatusInternalServerError, fmt.Sprintf("Error writing backup markup: %v", err))
-		return
+		_ = zipWriter.Close()
+		_ = tempZip.Close()
+		return "", "", fmt.Errorf("error writing backup markup: %w", err)
 	}
-
 	if err := zipWriter.Close(); err != nil {
-		tempZip.Close()
-		api.RespondError(c, http.StatusInternalServerError, fmt.Sprintf("Error finalizing zip: %v", err))
-		return
+		_ = tempZip.Close()
+		return "", "", fmt.Errorf("error finalizing zip: %w", err)
 	}
-	tempZip.Close()
+	if err := tempZip.Close(); err != nil {
+		return "", "", fmt.Errorf("error closing temp zip: %w", err)
+	}
 
-	// 5) 归档到 data/backup/。先写临时文件再原子发布。
-	ts := time.Now().UTC().Format("20060102-150405.000000")
-	archiveName := fmt.Sprintf("backup-%s.zip", ts)
-
+	archiveName := "database-maintenance-backup.zip"
 	archivePath := filepath.Join(backupDir, archiveName)
-	if err := os.MkdirAll(backupDir, 0755); err != nil {
-		api.RespondError(c, http.StatusInternalServerError, fmt.Sprintf("Error creating backup directory: %v", err))
-		return
+	if err := os.MkdirAll(backupDir, 0o755); err != nil {
+		return "", "", fmt.Errorf("error creating backup directory: %w", err)
 	}
-
 	archiveTemp, err := os.CreateTemp(backupDir, ".backup-*.tmp")
 	if err != nil {
-		api.RespondError(c, http.StatusInternalServerError, fmt.Sprintf("Error creating archive temp file: %v", err))
-		return
+		return "", "", fmt.Errorf("error creating archive temp file: %w", err)
 	}
 	archiveTempPath := archiveTemp.Name()
 	if err := archiveTemp.Close(); err != nil {
-		os.Remove(archiveTempPath)
-		api.RespondError(c, http.StatusInternalServerError, fmt.Sprintf("Error closing archive temp file: %v", err))
-		return
+		_ = os.Remove(archiveTempPath)
+		return "", "", fmt.Errorf("error closing archive temp file: %w", err)
 	}
 	defer os.Remove(archiveTempPath)
 	if err := copyFile(tempZipPath, archiveTempPath); err != nil {
-		api.RespondError(c, http.StatusInternalServerError, fmt.Sprintf("Error archiving backup: %v", err))
-		return
+		return "", "", fmt.Errorf("error archiving backup: %w", err)
 	}
 	if err := os.Rename(archiveTempPath, archivePath); err != nil {
-		api.RespondError(c, http.StatusInternalServerError, fmt.Sprintf("Error publishing backup archive: %v", err))
+		return "", "", fmt.Errorf("error publishing backup archive: %w", err)
+	}
+	// Keep one deterministic maintenance backup instead of accumulating large ZIPs.
+	entries, _ := os.ReadDir(backupDir)
+	for _, entry := range entries {
+		if entry.IsDir() || entry.Name() == archiveName ||
+			(!strings.HasPrefix(entry.Name(), "database-maintenance-backup-") &&
+				!strings.HasPrefix(entry.Name(), "backup-")) {
+			continue
+		}
+		_ = os.Remove(filepath.Join(backupDir, entry.Name()))
+	}
+	return archivePath, archiveName, nil
+}
+
+// DownloadBackup preserves the manual full ZIP download endpoint.
+func DownloadBackup(c *gin.Context) {
+	archivePath, archiveName, err := createBackupArchive()
+	if err != nil {
+		api.RespondError(c, http.StatusInternalServerError, err.Error())
 		return
 	}
-
-	// 6) 发送给客户端
-	c.Writer.Header().Set("Content-Type", "application/zip")
-	c.Writer.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", archiveName))
-
-	zipReader, err := os.Open(tempZipPath)
+	zipReader, err := os.Open(archivePath)
 	if err != nil {
-		api.RespondError(c, http.StatusInternalServerError, fmt.Sprintf("Error reading temp zip: %v", err))
+		api.RespondError(c, http.StatusInternalServerError, fmt.Sprintf("error reading backup archive: %v", err))
 		return
 	}
 	defer zipReader.Close()
-
+	c.Writer.Header().Set("Content-Type", "application/zip")
+	c.Writer.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", archiveName))
 	http.ServeContent(c.Writer, c.Request, archiveName, time.Now(), zipReader)
 }

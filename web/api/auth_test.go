@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestExtractClientTokenRequiresBearerHeader(t *testing.T) {
+func TestExtractClientTokenFromRequest(t *testing.T) {
 	tests := []struct {
 		name  string
 		setup func(*http.Request)
@@ -21,8 +21,16 @@ func TestExtractClientTokenRequiresBearerHeader(t *testing.T) {
 			want: "agent-token",
 		},
 		{
-			name: "query token is rejected",
+			name: "legacy v2 query token",
 			setup: func(r *http.Request) {
+				r.URL.RawQuery = "token=agent-token"
+			},
+			want: "agent-token",
+		},
+		{
+			name: "query token outside v2 is rejected",
+			setup: func(r *http.Request) {
+				r.URL.Path = "/api/rpc2"
 				r.URL.RawQuery = "token=agent-token"
 			},
 		},
@@ -43,7 +51,7 @@ func TestExtractClientTokenRequiresBearerHeader(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := httptest.NewRequest("POST", "/", nil)
+			r := httptest.NewRequest("POST", "/api/clients/v2/rpc", nil)
 			tt.setup(r)
 			if got := extractClientTokenFromRequest(r); got != tt.want {
 				t.Fatalf("token = %q, want %q", got, tt.want)

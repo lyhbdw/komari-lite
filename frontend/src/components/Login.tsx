@@ -72,7 +72,7 @@ const LoginDialog = ({ trigger, autoOpen = false, showSettings = true, info, onL
             onLoginSuccess();
             return
           }
-          window.open("/admin/dashboard", "_self");
+          window.open("/admin/servers", "_self");
         } else {
           if (data.message === "2FA code is required") {
             setRequire2FA(true);
@@ -103,7 +103,7 @@ const LoginDialog = ({ trigger, autoOpen = false, showSettings = true, info, onL
         return null;
       }
       return (
-        <a href="/admin/dashboard" target="_blank">
+        <a href="/admin/servers" target="_blank">
           <IconButton
             title={t("settings.title", "Settings")}
             aria-label={t("settings.title", "Settings")}

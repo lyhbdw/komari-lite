@@ -1,9 +1,6 @@
 package cmd
 
 import (
-	"errors"
-	"os"
-
 	appserver "github.com/komari-monitor/komari/internal/server"
 	logger "github.com/komari-monitor/komari/utils/log"
 
@@ -63,10 +60,6 @@ func RunServer() {
 	}
 
 	if err := app.Run(); err != nil {
-		if errors.Is(err, appserver.ErrRestartRequested) {
-			logger.Infof("server", "Service stopped for restart: %v", err)
-			os.Exit(1)
-		}
 		logger.Fatalf("server", "server exited with error: %v", err)
 	}
 }

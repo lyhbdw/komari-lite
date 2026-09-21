@@ -125,6 +125,18 @@ func TestCorsMiddlewareSkipsNonAPIPaths(t *testing.T) {
 	}
 }
 
+func TestCorsMiddlewareRejectsWildcardAllowlistWithCredentials(t *testing.T) {
+	setupCORSConfigDB(t, "")
+	router := setupCORSRouter(true, "*")
+	response := performCORSRequest(router, http.MethodGet, "/api/ping", "api.example", "https://evil.example")
+	if response.Code != http.StatusForbidden {
+		t.Fatalf("status = %d, want %d", response.Code, http.StatusForbidden)
+	}
+	if got := response.Header().Get("Access-Control-Allow-Origin"); got != "" {
+		t.Fatalf("wildcard allow origin = %q", got)
+	}
+}
+
 func setupCORSRouter(enabled bool, allowlist string) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()

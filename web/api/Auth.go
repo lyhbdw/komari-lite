@@ -131,20 +131,32 @@ func PrivateSiteMiddleware() gin.HandlerFunc {
 }
 
 func extractClientToken(c *gin.Context) string {
-	return extractClientTokenFromRequest(c.Request)
+	return ExtractClientTokenFromRequest(c.Request)
+}
+
+func ExtractClientTokenFromRequest(r *http.Request) string {
+	const prefix = "Bearer "
+	authorization := strings.TrimSpace(r.Header.Get("Authorization"))
+	if strings.HasPrefix(authorization, prefix) {
+		token := strings.TrimSpace(strings.TrimPrefix(authorization, prefix))
+		if token != "" && !strings.ContainsAny(token, " 	\r\n") {
+			return token
+		}
+	}
+
+	// Transitional compatibility for agents installed before Lite migration.
+	// Keep the legacy query-token path limited to the agent v2 transport only.
+	if strings.HasPrefix(r.URL.Path, "/api/clients/v2/rpc") {
+		token := strings.TrimSpace(r.URL.Query().Get("token"))
+		if token != "" && !strings.ContainsAny(token, " 	\r\n") {
+			return token
+		}
+	}
+	return ""
 }
 
 func extractClientTokenFromRequest(r *http.Request) string {
-	const prefix = "Bearer "
-	authorization := strings.TrimSpace(r.Header.Get("Authorization"))
-	if !strings.HasPrefix(authorization, prefix) {
-		return ""
-	}
-	token := strings.TrimSpace(strings.TrimPrefix(authorization, prefix))
-	if token == "" || strings.ContainsAny(token, " 	\r\n") {
-		return ""
-	}
-	return token
+	return ExtractClientTokenFromRequest(r)
 }
 
 func checkTokenAndGetUUID(token string) (string, error) {

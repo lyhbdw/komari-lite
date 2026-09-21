@@ -1,55 +1,40 @@
 package jsonrpc
 
-import (
-	"testing"
+import "testing"
 
-	"github.com/komari-monitor/komari/internal/metricstore"
-)
-
-func TestMetricKeysTouched(t *testing.T) {
-	if !metricKeysTouched(map[string]interface{}{metricstore.MetricDBDSNKey: "metrics.db"}) {
-		t.Fatal("metric database DSN must trigger metric store validation")
-	}
-	for _, key := range []string{
-		metricstore.MetricRollupMinuteRetentionMinutesKey,
-		metricstore.MetricRollupFiveMinuteRetentionMinutesKey,
-		metricstore.MetricRollupHourRetentionHoursKey,
-	} {
-		if !metricKeysTouched(map[string]interface{}{key: 1}) {
-			t.Fatalf("%s must trigger metric store validation", key)
-		}
-	}
-}
-
-func TestValidateMetricRollupSettingChanges(t *testing.T) {
-	if err := validateMetricRollupSettingChanges(map[string]interface{}{
-		metricstore.MetricRollupMinuteRetentionMinutesKey:     float64(30),
-		metricstore.MetricRollupFiveMinuteRetentionMinutesKey: float64(150),
-		metricstore.MetricRollupHourRetentionHoursKey:         float64(300),
-	}); err != nil {
-		t.Fatalf("valid rollup settings rejected: %v", err)
-	}
-
-	for _, value := range []interface{}{float64(0), float64(-1), float64(1.5), "not-a-number"} {
-		err := validateMetricRollupSettingChanges(map[string]interface{}{
-			metricstore.MetricRollupMinuteRetentionMinutesKey: value,
-		})
-		if err == nil {
-			t.Fatalf("value %#v should be rejected", value)
-		}
-	}
-}
-
-func TestRemoveRetiredLowResourceMode(t *testing.T) {
+func TestRemoveRetiredSettings(t *testing.T) {
 	cfg := map[string]interface{}{
-		"low_resource_mode": true,
-		"sitename":          "Komari",
+		"low_resource_mode":                           true,
+		"metric_db_driver":                            "sqlite",
+		"metric_db_dsn":                               "./data/metrics.db",
+		"metric_table_prefix":                         "metric_",
+		"metric_max_open_conns":                       25,
+		"metric_max_idle_conns":                       5,
+		"metric_rollup_minute_retention_minutes":      600,
+		"metric_rollup_five_minute_retention_minutes": 3000,
+		"metric_rollup_hour_retention_hours":          600,
+		"metric_migration_target":                     "sqlite|./data/metrics.db",
+		"sitename":                                    "Komari",
 	}
 
 	removeRetiredLowResourceMode(cfg)
+	removeRetiredMetricStoreConfig(cfg)
 
-	if _, ok := cfg["low_resource_mode"]; ok {
-		t.Fatal("retired low resource mode must not be persisted")
+	for _, key := range []string{
+		"low_resource_mode",
+		"metric_db_driver",
+		"metric_db_dsn",
+		"metric_table_prefix",
+		"metric_max_open_conns",
+		"metric_max_idle_conns",
+		"metric_rollup_minute_retention_minutes",
+		"metric_rollup_five_minute_retention_minutes",
+		"metric_rollup_hour_retention_hours",
+		"metric_migration_target",
+	} {
+		if _, ok := cfg[key]; ok {
+			t.Fatalf("retired setting %q must not be persisted", key)
+		}
 	}
 	if cfg["sitename"] != "Komari" {
 		t.Fatal("unrelated settings must be preserved")

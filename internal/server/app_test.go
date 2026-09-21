@@ -3,8 +3,19 @@ package server
 import (
 	"context"
 	"errors"
+	"net/http"
 	"testing"
 )
+
+func TestNewHTTPServerAppliesRequestLimits(t *testing.T) {
+	server := newHTTPServer(":0", http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
+	if server.ReadHeaderTimeout <= 0 || server.ReadTimeout <= 0 || server.WriteTimeout <= 0 || server.IdleTimeout <= 0 {
+		t.Fatalf("HTTP timeouts must all be configured: %#v", server)
+	}
+	if server.MaxHeaderBytes <= 0 {
+		t.Fatalf("MaxHeaderBytes must be configured")
+	}
+}
 
 func TestRetryMetricStoreConnectionStopsAfterRecovery(t *testing.T) {
 	wantErr := errors.New("temporary connection failure")
@@ -23,7 +34,6 @@ func TestRetryMetricStoreConnectionStopsAfterRecovery(t *testing.T) {
 		t.Fatalf("attempts = %d, want 3", attempts)
 	}
 }
-
 
 func TestRetryMetricStoreConnectionReturnsLastError(t *testing.T) {
 	wantErr := errors.New("connection unavailable")

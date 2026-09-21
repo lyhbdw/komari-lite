@@ -259,5 +259,10 @@ jobs:
           platforms: linux/amd64,linux/arm64
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            OCI_REVISION=${{ github.sha }}
+            OCI_SOURCE=${{ github.server_url }}/${{ github.repository }}
+            OCI_VERSION=${{ needs.prepare.outputs.version }}
           no-cache: true
-          provenance: false
+          provenance: true
+          sbom: true

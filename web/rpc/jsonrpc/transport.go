@@ -6,7 +6,6 @@ import (
 	"errors"
 	"io"
 	"net/http"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/komari-monitor/komari/database/accounts"
@@ -180,10 +179,7 @@ func buildContextMeta(c *gin.Context) *rpc.ContextMeta {
 		}
 	case rpc.PrincipalAgent:
 		meta.ClientUUID = p.ClientUUID
-		// Client tokens are accepted only from Authorization: Bearer <token>.
-		if auth := c.GetHeader("Authorization"); strings.HasPrefix(auth, "Bearer ") {
-			meta.ClientToken = strings.TrimSpace(strings.TrimPrefix(auth, "Bearer "))
-		}
+		meta.ClientToken = api.ExtractClientTokenFromRequest(c.Request)
 	}
 
 	return meta

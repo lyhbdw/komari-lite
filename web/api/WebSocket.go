@@ -28,7 +28,9 @@ func UpgradeWebSocket(c *gin.Context, options ...WebSocketUpgradeOption) (*webso
 		return nil, fmt.Errorf("require websocket upgrade")
 	}
 	upgrader := websocket.Upgrader{
-		CheckOrigin: CheckWebSocketOrigin,
+		CheckOrigin: func(r *http.Request) bool {
+			return checkWebSocketOriginForContext(c, r)
+		},
 	}
 	for _, option := range options {
 		option(&upgrader)
@@ -47,11 +49,22 @@ func UpgradeSafeConn(c *gin.Context, options ...WebSocketUpgradeOption) (*connec
 }
 
 func CheckWebSocketOrigin(r *http.Request) bool {
-	origin := r.Header.Get("Origin")
-	if strings.EqualFold(os.Getenv("KOMARI_WS_DISABLE_ORIGIN"), "true") {
+	return checkWebSocketOriginForContext(nil, r)
+}
+
+func checkWebSocketOriginForContext(c *gin.Context, r *http.Request) bool {
+	if c != nil && r.URL.Path == "/api/clients/v2/rpc" && GetRole(c) == RoleClient && r.Header.Get("Origin") == "" {
 		return true
 	}
-	enabled, _ := config.GetAs[bool](config.WsOriginCheckEnabledKey, true)
+	origin := r.Header.Get("Origin")
+	development := strings.EqualFold(os.Getenv("GIN_MODE"), "debug") || strings.EqualFold(os.Getenv("GIN_MODE"), "test") || strings.EqualFold(os.Getenv("KOMARI_ENV"), "development")
+	if development && strings.EqualFold(os.Getenv("KOMARI_WS_DISABLE_ORIGIN"), "true") {
+		return true
+	}
+	enabled, err := config.GetAs[bool](config.WsOriginCheckEnabledKey, true)
+	if err != nil {
+		enabled = true
+	}
 	if !enabled {
 		return true
 	}

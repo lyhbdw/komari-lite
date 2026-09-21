@@ -44,3 +44,11 @@ func TestPrivateSiteLoginWhitelist(t *testing.T) {
 		}
 	}
 }
+
+func TestDatabaseMaintenanceRPCMethodsAreUnavailable(t *testing.T) {
+	for _, method := range []string{"admin:getDatabaseSize", "admin:vacuumDatabase", "admin:dbTables"} {
+		if resp := rpc.Call(1, "rpc.help", map[string]any{"method": method}); resp.Error == nil {
+			t.Fatalf("database maintenance RPC %q must remain unavailable", method)
+		}
+	}
+}

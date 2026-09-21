@@ -50,25 +50,19 @@ const (
 	MetricRollupMinuteRetentionMinutesKey     = "metric_rollup_minute_retention_minutes"
 	MetricRollupFiveMinuteRetentionMinutesKey = "metric_rollup_five_minute_retention_minutes"
 	MetricRollupHourRetentionHoursKey         = "metric_rollup_hour_retention_hours"
-	// MigrationTargetKey 记录上一次成功完成手动迁移的目标指纹（driver+dsn），
-	// 用于在下一次管理员手动迁移时推断默认源库。
-	MigrationTargetKey = "metric_migration_target"
 )
 
-func targetFingerprint(cfg *MetricStoreConfig) string {
-	driver := ResolveDriverFromConfig(cfg.Driver, cfg.DSN)
-	dsn := strings.TrimSpace(cfg.DSN)
-	return fmt.Sprintf("%s|%s", driver, dsn)
-}
-
-// buildMetricConfig 根据 MetricStoreConfig 构造底层 metric.Config。
-// autoMigrate 控制是否在 Open 时自动建表：正式初始化/热加载时为 true，
-// 仅做连接测试时为 false（不写入 schema，避免对目标库产生副作用）。
 func buildMetricConfig(cfg *MetricStoreConfig, autoMigrate bool) (metric.Config, error) {
 	if cfg == nil {
 		return metric.Config{}, fmt.Errorf("metric store config is nil")
 	}
-	driver := ResolveDriverFromConfig(cfg.Driver, cfg.DSN)
+	configuredDriver := strings.ToLower(strings.TrimSpace(cfg.Driver))
+	if configuredDriver != "" && configuredDriver != string(metric.DriverSQLite) {
+		return metric.Config{}, fmt.Errorf("monitoring-only build supports SQLite metrics storage only, got %q", cfg.Driver)
+	}
+	if inferred, ok := InferDriverFromDSN(cfg.DSN); ok && inferred != metric.DriverSQLite {
+		return metric.Config{}, fmt.Errorf("monitoring-only build rejects external metrics DSN")
+	}
 
 	tablePrefix := cfg.TablePrefix
 	if tablePrefix == "" {
@@ -84,42 +78,25 @@ func buildMetricConfig(cfg *MetricStoreConfig, autoMigrate bool) (metric.Config,
 	}
 	opts = append(opts, metric.WithRollupPolicy(policy))
 
-	switch driver {
-	case metric.DriverSQLite:
-		dsn := cfg.DSN
-		if dsn == "" || dsn == "./data/metrics.db" {
-			// 注意：刻意不使用 cache=shared。SQLite 共享缓存模式使用表级锁，
-			// 当一个连接持有读锁、另一个连接尝试写入时会立即返回
-			// SQLITE_LOCKED（"database table is locked"），且 busy_timeout
-			// 对共享缓存的表级锁无效，迁移期间与前台查询/实时写入并发时必然报错。
-			// _txlock=immediate 让写事务开始即获取写锁，避免锁升级死锁。
-			dsn = "file:./data/metrics.db?mode=rwc&_txlock=immediate"
-		} else {
-			// 用户自定义 DSN 时，剥离 cache=shared，避免上述表级锁问题。
-			dsn = stripSharedCache(dsn)
-		}
-		// SQLite 串行化写入：固定单写连接以避免 "database is locked" 竞争，
-		// 同时启用独立的 WAL 只读连接池提升前台查询并发（写仍走单主连接）。
-		// 这里刻意忽略 cfg.MaxOpenConns/MaxIdleConns —— 对 SQLite 而言多写连接
-		// 只会引入锁竞争而非提升吞吐。
-		opts = append(opts, metric.WithMaxOpenConns(1), metric.WithMaxIdleConns(1))
-		opts = append(opts, metric.WithSQLiteReadPool(2))
-		return metric.SQLite(dsn, opts...), nil
-	case metric.DriverMySQL:
-		opts = append(opts,
-			metric.WithMaxOpenConns(cfg.MaxOpenConns),
-			metric.WithMaxIdleConns(cfg.MaxIdleConns),
-		)
-		return metric.MySQL(cfg.DSN, opts...), nil
-	case metric.DriverPostgreSQL:
-		opts = append(opts,
-			metric.WithMaxOpenConns(cfg.MaxOpenConns),
-			metric.WithMaxIdleConns(cfg.MaxIdleConns),
-		)
-		return metric.PostgreSQL(cfg.DSN, opts...), nil
-	default:
-		return metric.Config{}, fmt.Errorf("unsupported metric database driver: %s", cfg.Driver)
+	dsn := cfg.DSN
+	if dsn == "" || dsn == "./data/metrics.db" {
+		// 注意：刻意不使用 cache=shared。SQLite 共享缓存模式使用表级锁，
+		// 当一个连接持有读锁、另一个连接尝试写入时会立即返回
+		// SQLITE_LOCKED（"database table is locked"），且 busy_timeout
+		// 对共享缓存的表级锁无效，迁移期间与前台查询/实时写入并发时必然报错。
+		// _txlock=immediate 让写事务开始即获取写锁，避免锁升级死锁。
+		dsn = "file:./data/metrics.db?mode=rwc&_txlock=immediate"
+	} else {
+		// 用户自定义 DSN 时，剥离 cache=shared，避免上述表级锁问题。
+		dsn = stripSharedCache(dsn)
 	}
+	// SQLite 串行化写入：固定单写连接以避免 "database is locked" 竞争，
+	// 同时启用独立的 WAL 只读连接池提升前台查询并发（写仍走单主连接）。
+	// 这里刻意忽略 cfg.MaxOpenConns/MaxIdleConns —— 对 SQLite 而言多写连接
+	// 只会引入锁竞争而非提升吞吐。
+	opts = append(opts, metric.WithMaxOpenConns(1), metric.WithMaxIdleConns(1))
+	opts = append(opts, metric.WithSQLiteReadPool(2))
+	return metric.SQLite(dsn, opts...), nil
 }
 
 func defaultRollupPolicy() metric.RollupPolicy {

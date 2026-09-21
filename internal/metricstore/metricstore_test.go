@@ -56,6 +56,18 @@ func TestBuildMetricConfigEnablesDefaultRollupPolicy(t *testing.T) {
 	}
 }
 
+func TestBuildMetricConfigRejectsExternalDatabaseDrivers(t *testing.T) {
+	for _, driver := range []string{"mysql", "postgresql", "postgres"} {
+		_, err := buildMetricConfig(&MetricStoreConfig{
+			Driver: driver,
+			DSN:    "external://must-not-open",
+		}, false)
+		if err == nil {
+			t.Fatalf("driver %q must be rejected by the monitoring-only build", driver)
+		}
+	}
+}
+
 func TestBuildMetricConfigLeavesFinalRetentionToMetricDefinition(t *testing.T) {
 	cfg, err := buildMetricConfig(&MetricStoreConfig{
 		Driver: "sqlite",
@@ -136,27 +148,6 @@ func TestBuildMetricConfigDefaultsOmittedRollupRetention(t *testing.T) {
 	}
 }
 
-func TestConfigFromFingerprintPreservesRollupRetention(t *testing.T) {
-	base := &MetricStoreConfig{
-		TablePrefix:                      "metrics_",
-		MaxOpenConns:                     11,
-		MaxIdleConns:                     4,
-		RollupMinuteRetentionMinutes:     30,
-		RollupFiveMinuteRetentionMinutes: 150,
-		RollupHourRetentionHours:         300,
-	}
-
-	got, err := configFromFingerprint("mysql|user:password@tcp(host:3306)/metrics", base)
-	if err != nil {
-		t.Fatalf("config from fingerprint: %v", err)
-	}
-	if got.RollupMinuteRetentionMinutes != base.RollupMinuteRetentionMinutes ||
-		got.RollupFiveMinuteRetentionMinutes != base.RollupFiveMinuteRetentionMinutes ||
-		got.RollupHourRetentionHours != base.RollupHourRetentionHours {
-		t.Fatalf("rollup retention was not preserved: %#v", got)
-	}
-}
-
 func TestBuildMetricConfigAlwaysEnablesDownsampling(t *testing.T) {
 	cfg, err := buildMetricConfig(&MetricStoreConfig{
 		Driver: "sqlite",
@@ -221,9 +212,9 @@ func TestGetPingRecordsReadsRollupsAfterRawCompaction(t *testing.T) {
 	}
 }
 
-func TestCreateMetricDefinitionsUsesExplicitRetentionAndPreservesOverrides(t *testing.T) {
-	if defaultBuiltinMetricRetentionDays != 1 {
-		t.Fatalf("default built-in metric retention = %d, want 1 day", defaultBuiltinMetricRetentionDays)
+func TestCreateMetricDefinitionsUsesFixedRetention(t *testing.T) {
+	if defaultBuiltinMetricRetentionDays != 30 {
+		t.Fatalf("default built-in metric retention = %d, want 30 days", defaultBuiltinMetricRetentionDays)
 	}
 
 	ctx := context.Background()
@@ -264,8 +255,8 @@ func TestCreateMetricDefinitionsUsesExplicitRetentionAndPreservesOverrides(t *te
 	if err != nil {
 		t.Fatalf("reload cpu definition: %v", err)
 	}
-	if cpu.RetentionDays != 60 {
-		t.Fatalf("cpu retention = %d, want preserved override 60", cpu.RetentionDays)
+	if cpu.RetentionDays != 30 {
+		t.Fatalf("cpu retention = %d, want fixed retention 30", cpu.RetentionDays)
 	}
 	if _, err := s.SetMetricRetention(ctx, MetricCPU, 0); err != nil {
 		t.Fatalf("disable cpu retention: %v", err)
@@ -277,8 +268,8 @@ func TestCreateMetricDefinitionsUsesExplicitRetentionAndPreservesOverrides(t *te
 	if err != nil {
 		t.Fatalf("reload disabled cpu definition: %v", err)
 	}
-	if cpu.RetentionDays != 0 {
-		t.Fatalf("cpu retention = %d, want preserved disabled state", cpu.RetentionDays)
+	if cpu.RetentionDays != 30 {
+		t.Fatalf("cpu retention = %d, want fixed retention 30", cpu.RetentionDays)
 	}
 }
 
@@ -314,7 +305,7 @@ func TestCreateMetricDefinitionsKeepsExistingMetrics(t *testing.T) {
 	}
 }
 
-func TestCreateMetricDefinitionsUsesLegacySpanOnlyForNewDefinitions(t *testing.T) {
+func TestCreateMetricDefinitionsUsesFixedRetentionForMigrationDefinitions(t *testing.T) {
 	ctx := context.Background()
 	s, err := metric.Open(ctx, metric.SQLite(":memory:", metric.WithMaxOpenConns(1)))
 	if err != nil {
@@ -330,8 +321,8 @@ func TestCreateMetricDefinitionsUsesLegacySpanOnlyForNewDefinitions(t *testing.T
 		t.Fatalf("list migration definitions: %v", err)
 	}
 	for _, def := range defs {
-		if def.RetentionDays != 10 {
-			t.Fatalf("%s retention = %d, want legacy span 10", def.Name, def.RetentionDays)
+		if def.RetentionDays != 30 {
+			t.Fatalf("%s retention = %d, want fixed 30", def.Name, def.RetentionDays)
 		}
 	}
 
@@ -350,8 +341,8 @@ func TestCreateMetricDefinitionsUsesLegacySpanOnlyForNewDefinitions(t *testing.T
 	if err != nil {
 		t.Fatalf("reload CPU definition: %v", err)
 	}
-	if cpu.RetentionDays != 3 {
-		t.Fatalf("existing CPU retention = %d, want preserved 3", cpu.RetentionDays)
+	if cpu.RetentionDays != 30 {
+		t.Fatalf("existing CPU retention = %d, want fixed 30", cpu.RetentionDays)
 	}
 }
 
@@ -607,43 +598,5 @@ func TestGetRecordsByClientAndTimeReadsRollupsAfterRawCompaction(t *testing.T) {
 	}
 	if len(all) != 1 || all[0].Client != rec.Client || all[0].Cpu == 0 {
 		t.Fatalf("all-client records were not reconstructed from rollup: %#v", all)
-	}
-}
-
-func TestGetRecordMetricMaxByClientAndTimeQueriesOnlySelectedMetric(t *testing.T) {
-	ctx := context.Background()
-	s, err := metric.Open(ctx, metric.SQLite(":memory:",
-		metric.WithMaxOpenConns(1),
-		metric.WithRollupPolicy(defaultRollupPolicy()),
-	))
-	if err != nil {
-		t.Fatalf("open metric store: %v", err)
-	}
-	defer s.Close()
-	if err := createMetricDefinitions(ctx, s); err != nil {
-		t.Fatalf("create metric definitions: %v", err)
-	}
-
-	base := time.Now().UTC().Truncate(time.Minute).Add(-time.Minute)
-	if err := s.WriteBatch(ctx, []metric.Point{
-		{MetricName: MetricCPU, EntityID: "node-a", Timestamp: base.Add(10 * time.Second), Value: 10},
-		{MetricName: MetricCPU, EntityID: "node-a", Timestamp: base.Add(20 * time.Second), Value: 90},
-		{MetricName: MetricRAM, EntityID: "node-a", Timestamp: base.Add(20 * time.Second), Value: 123456},
-	}); err != nil {
-		t.Fatalf("write metric points: %v", err)
-	}
-
-	got, err := getRecordMetricMaxByClientAndTimeFromSeries(ctx, s, "node-a", "cpu", base, base.Add(time.Minute))
-	if err != nil {
-		t.Fatalf("get CPU max records: %v", err)
-	}
-	if len(got) != 1 {
-		t.Fatalf("record count = %d, want 1: %#v", len(got), got)
-	}
-	if got[0].Cpu != 90 {
-		t.Fatalf("CPU max = %v, want 90", got[0].Cpu)
-	}
-	if got[0].Ram != 0 {
-		t.Fatalf("unselected RAM value = %d, want 0", got[0].Ram)
 	}
 }

@@ -30,19 +30,7 @@
     "title": "账户"
   },
   "account_settings": {
-    "bind_sso": "绑定外部账户",
-    "confirm_unbind": "确认解绑",
-    "looking_for_backup": "正在寻找备份？现已经迁移到设置-站点-备份。",
-    "sso_account": "外部账户",
-    "sso_account_bound": "{{name}}账户",
-    "sso_auth_failed": "处理SSO认证失败",
-    "sso_bound": "已绑定外部账户",
-    "sso_not_bound": "未绑定",
-    "unbind_sso": "解绑外部账户",
-    "unbind_sso_failed": "解绑失败",
-    "unbind_sso_success": "成功解绑",
-    "unbind_sso_warning": "确定要解绑 {{provider}} 账号吗？",
-    "upload_success": "上传成功"
+    "looking_for_backup": "正在寻找备份？现已经迁移到设置-站点-备份。"
   },
   "admin": {
     "nodeDetail": {
@@ -254,14 +242,6 @@
     "violet": "紫罗兰",
     "yellow": "黄色"
   },
-  "command_clipboard": {
-    "add": "添加命令",
-    "delete": "删除命令",
-    "edit": "编辑命令",
-    "error_generic": "发生错误",
-    "error_loading": "加载命令失败：{{message}}",
-    "title": "命令剪贴板"
-  },
   "common": {
     "about": "关于",
     "action": "操作",
@@ -281,7 +261,6 @@
     "confirm_delete": "确认删除",
     "content": "内容",
     "copy": "复制",
-    "dashboard": "仪表板",
     "day": "天",
     "delete": "删除",
     "deleted_successfully": "已删除",
@@ -359,77 +338,6 @@
   "copy_success": "已复制到剪贴板",
   "current_online": "当前在线",
   "current_time": "当前时间",
-  "dashboard": {
-    "avgCpu": "平均 CPU",
-    "daysLeft": "剩余 {{days}} 天",
-    "dbUsage": "数据库占用",
-    "downloadRate": "下载速率",
-    "downloadTotal": "累计下载",
-    "expiringSoon": "即将到期",
-    "greeting": "愿每一台服务器都稳定运行，一切尽在掌握",
-    "health": {
-      "danger": "危险",
-      "dangerDesc": "大部分服务器离线，集群状态异常",
-      "empty": "暂无数据",
-      "emptyDesc": "尚未添加任何服务器。",
-      "healthy": "健康",
-      "healthyDesc": "所有服务器均在线，状态良好",
-      "warning": "警告",
-      "warningDesc": "部分服务器离线，请注意检查"
-    },
-    "highestLoss": "丢包最高",
-    "mainDb": "主数据库",
-    "monitoringDb": "监控数据库",
-    "noData": "暂无数据",
-    "noExpiring": "无服务器即将到期",
-    "noOfflineNodes": "无离线服务器",
-    "offlineListAria": "离线服务器列表",
-    "offlineNodes": "离线 {{offline}} 台",
-    "onlineNodes": "在线 {{online}}/{{total}} 台",
-    "onlineRateAria": "服务器在线率 {{percent}}%",
-    "overview": "总览",
-    "peakAt": "峰值 {{value}} at {{time}}",
-    "renewed": "我已续费",
-    "renewFailed": "续费失败",
-    "renewing": "续费中...",
-    "renewNotSupported": "该服务器未设置计费周期",
-    "renewSuccess": "续费成功，新到期时间：{{date}}",
-    "stableLatency": "延迟最稳定",
-    "title": "仪表板",
-    "today": "今天",
-    "topCpu": "平均 CPU 占用排行",
-    "topMem": "平均内存占用百分比排行",
-    "topTraffic": "流量消耗 Top 5",
-    "traffic24h": "最近24小时流量",
-    "trafficChartAria": "最近24小时流量图，显示上传/下载速率与累计流量",
-    "unstableLatency": "延迟最不稳定",
-    "uploadRate": "上传速率",
-    "uploadTotal": "累计上传",
-    "viewChart": "查看24小时图表",
-    "yesterday": "昨天"
-  },
-  "database_migration": {
-    "after": "迁移后",
-    "before": "迁移前",
-    "failed_title": "数据库迁移未完成",
-    "legacy_full_history": "全量迁移数据库，迁移完成后会回收一次空间。",
-    "network_error": "无法连接数据库迁移服务。",
-    "request_failed": "请求失败，请检查服务日志后重试。"
-  },
-  "database_recovery": {
-    "completed_description": "服务器正在重新启动普通控制台。",
-    "completed_title": "数据库连接已恢复",
-    "dsn_required": "请输入监控数据库连接串。",
-    "failure_detail": "数据库连接已连续失败 {{count}}/{{max}} 次。",
-    "history_note": "恢复流程只使用新 DSN 重新建立连接，不会从原连接迁移任何数据。",
-    "network_error": "无法连接恢复服务。",
-    "request_failed": "请求失败，请重试。",
-    "save": "保存并重连",
-    "save_failed": "监控数据库连接失败，请检查连接串后重试。",
-    "saving": "连接中...",
-    "subtitle": "监控数据库暂时无法连接。请登录后更新连接串。",
-    "title": "监控数据库恢复"
-  },
   "errorBoundary": {
     "go_to_home": "返回首页",
     "no_stack_trace": "无可用的栈跟踪。",
@@ -442,142 +350,6 @@
     "accept": "我已详细阅读并接受",
     "reject": "不接受",
     "title": "法律声明与合规指引"
-  },
-  "exec": {
-    "allCompleted": "所有任务执行完成",
-    "command": "执行命令",
-    "commandPlaceholder": "whoami（使用 Shift+Enter 换行）",
-    "description": "在选定的节点上远程执行命令",
-    "errors": {
-      "emptyCommand": "命令不能为空",
-      "executionFailed": "执行失败",
-      "noNodes": "请选择至少一个节点"
-    },
-    "execute": "执行命令",
-    "executing": "执行中...",
-    "pollingTimeout": "任务执行超时",
-    "results": "执行结果",
-    "selectedNodes": "已选择节点",
-    "selectNodes": "选择目标节点",
-    "status": {
-      "polling": "正在获取最新执行状态...",
-      "running": "正在运行",
-      "timeout": "超时"
-    },
-    "stopPolling": "停止轮询",
-    "taskStarted": "任务已启动",
-    "title": "远程执行"
-  },
-  "file_manager": {
-    "action_failed": "文件操作失败",
-    "action_success": "文件操作完成",
-    "confirm_delete": "确定删除 {{name}} 吗？此操作无法撤销。",
-    "confirm_delete_multiple": "确定删除 {{count}} 个项目？此操作无法撤销。",
-    "content": "内容",
-    "copy": "复制",
-    "copy_directory_unsupported": "暂不支持复制文件夹。",
-    "copy_here": "粘贴到此处",
-    "copy_path": "复制路径",
-    "copy_path_failed": "复制路径失败",
-    "copy_path_success": "路径已复制",
-    "copy_paths": "复制路径",
-    "cut": "剪切",
-    "delete": "删除",
-    "download": "下载",
-    "drive": "磁盘",
-    "editor": {
-      "binary": "二进制文件预览",
-      "close_file": "关闭文件",
-      "close_left": "关闭左侧",
-      "close_others": "关闭其他",
-      "close_right": "关闭右侧",
-      "close_tab": "关闭标签页",
-      "column": "列",
-      "copy": "复制",
-      "cut": "剪切",
-      "dont_save": "不保存",
-      "empty": "从资源管理器中打开文件",
-      "encoding_failed": "无法使用此编码解码文件",
-      "encoding_hint": "文本编码（打开时自动检测）",
-      "explorer": "资源管理器",
-      "fullscreen": "切换全屏",
-      "go_to": "转到文件",
-      "go_to_placeholder": "输入文件路径",
-      "go_to_position": "转到行/列",
-      "line": "行",
-      "loading_agent": "正在从 Agent 获取文件",
-      "maximize": "最大化",
-      "menu": {
-        "edit": "编辑",
-        "file": "文件",
-        "terminal": "终端",
-        "view": "视图"
-      },
-      "minimap": "缩略图",
-      "no_symbols": "未找到符号",
-      "open_terminal_dock": "在底部打开终端",
-      "outline": "大纲",
-      "paste": "粘贴",
-      "preview_failed": "无法预览此文件",
-      "redo": "重做",
-      "reopen": "重新打开",
-      "reopen_with_encoding": "以编码重新打开",
-      "reopen_with_encoding_description": "要以 {{encoding}} 重新打开“{{name}}”吗？未保存的修改将被舍弃。",
-      "reopen_with_encoding_title": "以编码重新打开？",
-      "restore": "还原",
-      "save": "保存",
-      "save_all": "全部保存",
-      "save_with_encoding": "以编码保存",
-      "saved": "文件已保存",
-      "select_all": "全选",
-      "title": "文件编辑器",
-      "too_large": "大于 {{size}} 的文件无法在编辑器中打开。",
-      "too_large_preview": "文件过大，无法预览",
-      "undo": "撤销",
-      "unsaved_all": "有 {{count}} 个文件包含未保存的修改。",
-      "unsaved_file": "是否保存对 {{name}} 的修改？",
-      "unsaved_title": "保存修改？",
-      "word_wrap": "自动换行"
-    },
-    "empty": "当前目录为空",
-    "group": "用户组",
-    "load_failed": "文件管理器加载失败",
-    "loading": "正在加载...",
-    "mode": "权限",
-    "move_here": "移动到此处",
-    "new_file": "新建文件",
-    "new_folder": "新建文件夹",
-    "no_results": "没有搜索结果",
-    "no_server": "打开终端标签页后即可浏览对应服务器文件",
-    "open": "打开",
-    "open_in_editor": "在编辑器中打开",
-    "owner": "用户",
-    "parent": "上级目录",
-    "paste": "粘贴",
-    "path": "路径",
-    "permissions": "权限与属主",
-    "rename": "重命名",
-    "root_unavailable": "无法获取根目录",
-    "save_failed": "文件保存失败",
-    "search": "搜索",
-    "search_content": "搜索文件内容",
-    "search_failed": "搜索失败",
-    "search_placeholder": "搜索文件",
-    "search_results": "{{count}} 个结果",
-    "title": "文件管理",
-    "upload": "上传",
-    "upload_canceled": "上传已取消",
-    "upload_chunk": "分片",
-    "upload_chunk_done": "已完成",
-    "upload_chunk_queued": "排队中",
-    "upload_chunk_retrying": "重试中",
-    "upload_chunk_summary": "仅显示正在上传的分片（并发 {{active}} 个，共 {{count}} 个）",
-    "upload_chunk_uploading": "上传中",
-    "upload_chunks": "分片上传",
-    "upload_complete": "上传完成",
-    "upload_destination": "目标",
-    "upload_failed": "上传失败",
-    "uploading": "上传中"
   },
   "go_to_home": "回到主页",
   "install": {
@@ -597,12 +369,6 @@
     "next": "下一步",
     "password": "密码",
     "password_confirm": "确认密码",
-    "restore": "从备份恢复",
-    "restore_413": "备份上传失败（413）。请调整 CDN 或 Nginx 等反向代理的文件大小限制（例如 client_max_body_size），或手动将备份上传到 ./data/backup.zip 后重启服务。",
-    "restore_description": "上传备份文件将重启服务并恢复其中的数据。",
-    "restore_failed": "恢复备份失败，请稍后重试。",
-    "restore_file_type": "请选择 .zip 格式的备份文件。",
-    "restore_restarting": "正在重启并恢复备份...",
     "site": "站点",
     "site_hint": "这些内容会显示在浏览器标题和公开页面中。",
     "site_title": "站点信息",
@@ -651,57 +417,6 @@
   },
   "logs": {
     "title": "日志"
-  },
-  "market": {
-    "add_source": "添加源",
-    "delete_source_confirm": "确定删除源 {{name}} 吗？",
-    "description": "查找并安装来自互联网的主题",
-    "edit_source": "编辑源",
-    "enabled": "启用",
-    "install": "安装",
-    "install_success": "主题安装成功",
-    "install_unavailable": "暂无安装包",
-    "installed": "已安装",
-    "installed_version": "已安装 v{{version}}",
-    "manage_sources": "管理源",
-    "no_sources": "尚未配置源",
-    "no_themes": "未找到主题",
-    "project_page": "项目主页",
-    "refresh_success": "主题源已刷新",
-    "search_placeholder": "搜索主题、作者或来源",
-    "source": "源",
-    "source_created": "源已添加",
-    "source_deleted": "源已删除",
-    "source_name": "源名称",
-    "source_updated": "源已更新",
-    "themes": "主题市场",
-    "uninstall": "卸载",
-    "uninstall_confirm": "确定卸载 {{name}} 吗？",
-    "uninstall_success": "主题已卸载",
-    "update_available": "有可用更新"
-  },
-  "metric_store_restructure": {
-    "after": "重构后",
-    "before": "重构前",
-    "completed_description": "服务器正在启动普通服务。",
-    "completed_title": "指标数据库结构重构完成",
-    "confirm_description": "将复制历史指标到新的字典化汇总结构，并在完成后回收一次数据库空间。此操作期间普通服务暂不可用。",
-    "confirm_title": "开始重构数据库结构？",
-    "copy_detail": "已复制 {{rows}} / {{total}} 条记录，完成 {{metrics}} / {{metricTotal}} 个指标。当前指标：{{metric}}。",
-    "discard": "删除历史监控数据",
-    "discard_action": "确认删除",
-    "discard_confirm": "我确认永久删除全部历史监控数据",
-    "discard_description": "如果不需要保留历史监控数据，可以跳过复制并直接建立新的空数据库结构。指标定义和保留策略不会被删除。",
-    "discard_detail": "正在删除历史监控数据并建立新的空数据库结构。",
-    "discard_title": "删除全部历史监控数据？",
-    "discard_warning": "此操作无法撤销，现有历史图表数据将全部清空。",
-    "network_error": "无法连接结构重构服务。",
-    "phase_copying": "正在复制指标汇总",
-    "phase_discarding": "正在删除历史监控数据",
-    "phase_reclaiming": "正在优化数据库并回收磁盘空间。",
-    "start": "开始重构",
-    "start_failed": "无法开始数据库结构重构。",
-    "title": "监控数据库结构重构"
   },
   "network_speed": "网络速率",
   "nodeCard": {
@@ -782,140 +497,6 @@
     "task_view": "任务视图",
     "title": "延迟监测"
   },
-  "plugin": {
-    "config": "配置",
-    "config_no_configurable_plugins": "没有带配置项的插件",
-    "config_no_items": "该插件没有配置项",
-    "config_save_failed": "保存配置失败",
-    "config_saved": "配置已保存",
-    "config_saved_and_reloaded": "配置已保存，插件已重载",
-    "config_saved_reload_failed": "配置已保存，但插件重载失败",
-    "config_select_hint": "请选择要配置的插件",
-    "delete": "删除插件",
-    "delete_confirm": "确定删除此插件？",
-    "delete_confirm_desc": "插件目录及其配置将被移除。",
-    "deleted": "插件已删除",
-    "deleting": "删除中...",
-    "disable": "禁用插件",
-    "disable_success": "插件已禁用",
-    "drag_drop": "将文件拖放到此处",
-    "enable": "启用插件",
-    "enable_success": "插件已启用",
-    "installed": "已安装",
-    "invalid_file_type": "无效的文件类型，仅支持 .zip 文件",
-    "last_error": "最后错误",
-    "loading": "加载中...",
-    "logs_load_failed": "加载日志失败",
-    "manage": "插件管理",
-    "market": "插件市场",
-    "market_install": "安装",
-    "market_install_success": "插件已安装",
-    "market_installing": "安装中...",
-    "market_modify": "修改",
-    "market_no_plugins": "市场中暂无插件",
-    "market_not_installable": "不可安装",
-    "market_plugins": "插件",
-    "market_refresh_success": "插件源已刷新",
-    "market_reinstall": "重新安装",
-    "market_search": "搜索插件...",
-    "market_uninstall_success": "插件已卸载",
-    "market_update_required": "需要更新 Komari",
-    "market_warning": "插件市场中的第三方插件未经官方审查，可能包含有害代码，请仔细甄别后再安装。",
-    "no_logs": "暂无日志",
-    "no_plugins": "尚未安装插件",
-    "or_click_to_browse": "或点击浏览文件",
-    "page_missing_params": "缺少插件页面参数",
-    "permission": {
-      "allowAllFileAccess": "访问插件目录之外的文件",
-      "allowExec": "执行子进程",
-      "allowHooks": "修改 HTTP 请求/响应",
-      "allowHTMLInject": "向每个 HTML 页面注入 CSS/JS",
-      "allowListen": "监听本地端口",
-      "allowRoutes": "注册 HTTP 路由",
-      "allowSystemRPC": "调用系统 RPC"
-    },
-    "permission_approve": "批准并启用",
-    "permission_default_note": "默认授予：读取插件配置、注册插件 RPC、读写插件目录内的文件",
-    "permission_description": "此插件请求以下权限：",
-    "permission_none": "此插件不请求任何特殊权限",
-    "permission_title": "需要权限",
-    "running": "运行中",
-    "save_and_reload": "保存并重载",
-    "saving": "保存中...",
-    "saving_and_reloading": "保存并重载中...",
-    "stopped": "已停止",
-    "title": "插件",
-    "upload": "上传插件",
-    "upload_413_content_too_large": "文件上传失败 (413)。请检查并增大反向代理服务器（如 Nginx/CDN）配置中的文件大小限制（client_max_body_size），确保该值大于目标文件大小。",
-    "upload_description": "上传 .zip 插件包",
-    "upload_failed": "插件上传失败",
-    "uploaded": "插件已上传",
-    "uploading": "上传中...",
-    "zip_files_only": "仅支持 .zip 文件"
-  },
-  "pprof": {
-    "capture_duration": "CPU 与 trace 采集时长",
-    "download": "下载",
-    "duration_option": "{{seconds}} 秒",
-    "goroutines": "Goroutine 数量",
-    "heap_alloc": "已分配堆内存",
-    "heap_inuse": "正在使用的堆内存",
-    "heap_objects": "堆对象数",
-    "heap_preview_description": "实时堆内存文本摘要，会随进程概览一起刷新。",
-    "heap_preview_title": "堆内存快照",
-    "invalid_summary": "服务端返回了无效的运行时性能数据",
-    "loading": "采集中...",
-    "preview_description": "所选 Go 运行时性能数据的文本输出。",
-    "preview_title": "{{profile}} 性能数据",
-    "preview_unavailable": "此运行时性能数据不提供文本预览。",
-    "profiles": {
-      "allocs": {
-        "description": "进程启动以来的累计内存分配采样。",
-        "title": "分配"
-      },
-      "block": {
-        "description": "同步阻塞事件。",
-        "title": "阻塞"
-      },
-      "cpu": {
-        "description": "按所选时长采集 CPU 执行采样。",
-        "title": "CPU"
-      },
-      "goroutine": {
-        "description": "当前 Goroutine 栈性能数据。",
-        "title": "Goroutine"
-      },
-      "heap": {
-        "description": "仍在使用的堆内存分配采样。",
-        "title": "堆内存"
-      },
-      "mutex": {
-        "description": "发生竞争的互斥锁事件。",
-        "title": "互斥锁"
-      },
-      "threadcreate": {
-        "description": "操作系统线程创建事件。",
-        "title": "线程"
-      },
-      "trace": {
-        "description": "按所选时长采集执行追踪数据。",
-        "title": "Trace"
-      }
-    },
-    "profiles_description": "可查看文本快照，或下载 pprof 文件进行离线分析。",
-    "profiles_title": "运行时性能数据",
-    "request_failed": "获取运行时性能数据失败",
-    "runtime_overview_description": "无需启动性能采集即可读取的运行时实时指标。",
-    "runtime_overview_title": "当前进程概览",
-    "runtime_sys": "运行时保留内存",
-    "sample_count": "{{samples}} 个样本",
-    "summary_load_failed": "读取运行时性能数据失败",
-    "summary_unavailable": "当前无法读取运行时概览",
-    "timed_profile": "按所选时长采集",
-    "title": "性能分析",
-    "view": "查看",
-    "warning": "采集期间可能短暂增加服务器负载。"
-  },
   "region_overview": "点亮地区",
   "rpc2": {
     "automatic_connection_failed": "自动连接失败:",
@@ -964,51 +545,6 @@
       "key_length_error": "API 密钥长度至少为12",
       "title": "API密钥"
     },
-    "custom": {
-      "body": "自定义 Body",
-      "body_description": "在页面底部添加自定义内容",
-      "favicon": "自定义 Favicon",
-      "favicon_change": "更新 Favicon",
-      "favicon_current": "当前 Favicon",
-      "favicon_default": "恢复默认",
-      "favicon_default_description": "这将恢复默认的 Favicon 图标，是否继续？",
-      "favicon_default_error": "恢复默认 Favicon 失败",
-      "favicon_default_success": "已恢复默认 Favicon",
-      "favicon_description": "在浏览器标签页显示的图标",
-      "favicon_note": "Favicon 图标的更新速度可能较慢，通常需要清除浏览器缓存后才能看到更改。",
-      "favicon_update_success": "已更新 Favicon",
-      "header": "自定义头部",
-      "header_description": "添加自定义 HTML/CSS/JavaScript 到站点头部，这些内容将会在所有页面加载",
-      "note": "个性化内容在使用自定义主题时可能会被覆盖。请确保代码的安全性，避免使用不受信任的内容。"
-    },
-    "database": {
-      "actions": {
-        "optimize": "优化 MySQL / MariaDB 数据表（OPTIMIZE TABLE）",
-        "vacuum": "回收 SQLite 文件空间（VACUUM）",
-        "vacuum_full": "完整回收并分析 PostgreSQL 数据表（VACUUM (FULL, ANALYZE)）"
-      },
-      "confirm_description": "数据库维护可能锁定数据库并暂时阻塞 Komari，请确认以下操作。",
-      "confirm_title": "确认数据库维护",
-      "invalid_response": "服务端返回了无效的数据库信息",
-      "load_error": "读取数据库信息失败",
-      "local_total": "本机数据库合计",
-      "local_total_description": "主数据库与存储在本机的监控数据库占用",
-      "locations": {
-        "external": "外部",
-        "local": "本机"
-      },
-      "main": "主数据库",
-      "maintaining": "维护中...",
-      "maintenance_button": "回收空间",
-      "maintenance_description": "维护期间数据库可能被锁定，Komari 可能暂时无法响应。",
-      "maintenance_error": "数据库维护失败",
-      "maintenance_partial_failure": "数据库维护已结束，但存在失败操作",
-      "maintenance_success": "数据库维护完成",
-      "maintenance_title": "数据库维护",
-      "monitoring": "监控数据库",
-      "operation_failed": "操作失败",
-      "title": "数据库"
-    },
     "general": {
       "title": "通用"
     },
@@ -1027,216 +563,6 @@
     },
     "invalid_integer": "无效的整数",
     "invalid_number": "无效的数字",
-    "metrics": {
-      "advanced_title": "高级选项",
-      "batch_description": "选择多个指标，并为它们统一设置原始数据保留天数。",
-      "batch_edit": "批量设置",
-      "batch_search_placeholder": "搜索指标",
-      "batch_select_required": "请至少选择一个指标",
-      "batch_title": "批量设置保留天数",
-      "cancel_migration": "取消迁移",
-      "canceling": "取消中...",
-      "conns_invalid": "请输入有效的连接数",
-      "current_status": "当前状态",
-      "downsampling_title": "数据降采样",
-      "dsn_description": "当前运行的监控数据库连接串，系统会根据连接串自动识别数据库类型（SQLite / MariaDB / MySQL / PostgreSQL）。SQLite：./data/metrics.db；MariaDB / MySQL：user:password@tcp(host:3306)/metrics?charset=utf8mb4&parseTime=True；PostgreSQL：host=localhost user=komari password=secret dbname=metrics port=5432 sslmode=disable",
-      "dsn_title": "连接串（DSN）",
-      "fetch_metrics_failed": "获取指标列表失败",
-      "fetch_status_failed": "获取迁移状态失败",
-      "hours_unit": "小时",
-      "intro": "在此配置监控数据库，以及每个监控指标的原始数据保留策略。",
-      "loading_metrics": "正在加载指标...",
-      "max_idle_conns_description": "数据库最大空闲连接数，默认 5",
-      "max_idle_conns_title": "最大空闲连接数",
-      "max_open_conns_description": "数据库最大连接数，默认 25",
-      "max_open_conns_title": "最大连接数",
-      "metric_key": "指标 Key",
-      "metric_name": "指标名称",
-      "metric_unit": "单位",
-      "migrated_points": "已搬运采样点",
-      "migration_cancel_failed": "取消迁移失败",
-      "migration_canceled": "迁移已取消",
-      "migration_canceled_hint": "迁移已取消。由于写入是幂等的，可安全地重新发起迁移，不会产生重复数据。",
-      "migration_card_description": "把某个监控数据源库（默认本地 SQLite ./data/metrics.db，或上一个使用过的数据库）中的历史数据搬运到当前运行中的监控目标库。",
-      "migration_card_title": "数据库迁移",
-      "migration_completed_hint": "迁移已完成，历史数据已全部搬运到当前目标库。",
-      "migration_failed_hint": "迁移失败。请检查源库/目标库连接配置和服务器日志，修复后重新开始迁移。",
-      "migration_in_progress_hint": "迁移正在进行中，服务器继续正常运行。大数据量可能需要较长时间。",
-      "migration_progress": "迁移进度",
-      "migration_source": "源库",
-      "migration_start_failed": "启动迁移失败",
-      "migration_started": "迁移已开始",
-      "migration_target": "目标库",
-      "migration_title": "迁移",
-      "minutes_unit": "分钟",
-      "no_metrics": "暂无指标定义",
-      "restart_hint": "部分修改需要重启服务后才能生效。",
-      "retention_days": "保留天数",
-      "retention_description": "数据保留天数，默认 1；设置为 0 将禁用该指标持久化",
-      "retention_invalid": "请输入有效的保留天数",
-      "retention_save_failed": "保存保留天数失败",
-      "retention_saved": "保留天数已保存",
-      "retention_table_description": "为每个监控指标设置原始数据保留天数。默认保留 {{days}} 天，设置为 0 将禁用该指标持久化。",
-      "retention_title": "数据保留天数",
-      "retention_warning_continue": "仍然继续",
-      "retention_warning_description": "关闭数据降采样并保留超过 1 天时，Agent 的全部原始采样会持续写入数据库，可能快速增加数据库大小并降低查询性能。建议启用降采样；如确需长期保留原始数据，请使用 MariaDB、MySQL 或 PostgreSQL 等外部数据库。",
-      "retention_warning_title": "高频原始数据存储风险",
-      "rollup_five_minute_label": "5 分钟桶",
-      "rollup_hour_label": "1 小时桶",
-      "rollup_minute_label": "1 分钟桶",
-      "rollup_retention_description": "设置 1 分钟、5 分钟和 1 小时桶的全局保留时间。日桶继续遵循各指标的保留天数，精确采样固定在内存中保留 10 分钟。缩短后的数据由每小时清理任务删除。",
-      "rollup_retention_invalid": "请输入每层桶的正整数保留时间。",
-      "rollup_retention_order_invalid": "保留时间必须按 1 分钟、5 分钟、1 小时桶递增或保持不变。",
-      "rollup_retention_save": "保存桶保留时间",
-      "rollup_retention_title": "指标桶保留时间",
-      "save_changes": "保存更改",
-      "source_dsn_description": "留空时自动使用上一个使用过的监控数据库（默认本地 SQLite ./data/metrics.db）作为源库；也可手动填写源库连接串。目标库固定为当前运行中的监控数据库。",
-      "source_dsn_placeholder": "留空自动推断，或填写源库 DSN",
-      "source_dsn_title": "源库连接串（DSN，可选）",
-      "start_again": "重新迁移",
-      "start_migration": "开始迁移",
-      "starting": "启动中...",
-      "status": {
-        "canceled": "已取消",
-        "completed": "已完成",
-        "failed": "失败",
-        "idle": "空闲",
-        "running": "进行中"
-      },
-      "system": {
-        "connections": {
-          "tcp": {
-            "description": "TCP 连接数量",
-            "name": "TCP 连接数"
-          },
-          "udp": {
-            "description": "UDP 连接数量",
-            "name": "UDP 连接数"
-          }
-        },
-        "cpu": {
-          "usage": {
-            "description": "CPU 使用率百分比",
-            "name": "CPU 使用率"
-          }
-        },
-        "disk": {
-          "total": {
-            "description": "磁盘总容量",
-            "name": "总磁盘"
-          },
-          "used": {
-            "description": "当前已用磁盘空间",
-            "name": "已用磁盘"
-          }
-        },
-        "gpu": {
-          "device": {
-            "usage": {
-              "description": "单个 GPU 设备的使用率",
-              "name": "GPU 设备使用率"
-            }
-          },
-          "memory": {
-            "total": {
-              "description": "GPU 总显存容量",
-              "name": "GPU 总显存"
-            },
-            "used": {
-              "description": "GPU 当前已用显存",
-              "name": "GPU 已用显存"
-            }
-          },
-          "temperature": {
-            "description": "GPU 核心温度",
-            "name": "GPU 温度"
-          },
-          "usage": {
-            "description": "节点级平均 GPU 使用率百分比",
-            "name": "GPU 使用率"
-          }
-        },
-        "load": {
-          "average": {
-            "description": "系统负载平均值",
-            "name": "系统负载"
-          }
-        },
-        "memory": {
-          "total": {
-            "description": "内存总容量",
-            "name": "总内存"
-          },
-          "used": {
-            "description": "当前已用内存",
-            "name": "已用内存"
-          }
-        },
-        "net": {
-          "in": {
-            "rate": {
-              "description": "网络入站传输速率",
-              "name": "网络入站速率"
-            }
-          },
-          "out": {
-            "rate": {
-              "description": "网络出站传输速率",
-              "name": "网络出站速率"
-            }
-          },
-          "total": {
-            "down": {
-              "description": "网络累计下载流量",
-              "name": "累计下载"
-            },
-            "up": {
-              "description": "网络累计上传流量",
-              "name": "累计上传"
-            }
-          }
-        },
-        "ping": {
-          "latency_ms": {
-            "description": "Ping 延迟，单位毫秒",
-            "name": "Ping 延迟"
-          }
-        },
-        "process": {
-          "count": {
-            "description": "正在运行的进程数量",
-            "name": "进程数量"
-          }
-        },
-        "swap": {
-          "total": {
-            "description": "交换空间总容量",
-            "name": "总交换空间"
-          },
-          "used": {
-            "description": "当前已用交换空间",
-            "name": "已用交换空间"
-          }
-        },
-        "temperature": {
-          "description": "系统传感器（如 CPU、主板）报告的温度",
-          "name": "系统温度"
-        },
-        "traffic": {
-          "down": {
-            "description": "单次上报周期内的下载流量增量",
-            "name": "下载流量增量"
-          },
-          "up": {
-            "description": "单次上报周期内的上传流量增量",
-            "name": "上传流量增量"
-          }
-        }
-      },
-      "table_prefix_description": "监控表名前缀，默认 metric_",
-      "table_prefix_title": "表名前缀",
-      "title": "数据库"
-    },
     "missing_required_fields": "请填写必填字段: {{fieldNames}}",
     "notification": {
       "email": {
@@ -1283,9 +609,19 @@
       "backup": "备份",
       "backup_download": "下载备份",
       "backup_download_description": "将服务器数据下载到本地",
-      "backup_restore": "恢复备份",
-      "backup_restore_description": "从文件恢复备份，将覆盖当前数据。",
-      "backup_restore_error": "恢复备份失败",
+      "database_backup_and_cleanup": "清理数据库",
+      "database_cleanup": "清理数据库占用",
+      "database_cleanup_description": "直接执行 SQLite 空间回收和完整性检查，不会自动生成或保留备份文件。需要备份时请使用上方的下载备份按钮。",
+      "database_cleanup_confirm": "将直接清理本地 SQLite 数据库占用，不会自动生成备份。清理期间请勿关闭 Komari。确认继续？",
+      "database_cleaning": "正在清理数据库",
+      "database_loading": "读取中…",
+      "database_main": "主数据库",
+      "database_monitoring": "监控数据库",
+      "database_refresh": "刷新占用",
+      "database_total": "本地合计",
+      "database_usage": "数据库占用",
+      "database_usage_description": "查看数据库及 WAL/SHM 文件占用。清理前会自动生成备份，并在操作后返回清理前后大小。",
+      "database_maintenance_title": "数据库维护",
       "cors_allowed_origins": "API CORS 允许列表",
       "cors_origin_check_enabled": "CORS 跨域请求校验",
       "cors_origin_check_enabled_description": "开启后 API 请求只允许同源或允许列表中的地址",
@@ -1303,44 +639,10 @@
       "send_ip_addr_to_guest_description": "未登录的情况下可以通过 common:getNodes 查看部分IP地址信息，形如 9.*.*.* / fe80:*:*:*:*:*:*:*。用于部分主题展示IP。",
       "ssrf_protection_enabled": "启用 SSRF 防护",
       "ssrf_protection_enabled_description": "开启后，主题市场和插件市场下载、主题远程导入和更新会拦截内网、本地及其他非公网地址（包括重定向目标），防止 SSRF。关闭后不进行此地址检查。",
-      "temporary_share": "临时分享",
-      "temporary_share_current_link": "当前临时访问链接",
-      "temporary_share_description": "开启私有站点后，可以通过临时分享链接访问站点。",
-      "temporary_share_hours": "分享时长（小时）",
-      "temporary_share_revoke": "撤销访问许可",
       "title": "站点",
       "ws_allowed_origins": "WebSocket Origin 允许列表",
       "ws_origin_check_enabled": "WebSocket Origin 校验",
       "ws_origin_check_enabled_description": "开启后 WebSocket 请求只允许同源或允许列表中的 Origin"
-    },
-    "sso": {
-      "callback_url_tips": "回调地址：{{url}}",
-      "client_id_description": "OAuth 应用的客户端 ID",
-      "client_secret_description": "OAuth 应用的客户端密钥",
-      "enable": "启用单点登录",
-      "enable_description": "允许用户通过第三方账户（如 GitHub）登录",
-      "generic": {
-        "auth_url": "授权 URL",
-        "client_id": "客户端 ID",
-        "client_secret": "客户端密钥",
-        "scope": "作用域",
-        "token_url": "令牌 URL",
-        "user_id_field": "用户 ID 字段",
-        "user_info_url": "用户信息 URL"
-      },
-      "github": {
-        "client_id": "GitHub 客户端 ID",
-        "client_secret": "GitHub 客户端密钥"
-      },
-      "not_implemented_suffix": " [暂未实现]",
-      "provider": "单点登录提供商",
-      "provider_description": "选择用于单点登录的身份验证提供商",
-      "provider_fetch_failed": "加载登录提供商信息失败",
-      "provider_fields": "登录参数",
-      "provider_fields_description": "设置您选择登录方式的详细信息",
-      "provider_save_failed": "保存登录提供商设置失败",
-      "provider_settings_fetch_failed": "加载登录提供商设置失败",
-      "title": "单点登录"
     },
     "title": "设置",
     "update_1_2_7": {
@@ -1390,84 +692,11 @@
       "target": "目标数据库",
       "target_description": "选择本地 SQLite，或将指标数据写入远程 MariaDB / MySQL / PostgreSQL。",
       "title": "监控数据库升级"
-    },
-    "xtermjs": {
-      "convert_eol": "转换 EOL",
-      "cursor_blink": "光标闪烁",
-      "custom_css": "自定义 CSS",
-      "custom_css_description": "编写规则时，建议使用 .terminal-page 或 .terminal-xterm-host 作为前缀。",
-      "font_family": "字体族",
-      "font_size": "字号",
-      "reset_defaults": "恢复本地默认值",
-      "scrollback": "回滚行数",
-      "terminal_padding": "终端内边距",
-      "theme_json": "主题 JSON",
-      "theme_json_description": "这里只编辑 terminalOptions.theme。保存时会过滤未知键。",
-      "theme_json_filtered": "已过滤主题 JSON",
-      "theme_json_invalid": "主题 JSON 无效",
-      "theme_json_must_be_object": "主题 JSON 必须是 JSON 对象",
-      "title": "XtermJS",
-      "transparent_background": "透明背景",
-      "transparent_hint": "仅在容器背景也透明时启用透明效果。",
-      "transparent_theme_hint": "主题背景仍然不透明，请改用 rgba(...) 或 hsla(...)。"
     }
   },
   "status_settings": "状态显示设置",
   "system": {
     "title": "系统"
-  },
-  "terminal": {
-    "2fa_code_prompt": "请输入 2FA 验证码: ",
-    "2fa_prompt": "需要双因素认证。",
-    "clients_load_failed": "服务器加载失败",
-    "close_others": "其他",
-    "close_tab": "关闭标签页",
-    "close_tabs": "关闭",
-    "close_to_left": "左侧",
-    "close_to_right": "右侧",
-    "color_tab": "更改选项卡颜色",
-    "default_color": "默认颜色",
-    "disconnect": "连接已断开",
-    "duplicate_tab": "复制标签页",
-    "export_text": "导出文本",
-    "find": "查找",
-    "no_active_connection": "没有活动连接",
-    "otp_invalid": "2FA 验证码无效或已过期",
-    "reconnecting": "连接已断开，正在重新连接...",
-    "rename_tab": "重命名选项卡",
-    "resource_monitor": {
-      "close": "隐藏资源小窗",
-      "load_error": "实时数据加载失败",
-      "open": "显示资源小窗",
-      "title": "资源小窗",
-      "waiting": "等待数据..."
-    },
-    "search": {
-      "close": "关闭",
-      "match_case": "区分大小写",
-      "next": "下一个",
-      "placeholder": "查找",
-      "prev": "上一个",
-      "use_regex": "正则表达式"
-    },
-    "server": "服务器",
-    "settings_error": "xterm 设置加载失败，已使用默认设置：{{message}}",
-    "tabs": {
-      "choose_server": "选择服务器",
-      "connecting": "正在连接...",
-      "empty_action": "连接到服务器",
-      "empty_title": "暂无连接到的服务器",
-      "loading_servers": "正在加载服务器...",
-      "new_tab": "新建选项卡",
-      "no_servers": "没有可用的服务器",
-      "open_terminal": "打开终端",
-      "open_workbench": "打开工作台",
-      "scroll_left": "向左滚动选项卡",
-      "scroll_right": "向右滚动选项卡",
-      "title": "终端选项卡"
-    },
-    "title": "终端",
-    "title_with_sessions": "终端 - {{name}}（{{count}} 个会话）"
   },
   "theme": {
     "active": "当前使用",
@@ -1521,13 +750,6 @@
     "update_mode_github": "GitHub发布",
     "update_mode_url": "直接URL",
     "update_success": "主题更新成功",
-    "upload": "上传主题",
-    "upload_413_content_too_large": "文件上传失败 (413)。请检查并增大您的反向代理服务器（如 Nginx/CDN）配置中的文件大小限制（client_max_body_size），确保该值大于您的目标文件大小。",
-    "upload_description": "上传一个 .zip 格式的主题文件",
-    "upload_failed": "主题上传失败",
-    "upload_first_theme": "上传您的第一个主题",
-    "upload_success": "主题上传成功",
-    "uploading": "正在上传主题...",
     "version": "版本",
     "zip_files_only": "仅支持 .zip 格式"
   },

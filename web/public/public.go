@@ -17,6 +17,9 @@ import (
 //go:embed defaultTheme/komari-theme.json
 var PublicFS embed.FS
 
+//go:embed agent-migration.sh
+var AgentMigrationScript []byte
+
 //go:embed defaultTheme/dist.tar.zst
 var embeddedDistArchive []byte
 

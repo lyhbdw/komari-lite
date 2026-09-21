@@ -1,0 +1,10 @@
+[Unit]
+Description=Komari deployment backup
+Documentation=https://github.com/komari-monitor/komari
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/opt/komari/source/komari/scripts/komari-backup.sh

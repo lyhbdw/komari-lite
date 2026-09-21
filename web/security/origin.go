@@ -32,7 +32,7 @@ func OriginInAllowlist(origin, rawAllowlist string) bool {
 	}
 	for _, entry := range SplitAllowlist(rawAllowlist) {
 		if entry == "*" {
-			return true
+			continue
 		}
 		if strings.Contains(entry, "://") {
 			normalizedEntry, _, ok := normalizeOrigin(entry)

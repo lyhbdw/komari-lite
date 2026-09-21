@@ -23,6 +23,7 @@ import {
   MenuIcon,
   Pencil,
   Plus,
+  RefreshCw,
   Trash2Icon,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -541,6 +542,7 @@ const ActionButtons = ({
       <GenerateCommandButton
         settings={settings}
       />
+      <MigrateCommandButton />
 
       <EditButton node={node} />
       <BillingButton node={node} />
@@ -611,6 +613,38 @@ type InstallOptions = {
   monthRotate: string;
   installVersion: string;
 };
+function MigrateCommandButton() {
+  const { t } = useTranslation();
+  const scriptUrl = `${window.location.origin}/download/agent-migration.sh`;
+  const command = `curl --fail --proto '=https' --tlsv1.2 --location ${JSON.stringify(scriptUrl)} | sudo bash -s -- --migrate-legacy --install-version 1.0.0`;
+  const copy = async () => {
+    await navigator.clipboard.writeText(command);
+    toast.success(t("copy_success", "已复制到剪贴板"));
+  };
+  return (
+    <Dialog.Root>
+      <Dialog.Trigger>
+        <IconButton variant="ghost" title={t("admin.nodeTable.migrateLite", "迁移到 Lite")}>
+          <RefreshCw size="18" />
+        </IconButton>
+      </Dialog.Trigger>
+      <Dialog.Content>
+        <Dialog.Title>{t("admin.nodeTable.migrateLite", "迁移到 Komari Lite")}</Dialog.Title>
+        <Dialog.Description>
+          {t("admin.nodeTable.migrateLiteDescription", "在旧 Agent 所在的 Linux VPS 上执行。脚本会读取原服务配置并保留节点身份，不会在命令中显示 Token。")}
+        </Dialog.Description>
+        <TextArea disabled className="w-full" style={{ minHeight: "90px" }} value={command} />
+        <Flex justify="center" mt="4">
+          <Button style={{ width: "100%" }} onClick={copy}>
+            <Copy size={16} />
+            {t("common.copy")}
+          </Button>
+        </Flex>
+      </Dialog.Content>
+    </Dialog.Root>
+  );
+}
+
 function GenerateCommandButton({
   settings,
 }: {
