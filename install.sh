@@ -43,6 +43,7 @@ service_name="komari-agent"
 target_dir="/opt/komari"
 install_version=""
 local_binary=""
+download_base="${AGENT_DOWNLOAD_BASE:-}"
 sha256_expected="${AGENT_SHA256:-}"
 migration_mode=false
 install_dir_specified=false
@@ -97,6 +98,10 @@ while [ $# -gt 0 ]; do
             ;;
         --local-binary)
             local_binary="$2"
+            shift 2
+            ;;
+        --download-base)
+            download_base="$2"
             shift 2
             ;;
         --sha256)
@@ -551,7 +556,7 @@ install_dependencies() {
             log_error "No supported package manager found (apt/yum/apk/opkg)"
             exit 1
         fi
-        
+
         # Verify installation
         for cmd in $missing_deps; do
             if ! command -v $cmd >/dev/null 2>&1; then
@@ -565,7 +570,7 @@ install_dependencies() {
     fi
 }
 
- 
+
 # Install dependencies
 install_dependencies
 
@@ -631,14 +636,25 @@ else
     log_info "No version specified, installing the latest version."
 fi
 
-# Construct download URL
-if [ "$version_to_install" = "latest" ]; then
-    download_path="latest/download"
+# Construct download URL. A controller-provided base avoids depending on
+# GitHub availability while retaining the same mandatory SHA256 verification.
+if [ -n "$download_base" ]; then
+    case "$download_base" in
+        https://*) ;;
+        *)
+            log_error "--download-base must use HTTPS"
+            exit 1
+            ;;
+    esac
+    download_url="${download_base%/}/${file_name}"
 else
-    download_path="download/${version_to_install}"
+    if [ "$version_to_install" = "latest" ]; then
+        download_path="latest/download"
+    else
+        download_path="download/${version_to_install}"
+    fi
+    download_url="https://github.com/Tumb1er1376/komari-agent-lite/releases/${download_path}/${file_name}"
 fi
-
-download_url="https://github.com/Tumb1er1376/komari-agent-lite/releases/${download_path}/${file_name}"
 
 log_step "Creating installation directory: ${GREEN}$target_dir${NC}"
 mkdir -p "$target_dir"
@@ -672,7 +688,7 @@ else
     log_info "URL: ${CYAN}$download_url${NC}"
     if ! curl --fail --location --proto '=https' --tlsv1.2 --connect-timeout 15 \
         -o "$download_tmp" "$download_url" || [ ! -s "$download_tmp" ]; then
-        log_error "Download failed from GitHub Releases"
+        log_error "Download failed from the configured release source"
         exit 1
     fi
 fi
@@ -751,7 +767,7 @@ detect_init_system() {
         echo "nixos"
         return
     fi
-    
+
     # Alpine Linux MUST be checked first
     # Alpine always uses OpenRC, even in containers where PID 1 might be different
     if [ -f /etc/alpine-release ]; then
@@ -760,10 +776,10 @@ detect_init_system() {
             return
         fi
     fi
-    
+
     # Get PID 1 process for other detection
     local pid1_process=$(ps -p 1 -o comm= 2>/dev/null | tr -d ' ')
-    
+
     # If PID 1 is systemd, use systemd
     if [ "$pid1_process" = "systemd" ] || [ -d /run/systemd/system ]; then
         if command -v systemctl >/dev/null 2>&1; then
@@ -774,7 +790,7 @@ detect_init_system() {
             fi
         fi
     fi
-    
+
     # Check for Gentoo OpenRC (PID 1 is openrc-init)
     if [ "$pid1_process" = "openrc-init" ]; then
         if command -v rc-service >/dev/null 2>&1; then
@@ -782,7 +798,7 @@ detect_init_system() {
             return
         fi
     fi
-    
+
     # Check for other OpenRC systems (not Alpine, already handled)
     # Some systems use traditional init with OpenRC
     if [ "$pid1_process" = "init" ] && [ ! -f /etc/alpine-release ]; then
@@ -797,13 +813,13 @@ detect_init_system() {
             return
         fi
     fi
-    
+
     # Check for OpenWrt's procd
     if command -v uci >/dev/null 2>&1 && [ -f /etc/rc.common ]; then
         echo "procd"
         return
     fi
-    
+
 
     # Fallback: if systemctl exists and appears functional, assume systemd
     if command -v systemctl >/dev/null 2>&1; then
@@ -812,7 +828,7 @@ detect_init_system() {
             return
         fi
     fi
-    
+
     # Last resort: check for OpenRC without other indicators
     if command -v rc-service >/dev/null 2>&1 && [ -d /etc/init.d ]; then
         echo "openrc"
@@ -824,7 +840,7 @@ detect_init_system() {
         echo "upstart"
         return
     fi
-    
+
     echo "unknown"
 }
 
@@ -1034,5 +1050,3 @@ fi
 log_config "Service: ${GREEN}$service_name${NC}"
 log_config "Arguments: ${GREEN}configured${NC}"
 echo -e "${WHITE}===========================================${NC}"
-
-
