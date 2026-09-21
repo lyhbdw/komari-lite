@@ -44,32 +44,15 @@ npm run build
 
 ## 主题相关
 
-如果你需要基于本项目进行二次开发，可以参考以下步骤：
+Lite 版本不提供主题市场、上传、删除或在线更新。内置前端与后端统一发布；构建和嵌入步骤见仓库根目录 `README.md` 以及 `web/public/readme.md`。
 
-1. 完成开发环境配置
+已有本地主题仍可从 `data/theme/<short>/` 发现、选择和配置。每个主题目录至少包含：
 
-> 如果你是在 Linux 系统下开发，可以直接运行脚本 `build-theme.sh` 快速生成主题包。
+```text
+data/theme/<short>/
+├── komari-theme.json
+└── dist/
+    └── index.html
+```
 
-2. 修改 `komari-theme.json` 中的相关配置，具体可参考 [主题配置文件 | Komari](https://komari-document.pages.dev/dev/theme.html#%E4%B8%BB%E9%A2%98%E9%85%8D%E7%BD%AE%E6%96%87%E4%BB%B6)
-
-   `configuration` 会根据 `type` 复用 `data` 字段：
-
-   - `managed`: `data` 为配置项数组，后台会生成主题设置表单。
-   - `raw`: `data` 为 HTML 字符串，后台会在主内容区域渲染该 HTML。
-   - `redirect`: `data` 为站内相对路径，以实际部署的站点根目录（如 `VITE_BASE_URL`）为基准；例如根目录为 `/` 时 `settings` 或 `../settings` 会导航到 `/settings`，根目录为 `/abc/` 时会导航到 `/abc/settings`。
-
-3. 发挥你的想象和创造力，设计并实现你独特的主题风格！
-
-4. 构建主题
-
-   ```bash
-   npm run build
-   ```
-
-5. 生成的主题文件位于 `dist` 目录下，创建一个新的文件夹 `my-theme`（名称自定），将 `dist` 目录下复制到 `my-theme` 文件夹中。
-
-6. 将 `komari-theme.json` 文件复制到 `my-theme` 文件夹中。
-
-7. 将 `my-theme` 文件夹打包为 ZIP 文件。
-
-8. 在 Komari 的主题管理页面上传并应用你的自定义主题。
+`configuration.type` 仅使用 `managed`；`configuration.data` 为后台生成主题设置表单所需的配置项数组。

@@ -1,8 +1,6 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
-import Pages from "vite-plugin-pages";
-import { visualizer } from "rollup-plugin-visualizer";
 
 
 // https://vite.dev/config/
@@ -60,17 +58,6 @@ export default defineConfig(({ mode }) => {
       localKomariThemePlugin(),
       react(),
       tailwindcss(),
-      Pages({
-        dirs: "src/pages",
-        extensions: ["tsx", "jsx"],
-      }),
-
-      visualizer({
-        open: false,
-        filename: "bundle-analysis.html",
-        gzipSize: true,
-        brotliSize: true,
-      }),
     ],
     define: {
       __BUILD_TIME__: JSON.stringify(buildTime),

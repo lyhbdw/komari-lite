@@ -1,15 +1,14 @@
-import { useTheme } from "next-themes"
 import { createPortal } from "react-dom"
 import { Toaster as Sonner, type ToasterProps } from "sonner"
 
-const Toaster = ({ ...props }: ToasterProps) => {
-  const { theme = "system" } = useTheme()
+const Toaster = ({ theme, ...props }: ToasterProps) => {
+  const resolvedTheme = theme ?? (document.documentElement.classList.contains("dark") ? "dark" : "light")
 
   return (
     createPortal(
       <div className="km-toaster-portal" data-km-toaster-portal="">
         <Sonner
-          theme={theme as ToasterProps["theme"]}
+          theme={resolvedTheme}
           className="toaster group km-ui-toaster"
           style={
             {

@@ -70,7 +70,7 @@ const App = () => {
           <RPC2Provider>
             <PublicInfoProvider>
               <NodeListProvider>
-                <Toaster />
+                <Toaster theme={resolvedAppearance} />
                 {routing}
               </NodeListProvider>
             </PublicInfoProvider>
