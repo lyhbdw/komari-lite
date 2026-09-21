@@ -52,3 +52,20 @@ func TestDatabaseMaintenanceRPCMethodsAreUnavailable(t *testing.T) {
 		}
 	}
 }
+
+func TestLiteDisabledCapabilitiesAreNotRegisteredInRPC2(t *testing.T) {
+	for _, method := range []string{
+		"admin:terminal",
+		"admin:plugin",
+		"admin:restore",
+		"admin:backupRestore",
+		"admin:clipboard",
+		"admin:oidc",
+		"client:terminal",
+		"client:file",
+	} {
+		if resp := rpc.Call(1, method, nil); resp.Error == nil || resp.Error.Code != rpc.MethodNotFound {
+			t.Fatalf("Lite-disabled RPC method %q must not be registered: %+v", method, resp)
+		}
+	}
+}

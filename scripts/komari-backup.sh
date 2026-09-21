@@ -1,97 +1,66 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-# Create a non-destructive, traceable Komari deployment backup.
-# Override these variables when the installation uses another layout.
+# Create a consistent, traceable SQLite database backup.
 KOMARI_ROOT="${KOMARI_ROOT:-/opt/komari}"
 KOMARI_DATA_DIR="${KOMARI_DATA_DIR:-${KOMARI_ROOT}/data}"
-KOMARI_BACKUP_DIR="${KOMARI_BACKUP_DIR:-${KOMARI_ROOT}/backups}"
-KOMARI_COMPOSE_FILE="${KOMARI_COMPOSE_FILE:-}"
+KOMARI_BACKUP_DIR="${KOMARI_BACKUP_DIR:-${KOMARI_ROOT}/backups/database}"
+KOMARI_COMPOSE_FILE="${KOMARI_COMPOSE_FILE:-${KOMARI_ROOT}/docker-compose.yml}"
+RETENTION_COUNT="${RETENTION_COUNT:-7}"
 
 umask 077
-
-if [[ ! -d "$KOMARI_DATA_DIR" ]]; then
-  printf 'data directory does not exist: %s\n' "$KOMARI_DATA_DIR" >&2
-  exit 1
-fi
+command -v sqlite3 >/dev/null 2>&1 || { printf 'sqlite3 is required\n' >&2; exit 1; }
+[[ -d "$KOMARI_DATA_DIR" ]] || { printf 'data directory does not exist: %s\n' "$KOMARI_DATA_DIR" >&2; exit 1; }
+[[ "$RETENTION_COUNT" =~ ^[1-9][0-9]*$ ]] || { printf 'RETENTION_COUNT must be a positive integer\n' >&2; exit 1; }
 
 mkdir -p "$KOMARI_BACKUP_DIR"
-work_dir="$(mktemp -d "${KOMARI_BACKUP_DIR}/.komari-backup.XXXXXX")"
-archive_path=''
-cleanup() {
-  rm -rf "$work_dir"
-}
-trap cleanup EXIT
-
-payload_dir="${work_dir}/payload"
-mkdir -p "$payload_dir/data" "$payload_dir/deployment"
-
-# Preserve the complete data tree while excluding the backup output itself.
-tar -C "$KOMARI_DATA_DIR" --exclude='./backup' -cf - . | tar -C "$payload_dir/data" -xf -
-
-compose_files=()
-if [[ -n "$KOMARI_COMPOSE_FILE" ]]; then
-  IFS=: read -r -a requested_compose_files <<< "$KOMARI_COMPOSE_FILE"
-  compose_files+=("${requested_compose_files[@]}")
-else
-  for candidate in compose.yaml compose.yml docker-compose.yaml docker-compose.yml; do
-    [[ -f "${KOMARI_ROOT}/${candidate}" ]] && compose_files+=("${KOMARI_ROOT}/${candidate}")
-  done
-fi
-
-for compose_file in "${compose_files[@]}"; do
-  [[ -f "$compose_file" ]] || continue
-  cp -- "$compose_file" "${payload_dir}/deployment/$(basename "$compose_file")"
-done
-
-if command -v docker >/dev/null 2>&1 && ((${#compose_files[@]} > 0)); then
-  compose_args=()
-  for compose_file in "${compose_files[@]}"; do
-    compose_args+=( -f "$compose_file" )
-  done
-  if docker compose "${compose_args[@]}" config > "${payload_dir}/deployment/compose.rendered.yaml" 2>"${payload_dir}/deployment/compose.rendered.stderr"; then
-    rm -f "${payload_dir}/deployment/compose.rendered.stderr"
-  else
-    mv "${payload_dir}/deployment/compose.rendered.stderr" "${payload_dir}/deployment/compose.rendered.error.log"
-    printf '# docker compose config failed; see compose.rendered.error.log\n' > "${payload_dir}/deployment/compose.rendered.yaml"
-  fi
-  docker compose "${compose_args[@]}" images > "${payload_dir}/deployment/images.txt" 2>&1 || true
-else
-  printf 'docker compose metadata unavailable\n' > "${payload_dir}/deployment/images.txt"
-fi
-
-if command -v docker >/dev/null 2>&1; then
-  {
-    printf 'captured_at=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-    docker version --format 'server={{.Server.Version}} client={{.Client.Version}}' 2>/dev/null || true
-    docker ps --format '{{.Image}}\t{{.Names}}\t{{.ID}}' 2>/dev/null || true
-  } > "${payload_dir}/deployment/docker.info"
-else
-  printf 'docker unavailable\n' > "${payload_dir}/deployment/docker.info"
-fi
-
-{
-  printf 'created_at=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-  printf 'komari_root=%s\n' "$KOMARI_ROOT"
-  printf 'data_dir=%s\n' "$KOMARI_DATA_DIR"
-  printf 'compose_files=%s\n' "${#compose_files[@]}"
-} > "${payload_dir}/deployment/backup.info"
-
-( cd "$payload_dir" && find . -type f -print0 | sort -z | xargs -0 sha256sum ) > "${payload_dir}/SHA256SUMS"
+lock_file="${KOMARI_BACKUP_DIR}/.lock"
+exec 9>"$lock_file"
+flock -n 9 || { printf 'another backup is already running\n' >&2; exit 1; }
 
 stamp="$(date -u +%Y%m%dT%H%M%SZ)"
-archive_name="komari-backup-${stamp}-$$.tar.gz"
-archive_path="${KOMARI_BACKUP_DIR}/${archive_name}"
-temp_archive="${work_dir}/${archive_name}.tmp"
-tar -C "$payload_dir" -czf "$temp_archive" .
+work_dir="$(mktemp -d "${KOMARI_BACKUP_DIR}/.${stamp}.XXXXXX")"
+target_dir="${KOMARI_BACKUP_DIR}/${stamp}"
+cleanup() { rm -rf "$work_dir"; }
+trap cleanup EXIT
+mkdir -p "$work_dir"
 
-# Publish atomically. The PID suffix and noclobber guard preserve existing archives.
-if [[ -e "$archive_path" ]]; then
-  printf 'backup archive already exists: %s\n' "$archive_path" >&2
-  exit 1
+backup_database() {
+  local source="$1" target="$2"
+  [[ -f "$source" ]] || { printf 'database does not exist: %s\n' "$source" >&2; return 1; }
+  sqlite3 "$source" ".backup '$target'"
+  [[ "$(sqlite3 "$target" 'PRAGMA quick_check;')" == 'ok' ]] || { printf 'quick_check failed: %s\n' "$target" >&2; return 1; }
+}
+
+backup_database "${KOMARI_DATA_DIR}/komari.db" "${work_dir}/komari.db"
+backup_database "${KOMARI_DATA_DIR}/metrics.db" "${work_dir}/metrics.db"
+
+if [[ -f "$KOMARI_COMPOSE_FILE" ]]; then
+  cp -- "$KOMARI_COMPOSE_FILE" "${work_dir}/docker-compose.yml"
 fi
-mv -- "$temp_archive" "$archive_path"
-printf '%s  %s\n' "$(sha256sum "$archive_path" | awk '{print $1}')" "$archive_path" > "${archive_path}.sha256"
+if [[ -d "${KOMARI_DATA_DIR}/theme" ]]; then
+  tar -C "${KOMARI_DATA_DIR}" -czf "${work_dir}/theme.tar.gz" theme
+fi
+{
+  printf 'created_at=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  printf 'data_dir=%s\n' "$KOMARI_DATA_DIR"
+  printf 'compose_file=%s\n' "$KOMARI_COMPOSE_FILE"
+  if command -v docker >/dev/null 2>&1; then
+    docker inspect komari --format 'image={{.Config.Image}} image_id={{.Image}}' 2>/dev/null || true
+  fi
+} > "${work_dir}/backup.info"
+files=(komari.db metrics.db backup.info)
+[[ -f "${work_dir}/docker-compose.yml" ]] && files+=(docker-compose.yml)
+[[ -f "${work_dir}/theme.tar.gz" ]] && files+=(theme.tar.gz)
+(cd "$work_dir" && sha256sum -- "${files[@]}") > "${work_dir}/SHA256SUMS"
+
+mv -- "$work_dir" "$target_dir"
 trap - EXIT
-rm -rf "$work_dir"
-printf '%s\n' "$archive_path"
+
+mapfile -t old_dirs < <(find "$KOMARI_BACKUP_DIR" -mindepth 1 -maxdepth 1 -type d -regextype posix-extended -regex '.*/[0-9]{8}T[0-9]{6}Z' -printf '%p\n' | sort -r)
+if (( ${#old_dirs[@]} > RETENTION_COUNT )); then
+  for old_dir in "${old_dirs[@]:RETENTION_COUNT}"; do
+    rm -rf -- "$old_dir"
+  done
+fi
+printf '%s\n' "$target_dir"

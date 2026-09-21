@@ -6,5 +6,24 @@ After=network-online.target
 
 [Service]
 Type=oneshot
-User=root
+User=komari
+Group=komari
 ExecStart=/opt/komari/source/komari/scripts/komari-backup.sh
+TimeoutStartSec=45m
+MemoryMax=1G
+Nice=10
+IOSchedulingClass=idle
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/komari/data /opt/komari/backups/database
+RuntimeDirectory=komari-backup
+RuntimeDirectoryMode=0750
+RestrictAddressFamilies=AF_UNIX
+LockPersonality=true
+Environment=KOMARI_ROOT=/opt/komari
+Environment=KOMARI_DATA_DIR=/opt/komari/data
+Environment=KOMARI_BACKUP_DIR=/opt/komari/backups/database
+Environment=KOMARI_COMPOSE_FILE=/opt/komari/docker-compose.yml
+Environment=RETENTION_COUNT=7

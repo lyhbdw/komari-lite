@@ -3,6 +3,7 @@ import { buildAgentInstallArgs } from "../src/utils/agentInstallCommand.ts";
 
 const args = buildAgentInstallArgs({
   endpoint: "https://panel.example",
+  token: "generatedAgentToken123",
   interval: "5",
   includeNics: "eth1,pppoe-wan",
   excludeNics: "eth0",
@@ -11,6 +12,8 @@ const args = buildAgentInstallArgs({
 assert.deepEqual(args, [
   "-e",
   "https://panel.example",
+  "-t",
+  "generatedAgentToken123",
   "-i",
   "5",
   "--include-nics",
@@ -19,19 +22,27 @@ assert.deepEqual(args, [
   "eth0",
 ]);
 
-const defaultArgs = buildAgentInstallArgs({ endpoint: "https://panel.example" });
-assert.deepEqual(defaultArgs, ["-e", "https://panel.example"]);
+const defaultArgs = buildAgentInstallArgs({ endpoint: "https://panel.example", token: "generatedAgentToken123" });
+assert.deepEqual(defaultArgs, [
+  "-e",
+  "https://panel.example",
+  "-t",
+  "generatedAgentToken123",
+]);
 
 assert.deepEqual(
   buildAgentInstallArgs({
     endpoint: "https://panel.example",
-    interval: "  invalid ",
+    token: "generatedAgentToken123",
+    interval: "   invalid ",
     includeNics: "  eth 0  ",
     excludeNics: "  ppp0;wan  ",
   }),
   [
     "-e",
     "https://panel.example",
+    "-t",
+    "generatedAgentToken123",
     "-i",
     "1",
     "--include-nics",

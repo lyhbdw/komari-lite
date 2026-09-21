@@ -81,7 +81,7 @@ func InitializeStore() error {
 	store = s
 	storeMu.Unlock()
 
-	logger.Infof("metricstore", "Metric store initialized successfully (driver=%s)", ResolveDriverFromConfig(cfg.Driver, cfg.DSN))
+	logger.Infof("metricstore", "Metric store initialized successfully (driver=sqlite)")
 	return nil
 }
 

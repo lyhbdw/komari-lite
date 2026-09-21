@@ -32,8 +32,8 @@ func Register(r *gin.Engine) {
 func registerPublicRoutes(r *gin.Engine) {
 	// 非 JSON / 特殊流程，保留 REST handler。
 	r.POST("/api/login", public_api.Login)
-	r.GET("/download/agent-migration.sh", func(c *gin.Context) {
-		c.Data(200, "text/x-shellscript; charset=utf-8", public.AgentMigrationScript)
+	r.GET("/download/agent-install.sh", func(c *gin.Context) {
+		c.Data(200, "text/x-shellscript; charset=utf-8", public.AgentInstallScript)
 	})
 	r.GET("/download/agent/:version/:asset", public.ServeAgentAsset)
 	r.GET("/api/logout", public_api.Logout)
@@ -83,6 +83,7 @@ func registerLiteDisabledRoutes(r *gin.Engine) {
 		"/api/admin/pprof",
 		"/api/admin/settings/xtermjs",
 		"/api/admin/settings/oidc",
+		"/download/agent-migration.sh",
 
 		"/api/admin/clipboard",
 		"/api/admin/plugin",

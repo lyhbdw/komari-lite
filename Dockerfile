@@ -5,9 +5,11 @@ WORKDIR /app
 # Docker buildx 会在构建时自动填充这些变量
 ARG TARGETOS
 ARG TARGETARCH
-ARG OCI_REVISION=unknown
+ARG OCI_REVISION=
 ARG OCI_SOURCE=https://github.com/komari-monitor/komari
-ARG OCI_VERSION=1.0.0
+ARG OCI_VERSION=
+
+RUN test -n "$OCI_REVISION" && test "$OCI_REVISION" != unknown && test -n "$OCI_VERSION" && test "$OCI_VERSION" != unknown
 
 RUN apk add --no-cache ca-certificates curl tzdata
 

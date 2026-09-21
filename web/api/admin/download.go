@@ -2,6 +2,7 @@ package admin
 
 import (
 	"archive/zip"
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -13,6 +14,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/komari-monitor/komari/cmd/flags"
 	"github.com/komari-monitor/komari/database/dbcore"
+	"github.com/komari-monitor/komari/internal/metricstore"
 	"github.com/komari-monitor/komari/web/api"
 )
 
@@ -144,6 +146,11 @@ func createBackupArchive() (string, string, error) {
 	}
 	if err := copyWhitelistedFiles(contentDir); err != nil {
 		return "", "", fmt.Errorf("error copying data to temp: %w", err)
+	}
+	if store := metricstore.GetStore(); store != nil {
+		if err := store.SnapshotTo(context.Background(), filepath.Join(contentDir, "metrics.db")); err != nil {
+			return "", "", fmt.Errorf("error backing up metrics sqlite database: %w", err)
+		}
 	}
 
 	destDB := filepath.Join(contentDir, "komari.db")

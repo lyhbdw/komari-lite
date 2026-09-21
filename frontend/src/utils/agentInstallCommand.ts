@@ -1,5 +1,6 @@
 export type AgentInstallOptions = {
   endpoint: string;
+  token?: string;
   interval?: string;
   includeNics?: string;
   excludeNics?: string;
@@ -7,6 +8,8 @@ export type AgentInstallOptions = {
 
 export function buildAgentInstallArgs(options: AgentInstallOptions) {
   const args = ["-e", options.endpoint];
+  const token = options.token?.trim();
+  if (token) args.push("-t", token);
   const interval = options.interval?.trim();
   if (interval) {
     const value = Number.parseFloat(interval);

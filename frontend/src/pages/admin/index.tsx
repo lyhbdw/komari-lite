@@ -24,7 +24,6 @@ import {
   MenuIcon,
   Pencil,
   Plus,
-  RefreshCw,
   Trash2Icon,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -543,8 +542,8 @@ const ActionButtons = ({
     <div className="flex items-center gap-4">
       <GenerateCommandButton
         settings={settings}
+        nodeToken={node.token}
       />
-      <MigrateCommandButton />
 
       <EditButton node={node} />
       <BillingButton node={node} />
@@ -605,43 +604,12 @@ type InstallOptions = {
   excludeNics: string;
   interval: string;
 };
-function MigrateCommandButton() {
-  const { t } = useTranslation();
-  const scriptUrl = `${window.location.origin}/download/agent-migration.sh`;
-  const downloadBase = `${window.location.origin}/download/agent/1.0.5`;
-  const command = `curl --fail --proto '=https' --tlsv1.2 --location ${JSON.stringify(scriptUrl)} | sudo bash -s -- --migrate-legacy --install-version 1.0.5 --download-base ${JSON.stringify(downloadBase)}`;
-  const copy = async () => {
-    await navigator.clipboard.writeText(command);
-    toast.success(t("copy_success", "已复制到剪贴板"));
-  };
-  return (
-    <Dialog.Root>
-      <Dialog.Trigger>
-        <IconButton variant="ghost" title={t("admin.nodeTable.migrateLite", "迁移到 Lite")}>
-          <RefreshCw size="18" />
-        </IconButton>
-      </Dialog.Trigger>
-      <Dialog.Content>
-        <Dialog.Title>{t("admin.nodeTable.migrateLite", "迁移到 Komari Lite")}</Dialog.Title>
-        <Dialog.Description>
-          {t("admin.nodeTable.migrateLiteDescription", "在旧 Agent 所在的 Linux VPS 上执行。脚本会读取原服务配置并保留节点身份，不会在命令中显示 Token。")}
-        </Dialog.Description>
-        <TextArea disabled className="w-full" style={{ minHeight: "90px" }} value={command} />
-        <Flex justify="center" mt="4">
-          <Button style={{ width: "100%" }} onClick={copy}>
-            <Copy size={16} />
-            {t("common.copy")}
-          </Button>
-        </Flex>
-      </Dialog.Content>
-    </Dialog.Root>
-  );
-}
-
 function GenerateCommandButton({
   settings,
+  nodeToken,
 }: {
   settings: any;
+  nodeToken: string;
 }) {
   const [installOptions, setInstallOptions] = React.useState<InstallOptions>({
     includeNics: "",
@@ -664,13 +632,14 @@ function GenerateCommandButton({
     }();
     const args = buildAgentInstallArgs({
       endpoint: host,
+      token: nodeToken,
       interval: enableInterval ? installOptions.interval : undefined,
       includeNics: enableIncludeNics ? installOptions.includeNics : undefined,
       excludeNics: enableExcludeNics ? installOptions.excludeNics : undefined,
     });
-    const scriptUrl = `${window.location.origin}/download/agent-migration.sh`;
+    const scriptUrl = `${window.location.origin}/download/agent-install.sh`;
     const downloadBase = `${window.location.origin}/download/agent/1.0.5`;
-    return `read -r -s -p 'Agent token: ' KOMARI_AGENT_TOKEN && echo && curl --fail --proto '=https' --tlsv1.2 --location ${JSON.stringify(scriptUrl)} | sudo bash -s -- ${quoteShellArgs(args)} --install-version 1.0.5 --download-base ${JSON.stringify(downloadBase)} -t "$KOMARI_AGENT_TOKEN"`;
+    return `curl --fail --proto '=https' --tlsv1.2 --location ${JSON.stringify(scriptUrl)} | sudo bash -s -- ${quoteShellArgs(args)} --install-version 1.0.5 --download-base ${JSON.stringify(downloadBase)}`;
   };
 
   const copyToClipboard = async (text: string) => {

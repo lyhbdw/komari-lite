@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -89,6 +90,33 @@ func (s *Store) CheckpointWAL(ctx context.Context) error {
 		return nil
 	}
 	return sqliteCheckpoint(ctx, s.db)
+}
+
+// SnapshotTo writes a consistent SQLite snapshot to destPath. SQLite reads
+// committed pages from the live database and includes WAL content in the
+// snapshot, so callers never copy an active database file by itself.
+func (s *Store) SnapshotTo(ctx context.Context, destPath string) error {
+	s.maintenanceMu.Lock()
+	defer s.maintenanceMu.Unlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	if s.closed || s.db == nil {
+		return ErrClosed
+	}
+	if s.cfg.Driver != DriverSQLite {
+		return fmt.Errorf("%w: snapshots require SQLite", ErrInvalidArgument)
+	}
+	if err := os.MkdirAll(filepath.Dir(destPath), 0o755); err != nil {
+		return fmt.Errorf("metric: create snapshot directory: %w", err)
+	}
+	if err := os.Remove(destPath); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("metric: remove existing snapshot: %w", err)
+	}
+	safePath := strings.ReplaceAll(filepath.ToSlash(destPath), "'", "''")
+	if _, err := s.db.ExecContext(ctx, "VACUUM INTO '"+safePath+"'"); err != nil {
+		return fmt.Errorf("metric: snapshot sqlite database: %w", err)
+	}
+	return nil
 }
 
 // ReclaimSpace performs the backend-specific blocking operation that returns

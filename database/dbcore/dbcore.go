@@ -2,6 +2,8 @@ package dbcore
 
 import (
 	"archive/zip"
+	"context"
+	"database/sql"
 	"fmt"
 	"io"
 	"os"
@@ -16,6 +18,7 @@ import (
 	"github.com/komari-monitor/komari/internal/migrations"
 	"github.com/komari-monitor/komari/internal/sqlitetune"
 	logger "github.com/komari-monitor/komari/utils/log"
+	_ "github.com/mattn/go-sqlite3"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
@@ -89,82 +92,6 @@ func zipDirectoryExcluding(srcDir, dstZip string, exclude map[string]struct{}) e
 	return zw.Close()
 }
 
-// removeAllInDirExcept 删除 dir 下除 exclude 指定绝对路径外的所有文件和文件夹
-func removeAllInDirExcept(dir string, exclude map[string]struct{}) error {
-	absDir, err := filepath.Abs(dir)
-	if err != nil {
-		return err
-	}
-	normExclude := make(map[string]struct{}, len(exclude))
-	for p := range exclude {
-		abs, _ := filepath.Abs(p)
-		normExclude[abs] = struct{}{}
-	}
-	entries, err := os.ReadDir(absDir)
-	if err != nil {
-		return err
-	}
-	for _, e := range entries {
-		full := filepath.Join(absDir, e.Name())
-		if _, ok := normExclude[full]; ok {
-			continue
-		}
-		if err := os.RemoveAll(full); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// unzipToDir 将 zipPath 解压到 dstDir，包含路径遍历保护
-func unzipToDir(zipPath, dstDir string) error {
-	zr, err := zip.OpenReader(zipPath)
-	if err != nil {
-		return err
-	}
-	defer zr.Close()
-
-	if err := os.MkdirAll(dstDir, 0755); err != nil {
-		return err
-	}
-	absDst, _ := filepath.Abs(dstDir)
-
-	for _, f := range zr.File {
-		// 构造目标路径并做路径遍历保护
-		cleanName := filepath.Clean(f.Name)
-		targetPath := filepath.Join(absDst, cleanName)
-		if !strings.HasPrefix(targetPath, absDst+string(os.PathSeparator)) && targetPath != absDst {
-			return fmt.Errorf("illegal file path in zip: %s", f.Name)
-		}
-		if f.FileInfo().IsDir() {
-			if err := os.MkdirAll(targetPath, 0755); err != nil {
-				return err
-			}
-			continue
-		}
-		if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err != nil {
-			return err
-		}
-		rc, err := f.Open()
-		if err != nil {
-			return err
-		}
-		out, err := os.Create(targetPath)
-		if err != nil {
-			rc.Close()
-			return err
-		}
-		if _, err := io.Copy(out, rc); err != nil {
-			out.Close()
-			rc.Close()
-			return err
-		}
-		out.Close()
-		rc.Close()
-	}
-	return nil
-}
-
 var (
 	instance *gorm.DB
 	once     sync.Once
@@ -206,8 +133,8 @@ func resolveDatabaseFile() string {
 	return dbFile
 }
 
-// backupOnVersionUpgrade 在检测到版本升级时，把当前 ./data 打包到
-// ./data/backup/upgrade-{time}.zip，便于升级（含 metrics 迁移）异常时回滚。
+// backupOnVersionUpgrade 在检测到版本升级时，把当前 ./data 的一致性快照
+// 打包到 ./data/backup/upgrade-{time}.zip，便于升级（含 metrics 迁移）异常时回滚。
 //
 // 版本标识存放于配置库（configs 表，键 system_version），因此本函数必须在
 // config.SetDb 之后、一次性 metrics 迁移（InitStores）之前调用。
@@ -240,13 +167,6 @@ func backupOnVersionUpgrade() {
 		return
 	}
 
-	// 需要备份（升级或从旧稳定版首次带版本标记启动）。
-	// 先做一次 WAL checkpoint，确保 komari.db 主文件包含最新数据，
-	// 避免备份出的库缺少仍留在 -wal 中的写入。
-	if instance != nil {
-		instance.Exec("PRAGMA wal_checkpoint(TRUNCATE);")
-	}
-
 	backupDir := filepath.Join(".", "data", "backup")
 	if err := os.MkdirAll(backupDir, 0755); err != nil {
 		logger.Errorf("dbcore", "[upgrade-backup] failed to create backup dir: %v", err)
@@ -254,9 +174,8 @@ func backupOnVersionUpgrade() {
 	}
 	tsName := time.Now().UTC().Format("20060102-150405")
 	bakPath := filepath.Join(backupDir, fmt.Sprintf("upgrade-%s.zip", tsName))
-	backupZipPath := filepath.Join(".", "data", "backup.zip")
-	if zipErr := zipDirectoryExcluding("./data", bakPath, map[string]struct{}{backupZipPath: {}, backupDir: {}}); zipErr != nil {
-		logger.Errorf("dbcore", "[upgrade-backup] failed to backup ./data before upgrade (from %q to %q): %v", prevVersion, versionID, zipErr)
+	if err := createUpgradeBackup(bakPath); err != nil {
+		logger.Errorf("dbcore", "[upgrade-backup] failed to backup ./data before upgrade (from %q to %q): %v", prevVersion, versionID, err)
 		return
 	}
 	logger.Infof("dbcore", "[upgrade-backup] ./data backed up to %s before upgrade (from %q to %q)", bakPath, prevVersion, versionID)
@@ -264,7 +183,125 @@ func backupOnVersionUpgrade() {
 	writeVersionMarker()
 }
 
-// writeVersionMarker 将当前 versionID 写入配置库。
+// createUpgradeBackup archives non-database data together with SQLite-consistent
+// snapshots of both databases. Live database files, WAL and SHM sidecars are
+// never copied directly.
+func createUpgradeBackup(archivePath string) error {
+	mainDB := resolveDatabaseFile()
+	dataDir := filepath.Dir(mainDB)
+	if dataDir == "." || dataDir == "" {
+		dataDir = "."
+	}
+	metricsDB := filepath.Join(dataDir, "metrics.db")
+	stagingDir, err := os.MkdirTemp(dataDir, ".upgrade-backup-*")
+	if err != nil {
+		return fmt.Errorf("create staging directory: %w", err)
+	}
+	defer os.RemoveAll(stagingDir)
+
+	if err := copyUpgradeData(dataDir, stagingDir, mainDB, metricsDB, filepath.Join(dataDir, "backup"), stagingDir); err != nil {
+		return fmt.Errorf("copy non-database data: %w", err)
+	}
+	if instance == nil {
+		return fmt.Errorf("main database is not initialized")
+	}
+	mainSQLDB, err := instance.DB()
+	if err != nil {
+		return fmt.Errorf("get main database connection: %w", err)
+	}
+	if err := snapshotSQLiteConnection(mainSQLDB, filepath.Join(stagingDir, "komari.db")); err != nil {
+		return fmt.Errorf("snapshot main database: %w", err)
+	}
+
+	if _, err := os.Stat(metricsDB); err == nil {
+		metricsSQLDB, err := sql.Open("sqlite3", buildSQLiteDSN(metricsDB))
+		if err != nil {
+			return fmt.Errorf("open metrics database: %w", err)
+		}
+		metricsSQLDB.SetMaxOpenConns(1)
+		defer metricsSQLDB.Close()
+		if err := snapshotSQLiteConnection(metricsSQLDB, filepath.Join(stagingDir, "metrics.db")); err != nil {
+			return fmt.Errorf("snapshot metrics database: %w", err)
+		}
+	} else if !os.IsNotExist(err) {
+		return fmt.Errorf("stat metrics database: %w", err)
+	}
+
+	if err := os.MkdirAll(filepath.Dir(archivePath), 0755); err != nil {
+		return fmt.Errorf("create archive directory: %w", err)
+	}
+	if err := zipDirectoryExcluding(stagingDir, archivePath, nil); err != nil {
+		return fmt.Errorf("write archive: %w", err)
+	}
+	return nil
+}
+
+func copyUpgradeData(srcDir, dstDir, mainDB, metricsDB, backupDir, stagingDir string) error {
+	mainDB, _ = filepath.Abs(mainDB)
+	metricsDB, _ = filepath.Abs(metricsDB)
+	backupDir, _ = filepath.Abs(backupDir)
+	stagingDir, _ = filepath.Abs(stagingDir)
+	return filepath.Walk(srcDir, func(path string, info os.FileInfo, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		absPath, _ := filepath.Abs(path)
+		if absPath == backupDir || absPath == stagingDir {
+			if info.IsDir() {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if absPath == mainDB || absPath == metricsDB ||
+			absPath == mainDB+"-wal" || absPath == mainDB+"-shm" ||
+			absPath == metricsDB+"-wal" || absPath == metricsDB+"-shm" {
+			return nil
+		}
+		rel, err := filepath.Rel(srcDir, path)
+		if err != nil {
+			return err
+		}
+		target := filepath.Join(dstDir, rel)
+		if info.IsDir() {
+			return os.MkdirAll(target, 0755)
+		}
+		if err := os.MkdirAll(filepath.Dir(target), 0755); err != nil {
+			return err
+		}
+		in, err := os.Open(path)
+		if err != nil {
+			return err
+		}
+		out, err := os.Create(target)
+		if err != nil {
+			_ = in.Close()
+			return err
+		}
+		_, copyErr := io.Copy(out, in)
+		closeInErr := in.Close()
+		closeOutErr := out.Close()
+		if copyErr != nil {
+			return copyErr
+		}
+		if closeInErr != nil {
+			return closeInErr
+		}
+		return closeOutErr
+	})
+}
+
+func snapshotSQLiteConnection(db *sql.DB, destPath string) error {
+	if err := os.Remove(destPath); err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
+	defer cancel()
+	safePath := strings.ReplaceAll(filepath.ToSlash(destPath), "'", "''")
+	_, err := db.ExecContext(ctx, "VACUUM INTO '"+safePath+"'")
+	return err
+}
+
+// writeVersionMarker 将当前 versionID 写入配置库.
 func writeVersionMarker() {
 	if err := config.Set(SystemVersionKey, versionID); err != nil {
 		logger.Errorf("dbcore", "[upgrade-backup] failed to persist version marker: %v", err)

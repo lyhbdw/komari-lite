@@ -35,8 +35,8 @@ log_config() {
     echo -e "${CYAN}[CONFIG]${NC} $1"
 }
 
-# $EUID 是 bash 专有变量, ash/dash 下未定义, 补 POSIX 回退
-EUID=${EUID:-$(id -u)}
+# Keep the script compatible with both POSIX sh and bash.
+effective_uid=$(id -u)
 
 # Default values
 service_name="komari-agent"
@@ -45,22 +45,12 @@ install_version=""
 local_binary=""
 download_base="${AGENT_DOWNLOAD_BASE:-}"
 sha256_expected="${AGENT_SHA256:-}"
-migration_mode=false
 install_dir_specified=false
 service_user="${KOMARI_SERVICE_USER:-komari}"
 user_service=false
 agent_token="${AGENT_TOKEN:-}"
 credential_file=""
 runner_file=""
-legacy_binary=""
-legacy_service=""
-legacy_service_name=""
-legacy_service_file=""
-legacy_init=""
-legacy_args=""
-migration_ready_file=""
-migration_finalized=false
-migration_cleanup_active=false
 
 # Detect OS
 os_type=$(uname -s)
@@ -79,10 +69,6 @@ komari_args=""
 # [[ ]] -> [ ] (POSIX)
 while [ $# -gt 0 ]; do
     case $1 in
-        --migrate-legacy)
-            migration_mode=true
-            shift
-            ;;
         --install-dir)
             target_dir="$2"
             install_dir_specified=true
@@ -124,7 +110,7 @@ done
 komari_args="${komari_args# }"
 
 # A direct, unprivileged installation belongs entirely to the invoking user.
-if [ "$EUID" -ne 0 ] && [ "$install_dir_specified" = false ]; then
+if [ "$effective_uid" -ne 0 ] && [ "$install_dir_specified" = false ]; then
     case "$os_name" in
         linux)
             target_dir="${XDG_DATA_HOME:-$HOME/.local/share}/komari"
@@ -133,97 +119,6 @@ if [ "$EUID" -ne 0 ] && [ "$install_dir_specified" = false ]; then
 fi
 
 komari_agent_path="${target_dir}/agent"
-
-# A migration reuses the existing service command so the node UUID and token stay unchanged.
-# The token is read locally from the service definition and is never printed by this script.
-if [ "$migration_mode" = true ]; then
-    detect_legacy_service() {
-        if command -v systemctl >/dev/null 2>&1 && systemctl list-unit-files >/dev/null 2>&1; then
-            legacy_unit=$(systemctl list-unit-files --type=service --no-legend 2>/dev/null |
-                awk '$1 ~ /^komari.*agent.*[.]service$/ && $1 !~ /^komari-agent-lite[.]service$/ {print $1; exit}')
-            if [ -n "$legacy_unit" ]; then
-                legacy_service_name="${legacy_unit%.service}"
-                legacy_service="$legacy_service_name"
-                service_name="komari-agent-lite"
-                legacy_init="systemd"
-                legacy_service_file=$(systemctl show "${legacy_service_name}.service" -p FragmentPath --value 2>/dev/null || true)
-                if [ -z "$legacy_service_file" ] || [ "$legacy_service_file" = "n/a" ] || [ ! -f "$legacy_service_file" ]; then
-                    log_error "Could not locate the legacy systemd service file"
-                    exit 1
-                fi
-                return 0
-            fi
-        fi
-        for candidate in /etc/init.d/komari-agent /etc/init.d/komari; do
-            if [ -f "$candidate" ]; then
-                legacy_service_name=$(basename "$candidate")
-                legacy_service="$legacy_service_name"
-                service_name="komari-agent-lite"
-                legacy_init="openrc"
-                legacy_service_file="$candidate"
-                return 0
-            fi
-        done
-        return 1
-    }
-
-    if ! detect_legacy_service; then
-        log_error "No existing Komari Agent service was found"
-        exit 1
-    fi
-
-    if [ "$legacy_init" = "systemd" ]; then
-        legacy_exec=$(systemctl cat "${legacy_service_name}.service" 2>/dev/null |
-            sed -n 's/^ExecStart=//p' | tail -n 1)
-        if [ -z "$legacy_exec" ]; then
-            log_error "Could not read ExecStart from ${service_name}.service"
-            exit 1
-        fi
-        legacy_binary=$(printf '%s\\n' "$legacy_exec" | awk '{print $1}')
-        if [ -z "$legacy_binary" ] || [ ! -x "$legacy_binary" ]; then
-            log_error "Could not locate the existing Agent binary"
-            exit 1
-        fi
-        legacy_target_dir=$(dirname "$legacy_binary")
-        target_dir="${KOMARI_LITE_INSTALL_DIR:-/opt/komari-agent-lite}"
-        komari_agent_path="${target_dir}/agent"
-        komari_args=${legacy_exec#"$legacy_binary"}
-        komari_args="${komari_args# }"
-        detected_user=$(systemctl show "${legacy_service_name}.service" -p User --value 2>/dev/null || true)
-        case "$detected_user" in
-            ""|root)
-                service_user="${KOMARI_SERVICE_USER:-komari}"
-                log_warning "Legacy service used root; migrating to dedicated user '$service_user'"
-                ;;
-            *)
-                service_user="$detected_user"
-                ;;
-        esac
-    else
-        legacy_file="$legacy_service_file"
-        legacy_binary=$(sed -n 's/^command=//p' "$legacy_file" | tail -n 1)
-        legacy_args=$(sed -n 's/^command_args=//p' "$legacy_file" | tail -n 1)
-        if [ -z "$legacy_binary" ] || [ ! -x "$legacy_binary" ]; then
-            log_error "Could not locate the existing Agent binary"
-            exit 1
-        fi
-        legacy_target_dir=$(dirname "$legacy_binary")
-        target_dir="${KOMARI_LITE_INSTALL_DIR:-/opt/komari-agent-lite}"
-        komari_agent_path="${target_dir}/agent"
-        komari_args="$legacy_args"
-    fi
-
-    case " $komari_args " in
-        *" -e "*|*" --endpoint "*) ;;
-        *) log_error "The existing Agent service has no panel endpoint"; exit 1 ;;
-    esac
-    case " $komari_args " in
-        *" -t "*|*" --token "*) ;;
-        *) log_error "The existing Agent service has no token"; exit 1 ;;
-    esac
-    log_config "Migration source: ${GREEN}${legacy_service_name}${NC}"
-    log_config "Install directory: ${GREEN}${target_dir}${NC}"
-fi
 
 # Remove the token from the command line and keep it in a protected file.
 # The generated service invokes a wrapper that sources this file.
@@ -283,38 +178,24 @@ case "$agent_token" in
         ;;
 esac
 
-if [ "$EUID" -eq 0 ] && [ "$service_user" = "root" ]; then
+if [ "$effective_uid" -eq 0 ] && [ "$service_user" = "root" ]; then
     log_error "Refusing to install a system service as root; set KOMARI_SERVICE_USER to a dedicated non-root user"
     exit 1
 fi
-if [ "$EUID" -eq 0 ] && ! id "$service_user" >/dev/null 2>&1; then
-    if ! command -v useradd >/dev/null 2>&1 || ! useradd --system --home-dir "$target_dir" --shell /usr/sbin/nologin "$service_user"; then
+if [ "$effective_uid" -eq 0 ] && ! id "$service_user" >/dev/null 2>&1; then
+    login_shell="/sbin/nologin"
+    if [ ! -x "$login_shell" ]; then
+        login_shell="/usr/sbin/nologin"
+    fi
+    if ! command -v useradd >/dev/null 2>&1 || ! useradd --system --home-dir "$target_dir" --shell "$login_shell" "$service_user"; then
         log_error "Could not create dedicated service user '$service_user'"
         exit 1
     fi
 fi
 credential_file="${target_dir}/.agent.env"
 runner_file="${target_dir}/run-agent.sh"
-if [ "$migration_mode" = true ]; then
-    migration_ready_file="${KOMARI_MIGRATION_READY_FILE:-${target_dir}/.migration-ready}"
-    migration_ready_dir=$(dirname "$migration_ready_file")
-    mkdir -p "$migration_ready_dir"
-    if [ "$EUID" -eq 0 ] && [ "$service_user" != "root" ]; then
-        chown "$service_user" "$migration_ready_dir"
-    fi
-    chmod 0750 "$migration_ready_dir"
-    rm -f -- "$migration_ready_file"
-fi
-
-cleanup_target_on_exit() {
-    if [ "${migration_mode}" = true ] && [ "${migration_finalized}" != true ] && [ "${migration_cleanup_active}" = true ] && [ -n "${target_dir}" ]; then
-        rm -rf -- "$target_dir"
-    fi
-}
-trap cleanup_target_on_exit EXIT INT TERM
-
 # User services are the only service type a non-root Linux installation can manage.
-if [ "$EUID" -ne 0 ] && [ "$os_name" = "linux" ]; then
+if [ "$effective_uid" -ne 0 ] && [ "$os_name" = "linux" ]; then
     if command -v systemctl >/dev/null 2>&1 && systemctl --user show-environment >/dev/null 2>&1; then
         user_service=true
     else
@@ -340,48 +221,6 @@ else
 fi
 echo ""
 
-cleanup_new_installation() {
-    case "$init_system" in
-        systemd)
-            systemctl stop "${service_name}.service" >/dev/null 2>&1 || true
-            systemctl disable "${service_name}.service" >/dev/null 2>&1 || true
-            rm -f "/etc/systemd/system/${service_name}.service"
-            rm -rf "/etc/systemd/system/${service_name}.service.d"
-            systemctl daemon-reload >/dev/null 2>&1 || true
-            ;;
-        systemd-user)
-            systemctl --user stop "${service_name}.service" >/dev/null 2>&1 || true
-            systemctl --user disable "${service_name}.service" >/dev/null 2>&1 || true
-            rm -f "${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user/${service_name}.service"
-            systemctl --user daemon-reload >/dev/null 2>&1 || true
-            ;;
-        openrc|procd)
-            rc-service "$service_name" stop >/dev/null 2>&1 || true
-            rc-update del "$service_name" default >/dev/null 2>&1 || true
-            rm -f "/etc/init.d/${service_name}"
-            ;;
-        upstart)
-            initctl stop "$service_name" >/dev/null 2>&1 || true
-            rm -f "/etc/init/${service_name}.conf"
-            ;;
-    esac
-    rm -rf -- "$target_dir"
-}
-
-legacy_service_is_active() {
-    case "$legacy_init" in
-        systemd)
-            systemctl is-active --quiet "${legacy_service_name}.service"
-            ;;
-        openrc|procd)
-            rc-service "$legacy_service_name" status >/dev/null 2>&1
-            ;;
-        *)
-            return 1
-            ;;
-    esac
-}
-
 new_service_is_active() {
     case "$init_system" in
         systemd)
@@ -402,92 +241,8 @@ new_service_is_active() {
     esac
 }
 
-wait_for_migration_ready() {
-    attempts=0
-    while [ "$attempts" -lt 30 ]; do
-        if ! new_service_is_active; then
-            return 1
-        fi
-        if [ -s "$migration_ready_file" ]; then
-            return 0
-        fi
-        attempts=$((attempts + 1))
-        sleep 1
-    done
-    return 1
-}
-
-cleanup_legacy_installation() {
-    if [ "$migration_mode" != true ]; then
-        return 0
-    fi
-
-    if ! wait_for_migration_ready; then
-        log_error "New Agent did not report successfully; keeping legacy Agent"
-        migration_cleanup_active=true
-        cleanup_new_installation
-        return 1
-    fi
-
-    if ! new_service_is_active; then
-        log_error "New Agent service is not active; keeping legacy Agent"
-        migration_cleanup_active=true
-        cleanup_new_installation
-        return 1
-    fi
-
-    log_info "New Agent reported successfully; removing legacy Agent"
-    case "$legacy_init" in
-        systemd)
-            systemctl stop "${legacy_service_name}.service" >/dev/null 2>&1 || true
-            systemctl disable "${legacy_service_name}.service" >/dev/null 2>&1 || true
-            if legacy_service_is_active; then
-                log_error "Legacy Agent service is still active; keeping legacy files"
-                migration_cleanup_active=true
-                cleanup_new_installation
-                return 1
-            fi
-            rm -f -- "$legacy_service_file"
-            rm -rf -- "${legacy_service_file}.d"
-            systemctl daemon-reload >/dev/null 2>&1 || true
-            ;;
-        openrc|procd)
-            rc-service "$legacy_service_name" stop >/dev/null 2>&1 || true
-            rc-update del "$legacy_service_name" default >/dev/null 2>&1 || true
-            if legacy_service_is_active; then
-                log_error "Legacy Agent service is still active; keeping legacy files"
-                migration_cleanup_active=true
-                cleanup_new_installation
-                return 1
-            fi
-            rm -f -- "$legacy_service_file"
-            ;;
-        *)
-            log_error "Cannot remove legacy service safely; keeping legacy Agent"
-            migration_cleanup_active=true
-            cleanup_new_installation
-            return 1
-            ;;
-    esac
-
-    if [ -n "$legacy_binary" ] && [ -f "$legacy_binary" ] && [ "$legacy_binary" != "$komari_agent_path" ]; then
-        rm -f -- "$legacy_binary"
-    fi
-    if [ -e "$legacy_service_file" ] || [ -e "$legacy_binary" ] || [ -e "${legacy_service_file}.d" ]; then
-        log_error "Legacy Agent cleanup was incomplete; inspect the old service manually"
-        return 1
-    fi
-    migration_finalized=true
-    log_success "Legacy Agent service and binary removed after successful handoff"
-}
 uninstall_previous() {
     log_step "Checking for previous installation..."
-
-    # A migration uses an independent service and directory. Never stop the
-    # legacy service before the replacement has reported successfully.
-    if [ "$migration_mode" = true ]; then
-        return 0
-    fi
 
     if [ "$user_service" = true ]; then
         if systemctl --user list-unit-files | grep -q "${service_name}.service"; then
@@ -532,7 +287,7 @@ install_dependencies() {
     done
 
     if [ -n "$missing_deps" ]; then
-        if [ "$EUID" -ne 0 ]; then
+        if [ "$effective_uid" -ne 0 ]; then
             log_error "Missing required dependencies:$missing_deps"
             log_info "Install them with your system package manager, then run this script again."
             exit 1
@@ -658,7 +413,7 @@ fi
 
 log_step "Creating installation directory: ${GREEN}$target_dir${NC}"
 mkdir -p "$target_dir"
-if [ "$EUID" -eq 0 ] && [ "$service_user" != "root" ]; then
+if [ "$effective_uid" -eq 0 ] && [ "$service_user" != "root" ]; then
     chown "$service_user" "$target_dir"
 fi
 
@@ -726,33 +481,25 @@ if ! mv -f "$download_tmp" "$komari_agent_path"; then
     log_error "Could not install verified binary"
     exit 1
 fi
-# Keep the migration cleanup trap active after the verified binary is installed.
-trap cleanup_target_on_exit EXIT INT TERM
-
 # Service cleanup happens only after the verified binary is in place.
 uninstall_previous
 
 # Set executable permissions
 chmod +x "$komari_agent_path"
-if [ "$EUID" -eq 0 ] && [ "$service_user" != "root" ]; then
+if [ "$effective_uid" -eq 0 ] && [ "$service_user" != "root" ]; then
     chown "$service_user" "$komari_agent_path"
 fi
 umask 077
 printf 'export AGENT_TOKEN=%s\n' "$(shell_quote "$agent_token")" > "$credential_file"
 chmod 0600 "$credential_file"
-if [ "$migration_mode" = true ]; then
-    runner_args=" --migration-ready-file $(shell_quote "$migration_ready_file")"
-else
-    runner_args=""
-fi
 cat > "$runner_file" << EOF
 #!/bin/sh
 set -eu
 . $(shell_quote "$credential_file")
-exec $(shell_quote "$komari_agent_path") ${komari_args}${runner_args}
+exec $(shell_quote "$komari_agent_path") ${komari_args}
 EOF
 chmod 0700 "$runner_file"
-if [ "$EUID" -eq 0 ] && [ "$service_user" != "root" ]; then
+if [ "$effective_uid" -eq 0 ] && [ "$service_user" != "root" ]; then
     chown "$service_user" "$credential_file" "$runner_file"
 fi
 log_success "Komari-agent installed to ${GREEN}$komari_agent_path${NC}"
@@ -1031,12 +778,6 @@ else
     log_error "Unsupported or unknown init system detected: $init_system"
     log_error "Supported init systems: systemd, openrc, procd, upstart"
     exit 1
-fi
-
-cleanup_legacy_installation
-migration_status=$?
-if [ "$migration_mode" = true ] && [ "$migration_status" -ne 0 ]; then
-    exit "$migration_status"
 fi
 
 echo ""

@@ -40,23 +40,6 @@ func TestInfoWritesStructuredFields(t *testing.T) {
 	}
 }
 
-func TestMySQLDriverLoggerUsesStructuredConsoleFormat(t *testing.T) {
-	previous := defaultLogger
-	var output bytes.Buffer
-	defaultLogger = slog.New(NewConsoleHandler(&output, slog.LevelDebug))
-	t.Cleanup(func() { defaultLogger = previous })
-
-	mysqlDriverLogger{}.Print("packets.go:58 ", "unexpected EOF")
-
-	line := stripANSI(output.String())
-	if !regexp.MustCompile(`^\d{4}/\d{2}/\d{2} \d{2}:\d{2}:\d{2} \[ERROR/MYSQL\]`).MatchString(line) {
-		t.Fatalf("unexpected console log format %q", line)
-	}
-	if !strings.Contains(line, "packets.go:58 unexpected EOF") {
-		t.Fatalf("expected MySQL driver error in log output %q", line)
-	}
-}
-
 func TestGormLoggerSkipsSuccessfulQueriesByDefault(t *testing.T) {
 	previous := defaultLogger
 	var output bytes.Buffer
