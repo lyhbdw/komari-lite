@@ -616,7 +616,8 @@ type InstallOptions = {
 function MigrateCommandButton() {
   const { t } = useTranslation();
   const scriptUrl = `${window.location.origin}/download/agent-migration.sh`;
-  const command = `curl --fail --proto '=https' --tlsv1.2 --location ${JSON.stringify(scriptUrl)} | sudo bash -s -- --migrate-legacy --install-version 1.0.0`;
+  const downloadBase = `${window.location.origin}/download/agent/1.0.4`;
+  const command = `curl --fail --proto '=https' --tlsv1.2 --location ${JSON.stringify(scriptUrl)} | sudo bash -s -- --migrate-legacy --install-version 1.0.4 --download-base ${JSON.stringify(downloadBase)}`;
   const copy = async () => {
     await navigator.clipboard.writeText(command);
     toast.success(t("copy_success", "已复制到剪贴板"));
@@ -738,9 +739,9 @@ function GenerateCommandButton({
       args.push(`--month-rotate`);
       args.push(rotateVal);
     }
-    const scriptUrl =
-      "https://raw.githubusercontent.com/Tumb1er1376/komari-agent-lite/56815821d251532ed052a40cb7b13546f242b9bb/install.sh";
-    return `read -r -s -p 'Agent token: ' KOMARI_AGENT_TOKEN && echo && curl --fail --proto '=https' --tlsv1.2 --location ${JSON.stringify(scriptUrl)} | sudo bash -s -- ${quoteShellArgs(args)} --install-version 1.0.0 -t "$KOMARI_AGENT_TOKEN"`;
+    const scriptUrl = `${window.location.origin}/download/agent-migration.sh`;
+    const downloadBase = `${window.location.origin}/download/agent/1.0.4`;
+    return `read -r -s -p 'Agent token: ' KOMARI_AGENT_TOKEN && echo && curl --fail --proto '=https' --tlsv1.2 --location ${JSON.stringify(scriptUrl)} | sudo bash -s -- ${quoteShellArgs(args)} --install-version 1.0.4 --download-base ${JSON.stringify(downloadBase)} -t "$KOMARI_AGENT_TOKEN"`;
   };
 
   const copyToClipboard = async (text: string) => {

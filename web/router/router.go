@@ -35,6 +35,7 @@ func registerPublicRoutes(r *gin.Engine) {
 	r.GET("/download/agent-migration.sh", func(c *gin.Context) {
 		c.Data(200, "text/x-shellscript; charset=utf-8", public.AgentMigrationScript)
 	})
+	r.GET("/download/agent/:version/:asset", public.ServeAgentAsset)
 	r.GET("/api/logout", public_api.Logout)
 	registerLiteDisabledRoutes(r)
 	// /api/clients 是 WebSocket 端点（客户端发 "get"/"get <uuid>" 拉取在线列表与最新上报），
