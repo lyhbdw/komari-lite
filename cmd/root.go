@@ -32,6 +32,7 @@ var RootCmd = &cobra.Command{
 	Use:   "komari-agent",
 	Short: "komari agent",
 	Long:  `komari agent`,
+	Args:  cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		loadFromEnv() // 从环境变量加载配置，覆盖解析
 		if flags.ConfigFile != "" {

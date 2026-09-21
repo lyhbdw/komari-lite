@@ -43,7 +43,7 @@ export AGENT_TOKEN="your-token"
 
 常用配置项：
 
-当前 Lite 版本为 `1.0.4`。Agent Token 只通过 `Authorization` 请求头发送。Agent Lite 不包含自更新功能。
+当前 Lite 版本为 `1.0.5`。Agent Token 只通过 `Authorization` 请求头发送。Agent Lite 不包含自更新功能。
 
 | JSON 字段 | 环境变量 | 命令行参数 | 说明 | 支持版本 |
 | --- | --- | --- | --- | --- |
