@@ -23,6 +23,7 @@ type reportTrafficState struct {
 type reportTrafficValues struct {
 	initialized bool
 	timestamp   time.Time
+	lastSeen    time.Time
 	hasUp       bool
 	totalUp     int64
 	hasDown     bool
@@ -37,6 +38,14 @@ const (
 	pingBatchMaxRecords     = 512
 	reportBatchMaxReports   = 512
 	reportBatchWriteTimeout = 10 * time.Second
+
+	// reportTrafficStatePruneInterval controls how often the batcher prunes
+	// idle traffic-counter states; reportTrafficStateIdleTTL is how long an
+	// agent may stay silent before its state is dropped. The counter is
+	// restorable from persisted data (latestReportCounter), so dropping an
+	// idle state only costs one restore query on the agent's next report.
+	reportTrafficStatePruneInterval = time.Hour
+	reportTrafficStateIdleTTL       = 24 * time.Hour
 )
 
 var (
@@ -200,6 +209,8 @@ func (w *reportBatchWorker) enqueue(ctx context.Context, report v2.Report) error
 func (w *reportBatchWorker) run() {
 	ticker := time.NewTicker(reportBatchInterval)
 	defer ticker.Stop()
+	pruneTicker := time.NewTicker(reportTrafficStatePruneInterval)
+	defer pruneTicker.Stop()
 
 	var pending []v2.Report
 	var pendingPings []models.PingRecord
@@ -221,6 +232,8 @@ func (w *reportBatchWorker) run() {
 				return
 			}
 			request.done <- err
+		case <-pruneTicker.C:
+			pruneReportTrafficStates(time.Now())
 		case <-ticker.C:
 			pendingPings = append(pendingPings, drainPingQueue(w.pingQueue, reportBatchQueueSize)...)
 			if err := writePendingPingRecords(context.Background(), &pendingPings); err != nil {
@@ -249,6 +262,28 @@ func (w *reportBatchWorker) enqueuePing(ctx context.Context, record models.PingR
 	default:
 		return ErrPingBatchQueueFull
 	}
+}
+
+// pruneReportTrafficStates drops traffic-counter states for agents that have
+// not reported within the idle TTL, so agents that disappear do not leak
+// entries forever. A returning agent re-initializes its counter from persisted
+// data (latestReportCounter), so pruning is lossless apart from one query.
+func pruneReportTrafficStates(now time.Time) {
+	cutoff := now.Add(-reportTrafficStateIdleTTL)
+	reportTrafficStates.Range(func(key, value any) bool {
+		state, ok := value.(*reportTrafficState)
+		if !ok {
+			reportTrafficStates.Delete(key)
+			return true
+		}
+		state.mu.Lock()
+		idle := !state.lastSeen.IsZero() && state.lastSeen.Before(cutoff)
+		state.mu.Unlock()
+		if idle {
+			reportTrafficStates.Delete(key)
+		}
+		return true
+	})
 }
 
 func drainReportQueue(queue <-chan v2.Report, limit int) []v2.Report {
@@ -393,6 +428,7 @@ func writeReportBatch(ctx context.Context, reports []v2.Report) ([]v2.Report, er
 		values.totalUp = report.Network.TotalUp
 		values.hasDown = true
 		values.totalDown = report.Network.TotalDown
+		values.lastSeen = time.Now()
 		pendingStates[state] = values
 		prepared[i] = report
 	}
