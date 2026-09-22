@@ -365,6 +365,49 @@ func (s *Store) FlushCoarse(ctx context.Context, now time.Time) (int, error) {
 	return s.flushClosedCoarseRollups(ctx, now)
 }
 
+// coarseRollupRows returns in-memory coarse parents of one tier that intersect
+// the query window, in the storedRollup shape Stats consumes.
+func (s *Store) coarseRollupRows(resolution time.Duration, query Query) ([]storedRollup, error) {
+	startMilli := bucketStartMillis(query.Start.UnixMilli(), resolution.Milliseconds())
+	endMilli := query.End.UnixMilli()
+	s.coarseMu.RLock()
+	defer s.coarseMu.RUnlock()
+	out := make([]storedRollup, 0)
+	for key, parent := range s.coarse {
+		if key.interval != resolution || key.metricName != query.MetricName {
+			continue
+		}
+		if key.bucket < startMilli || key.bucket > endMilli || len(parent.children) == 0 {
+			continue
+		}
+		if query.EntityID != "" && key.entityID != query.EntityID {
+			continue
+		}
+		var childTagsJSON string
+		for _, child := range parent.children {
+			childTagsJSON = child.tagsJSON
+			break
+		}
+		_, matched, err := matchRawTags(childTagsJSON, query.Tags)
+		if err != nil {
+			return nil, err
+		}
+		if !matched {
+			continue
+		}
+		summary := newRollupBucket(s.cfg.RollupPolicy.compression())
+		for _, child := range parent.children {
+			summary.mergeStored(child)
+		}
+		if summary.count == 0 {
+			continue
+		}
+		out = append(out, storedRollup{entityID: key.entityID, bucket: key.bucket, bucketData: summary})
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].bucket < out[j].bucket })
+	return out, nil
+}
+
 func (s *Store) metricRollupPolicyTx(ctx context.Context, metricName string, tx *sql.Tx) (RollupPolicy, error) {
 	var retentionDays int
 	err := tx.QueryRowContext(ctx, "SELECT retention_days FROM "+s.tables.definitions+" WHERE name = "+s.dialect.placeholder(1), metricName).Scan(&retentionDays)

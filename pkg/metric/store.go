@@ -1206,7 +1206,8 @@ func pageBuckets(buckets []AggregatePoint, limit, offset int) []AggregatePoint {
 	return buckets
 }
 
-// Stats computes summary statistics from persisted and active minute summaries.
+// Stats computes summary statistics from the rollup tiers that cover the
+// query window, plus the active in-memory minute summaries.
 func (s *Store) Stats(ctx context.Context, query Query) (Stats, error) {
 	if err := s.ensureOpen(); err != nil {
 		return Stats{}, err
@@ -1217,16 +1218,46 @@ func (s *Store) Stats(ctx context.Context, query Query) (Stats, error) {
 	query = query.normalized()
 	s.rollupViewMu.RLock()
 	defer s.rollupViewMu.RUnlock()
-	rows, err := s.scanRollupRowsBetween(ctx, query.MetricName, query.EntityID, query.Tags,
-		time.Minute.Milliseconds(), bucketStartMillis(query.Start.UnixMilli(), time.Minute.Milliseconds()), query.End.UnixMilli(), true)
-	if err != nil {
+
+	// Merge every tier whose retention still covers the window start (the same
+	// cascade SeriesBatch uses), so ranges beyond the minute tier's retention
+	// no longer return ErrNoData.
+	policy := s.cfg.RollupPolicy
+	if def, err := s.GetMetric(ctx, query.MetricName); err == nil {
+		if def.RetentionDays <= 0 {
+			policy = RollupPolicy{}
+		} else {
+			policy = policy.withMetricRetention(time.Duration(def.RetentionDays) * 24 * time.Hour)
+		}
+	} else if !errors.Is(err, ErrNotFound) {
 		return Stats{}, err
 	}
-	hot, err := s.hotRollupRows(query.MetricName, query.EntityID, query.Tags, query.Start, query.End, true)
-	if err != nil {
-		return Stats{}, err
+	now := time.Now().UTC()
+	var rows []storedRollup
+	for _, tier := range policy.Tiers {
+		if now.Add(-tier.Retention).After(query.Start) {
+			continue
+		}
+		stored, err := s.scanRollupRowsBetween(ctx, query.MetricName, query.EntityID, query.Tags,
+			tier.Interval.Milliseconds(), bucketStartMillis(query.Start.UnixMilli(), tier.Interval.Milliseconds()), query.End.UnixMilli(), true)
+		if err != nil {
+			return Stats{}, err
+		}
+		rows = append(rows, stored...)
+		if tier.Interval == time.Minute {
+			hot, err := s.hotRollupRows(query.MetricName, query.EntityID, query.Tags, query.Start, query.End, true)
+			if err != nil {
+				return Stats{}, err
+			}
+			rows = append(rows, hot...)
+		} else {
+			coarse, err := s.coarseRollupRows(tier.Interval, query)
+			if err != nil {
+				return Stats{}, err
+			}
+			rows = append(rows, coarse...)
+		}
 	}
-	rows = append(rows, hot...)
 	if len(rows) == 0 {
 		// No samples in range. Disambiguate from a non-existent metric so the
 		// caller can tell "empty window" apart from "unknown metric".
