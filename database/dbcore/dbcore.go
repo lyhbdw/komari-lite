@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -15,6 +16,7 @@ import (
 	"github.com/komari-monitor/komari/cmd/flags"
 	"github.com/komari-monitor/komari/database/models"
 	"github.com/komari-monitor/komari/internal/config"
+	appconfig "github.com/komari-monitor/komari/internal/config"
 	"github.com/komari-monitor/komari/internal/migrations"
 	"github.com/komari-monitor/komari/internal/sqlitetune"
 	logger "github.com/komari-monitor/komari/utils/log"
@@ -152,7 +154,7 @@ func backupOnVersionUpgrade() {
 		return
 	}
 
-	prevVersion, readErr := config.GetAs[string](SystemVersionKey)
+	prevVersion, readErr := readSystemVersion()
 	prevVersion = strings.TrimSpace(prevVersion)
 	versionRecorded := readErr == nil && prevVersion != ""
 
@@ -301,8 +303,34 @@ func snapshotSQLiteConnection(db *sql.DB, destPath string) error {
 	return err
 }
 
+// readSystemVersion 读取配置库中的版本标记。
+//
+// backupOnVersionUpgrade 现在在 config.SetDb 之前执行（必须在破坏性迁移前备份），
+// 因此不能走 config.GetAs；这里直接通过全局 gorm 实例读取 configs 表。
+// configs 表可能尚未建表（全新安装），此时返回空版本。
+func readSystemVersion() (string, error) {
+	if instance == nil {
+		return "", fmt.Errorf("main database is not initialized")
+	}
+	if !instance.Migrator().HasTable(&appconfig.ConfigItem{}) {
+		return "", nil
+	}
+	var item appconfig.ConfigItem
+	if err := instance.Where("key = ?", SystemVersionKey).First(&item).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return "", nil
+		}
+		return "", err
+	}
+	return item.Value, nil
+}
+
 // writeVersionMarker 将当前 versionID 写入配置库.
 func writeVersionMarker() {
+	if instance == nil {
+		logger.Errorf("dbcore", "[upgrade-backup] cannot persist version marker: main database is not initialized")
+		return
+	}
 	if err := config.Set(SystemVersionKey, versionID); err != nil {
 		logger.Errorf("dbcore", "[upgrade-backup] failed to persist version marker: %v", err)
 	}
@@ -419,14 +447,15 @@ func doInitialize() error {
 	default:
 		return fmt.Errorf("unsupported database type: %s (supported: %s)", flags.DatabaseType, flags.SupportedDatabaseTypes())
 	}
+	// 版本升级备份必须在 migrations.Run 之前执行：startup migrations 会 drop 旧表、
+	// 改写时间戳，若先迁移再备份，备份里已是破坏后的数据，无法用于回滚。
+	// 此处配置库尚未就绪，backupOnVersionUpgrade 通过 instance 直接读取版本标记。
+	backupOnVersionUpgrade()
+	config.SetDb(instance)
+
 	if err := migrations.Run(migrations.Context{DB: instance}); err != nil {
 		return fmt.Errorf("failed to run startup migrations: %w", err)
 	}
-	config.SetDb(instance)
-
-	// 配置库就绪后、执行后续 AutoMigrate 之前：
-	// 基于配置中的版本标记检测升级并自动备份 ./data，便于回滚。
-	backupOnVersionUpgrade()
 
 	// 自动迁移模型
 	//
