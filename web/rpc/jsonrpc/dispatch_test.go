@@ -7,12 +7,12 @@ import (
 )
 
 func TestRpcHelpUsesQualifiedMethodName(t *testing.T) {
-	resp := rpc.Call(1, "rpc.help", map[string]any{"method": "common:getMe"})
+	resp := rpc.Call(1, "rpc.help", map[string]any{"method": "public:getMe"})
 	if resp.Error != nil {
 		t.Fatalf("rpc.help returned error: %+v", resp.Error)
 	}
 	meta, ok := resp.Result.(*rpc.MethodMeta)
-	if !ok || meta.Name != "common:getMe" {
+	if !ok || meta.Name != "public:getMe" {
 		t.Fatalf("unexpected method metadata: %#v", resp.Result)
 	}
 }
