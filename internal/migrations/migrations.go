@@ -226,6 +226,23 @@ func migrateLegacyMessageSenderConfig(db *gorm.DB) error {
 		}
 	}
 
+	// 旧 configs 表在 migrateLegacyConfigToItems 中会被整体 drop，其中
+	// email_* 列若不在此处读出并保存，邮件配置会被静默丢弃。
+	if oldData.NotificationMethod == "email" && oldData.EmailHost != "" {
+		emailConfig := map[string]interface{}{
+			"host":     oldData.EmailHost,
+			"port":     oldData.EmailPort,
+			"username": oldData.EmailUsername,
+			"password": oldData.EmailPassword,
+			"sender":   oldData.EmailSender,
+			"receiver": oldData.EmailReceiver,
+			"use_ssl":  oldData.EmailUseSSL,
+		}
+		if err := saveLegacyMessageSenderConfig(db, "email", emailConfig); err != nil {
+			return err
+		}
+	}
+
 	for _, column := range []string{
 		"telegram_bot_token",
 		"telegram_chat_id",
