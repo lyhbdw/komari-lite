@@ -404,7 +404,19 @@ func getRecords(ctx context.Context, req *rpc.JsonRpcRequest) (any, *rpc.JsonRpc
 				"p99_p50_ratio": ratio,
 			}
 			if params.UUID == "" && taskId != -1 { // retain existing behavior of exposing clients only when filtering by task
-				info["clients"] = t.Clients
+				// 非管理员时过滤隐藏节点 UUID，避免通过任务摘要暴露隐藏节点。
+				if !isAdmin && len(t.Clients) > 0 {
+					visibleClients := make([]string, 0, len(t.Clients))
+					for _, uuid := range t.Clients {
+						if hidden[uuid] {
+							continue
+						}
+						visibleClients = append(visibleClients, uuid)
+					}
+					info["clients"] = visibleClients
+				} else {
+					info["clients"] = t.Clients
+				}
 			}
 			toList = append(toList, info)
 		}
