@@ -4,12 +4,15 @@ import (
 	"database/sql"
 	"net/http"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/komari-monitor/komari/database/accounts"
 	"github.com/komari-monitor/komari/database/clients"
 	"github.com/komari-monitor/komari/internal/config"
 	"github.com/komari-monitor/komari/pkg/rpc"
+	"github.com/komari-monitor/komari/utils/log"
 	"gorm.io/gorm"
 )
 
@@ -134,6 +137,21 @@ func extractClientToken(c *gin.Context) string {
 	return ExtractClientTokenFromRequest(c.Request)
 }
 
+// legacyQueryTokenWarnMu 节流 URL query token 的兼容警告，
+// 避免高频上报的 agent 刷爆日志。
+var legacyQueryTokenWarnMu sync.Mutex
+var legacyQueryTokenWarnLast time.Time
+
+func warnLegacyQueryToken(r *http.Request) {
+	legacyQueryTokenWarnMu.Lock()
+	defer legacyQueryTokenWarnMu.Unlock()
+	if time.Since(legacyQueryTokenWarnLast) < time.Hour {
+		return
+	}
+	legacyQueryTokenWarnLast = time.Now()
+	logger.Warnf("auth", "client token passed via URL query on %s is legacy compatibility and will be removed; upgrade the agent to use the Authorization header", r.URL.Path)
+}
+
 func ExtractClientTokenFromRequest(r *http.Request) string {
 	const prefix = "Bearer "
 	authorization := strings.TrimSpace(r.Header.Get("Authorization"))
@@ -149,6 +167,7 @@ func ExtractClientTokenFromRequest(r *http.Request) string {
 	if strings.HasPrefix(r.URL.Path, "/api/clients/v2/rpc") {
 		token := strings.TrimSpace(r.URL.Query().Get("token"))
 		if token != "" && !strings.ContainsAny(token, " 	\r\n") {
+			warnLegacyQueryToken(r)
 			return token
 		}
 	}

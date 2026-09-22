@@ -9,8 +9,12 @@ import (
 )
 
 const (
-	// 如果超过这个时间没有收到任何消息，则认为连接已死
-	readWait        = 11 * time.Second
+	// 如果超过这个时间没有收到任何消息（含 pong 控制帧），则认为连接已死。
+	// 兼容上报间隔较长的 agent（komari-agent-lite 可能 30s+ 上报一次），
+	// 由服务端心跳 ping 周期性保活。
+	readWait = 60 * time.Second
+	// 服务端心跳间隔，必须显著小于 readWait。
+	pingPeriod = 30 * time.Second
 	postPresenceTTL = 35 * time.Second
 )
 
@@ -44,7 +48,7 @@ func refreshPostPresence(uuid string) {
 	connID := time.Now().UnixNano()
 	agent_runtime.KeepAlivePresence(uuid, connID, postPresenceTTL)
 	agent_runtime.MarkV2Client(uuid)
-	go notifier.OnlineNotification(uuid, connID)
+	go safeOnlineNotification(uuid, connID)
 
 	defaultGeneration := uint64(0)
 	entry := &postPresenceEntry{connID: connID, generation: defaultGeneration}
@@ -64,7 +68,24 @@ func postPresenceExpired(uuid string, connID int64, gen uint64) {
 	delete(postPresenceStates, uuid)
 	postPresenceMu.Unlock()
 
+	// time.AfterFunc 回调里同步做运行时清理和通知，任何一处 panic
+	// 都会击穿 timer goroutine 导致进程崩溃，必须 recover。
+	defer func() { _ = recover() }()
 	agent_runtime.SetPresence(uuid, connID, false)
 	agent_runtime.ClearV2ClientIfOffline(uuid)
+	// POST 上报会话彻底过期后清理其事件队列，避免 map 只增不减。
+	agent_runtime.DeleteV2EventQueue(uuid)
+	safeOfflineNotification(uuid, connID)
+}
+
+// safeOnlineNotification 在独立 goroutine 中做上线通知，panic 不外泄。
+func safeOnlineNotification(uuid string, connID int64) {
+	defer func() { _ = recover() }()
+	notifier.OnlineNotification(uuid, connID)
+}
+
+// safeOfflineNotification 做下线通知，panic 不外泄。
+func safeOfflineNotification(uuid string, connID int64) {
+	defer func() { _ = recover() }()
 	notifier.OfflineNotification(uuid, connID)
 }

@@ -76,15 +76,23 @@ func DeleteClientConditionally(uuid string, connToRemove *connection.SafeConn) {
 	// 检查当前 map 里的 conn 是否就是要删除的这一个
 	if currentConn, exists := connectedClients[uuid]; exists && currentConn == connToRemove {
 		delete(connectedClients, uuid)
-		delete(v2Clients, uuid)
+		// 混合传输的 agent 可能同时有活跃的 POST presence；WS 断开时
+		// 只有在没有活跃 POST 上报会话的情况下才清 v2 在线标记，
+		// 否则 POST 会被误判为离线。
+		if p, ok := presenceOnly[uuid]; !ok || !p.expire.After(time.Now()) {
+			delete(v2Clients, uuid)
+		}
 	}
 }
+// DeleteConnectedClients 清除一个 uuid 的全部运行时在线状态
+// （admin 删除客户端时调用）：WS 连接条目、v2 标记、POST presence 与事件队列。
 func DeleteConnectedClients(uuid string) {
 	mu.Lock()
-	defer mu.Unlock()
-	// 只从 map 中删除，不再负责关闭连接
 	delete(connectedClients, uuid)
 	delete(v2Clients, uuid)
+	delete(presenceOnly, uuid)
+	mu.Unlock()
+	DeleteV2EventQueue(uuid)
 }
 
 // SetPresence sets or clears presence for non-WebSocket agents.
@@ -118,9 +126,11 @@ func SetPresence(uuid string, connectionID int64, present bool) {
 }
 
 // GetAllOnlineUUIDs returns a de-duplicated list of online UUIDs from both WebSocket and non-WebSocket agents.
+// Expired presence entries are garbage-collected here so the map does not grow
+// unboundedly for agents that stop reporting without an explicit offline path.
 func GetAllOnlineUUIDs() []string {
-	mu.RLock()
-	defer mu.RUnlock()
+	mu.Lock()
+	defer mu.Unlock()
 	set := make(map[string]struct{})
 	for k := range connectedClients {
 		set[k] = struct{}{}
@@ -129,6 +139,8 @@ func GetAllOnlineUUIDs() []string {
 	for k, v := range presenceOnly {
 		if v.expire.After(now) {
 			set[k] = struct{}{}
+		} else {
+			delete(presenceOnly, k)
 		}
 	}
 	res := make([]string, 0, len(set))
@@ -146,6 +158,13 @@ func GetLatestReport() map[string]*v2.Report {
 			continue
 		}
 		item := *v
+		// GPU 是指针字段，浅拷贝会与缓存共享底层 DetailedInfo 切片，
+		// 调用方修改会污染运行时状态。
+		if v.GPU != nil {
+			gpu := *v.GPU
+			gpu.DetailedInfo = append([]v2.GPUDeviceInfo(nil), v.GPU.DetailedInfo...)
+			item.GPU = &gpu
+		}
 		reportCopy[k] = &item
 	}
 	return reportCopy

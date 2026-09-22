@@ -14,6 +14,8 @@ import (
 const (
 	v2EventQueueLimit = 128
 	v2PingEventTTL    = 3 * time.Second
+	// 零 TTL 事件的默认过期时间，防止它们在队列中永久保留。
+	v2EventDefaultTTL = 10 * time.Minute
 )
 
 type v2EventQueue struct {
@@ -35,25 +37,33 @@ func getV2EventQueueLocked(uuid string) *v2EventQueue {
 	return q
 }
 
+// DeleteV2EventQueue 清理客户端的事件队列并唤醒可能正在 WaitV2Events 中
+// 等待的 goroutine，防止 map 只增不减以及等待者永久阻塞。
+func DeleteV2EventQueue(uuid string) {
+	v2EventMu.Lock()
+	defer v2EventMu.Unlock()
+	q := v2EventQueues[uuid]
+	if q == nil {
+		return
+	}
+	delete(v2EventQueues, uuid)
+	close(q.signal)
+}
+
 func DispatchPing(uuid string, params v2.PingParams) bool {
 	if conn := GetConnectedClients()[uuid]; conn != nil {
 		payload := v2.Request{JSONRPC: v2.Version, Method: v2.MethodAgentPing, Params: params}
-		if conn.WriteJSON(payload) == nil {
+		if err := conn.WriteJSON(payload); err == nil {
 			return true
 		}
+		// 直写失败（半开连接、写超时）：降级入队，重连后的 agent
+		// 通过 pull/report 拿到该事件，而不是静默丢失。
 	}
 	if !IsV2Client(uuid) {
 		return false
 	}
 	EnqueueV2Ping(uuid, params)
 	return true
-}
-
-func IsAgentOnline(uuid string) bool {
-	if GetConnectedClients()[uuid] != nil {
-		return true
-	}
-	return IsV2Client(uuid)
 }
 
 func EnqueueV2Ping(uuid string, params v2.PingParams) v2.Event {
@@ -147,8 +157,8 @@ func pruneExpiredV2EventsLocked(q *v2EventQueue) {
 	filtered := q.events[:0]
 	for _, event := range q.events {
 		if event.ExpiresAt.IsZero() {
-			filtered = append(filtered, event)
-			continue
+			// 零 TTL 事件按入队时间 + 默认 TTL 过期，避免永久保留。
+			event.ExpiresAt = event.CreatedAt.Add(v2EventDefaultTTL)
 		}
 		if event.ExpiresAt.After(now) {
 			filtered = append(filtered, event)
@@ -161,7 +171,12 @@ func TakeV2Events(uuid string, ackIDs []string, limit int) []v2.Event {
 	v2EventMu.Lock()
 	defer v2EventMu.Unlock()
 
-	q := getV2EventQueueLocked(uuid)
+	q := v2EventQueues[uuid]
+	if q == nil {
+		// 队列已被清理（客户端断开）：返回空，不重建，
+		// 否则等待者被唤醒后会重新把条目塞回 map。
+		return []v2.Event{}
+	}
 	ackV2EventsLocked(q, ackIDs)
 	pruneExpiredV2EventsLocked(q)
 	return takeV2EventsLocked(q, limit)

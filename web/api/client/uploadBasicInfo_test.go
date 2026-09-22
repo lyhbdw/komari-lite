@@ -70,7 +70,7 @@ func TestV2BasicInfoFillsRegionFromGeoIP(t *testing.T) {
 			},
 		},
 		ID: "basic-info",
-	}, false)
+	}, false, false)
 	if resp.Error != nil {
 		t.Fatalf("v2 basic info failed: %+v", resp.Error)
 	}

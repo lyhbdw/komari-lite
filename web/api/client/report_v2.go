@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -21,6 +22,10 @@ import (
 )
 
 const maxAgentBodyBytes int64 = 4 << 20
+
+// takeoverMu 串行化 WS 连接的“踢旧登记新”操作，保证同一 uuid 的并发
+// 重连不会互相覆盖或踢掉对方。
+var takeoverMu sync.Mutex
 
 func readMaybeCompressedBody(r *http.Request) ([]byte, error) {
 	defer r.Body.Close()
@@ -54,7 +59,10 @@ func bindV2Params[T any](raw any, target *T) error {
 	return json.Unmarshal(b, target)
 }
 
-func handleV2RPC(uuid string, req v2.Request, allowWait bool) v2.Response {
+// handleV2RPC 处理一条 v2 JSON-RPC 请求。
+// viaWebSocket 为 true 时表示请求来自长连接（WS），此时不刷新 POST 在线状态：
+// WS 连接的在线状态由连接生命周期自行管理，POST presence 只属于 HTTP 上报者。
+func handleV2RPC(uuid string, req v2.Request, allowWait, viaWebSocket bool) v2.Response {
 	if req.JSONRPC != v2.Version {
 		return v2.Error(req.ID, -32600, "invalid jsonrpc version", nil)
 	}
@@ -64,7 +72,7 @@ func handleV2RPC(uuid string, req v2.Request, allowWait bool) v2.Response {
 		if err := bindV2Params(req.Params, &params); err != nil {
 			return v2.Error(req.ID, -32602, "invalid report params", err.Error())
 		}
-		if err := ingestReport(uuid, params.Report, true); err != nil {
+		if err := ingestReport(uuid, params.Report, !viaWebSocket); err != nil {
 			return v2.Error(req.ID, -32000, "failed to save report", err.Error())
 		}
 		return v2.Success(req.ID, gin.H{
@@ -95,7 +103,9 @@ func handleV2RPC(uuid string, req v2.Request, allowWait bool) v2.Response {
 		if err := bindV2Params(req.Params, &params); err != nil {
 			return v2.Error(req.ID, -32602, "invalid pull params", err.Error())
 		}
-		refreshPostPresence(uuid)
+		if !viaWebSocket {
+			refreshPostPresence(uuid)
+		}
 		agent_runtime.MarkV2Client(uuid)
 		timeout := 0 * time.Second
 		if allowWait {
@@ -126,7 +136,7 @@ func UploadV2RPC(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, v2.Error(req.ID, -32001, "invalid token", nil))
 		return
 	}
-	resp := handleV2RPC(uuid, req, true)
+	resp := handleV2RPC(uuid, req, true, false)
 	status := http.StatusOK
 	if resp.Error != nil {
 		status = http.StatusBadRequest
@@ -152,19 +162,38 @@ func WebSocketV2RPC(c *gin.Context) {
 		conn.WriteJSON(v2.Error(nil, -32001, "invalid token", nil))
 		return
 	}
+	// WS takeover：关闭旧连接并登记新连接必须原子完成，
+	// 否则两个并发的新连接会互相踢掉对方。
+	takeoverMu.Lock()
 	if oldConn, exists := agent_runtime.GetConnectedClients()[uuid]; exists {
 		go oldConn.Close()
 	}
 	agent_runtime.SetConnectedClients(uuid, conn)
+	takeoverMu.Unlock()
 	agent_runtime.MarkV2Client(uuid)
 	go notifierOnline(uuid, conn.ID)
 	defer func() {
 		agent_runtime.DeleteClientConditionally(uuid, conn)
+		agent_runtime.DeleteV2EventQueue(uuid)
 		notifierOffline(uuid, conn.ID)
 	}()
 	if !pushQueuedV2Events(conn, uuid) {
 		return
 	}
+
+	// 服务端心跳：定期发 PingMessage 控制帧。gorilla/websocket 的 agent 端
+	// 默认自动回 pong，浏览器端也会自动回 pong；任何消息（含 pong）都会
+	// 重置下方的读超时，因此上报间隔较长的 agent 也不会被误判为离线。
+	// 写失败（含写超时）说明连接已不可用，直接退出读循环清理连接。
+	heartbeat := time.NewTicker(pingPeriod)
+	defer heartbeat.Stop()
+	go func() {
+		for range heartbeat.C {
+			if err := conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+				return
+			}
+		}
+	}()
 
 	for {
 		conn.SetReadDeadline(time.Now().Add(readWait))
@@ -181,7 +210,7 @@ func WebSocketV2RPC(c *gin.Context) {
 			conn.WriteJSON(v2.Error(nil, -32700, "parse error", err.Error()))
 			continue
 		}
-		resp := handleV2RPC(uuid, req, false)
+		resp := handleV2RPC(uuid, req, false, true)
 		if req.ID != nil {
 			if err := conn.WriteJSON(resp); err != nil {
 				logger.Errorf("client-api", "failed to write v2 rpc response: %v", err)

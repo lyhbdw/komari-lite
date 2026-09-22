@@ -30,10 +30,18 @@ func (sc *SafeConn) readFrame() (int, []byte, error) {
 	return sc.conn.ReadMessage()
 }
 
+// writeTimeout bounds every outgoing frame. Without it a slow consumer can
+// block WriteJSON forever while holding the write lock, which stalls the
+// read loop and Close() and leaks the connection.
+var writeTimeout = 10 * time.Second
+
 // writeFrame serializes writes to the underlying connection.
 func (sc *SafeConn) writeFrame(messageType int, data []byte) error {
 	sc.mu.Lock()
 	defer sc.mu.Unlock()
+	if err := sc.conn.SetWriteDeadline(time.Now().Add(writeTimeout)); err != nil {
+		return err
+	}
 	return sc.conn.WriteMessage(messageType, data)
 }
 
@@ -54,6 +62,10 @@ func (sc *SafeConn) WriteJSON(v interface{}) error {
 func (sc *SafeConn) Close() error {
 	sc.mu.Lock()
 	defer sc.mu.Unlock()
+	// Best-effort: closing an already-dead socket never blocks for long, but
+	// set a short deadline anyway so a wedged TCP stack cannot hold the lock
+	// that writeFrame also needs.
+	_ = sc.conn.SetWriteDeadline(time.Now().Add(writeTimeout))
 	return sc.conn.Close()
 }
 
