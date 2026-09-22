@@ -155,6 +155,13 @@ func GetLatestReport() map[string]*v2.Report {
 			continue
 		}
 		item := *v
+		// GPU 是指针字段，浅拷贝会与缓存共享底层 DetailedInfo 切片，
+		// 调用方修改会污染运行时状态。
+		if v.GPU != nil {
+			gpu := *v.GPU
+			gpu.DetailedInfo = append([]v2.GPUDeviceInfo(nil), v.GPU.DetailedInfo...)
+			item.GPU = &gpu
+		}
 		reportCopy[k] = &item
 	}
 	return reportCopy
