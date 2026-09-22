@@ -361,6 +361,10 @@ func getGitHubReleaseDownloadURL(owner, repo string) (string, error) {
 	if owner == "" || repo == "" {
 		return "", errors.New("GitHub仓库所有者和仓库名称不能为空")
 	}
+	// 校验 owner/repo 字符集，防止注入路径段或查询参数（如 "a/b?x=" 或 "../api"）。
+	if !isValidGitHubName(owner) || !isValidGitHubName(repo) {
+		return "", errors.New("GitHub仓库所有者或仓库名称包含非法字符")
+	}
 
 	// 构建GitHub API URL
 	// 使用GitHub API获取最新release信息
@@ -372,6 +376,7 @@ func getGitHubReleaseDownloadURL(owner, repo string) (string, error) {
 
 	var releaseInfo struct {
 		Assets []struct {
+			Name               string `json:"name"`
 			BrowserDownloadURL string `json:"browser_download_url"`
 		} `json:"assets"`
 	}
@@ -385,9 +390,39 @@ func getGitHubReleaseDownloadURL(owner, repo string) (string, error) {
 		return "", errors.New("GitHub release中没有可下载的资源")
 	}
 
-	// 返回第一个资源的下载链接
-	// 相当于shell命令: curl -s https://api.github.com/repos/owner/repo/releases/latest | jq -r ".assets[0].browser_download_url"
-	return releaseInfo.Assets[0].BrowserDownloadURL, nil
+	// 选择资产：优先匹配主题名的 zip，其次任意 .zip 后缀；不再盲取第一个
+	// （release 常含 sha256/签名等非主题资产）。
+	target := ""
+	for _, asset := range releaseInfo.Assets {
+		name := strings.ToLower(asset.Name)
+		if strings.HasSuffix(name, ".zip") {
+			if strings.Contains(name, strings.ToLower(public.DefaultTheme)) {
+				target = asset.BrowserDownloadURL
+				break
+			}
+			if target == "" {
+				target = asset.BrowserDownloadURL
+			}
+		}
+	}
+	if target == "" {
+		return "", errors.New("GitHub release中没有可下载的 zip 资源")
+	}
+	return target, nil
+}
+
+// isValidGitHubName 校验 GitHub 用户名/仓库名：仅字母数字与 - _ .，且不得以 . 开头/结尾。
+func isValidGitHubName(name string) bool {
+	if name == "" || len(name) > 100 || strings.HasPrefix(name, ".") || strings.HasSuffix(name, ".") {
+		return false
+	}
+	for _, r := range name {
+		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '-' || r == '_' || r == '.' {
+			continue
+		}
+		return false
+	}
+	return true
 }
 
 // isGitHubRepoURL 检查URL是否是GitHub仓库地址
