@@ -66,6 +66,9 @@ type timestampRow struct {
 
 // migrateLegacyTimestampColumns makes old offset-free SQLite values
 // unambiguous before any current model scans them as time.Time.
+//
+// 每个表使用独立事务、每批 1000 行提交一次，避免把所有表全部行放进
+// 单个巨型事务（长事务会长时间持有 SQLite 写锁、WAL 无限膨胀）。
 func migrateLegacyTimestampColumns(db *gorm.DB) error {
 	if timestampMigrationDone(db) {
 		return nil
@@ -73,21 +76,15 @@ func migrateLegacyTimestampColumns(db *gorm.DB) error {
 
 	location := legacyTimestampLocation()
 	var converted int64
-	err := db.Transaction(func(tx *gorm.DB) error {
-		for _, target := range legacyTimestampColumns {
-			if !tx.Migrator().HasTable(target.table) || !tx.Migrator().HasColumn(target.table, target.column) {
-				continue
-			}
-			count, err := migrateTimestampColumn(tx, target, location)
-			if err != nil {
-				return err
-			}
-			converted += count
+	for _, target := range legacyTimestampColumns {
+		if !db.Migrator().HasTable(target.table) || !db.Migrator().HasColumn(target.table, target.column) {
+			continue
 		}
-		return nil
-	})
-	if err != nil {
-		return err
+		count, err := migrateTimestampColumn(db, target, location)
+		if err != nil {
+			return err
+		}
+		converted += count
 	}
 	if converted > 0 {
 		logger.Infof("migration", "Converted %d legacy timestamp values to explicit UTC", converted)
