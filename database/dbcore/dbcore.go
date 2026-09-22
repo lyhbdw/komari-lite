@@ -335,6 +335,11 @@ func readSystemVersion() (string, error) {
 		}
 		return "", err
 	}
+	// 版本标记以 JSON 字符串形式存储（config.Set / strconv.Quote 均带引号），
+	// 比较前必须解码，否则每次启动都会误判为版本变化并重复做升级备份。
+	if unquoted, uerr := strconv.Unquote(item.Value); uerr == nil {
+		return unquoted, nil
+	}
 	return item.Value, nil
 }
 
