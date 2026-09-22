@@ -18,6 +18,9 @@ type job struct {
 	cancel context.CancelFunc
 }
 
+// stopTimeout 是 StopAll cancel 之后等待在跑任务退出的上限。
+const stopTimeout = 30 * time.Second
+
 type schedule interface {
 	Next(time.Time) time.Time
 }
@@ -65,6 +68,8 @@ func (s cronSchedule) match(t time.Time) bool {
 type Manager struct {
 	mu   sync.Mutex
 	jobs map[string]job
+	// wg 跟踪所有正在执行的任务（safeRun），StopAll cancel 后等待其退出。
+	wg sync.WaitGroup
 }
 
 var defaultManager = NewManager()
@@ -147,11 +152,23 @@ func (m *Manager) RemovePrefix(prefix string) {
 
 func (m *Manager) StopAll() {
 	m.mu.Lock()
-	defer m.mu.Unlock()
-
 	for name, old := range m.jobs {
 		old.cancel()
 		delete(m.jobs, name)
+	}
+	m.mu.Unlock()
+
+	// 只 cancel 不等待会让正在跑的任务在进程退出时被硬杀（写一半的
+	// 数据丢失），这里带超时等待在跑任务退出。
+	waitDone := make(chan struct{})
+	go func() {
+		m.wg.Wait()
+		close(waitDone)
+	}()
+	select {
+	case <-waitDone:
+	case <-time.After(stopTimeout):
+		logger.Warnf("scheduler", "Timed out waiting for running jobs to stop after %s", stopTimeout)
 	}
 }
 
@@ -167,12 +184,13 @@ func (m *Manager) replace(name string, cancel context.CancelFunc) {
 
 func (m *Manager) run(ctx context.Context, name string, s schedule, runImmediately bool, fn Func) {
 	if runImmediately {
-		go safeRun(ctx, name, fn)
+		m.wg.Add(1)
+		go safeRun(ctx, m, name, fn)
 	}
 
 	nextTick := s.Next(time.Now())
 	if nextTick.IsZero() {
-		logger.Warnf("scheduler", "corn job %s has no next run time", name)
+		logger.Warnf("scheduler", "Corn job %s has no next run time", name)
 		return
 	}
 	timer := time.NewTimer(time.Until(nextTick))
@@ -183,7 +201,8 @@ func (m *Manager) run(ctx context.Context, name string, s schedule, runImmediate
 		case <-ctx.Done():
 			return
 		case <-timer.C:
-			go safeRun(ctx, name, fn)
+			m.wg.Add(1)
+			go safeRun(ctx, m, name, fn)
 			nextTick = s.Next(nextTick)
 			if nextTick.IsZero() {
 				return
@@ -200,10 +219,11 @@ func resetTimer(timer *time.Timer, duration time.Duration) {
 	timer.Reset(duration)
 }
 
-func safeRun(ctx context.Context, name string, fn Func) {
+func safeRun(ctx context.Context, m *Manager, name string, fn Func) {
+	defer m.wg.Done()
 	defer func() {
 		if r := recover(); r != nil {
-			logger.Errorf("scheduler", "corn job %s panic: %v", name, r)
+			logger.Errorf("scheduler", "Corn job %s panic: %v", name, r)
 		}
 	}()
 
