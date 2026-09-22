@@ -104,6 +104,29 @@ func adminAddClient(ctx context.Context, req *rpc.JsonRpcRequest) (any, *rpc.Jso
 	return map[string]any{"uuid": uuid, "token": token}, nil
 }
 
+// adminEditableClientFields 是 admin:editClient 允许更新的字段白名单。
+// UI 暴露的可编辑字段之外（如 token、uuid 之外的底层列）一律拒绝，防止
+// 任意 map 透传到 gorm Updates 造成 mass assignment。
+var adminEditableClientFields = map[string]bool{
+	"name": true,
+	"note": true,
+	"remark": true,
+	"public_remark": true,
+	"region": true,
+	"group": true,
+	"tags": true,
+	"hidden": true,
+	"weight": true,
+	"price": true,
+	"billing_cycle": true,
+	"auto_renewal": true,
+	"currency": true,
+	"traffic_limit": true,
+	"traffic_limit_type": true,
+	"expired_at": true,
+	"uuid": true, // 仅作为定位键，SaveClient 不会更新其值
+}
+
 func adminEditClient(ctx context.Context, req *rpc.JsonRpcRequest) (any, *rpc.JsonRpcError) {
 	var update map[string]interface{}
 	if err := req.BindParams(&update); err != nil || update == nil {
@@ -113,7 +136,15 @@ func adminEditClient(ctx context.Context, req *rpc.JsonRpcRequest) (any, *rpc.Js
 	if uuid == "" {
 		return nil, rpc.MakeError(rpc.InvalidParams, "Invalid or missing UUID", nil)
 	}
-	if err := clients.SaveClient(update); err != nil {
+	// 字段白名单：拒绝任何未在 UI 暴露的键。
+	filtered := make(map[string]interface{}, len(update))
+	for key, value := range update {
+		if !adminEditableClientFields[key] {
+			return nil, rpc.MakeError(rpc.InvalidParams, "Field is not editable: "+key, nil)
+		}
+		filtered[key] = value
+	}
+	if err := clients.SaveClient(filtered); err != nil {
 		return nil, rpc.MakeError(rpc.InternalError, err.Error(), nil)
 	}
 	actor, ip := auditActor(ctx)
