@@ -53,7 +53,7 @@ func TestExtractClientTokenFromRequest(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			r := httptest.NewRequest("POST", "/api/clients/v2/rpc", nil)
 			tt.setup(r)
-			if got := extractClientTokenFromRequest(r); got != tt.want {
+			if got := ExtractClientTokenFromRequest(r); got != tt.want {
 				t.Fatalf("token = %q, want %q", got, tt.want)
 			}
 		})

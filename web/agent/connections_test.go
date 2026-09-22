@@ -5,6 +5,7 @@ import (
 	"time"
 
 	v2 "github.com/komari-monitor/komari/protocol/v2"
+	"github.com/komari-monitor/komari/web/connection"
 )
 
 func TestRecordReportKeepsLatestAndShortRecentWindow(t *testing.T) {
@@ -47,5 +48,37 @@ func TestRecordReportKeepsLatestAndShortRecentWindow(t *testing.T) {
 	DeleteLatestReport("node-a")
 	if len(GetRecentReports("node-a")) != 0 || GetLatestReport()["node-a"] != nil {
 		t.Fatal("deleting latest report did not clear runtime report state")
+	}
+}
+
+func TestClearV2ClientIfOfflinePreservesWebSocketClient(t *testing.T) {
+	mu.Lock()
+	previousConnected := connectedClients
+	previousV2 := v2Clients
+	connectedClients = make(map[string]*connection.SafeConn)
+	v2Clients = make(map[string]struct{})
+	mu.Unlock()
+	t.Cleanup(func() {
+		mu.Lock()
+		connectedClients = previousConnected
+		v2Clients = previousV2
+		mu.Unlock()
+	})
+
+	MarkV2Client("post-node")
+	if !ClearV2ClientIfOffline("post-node") {
+		t.Fatal("expected stale POST client to be cleared")
+	}
+	if IsV2Client("post-node") {
+		t.Fatal("stale POST client remained marked online")
+	}
+
+	connectedClients["ws-node"] = &connection.SafeConn{}
+	MarkV2Client("ws-node")
+	if ClearV2ClientIfOffline("ws-node") {
+		t.Fatal("active WebSocket client was reported as cleared")
+	}
+	if !IsV2Client("ws-node") {
+		t.Fatal("active WebSocket client lost online marker")
 	}
 }

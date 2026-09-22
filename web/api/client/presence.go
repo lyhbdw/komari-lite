@@ -65,5 +65,6 @@ func postPresenceExpired(uuid string, connID int64, gen uint64) {
 	postPresenceMu.Unlock()
 
 	agent_runtime.SetPresence(uuid, connID, false)
+	agent_runtime.ClearV2ClientIfOffline(uuid)
 	notifier.OfflineNotification(uuid, connID)
 }

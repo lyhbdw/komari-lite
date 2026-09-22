@@ -54,6 +54,21 @@ func IsV2Client(uuid string) bool {
 	return ok
 }
 
+// ClearV2ClientIfOffline clears an HTTP v2 presence marker without removing
+// the marker for an active WebSocket connection using the same UUID.
+func ClearV2ClientIfOffline(uuid string) bool {
+	mu.Lock()
+	defer mu.Unlock()
+	if _, connected := connectedClients[uuid]; connected {
+		return false
+	}
+	if _, marked := v2Clients[uuid]; !marked {
+		return false
+	}
+	delete(v2Clients, uuid)
+	return true
+}
+
 func DeleteClientConditionally(uuid string, connToRemove *connection.SafeConn) {
 	mu.Lock()
 	defer mu.Unlock()

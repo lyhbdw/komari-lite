@@ -155,10 +155,6 @@ func ExtractClientTokenFromRequest(r *http.Request) string {
 	return ""
 }
 
-func extractClientTokenFromRequest(r *http.Request) string {
-	return ExtractClientTokenFromRequest(r)
-}
-
 func checkTokenAndGetUUID(token string) (string, error) {
 	uuid, err := clients.GetClientUUIDByToken(token)
 
