@@ -1,13 +1,12 @@
 import { Cross1Icon, ExitIcon } from "@radix-ui/react-icons";
 import {
-  Button,
   Callout,
   Flex,
   Grid,
   IconButton,
   Text,
 } from "@radix-ui/themes";
-import { AnimatePresence, motion } from "framer-motion"; // 引入 Framer Motion
+import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useLocation /*useNavigate*/ } from "react-router-dom";
@@ -22,11 +21,9 @@ import { ChevronDownIcon } from "@radix-ui/react-icons";
 import { TablerMenu2 } from "../Icones/Tabler";
 import LoginDialog from "../Login";
 import InlineSvgIcon from "../InlineSvgIcon";
-import { useAccount } from "@/contexts/AccountContext";
-import { usePublicInfo } from "@/contexts/PublicInfoContext";
-import Tips from "../ui/tips";
-import { CircleFadingArrowUp } from "lucide-react";
-import { useRPC2Call } from "@/contexts/RPC2Context";
+import { useAccount } from "@/contexts/useAccount";
+import { usePublicInfo } from "@/contexts/usePublicInfo";
+import { useRPC2Call } from "@/contexts/useRPC2";
 
 
 // 将JSON配置转换为类型安全的菜单项数组 (基础静态菜单)
@@ -61,27 +58,9 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
     hash: string;
     version: string;
   } | null>(null);
-  // GitHub 最新发布信息与更新检测
-  interface GithubReleaseInfo {
-    tag_name: string;
-    name?: string;
-    body?: string;
-    html_url: string;
-    published_at?: string;
-    draft?: boolean;
-    prerelease?: boolean;
-  }
-  const [latestRelease, setLatestRelease] = useState<GithubReleaseInfo | null>(
-    null,
-  );
-  const [updateAvailable, setUpdateAvailable] = useState(false);
-  const [releasesSince, setReleasesSince] = useState<GithubReleaseInfo[]>([]);
-
-
   useEffect(() => {
     const fetchVersionInfo = async () => {
       try {
-        //const response = await fetch("/api/version");
         const data = await call("common:getVersion");
         setVersionInfo({
           hash: data.hash?.slice(0, 7),
@@ -93,71 +72,8 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
     };
 
     fetchVersionInfo();
-  }, []);
+  }, [call]);
 
-  // 规范化版本为 [major, minor, patch] 数组，忽略前缀 v 和后缀
-  function parseSemver(input?: string | null): number[] | null {
-    if (!input) return null;
-    const s = String(input).trim().replace(/^v/i, "");
-    const match = s.match(/^(\d+)\.(\d+)\.(\d+)/);
-    if (!match) return null;
-    return [Number(match[1]), Number(match[2]), Number(match[3])];
-  }
-
-  function isNewerVersion(latest?: string | null, current?: string | null) {
-    const a = parseSemver(latest);
-    const b = parseSemver(current);
-    if (!a || !b) return false;
-    for (let i = 0; i < 3; i++) {
-      if (a[i] > b[i]) return true;
-      if (a[i] < b[i]) return false;
-    }
-    return false;
-  }
-
-  // 获取 GitHub releases 列表，并筛选出“比当前版本新的所有 release”
-  useEffect(() => {
-    let ignore = false;
-    const currentVersion = (publicInfo as any)?.version || versionInfo?.version;
-    if (!currentVersion) return;
-
-    async function loadReleases() {
-      try {
-        const resp = await fetch(
-          "https://api.github.com/repos/Tumb1er1376/komari-monitor-lite/releases?per_page=100",
-          {
-            headers: {
-              Accept: "application/vnd.github+json",
-            },
-            cache: "no-cache",
-          },
-        );
-        if (!resp.ok) throw new Error(`GitHub HTTP ${resp.status}`);
-        const data: GithubReleaseInfo[] = await resp.json();
-        if (ignore) return;
-        const valid = (data || [])
-          .filter((r) => !r.draft && !r.prerelease)
-          .filter((r) =>
-            isNewerVersion(r?.tag_name || r?.name, currentVersion),
-          );
-        setReleasesSince(valid);
-        setLatestRelease(valid.length ? valid[0] : null);
-        setUpdateAvailable(valid.length > 0);
-      } catch (e) {
-        console.warn("加载 GitHub 最新发布失败:", e);
-        if (!ignore) {
-          setLatestRelease(null);
-          setReleasesSince([]);
-          setUpdateAvailable(false);
-        }
-      }
-    }
-
-    loadReleases();
-    return () => {
-      ignore = true;
-    };
-  }, [publicInfo, versionInfo]);
   // Handle responsive behavior
   useEffect(() => {
     const handleResize = () => setSidebarOpen(!isMobile);
@@ -278,66 +194,6 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
               <a href="/" target="_blank" rel="noopener noreferrer">
                 <label className="text-xl font-bold">Komari</label>
               </a>
-              {updateAvailable && releasesSince.length > 0 && (
-                <Tips
-                  mode="dialog"
-                  className="check-update"
-                  trigger={<CircleFadingArrowUp color="#FB4141" size="16" />}
-                >
-                  <div className="flex flex-col gap-2 max-w-[80vw] md:max-w-[720px]">
-                    <label className="font-bold">
-                      {t("common.update_available")}
-                    </label>
-                    <div className="text-sm text-muted-foreground">
-                      <span style={{ marginRight: 8 }}>
-                        {(publicInfo as any)?.version || versionInfo?.version}
-                      </span>
-                      <span>{"> "}</span>
-                      <span>
-                        {(latestRelease?.tag_name || latestRelease?.name) ?? ""}
-                      </span>
-                    </div>
-
-                    <div className="rounded-md p-2 overflow-auto max-h-80">
-                      <div className="flex flex-col gap-4 text-sm">
-                        {releasesSince.map((r) => (
-                          <div key={r.html_url} className="flex flex-col gap-2">
-                            <div className="flex items-center justify-between">
-                              <div className="font-medium">
-                                {r.name || r.tag_name}
-                              </div>
-                              {r.published_at && (
-                                <div className="text-xs text-muted-foreground">
-                                  {new Date(r.published_at).toLocaleString()}
-                                </div>
-                              )}
-                            </div>
-                            <div className="whitespace-pre-wrap break-words">
-                              {r.body || ""}
-                            </div>
-                            <div
-                              style={{
-                                height: 1,
-                                background: "var(--accent-5)",
-                                opacity: 0.5,
-                              }}
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="flex justify-end">
-                      <a
-                        href={latestRelease?.html_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        <Button variant="soft">Github</Button>
-                      </a>
-                    </div>
-                  </div>
-                </Tips>
-              )}
               <label
                 className="text-sm text-muted-foreground self-end overflow-hidden"
                 hidden={isMobile}

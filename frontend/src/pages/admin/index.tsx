@@ -1,11 +1,9 @@
 import { quoteShellArgs } from "@/utils/shellQuote";
 import { buildAgentInstallArgs } from "@/utils/agentInstallCommand";
 import React, { useEffect, useState } from "react";
-import {
-  NodeDetailsProvider,
-  useNodeDetails,
-  type NodeDetail,
-} from "@/contexts/NodeDetailsContext";
+import { NodeDetailsProvider } from "@/contexts/NodeDetailsContext";
+import { useNodeDetails } from "@/contexts/useNodeDetails";
+import type { NodeDetail } from "@/contexts/node-details-context";
 import {
   Flex,
   TextField,
@@ -101,9 +99,11 @@ const Layout = () => {
     : [];
 
   useEffect(() => {
-    const interval = setInterval(() => { refresh() }, 5000);
+    const interval = setInterval(() => {
+      refresh();
+    }, 5000);
     return () => clearInterval(interval);
-  }, [nodeDetail]);
+  }, [refresh]);
 
   if (isLoading) return <Loading text="" />;
   if (error) return <div>{error}</div>;

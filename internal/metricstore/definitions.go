@@ -8,7 +8,7 @@ import (
 	"github.com/komari-monitor/komari/pkg/metric"
 )
 
-const defaultBuiltinMetricRetentionDays = 30
+const defaultBuiltinMetricRetentionDays = 90
 
 // RetentionSummary is the compatibility view of all persisted metric policies.
 type RetentionSummary struct {

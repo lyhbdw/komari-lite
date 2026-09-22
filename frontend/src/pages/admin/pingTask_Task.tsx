@@ -8,8 +8,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useNodeDetails } from "@/contexts/NodeDetailsContext";
-import { usePingTask, type PingTask } from "@/contexts/PingTaskContext";
+import { useNodeDetails } from "@/contexts/useNodeDetails";
+import { usePingTask } from "@/contexts/usePingTask";
+import type { PingTask } from "@/contexts/ping-task-context";
 import {
   DndContext,
   KeyboardSensor,

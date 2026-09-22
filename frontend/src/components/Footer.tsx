@@ -1,7 +1,7 @@
 import { Flex, Text } from "@radix-ui/themes";
 import { useEffect, useState } from "react";
-import { useRPC2Call } from "@/contexts/RPC2Context";
-import { usePublicInfo } from "@/contexts/PublicInfoContext";
+import { useRPC2Call } from "@/contexts/useRPC2";
+import { usePublicInfo } from "@/contexts/usePublicInfo";
 
 const Footer = () => {
   //const currentYear = new Date().getFullYear();
@@ -34,16 +34,14 @@ const Footer = () => {
   useEffect(() => {
     const fetchVersionInfo = async () => {
       try {
-        //const response = await fetch('/api/version');
         const data = await call("common:getVersion");
         setVersionInfo({ hash: data.hash?.slice(0, 7), version: data.version });
       } catch (error) {
         console.error("Failed to fetch version info:", error);
       }
     };
-
     fetchVersionInfo();
-  }, []);
+  }, [call]);
 
   return (
     <div className="km-footer footer p-2 border-t-1 border-t-[var(--gray-7)]">

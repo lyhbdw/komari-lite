@@ -35,8 +35,10 @@ backup_database() {
 backup_database "${KOMARI_DATA_DIR}/komari.db" "${work_dir}/komari.db"
 backup_database "${KOMARI_DATA_DIR}/metrics.db" "${work_dir}/metrics.db"
 
-if [[ -f "$KOMARI_COMPOSE_FILE" ]]; then
+if [[ -r "$KOMARI_COMPOSE_FILE" ]]; then
   cp -- "$KOMARI_COMPOSE_FILE" "${work_dir}/docker-compose.yml"
+else
+  printf 'optional compose file is not readable; continuing without it: %s\n' "$KOMARI_COMPOSE_FILE" >&2
 fi
 if [[ -d "${KOMARI_DATA_DIR}/theme" ]]; then
   tar -C "${KOMARI_DATA_DIR}" -czf "${work_dir}/theme.tar.gz" theme

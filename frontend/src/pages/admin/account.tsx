@@ -2,7 +2,7 @@ import React from "react";
 
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
-import { AccountProvider, useAccount } from "@/contexts/AccountContext";
+import { useAccount } from "@/contexts/useAccount";
 import {
   Button,
   Dialog,
@@ -12,13 +12,7 @@ import {
 } from "@radix-ui/themes";
 import Loading from "@/components/loading";
 
-const Account = () => {
-  return (
-    <AccountProvider>
-      <InnerLayout />
-    </AccountProvider>
-  );
-};
+const Account = () => <InnerLayout />;
 
 const InnerLayout = () => {
   const { t } = useTranslation();
@@ -221,6 +215,8 @@ const TwoFactorDisabled = () => {
   const [code, setCode] = React.useState<string>("");
 
   React.useEffect(() => {
+    let objectUrl: string | null = null;
+    let cancelled = false;
     if (isOpen) {
       setIsLoading(true);
       fetch("/api/admin/2fa/generate")
@@ -231,13 +227,21 @@ const TwoFactorDisabled = () => {
           return response.blob();
         })
         .then((blob) => {
-          const url = URL.createObjectURL(blob);
-          setQRCode(url);
+          if (cancelled) return;
+          objectUrl = URL.createObjectURL(blob);
+          setQRCode((previous) => {
+            if (previous) URL.revokeObjectURL(previous);
+            return objectUrl;
+          });
         })
         .catch((err) => toast.error(err.message))
         .finally(() => setIsLoading(false));
     }
-  }, [isOpen]);
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [isOpen, t]);
 
   const handleEnable2fa = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();

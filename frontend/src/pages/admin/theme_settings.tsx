@@ -15,7 +15,7 @@ import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import Loading from "@/components/loading";
-import { usePublicInfo } from "@/contexts/PublicInfoContext";
+import { usePublicInfo } from "@/contexts/usePublicInfo";
 
 type LocalizedText = string | Record<string, string>;
 
@@ -40,7 +40,7 @@ export default function ThemeSettingsPage() {
   const location = useLocation();
   const { publicInfo, refresh } = usePublicInfo();
   const requestedTheme = new URLSearchParams(location.search).get("theme");
-  const theme = requestedTheme || publicInfo?.theme || "default";
+  const theme = requestedTheme || publicInfo?.theme || "Emerald";
   const language = i18n.resolvedLanguage || i18n.language || "en";
   const [fields, setFields] = useState<ThemeField[]>([]);
   const [values, setValues] = useState<Record<string, unknown>>({});
@@ -84,7 +84,7 @@ export default function ThemeSettingsPage() {
     return () => {
       cancelled = true;
     };
-  }, [theme, publicInfo?.theme_settings, t]);
+  }, [theme, publicInfo?.theme, publicInfo?.theme_settings, t]);
 
   const title = useMemo(() => {
     const selected = fields.find((field) => field.type === "title");

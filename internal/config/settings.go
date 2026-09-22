@@ -10,12 +10,12 @@ type Settings struct {
 	CorsAllowedOrigins     string `json:"cors_allowed_origins" default:""`                     // API 跨域允许列表
 	WsOriginCheckEnabled   bool   `json:"ws_origin_check_enabled" default:"true"`              // 是否校验 WebSocket Origin
 	WsAllowedOrigins       string `json:"ws_allowed_origins" default:""`                       // WebSocket Origin 允许列表
-	Theme                  string `json:"theme" default:"default"`                             // 主题名称，默认 'default'
+	Theme                  string `json:"theme" default:"Emerald"`                             // 主题名称，默认 Emerald
 	PrivateSite            bool   `json:"private_site" default:"false"`                        // 是否为私有站点，默认 false
 	ScriptDomain           string `json:"script_domain" default:""`                            // 自定义脚本域名
 	SendIpAddrToGuest      bool   `json:"send_ip_addr_to_guest" default:"false"`               // 是否向访客页面发送 IP 地址，默认 false
 	VisitorAuditEnabled    bool   `json:"visitor_audit_enabled" default:"false"`               // 是否允许公开访客事件写入审计日志，默认 false
-	SSRFProtectionEnabled  bool   `json:"ssrf_protection_enabled" default:"false"`             // 是否启用 SSRF 防护，默认关闭
+	SSRFProtectionEnabled  bool   `json:"ssrf_protection_enabled" default:"true"`              // 是否启用 SSRF 防护，默认开启
 	EulaAccepted           bool   `json:"eula_accepted" default:"false"`
 	BaseScriptsURLKey      string `json:"base_scripts_url" default:""`
 	// GeoIP 配置
@@ -63,5 +63,6 @@ const (
 	TrafficLimitPercentageKey     = "traffic_limit_percentage"
 	UpdatedAtKey                  = "updated_at"
 	XtermjsSettingsKey            = "xtermjs_settings"
+	ThemeMarketSourcesKey         = "theme_market_sources"
 	PluginMarketSourcesKey        = "plugin_market_sources"
 )

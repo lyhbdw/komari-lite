@@ -15,7 +15,6 @@ import (
 
 var (
 	store             *metric.Store
-	storeFingerprint  string
 	storeMu           sync.RWMutex
 	storeInitMu       sync.Mutex
 	storeOperations   = newStoreOperationGate()

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/komari-monitor/komari/database/auditlog"
 	"github.com/komari-monitor/komari/internal/config"
 	"github.com/komari-monitor/komari/internal/metricstore"
 	logger "github.com/komari-monitor/komari/utils/log"
@@ -74,12 +73,10 @@ func retryMetricStoreConnection(attempts int, interval time.Duration, connect fu
 	return lastErr
 }
 
-// InitStores opens the metric store and starts its report batcher. Historical
-// data migrations are started only through an explicit administrator action.
+// InitStores starts the metric report batcher after the metric store has been connected.
 func (a *App) InitStores() error {
-	if err := a.ConnectMetricStore(); err != nil {
-		auditlog.EventLog("error", fmt.Sprintf("Failed to initialize metric store: %v", err))
-		return err
+	if metricstore.GetStore() == nil {
+		return fmt.Errorf("metric store is not initialized")
 	}
 	metricstore.StartReportBatcher()
 	a.addCleanup("metric-report-batcher", metricstore.StopReportBatcher)

@@ -12,6 +12,7 @@ import (
 )
 
 var defaultDistFiles map[string][]byte
+var adminDistFiles map[string][]byte
 
 func loadEmbeddedDist() (map[string][]byte, error) {
 	return decodeEmbeddedDist(embeddedDistArchive)

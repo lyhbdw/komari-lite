@@ -5,7 +5,7 @@ import LoginDialog from "./Login";
 import { IconButton } from "@radix-ui/themes";
 import { GitHubLogoIcon } from "@radix-ui/react-icons";
 import { Link } from "react-router-dom";
-import { usePublicInfo } from "@/contexts/PublicInfoContext";
+import { usePublicInfo } from "@/contexts/usePublicInfo";
 import { useTranslation } from "react-i18next";
 const NavBar = () => {
   const { publicInfo } = usePublicInfo();

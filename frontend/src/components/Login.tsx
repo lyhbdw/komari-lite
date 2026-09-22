@@ -9,8 +9,9 @@ import {
 } from "@radix-ui/themes";
 import { useTranslation } from "react-i18next";
 import { TablerSettings } from "./Icones/Tabler";
-import { AccountProvider, useAccount } from "@/contexts/AccountContext";
-import { usePublicInfo } from "@/contexts/PublicInfoContext";
+import { AccountProvider } from "@/contexts/AccountContext";
+import { useAccount } from "@/contexts/useAccount";
+import { usePublicInfo } from "@/contexts/usePublicInfo";
 
 type LoginDialogProps = {
   trigger?: React.ReactNode | string;
@@ -21,7 +22,12 @@ type LoginDialogProps = {
 };
 
 const LoginDialog = ({ trigger, autoOpen = false, showSettings = true, info, onLoginSuccess }: LoginDialogProps) => {
-  const InnerLayout = () => {
+  const InnerLayout = ({
+    autoOpen,
+    showSettings,
+    info,
+    onLoginSuccess,
+  }: Pick<LoginDialogProps, "autoOpen" | "showSettings" | "info" | "onLoginSuccess">) => {
     const { account, loading, error, refresh } = useAccount();
     const [t] = useTranslation();
     const [username, setUsername] = React.useState("");
@@ -30,20 +36,20 @@ const LoginDialog = ({ trigger, autoOpen = false, showSettings = true, info, onL
     const [errorMsg, setErrorMsg] = React.useState("");
     const [isLoading, setIsLoading] = React.useState(false);
     const [require2FA, setRequire2FA] = React.useState(false);
-    const [open, setOpen] = React.useState(autoOpen || false);
+    const [open, setOpen] = React.useState(autoOpen);
     const fieldId = React.useId().replace(/:/g, "");
     const {publicInfo} = usePublicInfo();
-  // 是否启用密码登录
-  const passwordLoginEnabled = !publicInfo?.disable_password_login;
 
-  // Validate inputs (仅在启用密码登录时需要)
-  const isFormValid = passwordLoginEnabled && username.trim() !== "" && password.trim() !== "";
-    //console.log(autoOpen, open);
     React.useEffect(() => {
       if (autoOpen) {
         setOpen(true);
       }
     }, [autoOpen]);
+  // 是否启用密码登录
+  const passwordLoginEnabled = !publicInfo?.disable_password_login;
+
+  // Validate inputs (仅在启用密码登录时需要)
+  const isFormValid = passwordLoginEnabled && username.trim() !== "" && password.trim() !== "";
     // Handle login
     const handleLogin = async () => {
       if (!isFormValid) {
@@ -215,7 +221,12 @@ const LoginDialog = ({ trigger, autoOpen = false, showSettings = true, info, onL
   };
   return (
     <AccountProvider>
-      <InnerLayout />
+      <InnerLayout
+        autoOpen={autoOpen}
+        showSettings={showSettings}
+        info={info}
+        onLoginSuccess={onLoginSuccess}
+      />
     </AccountProvider>
   );
 };

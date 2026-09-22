@@ -6,8 +6,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useNodeDetails } from "@/contexts/NodeDetailsContext";
-import { usePingTask, type PingTask } from "@/contexts/PingTaskContext";
+import { useNodeDetails } from "@/contexts/useNodeDetails";
+import { usePingTask } from "@/contexts/usePingTask";
+import type { PingTask } from "@/contexts/ping-task-context";
 import { Button, Dialog, Flex, IconButton } from "@radix-ui/themes";
 import { MoreHorizontal } from "lucide-react";
 import React from "react";

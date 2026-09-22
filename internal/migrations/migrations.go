@@ -18,7 +18,7 @@ type legacyModelConfig struct {
 	ID                         uint    `json:"id,omitempty" gorm:"primaryKey;autoIncrement"`
 	Sitename                   string  `json:"sitename" gorm:"type:varchar(100);not null"`
 	Description                string  `json:"description" gorm:"type:text"`
-	Theme                      string  `json:"theme" gorm:"type:varchar(100);default:'default'"`
+	Theme                      string  `json:"theme" gorm:"type:varchar(100);default:'Emerald'"`
 	PrivateSite                bool    `json:"private_site" gorm:"default:false"`
 	ApiKey                     string  `json:"api_key" gorm:"type:varchar(255);default:''"`
 	AutoDiscoveryKey           string  `json:"auto_discovery_key" gorm:"type:varchar(255);default:''"`

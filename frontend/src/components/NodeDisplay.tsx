@@ -9,7 +9,7 @@ import {
 import { Search, Grid3X3, Table2, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
-import type { NodeBasicInfo } from "@/contexts/NodeListContext";
+import type { NodeBasicInfo } from "@/contexts/node-list-context";
 import type { LiveData } from "../types/LiveData";
 import { NodeGrid } from "./Node";
 const NodeTable = React.lazy(() => import("./NodeTable"));

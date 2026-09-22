@@ -213,8 +213,8 @@ func TestGetPingRecordsReadsRollupsAfterRawCompaction(t *testing.T) {
 }
 
 func TestCreateMetricDefinitionsUsesFixedRetention(t *testing.T) {
-	if defaultBuiltinMetricRetentionDays != 30 {
-		t.Fatalf("default built-in metric retention = %d, want 30 days", defaultBuiltinMetricRetentionDays)
+	if defaultBuiltinMetricRetentionDays != 90 {
+		t.Fatalf("default built-in metric retention = %d, want 90 days", defaultBuiltinMetricRetentionDays)
 	}
 
 	ctx := context.Background()
@@ -255,8 +255,8 @@ func TestCreateMetricDefinitionsUsesFixedRetention(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reload cpu definition: %v", err)
 	}
-	if cpu.RetentionDays != 30 {
-		t.Fatalf("cpu retention = %d, want fixed retention 30", cpu.RetentionDays)
+	if cpu.RetentionDays != 90 {
+		t.Fatalf("cpu retention = %d, want fixed retention 90", cpu.RetentionDays)
 	}
 	if _, err := s.SetMetricRetention(ctx, MetricCPU, 0); err != nil {
 		t.Fatalf("disable cpu retention: %v", err)
@@ -268,8 +268,8 @@ func TestCreateMetricDefinitionsUsesFixedRetention(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reload disabled cpu definition: %v", err)
 	}
-	if cpu.RetentionDays != 30 {
-		t.Fatalf("cpu retention = %d, want fixed retention 30", cpu.RetentionDays)
+	if cpu.RetentionDays != 90 {
+		t.Fatalf("cpu retention = %d, want fixed retention 90", cpu.RetentionDays)
 	}
 }
 
@@ -321,8 +321,8 @@ func TestCreateMetricDefinitionsUsesFixedRetentionForMigrationDefinitions(t *tes
 		t.Fatalf("list migration definitions: %v", err)
 	}
 	for _, def := range defs {
-		if def.RetentionDays != 30 {
-			t.Fatalf("%s retention = %d, want fixed 30", def.Name, def.RetentionDays)
+		if def.RetentionDays != 90 {
+			t.Fatalf("%s retention = %d, want fixed 90", def.Name, def.RetentionDays)
 		}
 	}
 
@@ -341,8 +341,8 @@ func TestCreateMetricDefinitionsUsesFixedRetentionForMigrationDefinitions(t *tes
 	if err != nil {
 		t.Fatalf("reload CPU definition: %v", err)
 	}
-	if cpu.RetentionDays != 30 {
-		t.Fatalf("existing CPU retention = %d, want fixed 30", cpu.RetentionDays)
+	if cpu.RetentionDays != 90 {
+		t.Fatalf("existing CPU retention = %d, want fixed 90", cpu.RetentionDays)
 	}
 }
 

@@ -12,7 +12,7 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart";
 import Tips from "@/components/ui/tips";
-import { useRPC2Call } from "@/contexts/RPC2Context";
+import { useRPC2Call } from "@/contexts/useRPC2";
 import { cn } from "@/lib/utils";
 import type {
   MetricSeries,

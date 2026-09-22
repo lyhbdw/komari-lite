@@ -5,6 +5,7 @@ import (
 	"io/fs"
 	"mime"
 	"net/http"
+	"net/url"
 	"os"
 	"path"
 	"path/filepath"
@@ -14,7 +15,7 @@ import (
 	"github.com/komari-monitor/komari/internal/config"
 )
 
-//go:embed defaultTheme/komari-theme.json
+//go:embed defaultTheme/komari-theme.json defaultTheme/preview.png
 var PublicFS embed.FS
 
 //go:embed agent-install.sh
@@ -28,13 +29,16 @@ const (
 	DataDir            = "./data"
 	ThemesDir          = "theme"
 	FaviconFile        = "favicon.ico"
-	DefaultTheme       = "default"
+	DefaultTheme       = "Emerald"
 	LanguageCookieName = "language"
 
 	// 主题内部结构定义
 	DistDir   = "dist"       // 静态资源存放目录
 	IndexFile = "index.html" // 相对于 DistDir
 )
+
+//go:embed defaultTheme/admin-dist.tar.zst
+var embeddedAdminDistArchive []byte
 
 func init() {
 	_ = os.MkdirAll("./data/theme", 0755)
@@ -43,6 +47,10 @@ func init() {
 	defaultDistFiles, err = loadEmbeddedDist()
 	if err != nil {
 		panic("load embedded default frontend: " + err.Error())
+	}
+	adminDistFiles, err = decodeEmbeddedDist(embeddedAdminDistArchive)
+	if err != nil {
+		panic("load embedded admin frontend: " + err.Error())
 	}
 }
 
@@ -88,6 +96,18 @@ func replaceHTMLLanguage(htmlStr, language string) string {
 
 func stripServiceWorkerRegistration(html string) string {
 	return strings.ReplaceAll(html, `<script id="vite-plugin-pwa:register-sw" src="/registerSW.js"></script>`, "")
+}
+
+func adminAssetRequest(r *http.Request) bool {
+	referrer := r.Referer()
+	if referrer == "" {
+		return false
+	}
+	u, err := url.Parse(referrer)
+	if err != nil {
+		return false
+	}
+	return strings.HasPrefix(u.Path, "/admin") || strings.HasPrefix(u.Path, "/terminal")
 }
 
 // isSafePath 验证路径是否在指定的基础目录内，防止路径穿透攻击
@@ -157,33 +177,35 @@ func static(r *gin.RouterGroup, noRoute func(handlers ...gin.HandlerFunc), force
 		cleanPath := strings.TrimPrefix(relativePath, "/")
 
 		cleanPath = filepath.Clean(cleanPath)
+		embedPath := filepath.ToSlash(cleanPath)
 
+		if themeID == "__admin__" {
+			if content, ok := adminDistFiles[strings.TrimPrefix(embedPath, DistDir+"/")]; ok {
+				return content, mime.TypeByExtension(filepath.Ext(embedPath)), true
+			}
+			return nil, "", false
+		}
+
+		if strings.Contains(themeID, "..") || strings.Contains(themeID, "/") || strings.Contains(themeID, "\\") {
+			return nil, "", false
+		}
+		themeBasePath := filepath.Join(DataDir, ThemesDir, themeID)
+		if !isSafePath(themeBasePath, cleanPath) {
+			return nil, "", false
+		}
+		localPath := filepath.Join(themeBasePath, cleanPath)
+		if info, err := os.Stat(localPath); err == nil && !info.IsDir() {
+			content, err := os.ReadFile(localPath)
+			if err == nil {
+				return content, mime.TypeByExtension(filepath.Ext(localPath)), true
+			}
+		}
 		if themeID != DefaultTheme {
-			if strings.Contains(themeID, "..") || strings.Contains(themeID, "/") || strings.Contains(themeID, "\\") {
-				return nil, "", false
-			}
-
-			themeBasePath := filepath.Join(DataDir, ThemesDir, themeID)
-
-			if !isSafePath(themeBasePath, cleanPath) {
-				return nil, "", false
-			}
-
-			localPath := filepath.Join(themeBasePath, cleanPath)
-			// 检查文件是否存在且不是目录
-			if info, err := os.Stat(localPath); err == nil && !info.IsDir() {
-				content, err := os.ReadFile(localPath)
-				if err == nil {
-					return content, mime.TypeByExtension(filepath.Ext(localPath)), true
-				}
-			}
-			// 本地文件不存在，或读取失败 -> 继续向下回退
+			return nil, "", false
 		}
 
 		// 2. 尝试从嵌入式 defaultTheme/{cleanPath} 读取
 		// fs.ReadFile 处理 embed 路径时使用 "/"
-		embedPath := filepath.ToSlash(cleanPath)
-
 		if strings.Contains(embedPath, "..") {
 			return nil, "", false
 		}
@@ -208,8 +230,8 @@ func static(r *gin.RouterGroup, noRoute func(handlers ...gin.HandlerFunc), force
 		shouldReplace := true
 
 		// 特殊页面：强制使用 default 主题，且不进行内容替换
-		if forceDefaultTheme || strings.HasPrefix(reqPath, "/admin") || strings.HasPrefix(reqPath, "/terminal") {
-			currentTheme = DefaultTheme
+		if forceDefaultTheme || strings.HasPrefix(reqPath, "/admin") || strings.HasPrefix(reqPath, "/terminal") || adminAssetRequest(c.Request) {
+			currentTheme = "__admin__"
 			shouldReplace = false
 		}
 
@@ -262,8 +284,8 @@ func static(r *gin.RouterGroup, noRoute func(handlers ...gin.HandlerFunc), force
 		cfg := getConfig()
 		themeFaviconPath := path.Join(DistDir, FaviconFile)
 		currentTheme := cfg[config.ThemeKey].(string)
-		if forceDefaultTheme {
-			currentTheme = DefaultTheme
+		if forceDefaultTheme || strings.HasPrefix(c.Request.URL.Path, "/admin") || strings.HasPrefix(c.Request.URL.Path, "/terminal") {
+			currentTheme = "__admin__"
 		}
 		content, mimeType, exists := getFileContent(currentTheme, themeFaviconPath)
 		if exists {
@@ -278,12 +300,12 @@ func static(r *gin.RouterGroup, noRoute func(handlers ...gin.HandlerFunc), force
 	// 允许访问 /themes/MyTheme/theme.json 和 /themes/MyTheme/dist/assets/a.js
 	r.GET("/themes/:id/*path", func(c *gin.Context) {
 		themeID := c.Param("id")
-		if forceDefaultTheme && themeID != DefaultTheme {
+		if forceDefaultTheme && themeID != "__admin__" && themeID != DefaultTheme {
 			c.Status(http.StatusNotFound)
 			return
 		}
 		if forceDefaultTheme {
-			themeID = DefaultTheme
+			themeID = "__admin__"
 		}
 		// c.Param("path") 包含了开头的 /，getFileContent 会处理
 		filePath := c.Param("path")
@@ -305,12 +327,18 @@ func static(r *gin.RouterGroup, noRoute func(handlers ...gin.HandlerFunc), force
 		reqPath := c.Request.URL.Path
 		cfg := getConfig()
 		currentTheme := cfg[config.ThemeKey].(string)
-		if forceDefaultTheme {
-			currentTheme = DefaultTheme
+		if forceDefaultTheme || strings.HasPrefix(reqPath, "/admin") || strings.HasPrefix(reqPath, "/terminal") || adminAssetRequest(c.Request) {
+			currentTheme = "__admin__"
 		}
 
 		// SPA 静态资源回退
 		distPath := path.Join(DistDir, reqPath)
+		if strings.HasPrefix(reqPath, "/assets/") {
+			if content, mimeType, exists := getFileContent("__admin__", distPath); exists {
+				c.Data(http.StatusOK, mimeType, content)
+				return
+			}
+		}
 
 		content, mimeType, exists := getFileContent(currentTheme, distPath)
 		if exists {

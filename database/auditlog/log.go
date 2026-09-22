@@ -26,10 +26,10 @@ func EventLog(eventType, message string) {
 	Log("", "", message, eventType)
 }
 
-// Delete logs older than 30 days
+// Delete logs older than 90 days
 func RemoveOldLogs() {
 	db := dbcore.GetDBInstance()
-	threshold := time.Now().UTC().AddDate(0, 0, -30)
+	threshold := time.Now().UTC().AddDate(0, 0, -90)
 	if err := db.Where("time < ?", threshold).Delete(&models.Log{}).Error; err != nil {
 		logger.ErrorArgs("audit", "Failed to remove old logs:", err)
 	}

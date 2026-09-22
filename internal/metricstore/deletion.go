@@ -87,18 +87,3 @@ func DeleteEntityAsync(entityID string) {
 		}
 	}()
 }
-
-// DeleteMetricDataAsync clears disabled metric history without delaying an
-// admin retention-policy update response.
-func DeleteMetricDataAsync(metricName string) {
-	go func() {
-		s := GetStore()
-		if s == nil {
-			logger.Errorf("metricstore", "Failed to delete disabled metric %s: metric store not enabled", metricName)
-			return
-		}
-		if _, err := s.DeleteMetricDataIfDisabled(context.Background(), metricName); err != nil {
-			logger.Errorf("metricstore", "Failed to delete disabled metric %s: %v", metricName, err)
-		}
-	}()
-}

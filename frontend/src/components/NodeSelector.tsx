@@ -1,5 +1,5 @@
 import React from "react";
-import { useNodeDetails } from "@/contexts/NodeDetailsContext";
+import { useNodeDetails } from "@/contexts/useNodeDetails";
 import { useTranslation } from "react-i18next";
 import Selector from "./Selector";
 

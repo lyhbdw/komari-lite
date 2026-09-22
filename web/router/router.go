@@ -90,8 +90,6 @@ func registerLiteDisabledRoutes(r *gin.Engine) {
 		"/api/admin/task",
 		"/api/admin/theme",
 		"/api/admin/theme/delete",
-		"/api/admin/theme/import",
-		"/api/admin/theme/update",
 	} {
 		r.Any(path, disabled)
 	}
@@ -113,7 +111,7 @@ func registerLiteDisabledRoutes(r *gin.Engine) {
 
 		"/api/admin/clipboard/*path",
 		"/api/admin/plugin/*path",
-		"/api/admin/theme/market/*path",
+
 		"/api/admin/task/*path",
 		"/api/admin/client/:uuid/terminal",
 		"/api/admin/client/:uuid/file/*path",
@@ -143,12 +141,20 @@ func registerAdminRoutes(r *gin.Engine) {
 	g.POST("/update/mmdb", admin.UpdateMmdbGeoIP)
 	g.POST("/update/user", admin.UpdateUser)
 
-	// 本地主题选择和设置保留；远程市场、导入、删除和在线更新已关闭。
+	// 仅保留 Emerald 主题，但允许从远程来源导入和在线更新 Emerald。
 	theme := g.Group("/theme")
 	{
 		theme.GET("/list", admin.ListThemes)
 		theme.GET("/set", admin.SetTheme)
+		theme.POST("/update", admin.UpdateTheme)
+		theme.POST("/import", admin.ImportTheme)
 		theme.POST("/settings", admin.UpdateThemeSettings)
+		theme.GET("/market/sources", admin.ListThemeMarketSources)
+		theme.POST("/market/sources", admin.CreateThemeMarketSource)
+		theme.PUT("/market/sources/:id", admin.UpdateThemeMarketSource)
+		theme.DELETE("/market/sources/:id", admin.DeleteThemeMarketSource)
+		theme.GET("/market/catalog", admin.ListThemeMarketCatalog)
+		theme.POST("/market/install", admin.InstallThemeFromMarket)
 	}
 
 	// 2FA 含二维码 PNG / 敏感操作，保留 REST handler。

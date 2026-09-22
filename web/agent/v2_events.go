@@ -13,7 +13,6 @@ import (
 
 const (
 	v2EventQueueLimit = 128
-	v2EventTTL        = 5 * time.Minute
 	v2PingEventTTL    = 3 * time.Second
 )
 

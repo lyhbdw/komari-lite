@@ -11,9 +11,9 @@ import { Badge, Flex, IconButton } from "@radix-ui/themes";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { ChevronRight, ChevronUp, ChevronDown } from "lucide-react";
-import type { NodeBasicInfo } from "@/contexts/NodeListContext";
+import type { NodeBasicInfo } from "@/contexts/node-list-context";
 import type { LiveData, Record } from "../types/LiveData";
-import { formatUptime } from "./Node";
+import { formatUptime } from "@/utils/formatUptime";
 import { formatBytes } from "@/utils/unitHelper";
 import UsageBar from "./UsageBar";
 import Flag from "./Flag";
@@ -22,7 +22,7 @@ import Tips from "./ui/tips";
 import { DetailsGrid } from "./DetailsGrid";
 import MiniPingChart from "./MiniPingChart";
 import { getOSImage } from "@/utils";
-import { usePublicInfo } from "@/contexts/PublicInfoContext";
+import { usePublicInfo } from "@/contexts/usePublicInfo";
 
 interface NodeTableProps {
   nodes: NodeBasicInfo[];

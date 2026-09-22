@@ -1,73 +1,50 @@
-import React from 'react';
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { NodeDetailsContext, type NodeDetail } from "./node-details-context";
 
-export type NodeDetail = {
-  uuid: string;
-  token: string;
-  name: string;
-  cpu_name: string;
-  virtualization: string;
-  arch: string;
-  cpu_cores: number;
-  os: string;
-  gpu_name: string;
-  ipv4: string;
-  ipv6: string;
-  region: string;
-  mem_total: number;
-  swap_total: number;
-  disk_total: number;
-  version: string;
-  weight: number;
-  price: number;
-  remark: string | undefined;
-  public_remark: string;
-  group: string | undefined;
-  billing_cycle: number;
-  expired_at: string;
-  created_at: string;
-  updated_at: string;
-  [key: string]: any; 
-};
-
-interface NodeDetailsContextType {
-  nodeDetail: NodeDetail[] | [];
-  isLoading: boolean;
-  error: string | null;
-  refresh: () => void;
-}
-const NodeDetailsContext = React.createContext<NodeDetailsContextType | undefined>(undefined);
 export const NodeDetailsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [nodeDetail, setNodeDetail] = React.useState<NodeDetail[] | []>([]);
-  const [isLoading, setIsLoading] = React.useState<boolean>(false);
-  const [error, setError] = React.useState<string | null>(null);
+  const [nodeDetail, setNodeDetail] = useState<NodeDetail[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const mountedRef = useRef(true);
+  const hasLoadedRef = useRef(false);
 
-  const refresh = () => {
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  const refresh = useCallback(() => {
+    if (!hasLoadedRef.current) {
+      setIsLoading(true);
+    }
+    setError(null);
     fetch("/api/admin/client/list")
-      .then((response) => response.json())
+      .then((response) => {
+        if (!response.ok) throw new Error("Failed to fetch node details");
+        return response.json();
+      })
       .then((data: NodeDetail[]) => {
+        if (!mountedRef.current) return;
         setNodeDetail(data);
+        hasLoadedRef.current = true;
         setIsLoading(false);
       })
-      .catch((error) => {
-        setError(error.message);
+      .catch((err) => {
+        if (!mountedRef.current) return;
+        setError(err instanceof Error ? err.message : String(err));
         setIsLoading(false);
       });
-  };
-    React.useEffect(() => {
-        setIsLoading(true);
-        refresh();
-    }, []);
+  }, []);
+
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
+
   return (
     <NodeDetailsContext.Provider value={{ nodeDetail, isLoading, error, refresh }}>
       {children}
     </NodeDetailsContext.Provider>
   );
-};
-
-export const useNodeDetails = () => {
-    const context = React.useContext(NodeDetailsContext);
-    if (context === undefined) {
-        throw new Error("useNodeDetails must be used within a NodeDetailsProvider");
-    }
-    return context;
 };

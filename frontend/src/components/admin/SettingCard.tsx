@@ -10,7 +10,7 @@ import {
 import React from "react";
 import { useTranslation } from "react-i18next";
 import { ChevronDownIcon } from "lucide-react";
-import { AnimatePresence, motion } from "framer-motion"; // 引入 Framer Motion
+import { AnimatePresence, motion } from "motion/react"
 
 interface SettingCardProps {
   title?: string | React.ReactNode;

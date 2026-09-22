@@ -53,10 +53,10 @@ import Loading from "@/components/loading";
 import MetricBoundaryAxisTick from "@/components/MetricBoundaryAxisTick";
 import PingMetricStatContent from "@/components/PingMetricStatContent";
 import Tips from "@/components/ui/tips";
-import { useAccount } from "@/contexts/AccountContext";
-import { useNodeList } from "@/contexts/NodeListContext";
-import { usePublicInfo } from "@/contexts/PublicInfoContext";
-import { useRPC2Call } from "@/contexts/RPC2Context";
+import { useAccount } from "@/contexts/useAccount";
+import { useNodeList } from "@/contexts/useNodeList";
+import { usePublicInfo } from "@/contexts/usePublicInfo";
+import { useRPC2Call } from "@/contexts/useRPC2";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { cn } from "@/lib/utils";
 import type {

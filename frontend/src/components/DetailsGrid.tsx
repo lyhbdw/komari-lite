@@ -1,11 +1,9 @@
 import { useTranslation } from "react-i18next";
 import { UpDownStack } from "./UpDownStack";
-import {
-  useNodeList,
-  type NodeBasicInfo,
-} from "@/contexts/NodeListContext";
-import { useLiveData } from "@/contexts/LiveDataContext";
-import { formatUptime } from "./Node";
+import { useNodeList } from "@/contexts/useNodeList";
+import { useLiveData } from "@/contexts/useLiveData";
+import type { NodeBasicInfo } from "@/contexts/node-list-context";
+import { formatUptime } from "@/utils/formatUptime";
 import { formatBytes } from "@/utils/unitHelper";
 import { Flex, Text, Card } from "@radix-ui/themes";
 import type { Record as LiveRecord } from "@/types/LiveData";

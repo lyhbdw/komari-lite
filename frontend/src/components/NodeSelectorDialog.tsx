@@ -1,7 +1,7 @@
 import React from "react";
 import { Dialog, Button, Flex } from "@radix-ui/themes";
 import NodeSelector from "./NodeSelector";
-import { useNodeDetails } from "@/contexts/NodeDetailsContext";
+import { useNodeDetails } from "@/contexts/useNodeDetails";
 import { useTranslation } from "react-i18next";
 
 interface NodeSelectorDialogProps {

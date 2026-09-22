@@ -1,62 +1,43 @@
-import React from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import {
+  NotificationContext,
+  type OfflineNotification,
+} from "./notification-context";
 
-export type OfflineNotification = {
-  client: string;
-  enable: boolean;
-  cooldown: number;
-  grace_period: number;
-  last_notified: string;
-};
+export const OfflineNotificationProvider: React.FC<{
+  children: React.ReactNode;
+}> = ({ children }) => {
+  const [offlineNotification, setOfflineNotification] = useState<OfflineNotification[]>([]);
+  const [loading, setLoading] = useState(false);
+  const firstLoad = useRef(true);
+  const [error, setError] = useState<Error | null>(null);
 
-interface OfflineNotificationContextType {
-  offlineNotification: OfflineNotification[]
-  loading?: boolean;
-  error?: Error | null;
-  refresh: () => Promise<void>;
-}
-
-const NotificationContext = React.createContext<OfflineNotificationContextType | undefined>(undefined);
-
-export const OfflineNotificationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [offlineNotification, setOfflineNotification] = React.useState<OfflineNotification[]>([]);
-  const [loading, setLoading] = React.useState<boolean>(false);
-  const firstLoad = React.useRef(true);
-  const [error, setError] = React.useState<Error | null>(null);
-
-  const refresh = async () => {
+  const refresh = useCallback(async () => {
     if (firstLoad.current) setLoading(true);
     try {
       const response = await fetch("/api/admin/notification/offline");
-      if (!response.ok) {
-        throw new Error("Failed to fetch offline notifications");
-      }
+      if (!response.ok) throw new Error("Failed to fetch offline notifications");
       const data = await response.json();
       setOfflineNotification(data.data || []);
-    } catch (error) {
-      console.error("Error fetching offline notifications:", error);
-      setError(error instanceof Error ? error : new Error(String(error)));
+      setError(null);
+    } catch (err) {
+      console.error("Error fetching offline notifications:", err);
+      setError(err instanceof Error ? err : new Error(String(err)));
     } finally {
       if (firstLoad.current) {
         setLoading(false);
         firstLoad.current = false;
       }
     }
-  };
-
-  React.useEffect(() => {
-    refresh();
   }, []);
+
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
 
   return (
     <NotificationContext.Provider value={{ offlineNotification, refresh, loading, error }}>
       {children}
     </NotificationContext.Provider>
   );
-}
-export const useOfflineNotification = () => {
-  const context = React.useContext(NotificationContext);
-  if (!context) {
-    throw new Error("useOfflineNotification must be used within a OfflineNotificationProvider");
-  }
-  return context;
-}
+};
