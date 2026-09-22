@@ -588,6 +588,55 @@ func (s *Store) ListMetrics(ctx context.Context) ([]Definition, error) {
 	return out, rows.Err()
 }
 
+// HasMetricData reports whether any raw or rollup data still exists for a
+// metric, across persisted rollups and the in-memory raw/hot/coarse views.
+//
+// HasMetricData 检查某指标是否仍有任何 raw 或 rollup 数据（含持久化与内存视图）。
+func (s *Store) HasMetricData(ctx context.Context, metricName string) (bool, error) {
+	if err := s.ensureOpen(); err != nil {
+		return false, err
+	}
+	if strings.TrimSpace(metricName) == "" {
+		return false, fmt.Errorf("%w: metric name is required", ErrInvalidArgument)
+	}
+	var exists bool
+	err := s.reader().QueryRowContext(ctx, fmt.Sprintf(
+		`SELECT EXISTS (SELECT 1 FROM %s r JOIN %s s ON s.id = r.series_id WHERE s.metric_name = %s)`,
+		s.tables.rollups, s.tables.series, s.dialect.placeholder(1),
+	), metricName).Scan(&exists)
+	if err != nil {
+		return false, err
+	}
+	if exists {
+		return true, nil
+	}
+	s.rawMu.RLock()
+	for key := range s.raw {
+		if key.metricName == metricName {
+			s.rawMu.RUnlock()
+			return true, nil
+		}
+	}
+	s.rawMu.RUnlock()
+	s.hotMu.RLock()
+	for key := range s.hot {
+		if key.metricName == metricName {
+			s.hotMu.RUnlock()
+			return true, nil
+		}
+	}
+	s.hotMu.RUnlock()
+	s.coarseMu.RLock()
+	for key := range s.coarse {
+		if key.metricName == metricName {
+			s.coarseMu.RUnlock()
+			return true, nil
+		}
+	}
+	s.coarseMu.RUnlock()
+	return false, nil
+}
+
 // DeleteMetric deletes a metric definition and all of its raw and rollup data.
 //
 // DeleteMetric 删除指标定义及其所有 rollup 数据。

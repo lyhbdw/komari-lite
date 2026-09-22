@@ -106,6 +106,16 @@ func deleteUndefinedMetrics(ctx context.Context, s *metric.Store) error {
 		if _, ok := builtin[definition.Name]; ok {
 			continue
 		}
+		// Only drop definitions that truly have no data left. A non-builtin
+		// metric with remaining rows is a user-created metric; deleting it
+		// here would silently erase the user's history during reclaim.
+		hasData, err := s.HasMetricData(ctx, definition.Name)
+		if err != nil {
+			return fmt.Errorf("check data for metric %q before reclaim: %w", definition.Name, err)
+		}
+		if hasData {
+			continue
+		}
 		if err := s.DeleteMetric(ctx, definition.Name); err != nil {
 			return fmt.Errorf("delete undefined metric %q before reclaim: %w", definition.Name, err)
 		}
