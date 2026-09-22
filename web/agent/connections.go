@@ -84,12 +84,15 @@ func DeleteClientConditionally(uuid string, connToRemove *connection.SafeConn) {
 		}
 	}
 }
+// DeleteConnectedClients 清除一个 uuid 的全部运行时在线状态
+// （admin 删除客户端时调用）：WS 连接条目、v2 标记、POST presence 与事件队列。
 func DeleteConnectedClients(uuid string) {
 	mu.Lock()
-	defer mu.Unlock()
-	// 只从 map 中删除，不再负责关闭连接
 	delete(connectedClients, uuid)
 	delete(v2Clients, uuid)
+	delete(presenceOnly, uuid)
+	mu.Unlock()
+	DeleteV2EventQueue(uuid)
 }
 
 // SetPresence sets or clears presence for non-WebSocket agents.

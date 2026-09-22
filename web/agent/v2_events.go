@@ -66,13 +66,6 @@ func DispatchPing(uuid string, params v2.PingParams) bool {
 	return true
 }
 
-func IsAgentOnline(uuid string) bool {
-	if GetConnectedClients()[uuid] != nil {
-		return true
-	}
-	return IsV2Client(uuid)
-}
-
 func EnqueueV2Ping(uuid string, params v2.PingParams) v2.Event {
 	now := time.Now().UTC()
 	event := v2.Event{
