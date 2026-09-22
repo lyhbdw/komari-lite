@@ -487,7 +487,11 @@ func doInitialize() error {
 	// 注意：负载/GPU/ping 历史监控数据运行期全部走 metric store（默认 SQLite
 	// ./data/metrics.db，或配置的 MySQL/PostgreSQL）。旧的 records /
 	// records_long_term / gpu_records / ping_records 表不再建表、不再写入。
-	// 若升级时旧表仍存在，管理员可通过升级向导显式导入并清理。
+	// 若升级时旧表仍存在，管理员可通过 admin RPC 显式导入并清理：
+	// admin:getLegacyMigrationStatus 查看旧表数据概况与迁移进度，
+	// admin:runLegacyMigration 执行导入（internal/migrations 的
+	// MigrateLegacyMonitoring / CompleteLegacyMonitoringMigration），
+	// 导入完成后旧表会被 drop 并写入完成 marker。
 	// models.Record / models.PingRecord / models.GPURecord 结构体仍作为
 	// metric store 的读写 DTO 和旧表导入 DTO 保留在 models 包中。
 	// models.TrafficReportNotification 同样仅为旧数据库兼容保留，不再建表。
