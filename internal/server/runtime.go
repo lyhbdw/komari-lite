@@ -4,9 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -68,9 +70,53 @@ func (a *App) registerReloadHandlers(cors *security.CorsController) {
 	a.reload.Register("cors", func(event config.ConfigEvent) { cors.Update(event) })
 }
 
+// defaultTrustedProxies is the conservative default trust list: only
+// loopback. Deployments behind a reverse proxy must explicitly opt in via
+// the KOMARI_TRUSTED_PROXIES environment variable (comma-separated CIDRs
+// or IPs), otherwise X-Forwarded-* headers from clients are ignored and
+// gin derives the client IP from the remote address.
+const defaultTrustedProxies = "127.0.0.0/8,::1/128"
+
+// trustedProxyEnv is the environment variable used to override the default
+// trusted proxy list. Comma-separated CIDR notation or plain IPs.
+const trustedProxyEnv = "KOMARI_TRUSTED_PROXIES"
+
+func resolveTrustedProxies() ([]string, error) {
+	raw := strings.TrimSpace(os.Getenv(trustedProxyEnv))
+	if raw == "" {
+		raw = defaultTrustedProxies
+	}
+	var proxies []string
+	for _, part := range strings.Split(raw, ",") {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+		if strings.Contains(part, "/") {
+			if _, _, err := net.ParseCIDR(part); err != nil {
+				return nil, fmt.Errorf("invalid CIDR %q in %s: %w", part, trustedProxyEnv, err)
+			}
+		} else if net.ParseIP(part) == nil {
+			return nil, fmt.Errorf("invalid IP %q in %s", part, trustedProxyEnv)
+		}
+		proxies = append(proxies, part)
+	}
+	if len(proxies) == 0 {
+		return nil, fmt.Errorf("%s must not be empty", trustedProxyEnv)
+	}
+	return proxies, nil
+}
+
 // BuildRouter constructs the normal application router and starts reloads.
 func (a *App) BuildRouter() error {
 	r := gin.New()
+	proxies, err := resolveTrustedProxies()
+	if err != nil {
+		return err
+	}
+	if err := r.SetTrustedProxies(proxies); err != nil {
+		return fmt.Errorf("set trusted proxies: %w", err)
+	}
 	r.Use(logger.GinLogger(), logger.GinRecovery())
 	cors := security.NewCorsController(a.settings.CorsOriginCheckEnabled, a.settings.CorsAllowedOrigins)
 	r.Use(cors.Middleware(), api.IdentityMiddleware(), api.PrivateSiteMiddleware(), noStoreAPIResponses())
