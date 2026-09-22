@@ -53,9 +53,11 @@ func DeleteV2EventQueue(uuid string) {
 func DispatchPing(uuid string, params v2.PingParams) bool {
 	if conn := GetConnectedClients()[uuid]; conn != nil {
 		payload := v2.Request{JSONRPC: v2.Version, Method: v2.MethodAgentPing, Params: params}
-		if conn.WriteJSON(payload) == nil {
+		if err := conn.WriteJSON(payload); err == nil {
 			return true
 		}
+		// 直写失败（半开连接、写超时）：降级入队，重连后的 agent
+		// 通过 pull/report 拿到该事件，而不是静默丢失。
 	}
 	if !IsV2Client(uuid) {
 		return false
