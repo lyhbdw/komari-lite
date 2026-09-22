@@ -40,6 +40,7 @@ func init() {
 		},
 		Returns: "null",
 	})
+	rpc.MarkSensitive("admin:removeClient")
 	RegisterWithGroupAndMeta("getClient", rpc.RoleAdmin, adminGetClient, &rpc.MethodMeta{
 		Name:    "admin:getClient",
 		Summary: "Get a client by UUID",
@@ -66,6 +67,7 @@ func init() {
 		Summary: "Delete all load records",
 		Returns: "null",
 	})
+	rpc.MarkSensitive("admin:clearRecords")
 }
 
 // auditActor 从上下文提取审计用的 actor UUID 与来源 IP。

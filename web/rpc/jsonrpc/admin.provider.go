@@ -16,6 +16,7 @@ import (
 func init() {
 	reg("getMessageSenderProvider", adminGetMessageSender, "Get message sender provider config or templates")
 	reg("setMessageSenderProvider", adminSetMessageSender, "Set message sender provider config")
+	rpc.MarkSensitive("admin:setMessageSenderProvider")
 }
 
 func adminGetMessageSender(_ context.Context, req *rpc.JsonRpcRequest) (any, *rpc.JsonRpcError) {
