@@ -6,6 +6,17 @@ import (
 	"time"
 )
 
+// hotFlushThrottle bounds how often a write batch runs the coarse sealing
+// pass. The scheduled compactor still flushes on its own cadence, so a
+// skipped pass only delays sealing until the next eligible batch or the
+// scheduled flush, whichever comes first.
+const hotFlushThrottle = time.Minute
+
+// lastCoarseFlush records when the write path last ran the coarse sealing
+// pass. WriteBatch holds ingestMu across the write, which already serializes
+// this variable's readers and writers.
+var lastCoarseFlush time.Time
+
 // hotRollupKey identifies one active minute bucket. The dictionary dimensions
 // remain compact strings; full tag and label JSON lives only on the bucket.
 type hotRollupKey struct {
@@ -60,6 +71,12 @@ func (s *Store) writePreparedHotRollups(ctx context.Context, prepared []prepared
 	if err != nil {
 		return err
 	}
+	// Throttle the coarse sealing pass on the write path; the scheduled
+	// compactor's FlushCoarse remains the guaranteed backstop.
+	if now.Sub(lastCoarseFlush) < hotFlushThrottle {
+		return nil
+	}
+	lastCoarseFlush = now
 	if len(rebuild) > 0 {
 		_, err = s.flushClosedCoarseRollupsUnderView(ctx, now)
 	} else {
