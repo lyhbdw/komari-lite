@@ -10,9 +10,6 @@ import (
 	"net/netip"
 	"net/url"
 	"time"
-
-	"github.com/komari-monitor/komari/internal/config"
-	"gorm.io/gorm"
 )
 
 // marketDownloadMaxBytes limits the response size of a market download.
@@ -37,14 +34,6 @@ var blockedMarketIPPrefixes = []netip.Prefix{
 // checks every result, and dials the validated IP directly. Proxies are
 // disabled so the destination checked here is the destination actually used.
 var protectedMarketDownloadTransport = newSSRFProtectedTransport()
-
-// IsSSRFProtectionEnabled reports whether SSRF protection is enabled for
-// market downloads. An unreadable setting is treated as enabled so callers
-// using this status helper fail closed.
-func IsSSRFProtectionEnabled() bool {
-	enabled, err := ssrfProtectionEnabled()
-	return err != nil || enabled
-}
 
 // DownloadMarketURL performs a market download. When SSRF protection is
 // enabled, URLs resolving to private or internal addresses are rejected
@@ -182,18 +171,4 @@ func isBlockedMarketIP(ip net.IP) bool {
 		}
 	}
 	return false
-}
-
-func ssrfProtectionEnabled() (bool, error) {
-	enabled, err := config.GetAs[bool](config.SSRFProtectionEnabledKey)
-	if err == nil {
-		return enabled, nil
-	}
-	if !errors.Is(err, gorm.ErrRecordNotFound) {
-		return false, err
-	}
-	if err := config.Set(config.SSRFProtectionEnabledKey, false); err != nil {
-		return false, err
-	}
-	return false, nil
 }

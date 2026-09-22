@@ -70,45 +70,6 @@ func ListThemes(c *gin.Context) {
 	api.RespondSuccess(c, themes)
 }
 
-// DeleteTheme 删除主题
-func DeleteTheme(c *gin.Context) {
-	var req struct {
-		Short string `json:"short" binding:"required"`
-	}
-
-	if err := c.ShouldBindJSON(&req); err != nil {
-		api.RespondError(c, http.StatusBadRequest, "参数错误: "+err.Error())
-		return
-	}
-
-	if req.Short == public.DefaultTheme {
-		api.RespondError(c, http.StatusBadRequest, "默认主题不能删除")
-		return
-	}
-
-	// 校验主题短名称，防止路径穿越（如 ../）导致删除工作目录外的任意文件
-	if !isValidMarketShort(req.Short) {
-		api.RespondError(c, http.StatusBadRequest, "无效的主题名称")
-		return
-	}
-
-	themeDir := filepath.Join("./data/theme", req.Short)
-
-	// 检查主题是否存在
-	if _, err := os.Stat(themeDir); os.IsNotExist(err) {
-		api.RespondError(c, http.StatusNotFound, "主题不存在")
-		return
-	}
-
-	// 删除主题目录
-	if err := os.RemoveAll(themeDir); err != nil {
-		api.RespondError(c, http.StatusInternalServerError, "删除主题失败: "+err.Error())
-		return
-	}
-
-	api.RespondSuccessMessage(c, "主题删除成功", nil)
-}
-
 // SetTheme 设置主题
 func SetTheme(c *gin.Context) {
 	// CSRF 防御：状态变更端点仅接受 POST（原为 GET，可被跨站 <img> 触发）。
