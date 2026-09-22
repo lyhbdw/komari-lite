@@ -494,7 +494,13 @@ func doInitialize() error {
 	if err := instance.AutoMigrate(
 		&models.Session{},
 	); err != nil {
-		logger.Errorf("dbcore", "Failed to create Session table, it may already exist: %v", err)
+		// Session 表是登录依赖：建表失败时拒绝启动，而不是带着坏表照常
+		// 对外服务（那会让所有登录请求在运行期反复报错）。
+		if sqlDB, dbErr := instance.DB(); dbErr == nil {
+			_ = sqlDB.Close()
+		}
+		instance = nil
+		return fmt.Errorf("failed to create Session table (login depends on it): %w", err)
 	}
 	return nil
 }
