@@ -76,7 +76,12 @@ func DeleteClientConditionally(uuid string, connToRemove *connection.SafeConn) {
 	// 检查当前 map 里的 conn 是否就是要删除的这一个
 	if currentConn, exists := connectedClients[uuid]; exists && currentConn == connToRemove {
 		delete(connectedClients, uuid)
-		delete(v2Clients, uuid)
+		// 混合传输的 agent 可能同时有活跃的 POST presence；WS 断开时
+		// 只有在没有活跃 POST 上报会话的情况下才清 v2 在线标记，
+		// 否则 POST 会被误判为离线。
+		if p, ok := presenceOnly[uuid]; !ok || !p.expire.After(time.Now()) {
+			delete(v2Clients, uuid)
+		}
 	}
 }
 func DeleteConnectedClients(uuid string) {
@@ -118,9 +123,11 @@ func SetPresence(uuid string, connectionID int64, present bool) {
 }
 
 // GetAllOnlineUUIDs returns a de-duplicated list of online UUIDs from both WebSocket and non-WebSocket agents.
+// Expired presence entries are garbage-collected here so the map does not grow
+// unboundedly for agents that stop reporting without an explicit offline path.
 func GetAllOnlineUUIDs() []string {
-	mu.RLock()
-	defer mu.RUnlock()
+	mu.Lock()
+	defer mu.Unlock()
 	set := make(map[string]struct{})
 	for k := range connectedClients {
 		set[k] = struct{}{}
@@ -129,6 +136,8 @@ func GetAllOnlineUUIDs() []string {
 	for k, v := range presenceOnly {
 		if v.expire.After(now) {
 			set[k] = struct{}{}
+		} else {
+			delete(presenceOnly, k)
 		}
 	}
 	res := make([]string, 0, len(set))
