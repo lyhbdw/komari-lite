@@ -7,7 +7,11 @@ import (
 	"time"
 )
 
-const coarseRollupGrace = 10 * time.Minute
+// coarseRollupGrace delays sealing a parent past its window end. It must
+// exceed the raw late-arrival window (rawMemoryRetention, ten minutes) so an
+// accepted late correction can still update the parent; the extra two minutes
+// absorb processing delay between reading the clock and sealing.
+const coarseRollupGrace = rawMemoryRetention + 2*time.Minute
 
 // SQLite's default variable limit is 999; each normalized rollup row binds
 // fifteen values, so keep one batched upsert comfortably below that limit.

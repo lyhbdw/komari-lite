@@ -287,7 +287,7 @@ func TestOneDayRetentionStagesOnlyMinuteAndFiveMinute(t *testing.T) {
 			t.Fatalf("%s rows before parent seal = %d, want %d", tier.Interval, len(rows), want)
 		}
 	}
-	if written, err := s.FlushCoarse(ctx, base.Add(15*time.Minute)); err != nil || written != 1 {
+	if written, err := s.FlushCoarse(ctx, base.Add(18*time.Minute)); err != nil || written != 1 {
 		t.Fatalf("seal five-minute parent = %d, %v; want 1, nil", written, err)
 	}
 	for _, tier := range policy.Tiers {
@@ -322,7 +322,7 @@ func TestLongRetentionCoarseRollupsSealOnce(t *testing.T) {
 	if err := s.writePreparedHotRollups(ctx, prepared, base.Add(2*time.Minute), rebuild); err != nil {
 		t.Fatal(err)
 	}
-	if written, err := s.FlushCoarse(ctx, base.Add(15*time.Minute)); err != nil || written != 1 {
+	if written, err := s.FlushCoarse(ctx, base.Add(18*time.Minute)); err != nil || written != 1 {
 		t.Fatalf("seal five-minute parent = %d, %v; want 1, nil", written, err)
 	}
 	if written, err := s.FlushCoarse(ctx, base.Truncate(24*time.Hour).Add(24*time.Hour+coarseRollupGrace)); err != nil || written != 2 {
@@ -370,7 +370,7 @@ func TestLateReplacementChangesSealedPercentile(t *testing.T) {
 		Point{MetricName: "late-percentile", EntityID: "n1", Timestamp: base.Add(30 * time.Second), Value: 50},
 	)
 	write(Point{MetricName: "late-percentile", EntityID: "n1", Timestamp: base.Add(30 * time.Second), Value: 100})
-	if _, err := s.FlushCoarse(ctx, base.Add(15*time.Minute)); err != nil {
+	if _, err := s.FlushCoarse(ctx, base.Add(18*time.Minute)); err != nil {
 		t.Fatal(err)
 	}
 	series, err := s.Series(ctx, AggregateQuery{
@@ -423,7 +423,7 @@ func TestRestartFlushesUnsealedCoarseParents(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer reopened.Close()
-	if written, err := reopened.FlushCoarse(ctx, base.Add(15*time.Minute)); err != nil || written != 0 {
+	if written, err := reopened.FlushCoarse(ctx, base.Add(18*time.Minute)); err != nil || written != 0 {
 		t.Fatalf("reopened coarse flush = %d, %v; want 0, nil", written, err)
 	}
 	rows, err := reopened.scanRollupRows(ctx, reopened.reader(), "restart-parent", 5*time.Minute)

@@ -976,11 +976,14 @@ func (s *Store) WriteBatch(ctx context.Context, points []Point) error {
 	if err != nil {
 		return err
 	}
-	rebuild, err := s.writeRawPoints(ctx, prepared)
-	if err != nil {
-		return err
-	}
-	return s.writePreparedHotRollups(ctx, prepared, time.Now().UTC(), rebuild)
+	// One clock reading drives both the raw acceptance window and the coarse
+	// sealing decision. Two independent time.Now() calls would let processing
+	// delay push an accepted late correction past the sealing cutoff, leaving
+	// the minute row corrected while the 5m/hour/day parents keep the stale
+	// value forever.
+	now := time.Now().UTC()
+	rebuild := s.writeRawPointsAt(prepared, now)
+	return s.writePreparedHotRollups(ctx, prepared, now, rebuild)
 }
 
 // filterDisabledMetricPoints rejects points without a definition and drops

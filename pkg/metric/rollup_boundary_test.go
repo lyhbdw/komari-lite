@@ -396,7 +396,7 @@ func TestSeriesAndAggregateRollupBridgeSealedCoarseTail(t *testing.T) {
 		Point{MetricName: "sealed-tail", EntityID: "n1", Timestamp: base.Add(4 * time.Minute), Value: 20},
 	)
 	write(base.Add(13*time.Minute), Point{MetricName: "sealed-tail", EntityID: "n1", Timestamp: base.Add(12 * time.Minute), Value: 50})
-	if written, err := s.FlushCoarse(ctx, base.Add(16*time.Minute)); err != nil || written != 1 {
+	if written, err := s.FlushCoarse(ctx, base.Add(18*time.Minute)); err != nil || written != 1 {
 		t.Fatalf("seal first five-minute bucket = %d, %v; want 1, nil", written, err)
 	}
 	query := AggregateQuery{

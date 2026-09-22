@@ -146,19 +146,9 @@ func prepareMetricPoints(points []Point) ([]preparedMetricPoint, error) {
 	return prepared, nil
 }
 
-// writeRawPoints keeps the newest minute in a directly addressable form. The
+// writeRawPointsAt keeps the newest minute in a directly addressable form. The
 // surrounding nine minutes remain individual raw samples in a compact byte
 // representation; only their minute rollups are eventually persisted.
-func (s *Store) writeRawPoints(ctx context.Context, points []preparedMetricPoint) (map[hotRollupKey]struct{}, error) {
-	if err := ctx.Err(); err != nil {
-		return nil, err
-	}
-	if len(points) == 0 {
-		return nil, nil
-	}
-	return s.writeRawPointsAt(points, time.Now().UTC()), nil
-}
-
 func (s *Store) writeRawPointsAt(points []preparedMetricPoint, now time.Time) map[hotRollupKey]struct{} {
 	now = now.UTC()
 	directCutoff := now.Add(-directRawRetention).UnixMilli()
