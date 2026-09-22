@@ -98,9 +98,11 @@ func (s *Store) writeTierCascadeTx(ctx context.Context, metricName string, polic
 	return s.mergeRollupBucketsWithDictionaryTx(ctx, metricName, policy.Tiers[0].Interval, minute, newRollupDictionaryCache(), tx)
 }
 
-// replaceMinuteRollupsTx overwrites rebuilt minute buckets, then recomputes
-// only their affected ancestors from the stored finer tier. This keeps late
-// raw upserts idempotent even though t-digests cannot remove observations.
+// replaceMinuteRollupsTx overwrites rebuilt minute buckets in place. Coarser
+// ancestors are deliberately left untouched: they are accumulated in memory
+// and only materialized after their late-arrival grace, where a rebuilt child
+// replaces its earlier contribution. This keeps late raw upserts idempotent
+// even though t-digests cannot remove observations.
 func (s *Store) replaceMinuteRollupsTx(ctx context.Context, metricName string, policy RollupPolicy, replacements map[rollupKey]*rollupBucket, tx *sql.Tx) error {
 	if len(replacements) == 0 || len(policy.Tiers) == 0 {
 		return nil
@@ -125,44 +127,6 @@ func (s *Store) replaceMinuteRollupsTx(ctx context.Context, metricName string, p
 	}
 
 	return nil
-}
-
-func (s *Store) rebuildRollupBucketTx(ctx context.Context, metricName string, fineInterval, coarseInterval time.Duration, key rollupKey, tx *sql.Tx) (*rollupBucket, error) {
-	start := key.bucket
-	end := start + coarseInterval.Milliseconds()
-	columns := "s.entity_id, s.tags_hash, s.tags, l.labels_hash, l.labels, r.bucket_milli, r.count, r.sum, r.sum_sq, r.min_val, r.max_val, r.first_val, r.first_ts_milli, r.last_val, r.last_ts_milli, r.digest"
-	query := fmt.Sprintf(`SELECT %s FROM %s r
-		JOIN %s s ON s.id = r.series_id
-		JOIN %s d ON d.id = r.resolution_id
-		JOIN %s l ON l.id = r.label_id
-		WHERE s.metric_name = %s AND s.entity_id = %s AND s.tags_hash = %s
-			AND l.labels_hash = %s AND d.resolution_milli = %s
-			AND r.bucket_milli >= %s AND r.bucket_milli < %s
-		ORDER BY r.bucket_milli ASC`,
-		columns, s.tables.rollups, s.tables.series, s.tables.resolutions, s.tables.labels,
-		s.dialect.placeholder(1), s.dialect.placeholder(2), s.dialect.placeholder(3),
-		s.dialect.placeholder(4), s.dialect.placeholder(5), s.dialect.placeholder(6), s.dialect.placeholder(7))
-	rows, err := tx.QueryContext(ctx, query, metricName, key.entityID, key.tagsHash, key.labelsHash, fineInterval.Milliseconds(), start, end)
-	if err != nil {
-		return nil, err
-	}
-	stored, err := scanStoredRollupsForMaintenance(rows, true, s.cfg.RollupPolicy.compression())
-	_ = rows.Close()
-	if err != nil {
-		return nil, err
-	}
-	if len(stored) == 0 {
-		return nil, nil
-	}
-	bucket := newRollupBucket(s.cfg.RollupPolicy.compression())
-	for _, row := range stored {
-		if bucket.count == 0 {
-			bucket.tagsHash, bucket.tagsJSON = row.bucketData.tagsHash, row.bucketData.tagsJSON
-			bucket.labelsHash, bucket.labelsJSON = row.bucketData.labelsHash, row.bucketData.labelsJSON
-		}
-		bucket.mergeStored(row.bucketData)
-	}
-	return bucket, nil
 }
 
 func (s *Store) deleteRollupBucketTx(ctx context.Context, metricName string, interval time.Duration, key rollupKey, tx *sql.Tx) error {
