@@ -131,7 +131,7 @@ export default function Sessions() {
           </Dialog.Content>
         </Dialog.Root>
       </div>
-      <div className="km-sessions-table overflow-hidden rounded-lg">
+      <div className="km-sessions-table overflow-hidden rounded-xl border border-border/60 bg-card shadow-2xs">
         <Table>
           <TableHeader>
             <TableRow>

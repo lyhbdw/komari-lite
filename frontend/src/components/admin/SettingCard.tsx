@@ -45,11 +45,10 @@ export function SettingCard({
       justify="between"
       align="center"
       wrap="wrap"
-      style={{ borderColor: "var(--gray-a5)" }}
       className={
         bordless
-          ? "km-setting-card border-0"
-          : "km-setting-card border-1 rounded-md py-2 px-4 bg-transparent  min-h-8 " + className
+          ? "km-setting-card border-0 bg-transparent p-0 " + className
+          : "km-setting-card rounded-xl border border-border/60 bg-card p-4 sm:p-5 shadow-2xs hover:border-border/80 transition-all duration-150 " + className
       }
     >
       <Flex
@@ -63,14 +62,13 @@ export function SettingCard({
         <Flex
           direction="column"
           gap="1"
-          className="min-h-10"
-          justify={"center"}
+          className="min-h-10 justify-center"
         >
-          <label className="text-base font-medium" style={{ fontWeight: 600 }}>
+          <label className="text-sm font-semibold tracking-tight text-foreground">
             {title}
           </label>
           {description && (
-            <label className="text-sm text-muted-foreground">
+            <label className="text-xs text-muted-foreground leading-relaxed">
               {description}
             </label>
           )}
@@ -730,7 +728,7 @@ export function SettingCardLabel({
   children: React.ReactNode | null;
 }) {
   return (
-    <label className="text-xl font-bold" style={{ fontWeight: 600 }}>
+    <label className="text-base font-semibold tracking-tight text-foreground block my-1">
       {children}
     </label>
   );
@@ -760,15 +758,17 @@ export function SettingCardCollapse({
     >
       <SettingCard.Action>
         <IconButton
-          variant="soft"
+          variant="ghost"
+          size="2"
           onClick={() => setOpen(!open)}
           aria-expanded={open}
           aria-controls="collapsible-content"
+          className="text-muted-foreground hover:text-foreground"
         >
           <motion.div
             initial={{ rotate: 0, scale: 1 }}
-            animate={{ rotate: open ? 180 : 0, scale: open ? 1.1 : 1 }}
-            transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
+            animate={{ rotate: open ? 180 : 0, scale: open ? 1.05 : 1 }}
+            transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
           >
             <ChevronDownIcon />
           </motion.div>
@@ -777,16 +777,16 @@ export function SettingCardCollapse({
       <AnimatePresence>
         {open && (
           <motion.div
-            className="w-full p-0 md:p-1" // Ensures the content takes full width
+            className="w-full pt-1" // Ensures the content takes full width
             layout // Smoothly handles height changes
-            initial={{ height: 0, opacity: 0, y: -10 }}
+            initial={{ height: 0, opacity: 0, y: -6 }}
             animate={{ height: "auto", opacity: 1, y: 0 }}
-            exit={{ height: 0, opacity: 0, y: -10 }}
-            transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
+            exit={{ height: 0, opacity: 0, y: -6 }}
+            transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
             style={{ overflow: "hidden" }} // Prevents content clipping during animation
             id="collapsible-content"
           >
-            <div className="border-t-1 my-2" />
+            <div className="border-t border-border/50 my-3" />
             {children}
           </motion.div>
         )}

@@ -203,35 +203,54 @@ const Header = ({
     }
   };
   return (
-    <Flex justify="between" align="center" gap="4" wrap="wrap">
-      <Flex gap="2" align="center">
-        <Text size="5" weight="bold">
+    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="flex items-center gap-3">
+        <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
           {t("admin.nodeTable.nodeList")}
-        </Text>
+        </h1>
         {selectedNodes.length > 0 && (
-          <Text size="2">({selectedNodes.length} selected)</Text>
+          <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-accent text-accent-foreground border border-border/60">
+            {selectedNodes.length} selected
+          </span>
         )}
-      </Flex>
-      <Flex gap="2">
-        <TextField.Root
-          placeholder={t("admin.nodeTable.searchByName")}
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
+      </div>
+      <div className="flex items-center gap-2.5 w-full sm:w-auto">
+        <div className="relative flex-1 sm:w-64">
+          <TextField.Root
+            placeholder={t("admin.nodeTable.searchByName")}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full"
+          />
+        </div>
         <Dialog.Root open={dialogOpen} onOpenChange={setDialogOpen}>
           <Dialog.Trigger>
-            <Button onClick={() => setDialogOpen(true)}>
-              <Plus size={16} />
-              {t("admin.nodeTable.addNode")}
+            <Button onClick={() => setDialogOpen(true)} variant="solid" className="shrink-0 cursor-pointer shadow-2xs">
+              <Plus size={15} />
+              <span>{t("admin.nodeTable.addNode")}</span>
             </Button>
           </Dialog.Trigger>
-          <Dialog.Content>
-            <Dialog.Title>{t("admin.nodeTable.addNode")}</Dialog.Title>
-            <TextField.Root
-              ref={inputRef}
-              placeholder={t("admin.nodeTable.nameOptional")}
-            />
+          <Dialog.Content className="max-w-md">
+            <Dialog.Title className="text-base font-semibold">{t("admin.nodeTable.addNode")}</Dialog.Title>
+            <div className="mt-3">
+              <TextField.Root
+                ref={inputRef}
+                placeholder={t("admin.nodeTable.nameOptional")}
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleAddNode(inputRef.current?.value);
+                  }
+                }}
+              />
+            </div>
             <Flex justify="end" gap="2" mt="4">
+              <Dialog.Close>
+                <Button variant="soft" color="gray" disabled={loading}>
+                  {t("common.cancel", "Cancel")}
+                </Button>
+              </Dialog.Close>
               <Button
                 onClick={() => handleAddNode(inputRef.current?.value)}
                 disabled={loading}
@@ -239,11 +258,10 @@ const Header = ({
                 {t("admin.nodeTable.addNode")}
               </Button>
             </Flex>
-
           </Dialog.Content>
         </Dialog.Root>
-      </Flex>
-    </Flex>
+      </div>
+    </div>
   );
 };
 
@@ -271,12 +289,12 @@ const SortableRow = ({
     toast.success(t("copy_success"));
   }
   return (
-    <TableRow ref={setNodeRef} style={style} className="hover:bg-accent-a2">
-      <TableCell>
+    <TableRow ref={setNodeRef} style={style} className="hover:bg-muted/40 transition-colors">
+      <TableCell className="w-8">
         <div
           {...attributes}
           {...listeners}
-          className={`cursor-move p-2 rounded hover:bg-accent-a3 transition-colors ${
+          className={`cursor-grab p-1.5 rounded hover:bg-muted/80 text-muted-foreground/50 hover:text-foreground transition-colors ${
             isMobile ? "touch-manipulation select-none" : ""
           }`}
           style={{
@@ -290,7 +308,7 @@ const SortableRow = ({
               : undefined
           }
         >
-          <MenuIcon size={isMobile ? 18 : 16} color={"var(--gray-8)"} />
+          <MenuIcon size={15} />
         </div>
       </TableCell>
       <TableCell>
@@ -477,7 +495,7 @@ const NodeTable = ({
   };
   return (
     <div
-      className={`rounded-md overflow-hidden ${
+      className={`rounded-xl border border-border/60 bg-card overflow-hidden shadow-2xs ${
         isDragging ? "select-none" : ""
       }`}
     >
@@ -488,10 +506,10 @@ const NodeTable = ({
         onDragEnd={handleDragEnd}
       >
         <Table>
-          <TableHeader style={{ backgroundColor: "var(--accent-4)" }}>
+          <TableHeader>
             <TableRow>
-              <TableHead></TableHead>
-              <TableHead>
+              <TableHead className="w-8"></TableHead>
+              <TableHead className="w-8">
                 <Checkbox
                   checked={
                     selectedNodes.length === localNodes.length &&
@@ -506,7 +524,7 @@ const NodeTable = ({
               <TableHead>{t("common.group")}</TableHead>
               <TableHead>{t("admin.nodeEdit.remark")}</TableHead>
               <TableHead>{t("admin.nodeTable.billing")}</TableHead>
-              <TableHead></TableHead>
+              <TableHead className="w-28 text-right"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -539,7 +557,7 @@ const ActionButtons = ({
   settings: any;
 }) => {
   return (
-    <div className="flex items-center gap-4">
+    <div className="flex items-center justify-end gap-1.5">
       <GenerateCommandButton
         settings={settings}
         nodeToken={node.token}

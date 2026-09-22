@@ -1,4 +1,4 @@
-import { Badge, Button, Callout, Card, Flex, Heading, Text, TextField } from "@radix-ui/themes";
+import { Badge, Button, Callout, TextField } from "@radix-ui/themes";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
@@ -137,23 +137,27 @@ export default function ThemesPage() {
   }
 
   return (
-    <Flex direction="column" gap="4" className="km-page-admin-themes p-2 md:p-4">
-      <Flex direction="column" gap="1">
-        <Heading size="5">{t("theme.title", "主题")}</Heading>
-        <Text color="gray">
+    <div className="km-page-admin-themes max-w-5xl space-y-6">
+      <div className="space-y-1">
+        <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">{t("theme.title", "主题")}</h1>
+        <p className="text-sm text-muted-foreground">
           {t("theme.local_description", "当前使用 Komari Emerald，可从主题市场导入并在线更新。")}
-        </Text>
-      </Flex>
-      <Card size="2">
-        <Flex direction="column" gap="3">
-          <Text weight="bold">{t("theme.remote_title", "远程主题管理")}</Text>
-          <Text size="2" color="gray">{t("theme.remote_description", "仅允许下载、校验并覆盖 Komari Emerald。")}</Text>
+        </p>
+      </div>
+
+      <div className="rounded-xl border border-border/60 bg-card p-5 shadow-2xs space-y-4">
+        <div>
+          <h2 className="text-sm font-semibold tracking-tight text-foreground">{t("theme.remote_title", "远程主题管理")}</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">{t("theme.remote_description", "仅允许下载、校验并覆盖 Komari Emerald。")}</p>
+        </div>
+        <div className="space-y-3 max-w-xl">
           <TextField.Root
             value={remoteUrl}
             onChange={(event) => setRemoteUrl(event.target.value)}
             placeholder="https://.../theme.zip 或 GitHub 仓库地址"
+            className="w-full"
           />
-          <Flex gap="2" wrap="wrap">
+          <div className="flex gap-2 flex-wrap">
             <Button disabled={remoteBusy || !remoteUrl.trim()} onClick={() => void runRemoteAction("/api/admin/theme/import", { url: remoteUrl.trim() })}>
               {t("theme.remote_import", "远程导入")}
             </Button>
@@ -163,53 +167,71 @@ export default function ThemesPage() {
             <Button variant="soft" disabled={marketBusy} onClick={() => void installFromMarket()}>
               {t("theme.market_install", "从官方市场更新")}
             </Button>
-          </Flex>
-        </Flex>
-      </Card>
-      <Flex wrap="wrap" gap="4">
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
         {themes.map((theme) => {
           const active = theme.short === currentTheme;
           const preview = theme.preview ? `/themes/${theme.short}/${theme.preview}` : undefined;
           return (
-            <Card key={theme.short} size="2" style={{ width: 320 }}>
-              <Flex direction="column" gap="3">
-                {preview && (
-                  <img
-                    src={preview}
-                    alt={text(theme.name, language)}
-                    style={{ width: "100%", height: 150, objectFit: "cover", borderRadius: 6 }}
-                  />
+            <div
+              key={theme.short}
+              className={`rounded-xl border transition-all duration-200 overflow-hidden bg-card flex flex-col justify-between shadow-2xs ${
+                active ? "border-primary ring-1 ring-primary/30" : "border-border/60 hover:border-border"
+              }`}
+            >
+              <div>
+                {preview ? (
+                  <div className="aspect-video w-full overflow-hidden bg-muted/40 border-b border-border/40">
+                    <img
+                      src={preview}
+                      alt={text(theme.name, language)}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                ) : (
+                  <div className="aspect-video w-full bg-muted/30 border-b border-border/40 flex items-center justify-center text-muted-foreground/40 text-xs">
+                    No Preview
+                  </div>
                 )}
-                <Flex justify="between" align="start" gap="2">
-                  <Flex direction="column" gap="1">
-                    <Heading size="3">{text(theme.name, language) || theme.short}</Heading>
-                    <Text size="2" color="gray">
-                      {text(theme.description, language)}
-                    </Text>
-                  </Flex>
-                  {active && <Badge color="green">{t("theme.active", "当前使用")}</Badge>}
-                </Flex>
-                <Text size="1" color="gray">
-                  {theme.author ? `${t("theme.author", "作者")}: ${text(theme.author, language)}` : theme.short}
-                  {theme.version ? ` · v${theme.version}` : ""}
-                </Text>
-                <Flex gap="2">
-                  <Button disabled={active || switching !== null} onClick={() => void selectTheme(theme.short)}>
-                    {switching === theme.short
-                      ? t("common.loading", "切换中…")
-                      : active
-                        ? t("theme.active", "当前使用")
-                        : t("theme.use", "使用此主题")}
-                  </Button>
-                  <Button variant="soft" onClick={() => navigate(`/admin/themes/settings?theme=${encodeURIComponent(theme.short)}`)}>
-                    {t("theme.settings", "配置")}
-                  </Button>
-                </Flex>
-              </Flex>
-            </Card>
+                <div className="p-4 space-y-2">
+                  <div className="flex justify-between items-start gap-2">
+                    <h3 className="font-semibold text-base tracking-tight text-foreground">{text(theme.name, language) || theme.short}</h3>
+                    {active && <Badge color="green" variant="soft">{t("theme.active", "当前使用")}</Badge>}
+                  </div>
+                  <p className="text-xs text-muted-foreground line-clamp-2">
+                    {text(theme.description, language)}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground/75">
+                    {theme.author ? `${t("theme.author", "作者")}: ${text(theme.author, language)}` : theme.short}
+                    {theme.version ? ` · v${theme.version}` : ""}
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-4 pt-0 flex gap-2">
+                <Button
+                  className="flex-1 cursor-pointer"
+                  disabled={active || switching !== null}
+                  onClick={() => void selectTheme(theme.short)}
+                  variant={active ? "soft" : "solid"}
+                >
+                  {switching === theme.short
+                    ? t("common.loading", "切换中…")
+                    : active
+                      ? t("theme.active", "当前使用")
+                      : t("theme.use", "使用此主题")}
+                </Button>
+                <Button variant="soft" className="cursor-pointer" onClick={() => navigate(`/admin/themes/settings?theme=${encodeURIComponent(theme.short)}`)}>
+                  {t("theme.settings", "配置")}
+                </Button>
+              </div>
+            </div>
           );
         })}
-      </Flex>
-    </Flex>
+      </div>
+    </div>
   );
 }

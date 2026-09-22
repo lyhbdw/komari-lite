@@ -49,7 +49,7 @@ export default function App() {
         <Theme
           appearance={resolvedAppearance}
           accentColor={color}
-          scaling="110%"
+          scaling="100%"
           className="theme-root"
           style={{
             backgroundColor: "transparent",

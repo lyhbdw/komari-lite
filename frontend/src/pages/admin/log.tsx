@@ -102,7 +102,7 @@ const LogPage = () => {
           />
         </div>
       </div>
-      <div className="km-log-output rounded-lg overflow-hidden">
+      <div className="km-log-output rounded-xl border border-border/60 bg-card overflow-hidden shadow-2xs">
         <Table>
           <TableHeader>
             <TableRow>

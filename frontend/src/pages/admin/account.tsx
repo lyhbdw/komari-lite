@@ -116,60 +116,101 @@ const InnerLayout = () => {
   }
   
   return (
-    <Flex gap="4" direction="column" align="start">
-      <Flex gap="4" direction="row" className="km-page-admin-account p-4" wrap="wrap">
-        <Flex gap="2" direction="column" className="w-full">
-          <label className="text-2xl font-bold">{t("account.title")}</label>
-          <label className="text-lg">
-            {t("account.greeting", { username: account?.username })}
-          </label>
+    <div className="km-page-admin-account max-w-4xl space-y-6">
+      <div className="space-y-1">
+        <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">{t("account.title")}</h1>
+        <p className="text-sm text-muted-foreground">
+          {t("account.greeting", { username: account?.username })}
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Username form */}
+        <div className="rounded-xl border border-border/60 bg-card p-5 shadow-2xs space-y-4">
+          <div>
+            <h2 className="text-sm font-semibold tracking-tight text-foreground">
+              {t("account.change_username_title")}
+            </h2>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              修改您在管理面板的登录用户名。
+            </p>
+          </div>
           <form
-            className="km-account-profile-form flex gap-2 flex-col"
+            className="km-account-profile-form space-y-3"
             onSubmit={handleSubmitUsernameChange}
           >
-            <label className="font-bold" htmlFor="username">
-              {t("account.change_username_title")}
-            </label>
-
             <TextField.Root
-              className="max-w-128"
+              className="w-full"
               id="username"
               name="username"
               defaultValue={account?.username}
-            ></TextField.Root>
-            <div>
-              <Button disabled={usernameSaving} type="submit">
+            />
+            <div className="pt-1">
+              <Button disabled={usernameSaving} type="submit" variant="solid" className="cursor-pointer">
                 {t("account.change_username_button")}
               </Button>
             </div>
           </form>
-          <form onSubmit={changePassword} className="km-account-password-form flex flex-col gap-2">
-            <label className="font-bold" htmlFor="old_password">
-              {t("account.change_password_title")}
-            </label>
-            <label htmlFor="password">{t("account.new_password")}</label>
-            <TextField.Root
-              className="max-w-128"
-              id="password"
-              name="password"
-              type="password"
-            ></TextField.Root>
-            <label htmlFor="password_repeat">
-              {t("account.new_password_repeat")}
-            </label>
-            <TextField.Root
-              className="max-w-128"
-              id="password_repeat"
-              name="password_repeat"
-              type="password"
-            ></TextField.Root>
+        </div>
+
+        {/* 2FA section */}
+        <div className="rounded-xl border border-border/60 bg-card p-5 shadow-2xs space-y-4">
+          <div>
+            <h2 className="text-sm font-semibold tracking-tight text-foreground">2FA 两步验证</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              提高账户安全性，登录时要求验证码。
+            </p>
+          </div>
+          <div className="km-account-2fa space-y-3">
             {account?.["2fa_enabled"] ? (
-              <>
-                <label htmlFor="password_2fa">
+              <TwoFactorEnabled />
+            ) : (
+              <TwoFactorDisabled />
+            )}
+            <p className="text-muted-foreground text-xs">
+              {t("account_settings.looking_for_backup")}
+            </p>
+          </div>
+        </div>
+
+        {/* Password form */}
+        <div className="rounded-xl border border-border/60 bg-card p-5 shadow-2xs space-y-4 md:col-span-2">
+          <div>
+            <h2 className="text-sm font-semibold tracking-tight text-foreground">
+              {t("account.change_password_title")}
+            </h2>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              定期更新密码以保证安全。
+            </p>
+          </div>
+          <form onSubmit={changePassword} className="km-account-password-form max-w-lg space-y-3">
+            <div className="space-y-1">
+              <label htmlFor="password" className="text-xs font-medium text-foreground">{t("account.new_password")}</label>
+              <TextField.Root
+                className="w-full"
+                id="password"
+                name="password"
+                type="password"
+              />
+            </div>
+            <div className="space-y-1">
+              <label htmlFor="password_repeat" className="text-xs font-medium text-foreground">
+                {t("account.new_password_repeat")}
+              </label>
+              <TextField.Root
+                className="w-full"
+                id="password_repeat"
+                name="password_repeat"
+                type="password"
+              />
+            </div>
+            {account?.["2fa_enabled"] ? (
+              <div className="space-y-1">
+                <label htmlFor="password_2fa" className="text-xs font-medium text-foreground">
                   {t("account.2fa_otp_input_prompt")}
                 </label>
                 <TextField.Root
-                  className="max-w-128"
+                  className="w-full"
                   id="password_2fa"
                   name="password_2fa"
                   type="number"
@@ -179,30 +220,17 @@ const InnerLayout = () => {
                     setPasswordTwoFa((e.target as HTMLInputElement).value)
                   }
                 />
-              </>
+              </div>
             ) : null}
-            <div>
-              <Button disabled={passwordSaving} type="submit">
+            <div className="pt-2">
+              <Button disabled={passwordSaving} type="submit" variant="solid" className="cursor-pointer">
                 {t("account.change_password_button")}
               </Button>
             </div>
           </form>
-        </Flex>
-        <Flex direction="column" className="km-account-2fa gap-2">
-          <label className="font-bold text-2xl">2FA</label>
-          {account?.["2fa_enabled"] ? (
-            <TwoFactorEnabled />
-          ) : (
-            <TwoFactorDisabled></TwoFactorDisabled>
-          )}
-          <Flex gap="4" align="center" justify="start">
-            <label className="text-muted-foreground text-sm">
-              {t("account_settings.looking_for_backup")}
-            </label>
-          </Flex>
-        </Flex>
-      </Flex>
-    </Flex>
+        </div>
+      </div>
+    </div>
   );
 };
 const TwoFactorDisabled = () => {

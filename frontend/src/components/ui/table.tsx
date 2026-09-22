@@ -10,11 +10,8 @@ function Table({ className, ...props }: React.ComponentProps<"table">) {
     >
       <table
         data-slot="table"
-        className={cn("km-ui-table w-full caption-bottom text-sm", className)}
+        className={cn("km-ui-table w-full caption-bottom text-sm border-collapse", className)}
         {...props}
-        style={{
-          backgroundColor: "var(--accent-1)", // 浅色背景
-        }}
       />
     </div>
   );
@@ -24,10 +21,7 @@ function TableHeader({ className, ...props }: React.ComponentProps<"thead">) {
   return (
     <thead
       data-slot="table-header"
-      className={cn("km-ui-table-header [&_tr]:border-b", className)}
-      style={{
-        backgroundColor: "var(--accent-2)", // 更浅的表头背景
-      }}
+      className={cn("km-ui-table-header border-b border-border/60 bg-muted/30", className)}
       {...props}
     />
   );
@@ -37,7 +31,7 @@ function TableBody({ className, ...props }: React.ComponentProps<"tbody">) {
   return (
     <tbody
       data-slot="table-body"
-      className={cn("km-ui-table-body [&_tr:last-child]:border-0", className)}
+      className={cn("km-ui-table-body divide-y divide-border/40 [&_tr:last-child]:border-0", className)}
       {...props}
     />
   );
@@ -47,10 +41,7 @@ function TableFooter({ className, ...props }: React.ComponentProps<"tfoot">) {
   return (
     <tfoot
       data-slot="table-footer"
-      className={cn("border-t font-medium [&>tr]:last:border-b-0", className)}
-      style={{
-        backgroundColor: "var(--accent-2)", // 浅色底部
-      }}
+      className={cn("border-t border-border/60 bg-muted/20 font-medium [&>tr]:last:border-b-0", className)}
       {...props}
     />
   );
@@ -61,7 +52,7 @@ function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
     <tr
       data-slot="table-row"
       className={cn(
-        "km-ui-table-row transition-colors border-b border-[var(--accent-2)] hover:bg-[var(--accent-2)] data-[state=selected]:bg-[var(--accent-3)]",
+        "km-ui-table-row transition-colors border-b border-border/40 hover:bg-muted/40 data-[state=selected]:bg-muted/60",
         className
       )}
       {...props}
@@ -74,12 +65,9 @@ function TableHead({ className, ...props }: React.ComponentProps<"th">) {
     <th
       data-slot="table-head"
       className={cn(
-        "km-ui-table-head h-10 px-2 text-left align-middle font-medium whitespace-nowrap text-[var(--accent-12)] [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]",
+        "km-ui-table-head h-10 px-3.5 text-left align-middle font-medium text-xs text-muted-foreground uppercase tracking-wider whitespace-nowrap [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]",
         className
       )}
-      style={{
-        backgroundColor: "var(--accent-4)", // 浅色表头
-      }}
       {...props}
     />
   );
@@ -90,7 +78,7 @@ function TableCell({ className, ...props }: React.ComponentProps<"td">) {
     <td
       data-slot="table-cell"
       className={cn(
-        "km-ui-table-cell p-2 align-middle whitespace-nowrap text-[var(--accent-12)] [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]",
+        "km-ui-table-cell p-3.5 align-middle text-sm text-foreground whitespace-nowrap [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]",
         className
       )}
       {...props}
@@ -105,7 +93,7 @@ function TableCaption({
   return (
     <caption
       data-slot="table-caption"
-      className={cn("mt-4 text-sm text-[var(--accent-10)]", className)}
+      className={cn("mt-4 text-xs text-muted-foreground", className)}
       {...props}
     />
   );
