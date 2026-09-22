@@ -2,6 +2,8 @@ package admin
 
 import (
 	"archive/zip"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -19,6 +21,7 @@ import (
 	"github.com/komari-monitor/komari/internal/config"
 	"github.com/komari-monitor/komari/web/api"
 	"github.com/komari-monitor/komari/web/public"
+	logger "github.com/komari-monitor/komari/utils/log"
 )
 
 const (
@@ -450,7 +453,38 @@ func downloadThemeSource(rawURL string) ([]byte, error) {
 	return downloadThemeFromURL(rawURL)
 }
 
-func updateThemeFromBytes(c *gin.Context, data []byte) {
+// verifyThemeSHA256 校验下载内容与请求方提供的可选 sha256 是否一致。
+// expected 为空表示调用方未提供校验值，返回 unchecked=true。
+func verifyThemeSHA256(data []byte, expected string) (unchecked bool, err error) {
+	expected = strings.ToLower(strings.TrimSpace(expected))
+	if expected == "" {
+		return true, nil
+	}
+	if len(expected) != sha256.Size*2 {
+		return false, fmt.Errorf("sha256 字段格式无效：应为 %d 个十六进制字符", sha256.Size*2)
+	}
+	digest := sha256.Sum256(data)
+	if hex.EncodeToString(digest[:]) != expected {
+		return false, fmt.Errorf("主题包 SHA-256 校验失败：期望 %s，实际 %s", expected, hex.EncodeToString(digest[:]))
+	}
+	return false, nil
+}
+
+// warnThemeUnverified 在未提供 sha256 时记录警告，提示本次下载没有完整性校验。
+func warnThemeUnverified(source string) {
+	logger.Warn("theme", "[theme-update] downloading from "+source+" without sha256 verification; the downloaded archive is not integrity-checked")
+}
+
+func updateThemeFromBytes(c *gin.Context, data []byte, sha256Expected string) {
+	unchecked, err := verifyThemeSHA256(data, sha256Expected)
+	if err != nil {
+		// 校验失败：拒绝安装。data 仅在内存中，不落盘，无需额外清理。
+		api.RespondError(c, http.StatusBadRequest, err.Error())
+		return
+	}
+	if unchecked {
+		warnThemeUnverified("update source")
+	}
 	tempFile, err := os.CreateTemp("./data/theme", ".Emerald-download-*.zip")
 	if err != nil {
 		api.RespondError(c, http.StatusInternalServerError, "保存文件失败: "+err.Error())
@@ -486,6 +520,9 @@ func UpdateTheme(c *gin.Context) {
 		URL      string `json:"url"`                      // 新的URL地址（可选）
 		GitOwner string `json:"git_owner"`                // GitHub仓库所有者（可选）
 		GitRepo  string `json:"git_repo"`                 // GitHub仓库名称（可选）
+		// SHA256 为可选的下载包完整性校验值（hex）。提供时下载后校验，
+		// 不匹配则拒绝安装；未提供时仅记录无校验警告。
+		SHA256 string `json:"sha256"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -526,13 +563,15 @@ func UpdateTheme(c *gin.Context) {
 			api.RespondError(c, http.StatusBadRequest, "下载主题失败: "+err.Error())
 			return
 		}
-		updateThemeFromBytes(c, result)
+		updateThemeFromBytes(c, result, req.SHA256)
 		return
 	}
 
 	// 方式1和方式4: 尝试从原始URL下载主题
 	// 如果原始URL是GitHub仓库地址，则自动获取最新release
 	var themeData []byte
+	// 记录实际下载来源，用于无 sha256 校验时的警告日志。
+	var themeSource string
 	// 不保存下载链接，更新后由主题覆盖
 	//var downloadURL string
 	// var err2 error
@@ -548,6 +587,7 @@ func UpdateTheme(c *gin.Context) {
 			if err == nil {
 				// 使用获取到的GitHub release下载链接下载主题
 				themeData, _ = downloadThemeFromURL(gitHubURL)
+				themeSource = gitHubURL
 				//if err2 == nil {
 				// 注意：这里我们保存的是release的下载链接，而不是GitHub仓库地址
 				// 这样做是为了在下载成功后，将这个具体的release下载链接保存到主题配置中
@@ -558,6 +598,7 @@ func UpdateTheme(c *gin.Context) {
 		} else {
 			// 原始URL不是GitHub仓库地址，直接尝试下载（方式1）
 			themeData, _ = downloadThemeFromURL(themeInfo.URL)
+			themeSource = themeInfo.URL
 			//if err2 == nil {
 			// downloadURL = themeInfo.URL
 			//}
@@ -583,6 +624,7 @@ func UpdateTheme(c *gin.Context) {
 				api.RespondError(c, http.StatusBadRequest, "从GitHub下载主题失败: "+err.Error())
 				return
 			}
+			themeSource = gitHubURL
 			// 保存下载链接，稍后更新到主题配置中
 			// downloadURL = gitHubURL
 		} else if req.URL != "" {
@@ -604,6 +646,7 @@ func UpdateTheme(c *gin.Context) {
 					api.RespondError(c, http.StatusBadRequest, "从GitHub下载主题失败: "+err.Error())
 					return
 				}
+				themeSource = gitHubURL
 				// 保存GitHub仓库URL，而不是release下载链接，以便将来可以获取最新版本
 				// 这是一个重要的设计决策：我们保存的是GitHub仓库URL，而不是具体的release下载链接
 				// 这样在下次更新时，系统会再次检测到这是GitHub仓库，并自动获取最新的release
@@ -615,6 +658,7 @@ func UpdateTheme(c *gin.Context) {
 					api.RespondError(c, http.StatusBadRequest, "从新URL下载主题失败: "+err.Error())
 					return
 				}
+				themeSource = req.URL
 				// downloadURL = req.URL
 			}
 		}
@@ -631,6 +675,17 @@ func UpdateTheme(c *gin.Context) {
 	// 2. 原始URL是GitHub仓库，自动获取最新release下载
 	// 3. 用户提供的新URL下载
 	// 4. 用户提供的GitHub仓库信息，获取最新release下载
+
+	// 可选 sha256 完整性校验：提供时校验下载内容，不匹配则拒绝安装
+	// （数据尚未落盘，无需清理）；未提供时记录无校验警告。
+	unchecked, err := verifyThemeSHA256(themeData, req.SHA256)
+	if err != nil {
+		api.RespondError(c, http.StatusBadRequest, err.Error())
+		return
+	}
+	if unchecked {
+		warnThemeUnverified(themeSource)
+	}
 
 	// 临时文件名（随机名，避免并发请求互相覆盖/竞争固定路径）
 	tempFile, err := os.CreateTemp("", "komari-theme-download-*.zip")
