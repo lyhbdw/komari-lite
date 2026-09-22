@@ -381,6 +381,14 @@ func (s *Store) Close() error {
 	if err := s.flushAllHotRollups(flushCtx); err != nil {
 		firstErr = err
 	}
+	// flushAllHotRollups persists every remaining minute bucket and feeds the
+	// sealed ones into their coarse parents, so at this point the minute tier
+	// is durable. Flush the coarse tiers the same way: seal every in-memory
+	// parent (its children are already persisted) tier by tier so a shutdown
+	// no longer discards up to 24h+10min of the top tier's rollup data.
+	if _, err := s.flushAllCoarseRollups(flushCtx); err != nil && firstErr == nil {
+		firstErr = err
+	}
 	cancel()
 	s.rawMu.Lock()
 	s.raw = nil

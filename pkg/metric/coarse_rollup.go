@@ -110,10 +110,29 @@ func (s *Store) flushClosedCoarseRollups(ctx context.Context, now time.Time) (in
 }
 
 func (s *Store) flushClosedCoarseRollupsUnderView(ctx context.Context, now time.Time) (int, error) {
+	return s.flushDueCoarseRollupsUnderView(ctx, now, false)
+}
+
+// flushAllCoarseRollups seals and persists every in-memory coarse parent,
+// ignoring the late-arrival grace window. It runs after flushAllHotRollups so
+// the minute children feeding each parent are already durable; writing the
+// parent therefore cannot orphan finer-grained data.
+func (s *Store) flushAllCoarseRollups(ctx context.Context) (int, error) {
+	s.rollupViewMu.Lock()
+	defer s.rollupViewMu.Unlock()
+	return s.flushDueCoarseRollupsUnderView(ctx, time.Now().UTC(), true)
+}
+
+func (s *Store) flushDueCoarseRollupsUnderView(ctx context.Context, now time.Time, all bool) (int, error) {
 	now = now.UTC()
 	written := 0
 	for {
-		closed := s.takeClosedCoarseRollups(now)
+		var closed []closedCoarseRollup
+		if all {
+			closed = s.takeAllCoarseRollups()
+		} else {
+			closed = s.takeClosedCoarseRollups(now)
+		}
 		if len(closed) == 0 {
 			return written, nil
 		}
@@ -166,11 +185,23 @@ func (s *Store) filterClosedCoarseRollups(ctx context.Context, closed []closedCo
 }
 
 func (s *Store) takeClosedCoarseRollups(now time.Time) []closedCoarseRollup {
+	return s.takeCoarseRollupsDue(now, false)
+}
+
+// takeAllCoarseRollups takes every in-memory parent regardless of the
+// late-arrival grace window. It is the shutdown counterpart of
+// takeClosedCoarseRollups and still seals one tier at a time so a sealed
+// parent can feed the next tier before that tier is taken.
+func (s *Store) takeAllCoarseRollups() []closedCoarseRollup {
+	return s.takeCoarseRollupsDue(time.Time{}, true)
+}
+
+func (s *Store) takeCoarseRollupsDue(now time.Time, all bool) []closedCoarseRollup {
 	s.coarseMu.Lock()
 	defer s.coarseMu.Unlock()
 	var interval time.Duration
 	for key := range s.coarse {
-		if key.bucket+key.interval.Milliseconds()+coarseRollupGrace.Milliseconds() > now.UnixMilli() {
+		if !all && key.bucket+key.interval.Milliseconds()+coarseRollupGrace.Milliseconds() > now.UnixMilli() {
 			continue
 		}
 		if interval == 0 || key.interval < interval {
@@ -182,7 +213,10 @@ func (s *Store) takeClosedCoarseRollups(now time.Time) []closedCoarseRollup {
 	}
 	closed := make([]closedCoarseRollup, 0)
 	for key, parent := range s.coarse {
-		if key.interval != interval || key.bucket+key.interval.Milliseconds()+coarseRollupGrace.Milliseconds() > now.UnixMilli() {
+		if key.interval != interval {
+			continue
+		}
+		if !all && key.bucket+key.interval.Milliseconds()+coarseRollupGrace.Milliseconds() > now.UnixMilli() {
 			continue
 		}
 		bucket := newRollupBucket(s.cfg.RollupPolicy.compression())

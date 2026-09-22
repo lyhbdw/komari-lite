@@ -386,7 +386,7 @@ func TestLateReplacementChangesSealedPercentile(t *testing.T) {
 	}
 }
 
-func TestRestartDropsUnsealedCoarseParents(t *testing.T) {
+func TestRestartFlushesUnsealedCoarseParents(t *testing.T) {
 	ctx := context.Background()
 	policy := RollupPolicy{Tiers: []RollupTier{
 		{Interval: time.Minute, Retention: 24 * time.Hour},
@@ -416,6 +416,8 @@ func TestRestartDropsUnsealedCoarseParents(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// Close now flushes unsealed coarse parents alongside the hot minute
+	// buckets, so a restart no longer discards the pending 5-minute summary.
 	reopened, err := Open(ctx, SQLite(path, WithRollupPolicy(policy)))
 	if err != nil {
 		t.Fatal(err)
@@ -428,8 +430,11 @@ func TestRestartDropsUnsealedCoarseParents(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(rows) != 0 {
-		t.Fatalf("unsealed parent survived restart: %#v", rows)
+	if len(rows) != 1 {
+		t.Fatalf("unsealed parent missing after restart: %#v", rows)
+	}
+	if rows[0].entityID != "n1" || rows[0].bucketData.count != 1 || rows[0].bucketData.lastVal != 7 {
+		t.Fatalf("flushed parent = %#v, want one n1 sample of 7", rows[0])
 	}
 }
 
