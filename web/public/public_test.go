@@ -101,7 +101,9 @@ func TestStaticRestrictedDoesNotServeCustomAssetOverride(t *testing.T) {
 	if err != nil {
 		t.Fatalf("open config db: %v", err)
 	}
-	config.SetDb(db)
+	if err := config.SetDb(db); err != nil {
+		t.Fatalf("set config db: %v", err)
+	}
 	if err := config.Set(config.ThemeKey, "custom"); err != nil {
 		t.Fatalf("set custom theme: %v", err)
 	}

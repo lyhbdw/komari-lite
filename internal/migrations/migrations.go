@@ -2,6 +2,7 @@ package migrations
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	logger "github.com/komari-monitor/komari/utils/log"
 	"reflect"
@@ -187,7 +188,10 @@ func migrateLegacyLoadNotification(db *gorm.DB) error {
 }
 
 func migrateLegacyMessageSenderConfig(db *gorm.DB) error {
-	if db.Migrator().HasTable(&models.MessageSenderProvider{}) {
+	// 列级检查而非表级：HasTable guard 会让中途失败的迁移不可重入
+	// （表已建好但列还没删完时，重跑会直接跳过剩余步骤）。
+	if !hasTableColumn(db, "configs", "telegram_bot_token") &&
+		!hasTableColumn(db, "configs", "email_host") {
 		return nil
 	}
 
@@ -208,37 +212,59 @@ func migrateLegacyMessageSenderConfig(db *gorm.DB) error {
 	if err := db.Raw("SELECT * FROM configs LIMIT 1").Scan(&oldData).Error; err != nil {
 		return fmt.Errorf("get legacy message sender config: %w", err)
 	}
-	if err := db.AutoMigrate(&models.MessageSenderProvider{}); err != nil {
-		return err
-	}
 
-	if oldData.NotificationMethod == "telegram" && oldData.TelegramBotToken != "" {
-		telegramConfig := map[string]interface{}{
-			"bot_token": oldData.TelegramBotToken,
-			"chat_id":   oldData.TelegramChatID,
-			"endpoint":  oldData.TelegramEndpoint,
-		}
-		if telegramConfig["endpoint"] == "" {
-			telegramConfig["endpoint"] = "https://api.telegram.org/bot"
-		}
-		if err := saveLegacyMessageSenderConfig(db, "telegram", telegramConfig); err != nil {
+	// 整个迁移子步骤包在一个事务里：AutoMigrate、保存 provider 配置、
+	// 删除旧列要么全部完成，要么全部回滚，保证可重入。
+	return db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.AutoMigrate(&models.MessageSenderProvider{}); err != nil {
 			return err
 		}
-	}
 
-	for _, column := range []string{
-		"telegram_bot_token",
-		"telegram_chat_id",
-		"telegram_endpoint",
-	} {
-		if hasTableColumn(db, "configs", column) {
-			if err := db.Migrator().DropColumn(&legacyModelConfig{}, column); err != nil {
+		if oldData.NotificationMethod == "telegram" && oldData.TelegramBotToken != "" {
+			telegramConfig := map[string]interface{}{
+				"bot_token": oldData.TelegramBotToken,
+				"chat_id":   oldData.TelegramChatID,
+				"endpoint":  oldData.TelegramEndpoint,
+			}
+			if telegramConfig["endpoint"] == "" {
+				telegramConfig["endpoint"] = "https://api.telegram.org/bot"
+			}
+			if err := saveLegacyMessageSenderConfig(tx, "telegram", telegramConfig); err != nil {
 				return err
 			}
 		}
-	}
 
-	return nil
+		// 旧 configs 表在 migrateLegacyConfigToItems 中会被整体 drop，其中
+		// email_* 列若不在此处读出并保存，邮件配置会被静默丢弃。
+		if oldData.NotificationMethod == "email" && oldData.EmailHost != "" {
+			emailConfig := map[string]interface{}{
+				"host":     oldData.EmailHost,
+				"port":     oldData.EmailPort,
+				"username": oldData.EmailUsername,
+				"password": oldData.EmailPassword,
+				"sender":   oldData.EmailSender,
+				"receiver": oldData.EmailReceiver,
+				"use_ssl":  oldData.EmailUseSSL,
+			}
+			if err := saveLegacyMessageSenderConfig(tx, "email", emailConfig); err != nil {
+				return err
+			}
+		}
+
+		for _, column := range []string{
+			"telegram_bot_token",
+			"telegram_chat_id",
+			"telegram_endpoint",
+		} {
+			if hasTableColumn(tx, "configs", column) {
+				if err := tx.Migrator().DropColumn(&legacyModelConfig{}, column); err != nil {
+					return err
+				}
+			}
+		}
+
+		return nil
+	})
 }
 
 func saveLegacyMessageSenderConfig(db *gorm.DB, name string, config map[string]interface{}) error {
@@ -255,20 +281,24 @@ func saveLegacyMessageSenderConfig(db *gorm.DB, name string, config map[string]i
 func migrateLegacyConfigToItems(db *gorm.DB) error {
 	logger.InfoArgs("migration", "[>1.1.4] Moving legacy config data...")
 
-	var oldData legacyConfig
-	if err := db.Order("id desc").First(&oldData).Error; err != nil {
-		if err := db.Migrator().DropTable("configs"); err != nil {
+	// 整个读-写-drop 包在一个事务里：First 读不到行时也要在同一事务内
+	// drop 旧表并建新表，避免 drop 成功而建表失败留下“旧表没了、新表也没
+	// 建成”的中间状态（SQLite 的 DDL 同样参与事务回滚）。
+	return db.Transaction(func(tx *gorm.DB) error {
+		var oldData legacyConfig
+		err := tx.Order("id desc").First(&oldData).Error
+		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 			return err
 		}
-		return db.AutoMigrate(&appconfig.ConfigItem{})
-	}
 
-	newRows, err := legacyConfigRows(oldData)
-	if err != nil {
-		return err
-	}
+		var newRows []appconfig.ConfigItem
+		if err == nil {
+			newRows, err = legacyConfigRows(oldData)
+			if err != nil {
+				return err
+			}
+		}
 
-	return db.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Migrator().DropTable("configs"); err != nil {
 			return err
 		}
@@ -317,52 +347,58 @@ func migrateLegacyClientInfo(db *gorm.DB) error {
 	}
 
 	logger.InfoArgs("migration", "[>0.0.5] Legacy ClientInfo table detected, starting data migration...")
-	if err := db.AutoMigrate(&models.Client{}); err != nil {
-		return err
-	}
 
-	var clientInfos []ClientInfo
-	if err := db.Find(&clientInfos).Error; err != nil {
-		return fmt.Errorf("read legacy ClientInfo table: %w", err)
-	}
-
-	for _, info := range clientInfos {
-		var client models.Client
-		if err := db.Where("uuid = ?", info.UUID).First(&client).Error; err != nil {
-			logger.Errorf("migration", "Could not find Client record with UUID %s: %v", info.UUID, err)
-			continue
+	// 逐行 Save + RenameTable 全部包进单个事务：clients 表行数少，单事务
+	// 安全；中途失败时已写入的行和改名一半的状态整体回滚，重跑时旧表
+	// 仍在，迁移可重入（SQLite 的 RenameTable DDL 同样可回滚）。
+	return db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.AutoMigrate(&models.Client{}); err != nil {
+			return err
 		}
 
-		client.Name = info.Name
-		client.CpuName = info.CpuName
-		client.Virtualization = info.Virtualization
-		client.Arch = info.Arch
-		client.CpuCores = info.CpuCores
-		client.OS = info.OS
-		client.GpuName = info.GpuName
-		client.IPv4 = info.IPv4
-		client.IPv6 = info.IPv6
-		client.Region = info.Region
-		client.Remark = info.Remark
-		client.PublicRemark = info.PublicRemark
-		client.MemTotal = info.MemTotal
-		client.SwapTotal = info.SwapTotal
-		client.DiskTotal = info.DiskTotal
-		client.Version = info.Version
-		client.Weight = info.Weight
-		client.Price = info.Price
-		client.BillingCycle = info.BillingCycle
-		client.ExpiredAt = info.ExpiredAt
-		if err := db.Save(&client).Error; err != nil {
-			return fmt.Errorf("update Client record %s: %w", info.UUID, err)
+		var clientInfos []ClientInfo
+		if err := tx.Find(&clientInfos).Error; err != nil {
+			return fmt.Errorf("read legacy ClientInfo table: %w", err)
 		}
-	}
 
-	if err := db.Migrator().RenameTable("client_infos", "client_infos_backup"); err != nil {
-		return fmt.Errorf("backup legacy ClientInfo table: %w", err)
-	}
-	logger.InfoArgs("migration", "Data migration completed, old table has been backed up as client_infos_backup")
-	return nil
+		for _, info := range clientInfos {
+			var client models.Client
+			if err := tx.Where("uuid = ?", info.UUID).First(&client).Error; err != nil {
+				logger.Errorf("migration", "Could not find Client record with UUID %s: %v", info.UUID, err)
+				continue
+			}
+
+			client.Name = info.Name
+			client.CpuName = info.CpuName
+			client.Virtualization = info.Virtualization
+			client.Arch = info.Arch
+			client.CpuCores = info.CpuCores
+			client.OS = info.OS
+			client.GpuName = info.GpuName
+			client.IPv4 = info.IPv4
+			client.IPv6 = info.IPv6
+			client.Region = info.Region
+			client.Remark = info.Remark
+			client.PublicRemark = info.PublicRemark
+			client.MemTotal = info.MemTotal
+			client.SwapTotal = info.SwapTotal
+			client.DiskTotal = info.DiskTotal
+			client.Version = info.Version
+			client.Weight = info.Weight
+			client.Price = info.Price
+			client.BillingCycle = info.BillingCycle
+			client.ExpiredAt = info.ExpiredAt
+			if err := tx.Save(&client).Error; err != nil {
+				return fmt.Errorf("update Client record %s: %w", info.UUID, err)
+			}
+		}
+
+		if err := tx.Migrator().RenameTable("client_infos", "client_infos_backup"); err != nil {
+			return fmt.Errorf("backup legacy ClientInfo table: %w", err)
+		}
+		logger.InfoArgs("migration", "Data migration completed, old table has been backed up as client_infos_backup")
+		return nil
+	})
 }
 
 func migrateLegacyPingAllClientsExpansion(db *gorm.DB) error {
@@ -372,52 +408,58 @@ func migrateLegacyPingAllClientsExpansion(db *gorm.DB) error {
 	if !hasTableColumn(db, "ping_tasks", "all_clients") {
 		return nil
 	}
-	if !hasTableColumn(db, "ping_tasks", "clients") {
-		if err := db.Exec("ALTER TABLE ping_tasks ADD COLUMN clients text").Error; err != nil {
-			return fmt.Errorf("add clients column for legacy ping task expansion: %w", err)
-		}
-	}
-	if err := db.Table("ping_tasks").
-		Where("clients IS NULL OR clients = '' OR clients = '[]' OR clients = 'null'").
-		Update("clients", models.StringArray{}).Error; err != nil {
-		return fmt.Errorf("normalize legacy ping task clients: %w", err)
-	}
 
-	var pingTasks []legacyPingTask
-	if err := db.Table("ping_tasks").Select("id, clients").Where("all_clients = ?", true).Scan(&pingTasks).Error; err != nil {
-		return fmt.Errorf("find legacy all_clients ping tasks: %w", err)
-	}
-	if len(pingTasks) == 0 {
+	// 写入阶段（加列、规范化、展开）包进一个事务：中途失败时整体回滚，
+	// 重跑时 all_clients 列仍在，迁移可重入（SQLite 的 ALTER TABLE DDL
+	// 同样参与事务回滚）。
+	return db.Transaction(func(tx *gorm.DB) error {
+		if !hasTableColumn(tx, "ping_tasks", "clients") {
+			if err := tx.Exec("ALTER TABLE ping_tasks ADD COLUMN clients text").Error; err != nil {
+				return fmt.Errorf("add clients column for legacy ping task expansion: %w", err)
+			}
+		}
+		if err := tx.Table("ping_tasks").
+			Where("clients IS NULL OR clients = '' OR clients = '[]' OR clients = 'null'").
+			Update("clients", models.StringArray{}).Error; err != nil {
+			return fmt.Errorf("normalize legacy ping task clients: %w", err)
+		}
+
+		var pingTasks []legacyPingTask
+		if err := tx.Table("ping_tasks").Select("id, clients").Where("all_clients = ?", true).Scan(&pingTasks).Error; err != nil {
+			return fmt.Errorf("find legacy all_clients ping tasks: %w", err)
+		}
+		if len(pingTasks) == 0 {
+			return nil
+		}
+
+		var clients []models.Client
+		if err := tx.Select("uuid").Find(&clients).Error; err != nil {
+			return fmt.Errorf("find clients for legacy ping task expansion: %w", err)
+		}
+		if len(clients) == 0 {
+			return nil
+		}
+
+		allUUIDs := make(models.StringArray, 0, len(clients))
+		for _, client := range clients {
+			if client.UUID != "" {
+				allUUIDs = append(allUUIDs, client.UUID)
+			}
+		}
+		if len(allUUIDs) == 0 {
+			return nil
+		}
+
+		for _, task := range pingTasks {
+			if !isLegacyPingClientsEmpty(task.Clients) {
+				continue
+			}
+			if err := tx.Table("ping_tasks").Where("id = ?", task.Id).Update("clients", allUUIDs).Error; err != nil {
+				return fmt.Errorf("expand legacy all_clients ping task %d: %w", task.Id, err)
+			}
+		}
 		return nil
-	}
-
-	var clients []models.Client
-	if err := db.Select("uuid").Find(&clients).Error; err != nil {
-		return fmt.Errorf("find clients for legacy ping task expansion: %w", err)
-	}
-	if len(clients) == 0 {
-		return nil
-	}
-
-	allUUIDs := make(models.StringArray, 0, len(clients))
-	for _, client := range clients {
-		if client.UUID != "" {
-			allUUIDs = append(allUUIDs, client.UUID)
-		}
-	}
-	if len(allUUIDs) == 0 {
-		return nil
-	}
-
-	for _, task := range pingTasks {
-		if !isLegacyPingClientsEmpty(task.Clients) {
-			continue
-		}
-		if err := db.Table("ping_tasks").Where("id = ?", task.Id).Update("clients", allUUIDs).Error; err != nil {
-			return fmt.Errorf("expand legacy all_clients ping task %d: %w", task.Id, err)
-		}
-	}
-	return nil
+	})
 }
 
 func isLegacyPingClientsEmpty(raw string) bool {

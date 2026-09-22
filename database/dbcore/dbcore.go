@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -15,6 +16,7 @@ import (
 	"github.com/komari-monitor/komari/cmd/flags"
 	"github.com/komari-monitor/komari/database/models"
 	"github.com/komari-monitor/komari/internal/config"
+	appconfig "github.com/komari-monitor/komari/internal/config"
 	"github.com/komari-monitor/komari/internal/migrations"
 	"github.com/komari-monitor/komari/internal/sqlitetune"
 	logger "github.com/komari-monitor/komari/utils/log"
@@ -24,6 +26,8 @@ import (
 )
 
 // zipDirectoryExcluding 将 srcDir 打包为 dstZip，exclude 是绝对路径集合需要排除
+//
+// 任一步失败时删除半成品 zip，避免留下截断的归档被误当作可用备份。
 func zipDirectoryExcluding(srcDir, dstZip string, exclude map[string]struct{}) error {
 	// 规范化排除路径为绝对路径
 	normExclude := make(map[string]struct{}, len(exclude))
@@ -39,7 +43,6 @@ func zipDirectoryExcluding(srcDir, dstZip string, exclude map[string]struct{}) e
 	defer out.Close()
 
 	zw := zip.NewWriter(out)
-	defer zw.Close()
 
 	absSrc, _ := filepath.Abs(srcDir)
 	walkErr := filepath.Walk(absSrc, func(path string, info os.FileInfo, err error) error {
@@ -87,9 +90,17 @@ func zipDirectoryExcluding(srcDir, dstZip string, exclude map[string]struct{}) e
 		return nil
 	})
 	if walkErr != nil {
+		_ = zw.Close()
+		_ = out.Close()
+		_ = os.Remove(dstZip)
 		return walkErr
 	}
-	return zw.Close()
+	if err := zw.Close(); err != nil {
+		_ = out.Close()
+		_ = os.Remove(dstZip)
+		return err
+	}
+	return out.Close()
 }
 
 var (
@@ -152,7 +163,7 @@ func backupOnVersionUpgrade() {
 		return
 	}
 
-	prevVersion, readErr := config.GetAs[string](SystemVersionKey)
+	prevVersion, readErr := readSystemVersion()
 	prevVersion = strings.TrimSpace(prevVersion)
 	versionRecorded := readErr == nil && prevVersion != ""
 
@@ -167,7 +178,9 @@ func backupOnVersionUpgrade() {
 		return
 	}
 
-	backupDir := filepath.Join(".", "data", "backup")
+	// 备份目录从实际 DB 路径推算（与 createUpgradeBackup 的 dataDir 一致），
+	// 避免硬编码 ./data/backup 与自定义 -database 路径不一致。
+	backupDir := filepath.Join(filepath.Dir(resolveDatabaseFile()), "backup")
 	if err := os.MkdirAll(backupDir, 0755); err != nil {
 		logger.Errorf("dbcore", "[upgrade-backup] failed to create backup dir: %v", err)
 		return
@@ -301,8 +314,34 @@ func snapshotSQLiteConnection(db *sql.DB, destPath string) error {
 	return err
 }
 
+// readSystemVersion 读取配置库中的版本标记。
+//
+// backupOnVersionUpgrade 现在在 config.SetDb 之前执行（必须在破坏性迁移前备份），
+// 因此不能走 config.GetAs；这里直接通过全局 gorm 实例读取 configs 表。
+// configs 表可能尚未建表（全新安装），此时返回空版本。
+func readSystemVersion() (string, error) {
+	if instance == nil {
+		return "", fmt.Errorf("main database is not initialized")
+	}
+	if !instance.Migrator().HasTable(&appconfig.ConfigItem{}) {
+		return "", nil
+	}
+	var item appconfig.ConfigItem
+	if err := instance.Where("key = ?", SystemVersionKey).First(&item).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return "", nil
+		}
+		return "", err
+	}
+	return item.Value, nil
+}
+
 // writeVersionMarker 将当前 versionID 写入配置库.
 func writeVersionMarker() {
+	if instance == nil {
+		logger.Errorf("dbcore", "[upgrade-backup] cannot persist version marker: main database is not initialized")
+		return
+	}
 	if err := config.Set(SystemVersionKey, versionID); err != nil {
 		logger.Errorf("dbcore", "[upgrade-backup] failed to persist version marker: %v", err)
 	}
@@ -324,7 +363,10 @@ func buildSQLiteDSN(databaseFile string) string {
 	}
 
 	if databaseFile == ":memory:" {
-		return "file::memory:?cache=shared&" + params
+		// 不使用 cache=shared：主库固定单连接（SetMaxOpenConns(1)），
+		// 共享缓存没有意义，且其表级锁（SQLITE_LOCKED，busy_timeout 对其
+		// 无效）与 metricstore/config.go 阐述的问题一致。
+		return "file::memory:?" + params
 	}
 
 	return "file:" + filepath.ToSlash(databaseFile) + separator + params
@@ -419,21 +461,37 @@ func doInitialize() error {
 	default:
 		return fmt.Errorf("unsupported database type: %s (supported: %s)", flags.DatabaseType, flags.SupportedDatabaseTypes())
 	}
+	// 版本升级备份必须在 migrations.Run 之前执行：startup migrations 会 drop 旧表、
+	// 改写时间戳，若先迁移再备份，备份里已是破坏后的数据，无法用于回滚。
+	// 此处配置库尚未就绪，backupOnVersionUpgrade 通过 instance 直接读取版本标记。
+	backupOnVersionUpgrade()
+	if err := config.SetDb(instance); err != nil {
+		if sqlDB, dbErr := instance.DB(); dbErr == nil {
+			_ = sqlDB.Close()
+		}
+		instance = nil
+		return fmt.Errorf("failed to initialize config store: %w", err)
+	}
+
 	if err := migrations.Run(migrations.Context{DB: instance}); err != nil {
+		// 迁移失败时关闭已打开的连接池，避免初始化失败后泄漏。
+		if sqlDB, dbErr := instance.DB(); dbErr == nil {
+			_ = sqlDB.Close()
+		}
+		instance = nil
 		return fmt.Errorf("failed to run startup migrations: %w", err)
 	}
-	config.SetDb(instance)
-
-	// 配置库就绪后、执行后续 AutoMigrate 之前：
-	// 基于配置中的版本标记检测升级并自动备份 ./data，便于回滚。
-	backupOnVersionUpgrade()
 
 	// 自动迁移模型
 	//
 	// 注意：负载/GPU/ping 历史监控数据运行期全部走 metric store（默认 SQLite
 	// ./data/metrics.db，或配置的 MySQL/PostgreSQL）。旧的 records /
 	// records_long_term / gpu_records / ping_records 表不再建表、不再写入。
-	// 若升级时旧表仍存在，管理员可通过升级向导显式导入并清理。
+	// 若升级时旧表仍存在，管理员可通过 admin RPC 显式导入并清理：
+	// admin:getLegacyMigrationStatus 查看旧表数据概况与迁移进度，
+	// admin:runLegacyMigration 执行导入（internal/migrations 的
+	// MigrateLegacyMonitoring / CompleteLegacyMonitoringMigration），
+	// 导入完成后旧表会被 drop 并写入完成 marker。
 	// models.Record / models.PingRecord / models.GPURecord 结构体仍作为
 	// metric store 的读写 DTO 和旧表导入 DTO 保留在 models 包中。
 	// models.TrafficReportNotification 同样仅为旧数据库兼容保留，不再建表。
@@ -454,7 +512,13 @@ func doInitialize() error {
 	if err := instance.AutoMigrate(
 		&models.Session{},
 	); err != nil {
-		logger.Errorf("dbcore", "Failed to create Session table, it may already exist: %v", err)
+		// Session 表是登录依赖：建表失败时拒绝启动，而不是带着坏表照常
+		// 对外服务（那会让所有登录请求在运行期反复报错）。
+		if sqlDB, dbErr := instance.DB(); dbErr == nil {
+			_ = sqlDB.Close()
+		}
+		instance = nil
+		return fmt.Errorf("failed to create Session table (login depends on it): %w", err)
 	}
 	return nil
 }

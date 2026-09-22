@@ -269,6 +269,9 @@ func migrateLegacyMonitoringTables(ctx context.Context, db *gorm.DB, s *metric.S
 func migrateLegacyRecordTables(ctx context.Context, s *metric.Store, db *gorm.DB, tables []string, progress legacyBatchProgress) (int64, error) {
 	var existing []string
 	var total int64
+	// availableColumns 按表记录实际存在的指标列；缺失列不生成数据点，
+	// 避免 NULL/0 填充值参与 P95 聚合。
+	availableColumns := make(map[string]map[string]struct{})
 	for _, table := range tables {
 		if !db.Migrator().HasTable(table) {
 			continue
@@ -280,6 +283,11 @@ func migrateLegacyRecordTables(ctx context.Context, s *metric.Store, db *gorm.DB
 		if count > 0 {
 			existing = append(existing, table)
 			total += count
+			available, err := legacyRecordAvailableColumns(db, table)
+			if err != nil {
+				return 0, err
+			}
+			availableColumns[table] = available
 		}
 	}
 	if len(existing) == 0 {
@@ -292,7 +300,10 @@ func migrateLegacyRecordTables(ctx context.Context, s *metric.Store, db *gorm.DB
 		if err != nil {
 			return 0, err
 		}
-		parts = append(parts, projection)
+		// 带上来源表名：UNION ALL 后同一小时桶内的行仍需聚合到一起
+		// （ReplaceRollupPoints 按桶整体替换），但各表缺失列不同，
+		// recordToPoints 需要知道每行的来源表以跳过缺失列。
+		parts = append(parts, strings.TrimSuffix(projection, " FROM "+table)+", '"+table+"' AS source_table FROM "+table)
 	}
 	query := strings.Join(parts, " UNION ALL ") + " ORDER BY client ASC, time ASC"
 	rows, err := db.Raw(query).Rows()
@@ -302,14 +313,44 @@ func migrateLegacyRecordTables(ctx context.Context, s *metric.Store, db *gorm.DB
 	defer rows.Close()
 
 	logger.Infof("migration", "[legacy-migration] aggregating %d rows from %s into 1h P95 points", total, strings.Join(existing, ","))
-	migrated, err := migrateLegacyStream(ctx, db, s, rows, "records", func() *models.Record { return &models.Record{} }, func(value models.Record) []metric.Point {
-		return recordToPoints(value)
+	migrated, err := migrateLegacyStream(ctx, db, s, rows, "records", func() *legacyRecordRow { return &legacyRecordRow{} }, func(value legacyRecordRow) []metric.Point {
+		return recordToPoints(value.Record, availableColumns[value.SourceTable])
 	}, progress)
 	if err != nil {
 		return migrated, fmt.Errorf("aggregate legacy record tables: %w", err)
 	}
 	logger.Infof("migration", "[legacy-migration] aggregated %d rows from %s", migrated, strings.Join(existing, ","))
 	return migrated, nil
+}
+
+// legacyRecordRow 在旧记录行上附加来源表名，用于按表过滤缺失列。
+type legacyRecordRow struct {
+	models.Record
+	SourceTable string `gorm:"column:source_table"`
+}
+
+// legacyRecordAvailableColumns 返回旧记录表中实际存在的指标列集合。
+func legacyRecordAvailableColumns(db *gorm.DB, table string) (map[string]struct{}, error) {
+	columnTypes, err := db.Migrator().ColumnTypes(table)
+	if err != nil {
+		return nil, fmt.Errorf("inspect legacy %s columns: %w", table, err)
+	}
+	available := make(map[string]struct{}, len(columnTypes))
+	for _, column := range columnTypes {
+		available[strings.ToLower(column.Name())] = struct{}{}
+	}
+	return available, nil
+}
+
+// legacyOrderedProjection 生成单表的有序流式查询。
+func legacyOrderedProjection(db *gorm.DB, table string) string {
+	projection, err := legacyRecordProjection(db, table)
+	if err != nil {
+		// legacyRecordProjection 的错误在调用方已检查过；此处兜底。
+		return "SELECT * FROM " + table + " ORDER BY client ASC, time ASC"
+	}
+	base := strings.TrimSuffix(strings.TrimPrefix(projection, "SELECT "), " FROM "+table)
+	return "SELECT " + base + " FROM " + table + " ORDER BY client ASC, time ASC"
 }
 
 func migrateLegacyGPURecordTable(ctx context.Context, s *metric.Store, db *gorm.DB, table string, progress legacyBatchProgress) (int64, error) {
@@ -437,7 +478,11 @@ func legacyRecordProjection(db *gorm.DB, table string) (string, error) {
 		if _, ok := available[column]; ok {
 			projection = append(projection, column)
 		} else {
-			projection = append(projection, "0 AS "+column)
+			// 缺失的列填 NULL 而不是 0：0 会作为真实采样参与 P95 聚合，
+			// 把小时值拉向 0。NULL 扫描进 Record 后保持零值，但
+			// recordToPoints 会通过 availableLegacyRecordColumns 跳过
+			// 该表缺失列对应的点，使其不参与 P95。
+			projection = append(projection, "NULL AS "+column)
 		}
 	}
 	return "SELECT " + strings.Join(projection, ", ") + " FROM " + table, nil
@@ -602,26 +647,41 @@ func minLegacyBuckets(sourceRows, estimatedBuckets int64) int64 {
 	return estimatedBuckets
 }
 
-func recordToPoints(rec models.Record) []metric.Point {
+// recordToPoints 把旧记录行转换为数据点。available 是该表实际存在的列集合；
+// 缺失列（被 NULL 填充）不生成数据点，避免零值参与 P95 聚合。
+func recordToPoints(rec models.Record, available map[string]struct{}) []metric.Point {
 	ts := rec.Time
 	entityID := rec.Client
-	return []metric.Point{
-		{MetricName: metricstore.MetricCPU, EntityID: entityID, Timestamp: ts, Value: float64(rec.Cpu)},
-		{MetricName: metricstore.MetricGPU, EntityID: entityID, Timestamp: ts, Value: float64(rec.Gpu)},
-		{MetricName: metricstore.MetricRAM, EntityID: entityID, Timestamp: ts, Value: float64(rec.Ram)},
-		{MetricName: metricstore.MetricSwap, EntityID: entityID, Timestamp: ts, Value: float64(rec.Swap)},
-		{MetricName: metricstore.MetricLoad, EntityID: entityID, Timestamp: ts, Value: float64(rec.Load)},
-		{MetricName: metricstore.MetricDisk, EntityID: entityID, Timestamp: ts, Value: float64(rec.Disk)},
-		{MetricName: metricstore.MetricNetIn, EntityID: entityID, Timestamp: ts, Value: float64(rec.NetIn)},
-		{MetricName: metricstore.MetricNetOut, EntityID: entityID, Timestamp: ts, Value: float64(rec.NetOut)},
-		{MetricName: metricstore.MetricNetTotalUp, EntityID: entityID, Timestamp: ts, Value: float64(rec.NetTotalUp)},
-		{MetricName: metricstore.MetricNetTotalDown, EntityID: entityID, Timestamp: ts, Value: float64(rec.NetTotalDown)},
-		{MetricName: metricstore.MetricTrafficUp, EntityID: entityID, Timestamp: ts, Value: float64(rec.TrafficUp)},
-		{MetricName: metricstore.MetricTrafficDown, EntityID: entityID, Timestamp: ts, Value: float64(rec.TrafficDown)},
-		{MetricName: metricstore.MetricProcess, EntityID: entityID, Timestamp: ts, Value: float64(rec.Process)},
-		{MetricName: metricstore.MetricConnections, EntityID: entityID, Timestamp: ts, Value: float64(rec.Connections)},
-		{MetricName: metricstore.MetricConnectionsUDP, EntityID: entityID, Timestamp: ts, Value: float64(rec.ConnectionsUdp)},
+	has := func(column string) bool {
+		// available 为 nil 时（非迁移路径调用）保持旧行为：全部生成。
+		if available == nil {
+			return true
+		}
+		_, ok := available[column]
+		return ok
 	}
+	points := make([]metric.Point, 0, 15)
+	appendIf := func(column, metricName string, value float64) {
+		if has(column) {
+			points = append(points, metric.Point{MetricName: metricName, EntityID: entityID, Timestamp: ts, Value: value})
+		}
+	}
+	appendIf("cpu", metricstore.MetricCPU, float64(rec.Cpu))
+	appendIf("gpu", metricstore.MetricGPU, float64(rec.Gpu))
+	appendIf("ram", metricstore.MetricRAM, float64(rec.Ram))
+	appendIf("swap", metricstore.MetricSwap, float64(rec.Swap))
+	appendIf("load", metricstore.MetricLoad, float64(rec.Load))
+	appendIf("disk", metricstore.MetricDisk, float64(rec.Disk))
+	appendIf("net_in", metricstore.MetricNetIn, float64(rec.NetIn))
+	appendIf("net_out", metricstore.MetricNetOut, float64(rec.NetOut))
+	appendIf("net_total_up", metricstore.MetricNetTotalUp, float64(rec.NetTotalUp))
+	appendIf("net_total_down", metricstore.MetricNetTotalDown, float64(rec.NetTotalDown))
+	appendIf("traffic_up", metricstore.MetricTrafficUp, float64(rec.TrafficUp))
+	appendIf("traffic_down", metricstore.MetricTrafficDown, float64(rec.TrafficDown))
+	appendIf("process", metricstore.MetricProcess, float64(rec.Process))
+	appendIf("connections", metricstore.MetricConnections, float64(rec.Connections))
+	appendIf("connections_udp", metricstore.MetricConnectionsUDP, float64(rec.ConnectionsUdp))
+	return points
 }
 
 func gpuRecordToPoints(rec models.GPURecord) []metric.Point {
@@ -641,9 +701,18 @@ func gpuRecordToPoints(rec models.GPURecord) []metric.Point {
 func pingRecordToPoints(rec models.PingRecord) []metric.Point {
 	ts := rec.Time
 	tags := map[string]string{"task_id": fmt.Sprintf("%d", rec.TaskId)}
-	loss := 0.0
+	// 负值表示丢包（旧版用 -1 等哨兵值）：只记 loss，不写 latency 点，
+	// 否则 -1 会参与 P95 聚合把小时延迟拉低。
 	if rec.Value < 0 {
-		loss = 1
+		return []metric.Point{
+			{
+				MetricName: metricstore.MetricPingLoss,
+				EntityID:   rec.Client,
+				Timestamp:  ts,
+				Value:      1,
+				Tags:       tags,
+			},
+		}
 	}
 	return []metric.Point{
 		{
@@ -657,7 +726,7 @@ func pingRecordToPoints(rec models.PingRecord) []metric.Point {
 			MetricName: metricstore.MetricPingLoss,
 			EntityID:   rec.Client,
 			Timestamp:  ts,
-			Value:      loss,
+			Value:      0,
 			Tags:       tags,
 		},
 	}

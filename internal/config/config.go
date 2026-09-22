@@ -22,16 +22,26 @@ func (ConfigItem) TableName() string {
 }
 
 var (
-	db    *gorm.DB
-	SetDb = func(gdb *gorm.DB) {
+	db *gorm.DB
+	// SetDb 注入配置库并确保 configs 表存在。返回错误而非 panic：
+	// 调用方（启动生命周期）应统一处理失败，直接 panic 会绕过清理流程。
+	SetDb = func(gdb *gorm.DB) error {
+		if gdb == nil {
+			return fmt.Errorf("config database is nil")
+		}
 		db = gdb
 		if err := db.AutoMigrate(&ConfigItem{}); err != nil {
-			panic("failed to migrate config item table: " + err.Error())
+			db = nil
+			return fmt.Errorf("failed to migrate config item table: %w", err)
 		}
+		return nil
 	}
 )
 
 // GetAs 获取并转换为指定类型 (泛型)，支持数值类型自动转换
+//
+// miss 时仍会把默认值写回数据库（自愈），但不再广播配置变更事件：
+// 这是读路径，广播"变更"会触发订阅者无意义的重载。
 func GetAs[T any](key string, defaul ...any) (T, error) {
 	var t T
 	var item ConfigItem
@@ -41,7 +51,7 @@ func GetAs[T any](key string, defaul ...any) (T, error) {
 		if len(defaul) > 0 {
 			// 尝试直接类型断言
 			if v, ok := defaul[0].(T); ok {
-				err = Set(key, v)
+				err = setDefaultQuietly(key, v)
 				return v, err
 			}
 			// 尝试类型转换
@@ -49,7 +59,7 @@ func GetAs[T any](key string, defaul ...any) (T, error) {
 			if err := convertAndSet(defaul[0], val); err != nil {
 				return t, fmt.Errorf("default value type mismatch: expected %T, got %T", t, defaul[0])
 			}
-			err = Set(key, t)
+			err = setDefaultQuietly(key, t)
 			return t, err
 		}
 		return t, err
@@ -70,9 +80,23 @@ func GetAs[T any](key string, defaul ...any) (T, error) {
 	return t, nil
 }
 
+// setDefaultQuietly 把默认值写回数据库（自愈），但不广播配置变更事件。
+// 读路径 miss 时的回填不是真正的配置变更，不应触发订阅者重载。
+func setDefaultQuietly(key string, value any) error {
+	bytes, err := json.Marshal(value)
+	if err != nil {
+		return err
+	}
+	item := ConfigItem{Key: key, Value: string(bytes)}
+	return db.Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "key"}},
+		DoUpdates: clause.AssignmentColumns([]string{"value"}),
+	}).Create(&item).Error
+}
+
 // GetMany 获取多个配置项，keys 为 map[key]defaultValue
 // 如果 defaultValue 为 nil，则数据库不存在时不写入
-// 如果 defaultValue 不为 nil，则数据库不存在时写入默认值
+// 如果 defaultValue 不为 nil，则数据库不存在时写入默认值（不广播事件）
 func GetMany(keys map[string]any) (map[string]any, error) {
 	var items []ConfigItem
 	result := make(map[string]any)
@@ -521,24 +545,68 @@ func IsChangedT[T any](e ConfigEvent, key string) (bool, T) {
 // ConfigSubscriber handles config events
 type ConfigSubscriber func(event ConfigEvent)
 
+// subscriberWrapper 包装一个订阅者及其串行分发 goroutine：
+// publishEvent 只把事件投递到带缓冲的队列，由专属 goroutine 依序消费，
+// 保证同一订阅者内事件有序（此前对每个 subscriber 裸 go sub(event)，
+// 事件可能乱序到达，且慢订阅者会无界堆积 goroutine）。
+type subscriberWrapper struct {
+	fn   ConfigSubscriber
+	queue chan ConfigEvent
+	done chan struct{}
+}
+
+// subscriberQueueSize 是单个订阅者事件队列的缓冲上限。
+// 队列满时丢弃最旧事件并记录警告，避免发布方阻塞或内存无界增长。
+const subscriberQueueSize = 256
+
 var (
 	subscribersMu sync.RWMutex
-	subscribers   []ConfigSubscriber
+	subscribers   []*subscriberWrapper
 )
 
 // Subscribe registers a subscriber for all config events.
 func Subscribe(subscriber ConfigSubscriber) {
+	if subscriber == nil {
+		return
+	}
 	subscribersMu.Lock()
 	defer subscribersMu.Unlock()
-	subscribers = append(subscribers, subscriber)
+
+	w := &subscriberWrapper{
+		fn:    subscriber,
+		queue: make(chan ConfigEvent, subscriberQueueSize),
+		done:  make(chan struct{}),
+	}
+	go w.dispatchLoop()
+	subscribers = append(subscribers, w)
+}
+
+func (w *subscriberWrapper) dispatchLoop() {
+	defer close(w.done)
+	for event := range w.queue {
+		func() {
+			defer func() {
+				if r := recover(); r != nil {
+					logger.Errorf("config", "Config subscriber panicked: %v", r)
+				}
+			}()
+			w.fn(event)
+		}()
+	}
 }
 
 // publishEvent notifies all subscribers of a config change.
+// 每个订阅者有独立队列与串行消费 goroutine，同一订阅者内事件保序。
 func publishEvent(oldVal, newVal map[string]any) {
+	event := ConfigEvent{Old: oldVal, New: newVal}
 	subscribersMu.RLock()
 	defer subscribersMu.RUnlock()
-	for _, sub := range subscribers {
-		event := ConfigEvent{Old: oldVal, New: newVal}
-		go sub(event)
+	for _, w := range subscribers {
+		select {
+		case w.queue <- event:
+		default:
+			// 队列满：慢订阅者可能已经失去同步，丢弃事件并警告。
+			logger.Warn("config", "config subscriber queue is full, dropping event", "queue_size", subscriberQueueSize)
+		}
 	}
 }

@@ -167,7 +167,9 @@ func setupCORSConfigDB(t *testing.T, _ string) {
 		_ = sqlDB.Close()
 	})
 
-	config.SetDb(db)
+	if err := config.SetDb(db); err != nil {
+		t.Fatalf("set config db: %v", err)
+	}
 }
 
 func performCORSRequest(handler http.Handler, method, path, host, origin string) *httptest.ResponseRecorder {

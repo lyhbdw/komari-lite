@@ -66,6 +66,9 @@ type timestampRow struct {
 
 // migrateLegacyTimestampColumns makes old offset-free SQLite values
 // unambiguous before any current model scans them as time.Time.
+//
+// 每个表使用独立事务、每批 1000 行提交一次，避免把所有表全部行放进
+// 单个巨型事务（长事务会长时间持有 SQLite 写锁、WAL 无限膨胀）。
 func migrateLegacyTimestampColumns(db *gorm.DB) error {
 	if timestampMigrationDone(db) {
 		return nil
@@ -73,21 +76,15 @@ func migrateLegacyTimestampColumns(db *gorm.DB) error {
 
 	location := legacyTimestampLocation()
 	var converted int64
-	err := db.Transaction(func(tx *gorm.DB) error {
-		for _, target := range legacyTimestampColumns {
-			if !tx.Migrator().HasTable(target.table) || !tx.Migrator().HasColumn(target.table, target.column) {
-				continue
-			}
-			count, err := migrateTimestampColumn(tx, target, location)
-			if err != nil {
-				return err
-			}
-			converted += count
+	for _, target := range legacyTimestampColumns {
+		if !db.Migrator().HasTable(target.table) || !db.Migrator().HasColumn(target.table, target.column) {
+			continue
 		}
-		return nil
-	})
-	if err != nil {
-		return err
+		count, err := migrateTimestampColumn(db, target, location)
+		if err != nil {
+			return err
+		}
+		converted += count
 	}
 	if converted > 0 {
 		logger.Infof("migration", "Converted %d legacy timestamp values to explicit UTC", converted)
@@ -137,7 +134,10 @@ func migrateTimestampColumn(db *gorm.DB, target timestampColumn, location *time.
 			}
 			stamp, err := parseLegacyTimestamp(raw, location)
 			if err != nil {
-				return converted, fmt.Errorf("convert legacy timestamp %s.%s rowid=%d: %w", target.table, target.column, row.rowID, err)
+				// 坏行只跳过并记录错误日志，保留原值，不阻断启动：
+				// 单条脏数据不应让整个服务无法起来（此前会直接 Fatalf）。
+				logger.Errorf("migration", "Skip unparseable legacy timestamp %s.%s rowid=%d (kept as-is): %v", target.table, target.column, row.rowID, err)
+				continue
 			}
 			update := fmt.Sprintf("UPDATE %s SET %s = ? WHERE rowid = ?", table, column)
 			if err := db.Exec(update, stamp.UTC(), row.rowID).Error; err != nil {
@@ -197,16 +197,21 @@ func legacyEpochTime(value int64) time.Time {
 
 // legacyTimestampLocation is intentionally migration-only. The old custom
 // type used TZ and defaulted to UTC; current runtime code uses system time.Local.
+//
+// 迁移时明确记录所使用的时区；TZ 未设置或无法加载时给出警告（不阻断），
+// 因为时区猜错会把旧时间戳整体平移，管理员需要据此判断是否需要修正。
 func legacyTimestampLocation() *time.Location {
 	name := strings.TrimSpace(os.Getenv("TZ"))
 	if name == "" {
+		logger.Warnf("migration", "TZ environment variable is not set; interpreting legacy offset-free timestamps as UTC. If the old deployment ran in a different timezone, set TZ before upgrading to avoid shifted timestamps.")
 		return time.UTC
 	}
 	location, err := time.LoadLocation(name)
 	if err != nil {
-		logger.Infof("migration", "Legacy timezone %q cannot be loaded; interpreting old timestamps as UTC: %v", name, err)
+		logger.Warnf("migration", "Legacy timezone %q cannot be loaded; interpreting old timestamps as UTC: %v", name, err)
 		return time.UTC
 	}
+	logger.Infof("migration", "Interpreting legacy offset-free timestamps in timezone %q (from TZ environment variable)", name)
 	return location
 }
 

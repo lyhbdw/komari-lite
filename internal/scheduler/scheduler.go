@@ -18,6 +18,9 @@ type job struct {
 	cancel context.CancelFunc
 }
 
+// stopTimeout 是 StopAll cancel 之后等待在跑任务退出的上限。
+const stopTimeout = 30 * time.Second
+
 type schedule interface {
 	Next(time.Time) time.Time
 }
@@ -37,34 +40,99 @@ type cronSchedule struct {
 	dom     map[int]struct{}
 	months  map[int]struct{}
 	dow     map[int]struct{}
+	// domRestricted / dowRestricted 记录字段是否被限制（非 *）。
+	// 标准 cron 语义：dom 与 dow 同时受限时按 OR 匹配，否则各自为 * 时
+	// 恒真（此前实现把两者做 AND，导致 "0 0 1 * 1"（每月 1 号或每个
+	// 周一）这类表达式永不匹配）。
+	domRestricted bool
+	dowRestricted bool
 }
 
 func (s cronSchedule) Next(t time.Time) time.Time {
 	next := t.UTC().Truncate(time.Second).Add(time.Second)
 	limit := next.Add(366 * 24 * time.Hour)
+	// 逐秒扫描对"永不匹配"的表达式要烧 ~3100 万次迭代。先逐级跳到
+	// 候选时间（月→日→时→分→秒），每次失配至少前进一个单位。
 	for next.Before(limit) {
-		if s.match(next) {
-			return next
+		if v, ok := s.advance(next); ok {
+			return v
 		}
-		next = next.Add(time.Second)
 	}
 	return time.Time{}
 }
 
+// advance 返回 >= t 的下一个候选时间；ok=false 表示 t 已越界。
+func (s cronSchedule) advance(t time.Time) (time.Time, bool) {
+	local := t.In(time.Local)
+	for {
+		if _, ok := s.months[int(local.Month())]; !ok {
+			// 跳到下个月 1 号 00:00:00。
+			local = time.Date(local.Year(), local.Month()+1, 1, 0, 0, 0, 0, time.Local)
+			continue
+		}
+		if !s.matchDay(local) {
+			local = time.Date(local.Year(), local.Month(), local.Day(), 0, 0, 0, 0, time.Local).AddDate(0, 0, 1)
+			continue
+		}
+		if _, ok := s.hours[local.Hour()]; !ok {
+			local = time.Date(local.Year(), local.Month(), local.Day(), local.Hour(), 0, 0, 0, time.Local).Add(time.Hour)
+			continue
+		}
+		if _, ok := s.minutes[local.Minute()]; !ok {
+			local = time.Date(local.Year(), local.Month(), local.Day(), local.Hour(), local.Minute(), 0, 0, time.Local).Add(time.Minute)
+			continue
+		}
+		if _, ok := s.seconds[local.Second()]; !ok {
+			local = local.Add(time.Second)
+			continue
+		}
+		return local.UTC(), true
+	}
+}
+
+// matchDay 按标准 cron 语义匹配日字段：dom 与 dow 均受限时取 OR，
+// 否则只要受限的一方匹配即可（未受限的恒真）。
+func (s cronSchedule) matchDay(t time.Time) bool {
+	if _, ok := s.months[int(t.Month())]; !ok {
+		return false
+	}
+	domOK := true
+	if s.domRestricted {
+		_, domOK = s.dom[t.Day()]
+	}
+	dowOK := true
+	if s.dowRestricted {
+		_, dowOK = s.dow[int(t.Weekday())]
+	}
+	if s.domRestricted && s.dowRestricted {
+		return domOK || dowOK
+	}
+	return domOK && dowOK
+}
+
+// match 保留用于测试的逐秒匹配语义（与 advance 一致）。
 func (s cronSchedule) match(t time.Time) bool {
 	t = t.In(time.Local)
-	_, okSecond := s.seconds[t.Second()]
-	_, okMinute := s.minutes[t.Minute()]
-	_, okHour := s.hours[t.Hour()]
-	_, okDay := s.dom[t.Day()]
-	_, okMonth := s.months[int(t.Month())]
-	_, okWeek := s.dow[int(t.Weekday())]
-	return okSecond && okMinute && okHour && okDay && okMonth && okWeek
+	if _, ok := s.months[int(t.Month())]; !ok {
+		return false
+	}
+	if _, ok := s.hours[t.Hour()]; !ok {
+		return false
+	}
+	if _, ok := s.minutes[t.Minute()]; !ok {
+		return false
+	}
+	if _, ok := s.seconds[t.Second()]; !ok {
+		return false
+	}
+	return s.matchDay(t)
 }
 
 type Manager struct {
 	mu   sync.Mutex
 	jobs map[string]job
+	// wg 跟踪所有正在执行的任务（safeRun），StopAll cancel 后等待其退出。
+	wg sync.WaitGroup
 }
 
 var defaultManager = NewManager()
@@ -147,11 +215,23 @@ func (m *Manager) RemovePrefix(prefix string) {
 
 func (m *Manager) StopAll() {
 	m.mu.Lock()
-	defer m.mu.Unlock()
-
 	for name, old := range m.jobs {
 		old.cancel()
 		delete(m.jobs, name)
+	}
+	m.mu.Unlock()
+
+	// 只 cancel 不等待会让正在跑的任务在进程退出时被硬杀（写一半的
+	// 数据丢失），这里带超时等待在跑任务退出。
+	waitDone := make(chan struct{})
+	go func() {
+		m.wg.Wait()
+		close(waitDone)
+	}()
+	select {
+	case <-waitDone:
+	case <-time.After(stopTimeout):
+		logger.Warnf("scheduler", "Timed out waiting for running jobs to stop after %s", stopTimeout)
 	}
 }
 
@@ -167,12 +247,13 @@ func (m *Manager) replace(name string, cancel context.CancelFunc) {
 
 func (m *Manager) run(ctx context.Context, name string, s schedule, runImmediately bool, fn Func) {
 	if runImmediately {
-		go safeRun(ctx, name, fn)
+		m.wg.Add(1)
+		go safeRun(ctx, m, name, fn)
 	}
 
 	nextTick := s.Next(time.Now())
 	if nextTick.IsZero() {
-		logger.Warnf("scheduler", "corn job %s has no next run time", name)
+		logger.Warnf("scheduler", "Corn job %s has no next run time", name)
 		return
 	}
 	timer := time.NewTimer(time.Until(nextTick))
@@ -183,8 +264,11 @@ func (m *Manager) run(ctx context.Context, name string, s schedule, runImmediate
 		case <-ctx.Done():
 			return
 		case <-timer.C:
-			go safeRun(ctx, name, fn)
-			nextTick = s.Next(nextTick)
+			m.wg.Add(1)
+			go safeRun(ctx, m, name, fn)
+			// 基于当前时间而非旧基准计算下一次触发：调度停摆（宿主机
+			// 挂起、GC 长停顿）后按旧基准追赶会连发多个 tick 造成突发。
+			nextTick = s.Next(time.Now())
 			if nextTick.IsZero() {
 				return
 			}
@@ -200,10 +284,11 @@ func resetTimer(timer *time.Timer, duration time.Duration) {
 	timer.Reset(duration)
 }
 
-func safeRun(ctx context.Context, name string, fn Func) {
+func safeRun(ctx context.Context, m *Manager, name string, fn Func) {
+	defer m.wg.Done()
 	defer func() {
 		if r := recover(); r != nil {
-			logger.Errorf("scheduler", "corn job %s panic: %v", name, r)
+			logger.Errorf("scheduler", "Corn job %s panic: %v", name, r)
 		}
 	}()
 
@@ -275,7 +360,30 @@ func Parse(spec string) (schedule, error) {
 		delete(dow, 7)
 	}
 
-	return cronSchedule{seconds: seconds, minutes: minutes, hours: hours, dom: dom, months: months, dow: dow}, nil
+	// 字段受限 = 表达式中不是 "*"（或等价的 "* /n" 全跨度步进）。
+	// dom/dow 同时受限时按标准 cron OR 语义匹配。
+	domRestricted := !isFullField(fields[3], 1, 31)
+	dowRestricted := !isFullField(fields[5], 0, 7)
+
+	return cronSchedule{
+		seconds:       seconds,
+		minutes:       minutes,
+		hours:         hours,
+		dom:           dom,
+		months:        months,
+		dow:           dow,
+		domRestricted: domRestricted,
+		dowRestricted: dowRestricted,
+	}, nil
+}
+
+// isFullField 判断字段是否覆盖整个取值范围（等价于 *）。
+func isFullField(field string, min, max int) bool {
+	values, err := parseField(field, min, max)
+	if err != nil {
+		return false
+	}
+	return len(values) == max-min+1
 }
 
 func parseField(field string, min int, max int) (map[int]struct{}, error) {
