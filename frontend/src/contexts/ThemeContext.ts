@@ -15,7 +15,7 @@ export type Appearance = typeof allowedAppearances[number];
 
 export const THEME_DEFAULTS = {
   appearance: "system" as Appearance,
-  color: "iris" as Colors,
+  color: "jade" as Colors,
 } as const;
 
 export interface ThemeContextType {

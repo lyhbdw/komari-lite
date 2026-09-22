@@ -197,7 +197,7 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
   return (
     <div className="km-admin-layout flex flex-col h-screen w-screen overflow-hidden bg-background text-foreground">
       {/* Top Navbar */}
-      <header className="km-admin-panel-topbar h-14 shrink-0 border-b border-border/60 bg-background/80 backdrop-blur-md px-4 flex items-center justify-between sticky top-0 z-30">
+      <header className="km-admin-panel-topbar h-12 shrink-0 border-b border-border bg-background px-4 flex items-center justify-between sticky top-0 z-30">
         <Flex gap="3" align="center">
           <IconButton
             variant="ghost"
@@ -205,7 +205,7 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
             onClick={() => setSidebarOpen(!sidebarOpen)}
             title={t("common.menu_sidebar", "Menu")}
             aria-label={t("common.menu_sidebar", "Menu")}
-            className="text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-colors"
+            className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
             style={{
               display: isMobile && sidebarOpen ? "none" : "flex",
             }}
@@ -213,10 +213,10 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
             <TablerMenu2 />
           </IconButton>
           <Link to="/admin/servers" className="flex items-center gap-2 group">
-            <span className="text-base font-bold tracking-tight text-foreground group-hover:opacity-85 transition-opacity">
+            <span className="text-sm font-semibold tracking-tight text-foreground">
               Komari
             </span>
-            <span className="text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 tracking-wider uppercase">
+            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-muted text-muted-foreground uppercase font-medium">
               Lite
             </span>
           </Link>
@@ -245,14 +245,14 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
             href="/"
             target="_blank"
             rel="noopener noreferrer"
-            className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-colors border border-border/50"
+            className="hidden sm:inline-flex items-center gap-1.5 px-2 py-1 text-xs font-medium rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
             title={t("common.home", "View Site")}
           >
             <span>{t("common.home", "监控前端")}</span>
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              width="12"
-              height="12"
+              width="11"
+              height="11"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
@@ -267,7 +267,7 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
             </svg>
           </a>
 
-          <div className="h-4 w-px bg-border/60 mx-1 hidden sm:block" />
+          <div className="h-3 w-px bg-border mx-1 hidden sm:block" />
 
           <ThemeSwitch />
           <ColorSwitch />
@@ -275,7 +275,7 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
           <IconButton
             variant="ghost"
             size="2"
-            className="km-admin-panel-account text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+            className="km-admin-panel-account text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
             onClick={logout}
             title={t("common.logout", "Logout")}
             aria-label={t("common.logout", "Logout")}
