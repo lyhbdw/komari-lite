@@ -521,24 +521,68 @@ func IsChangedT[T any](e ConfigEvent, key string) (bool, T) {
 // ConfigSubscriber handles config events
 type ConfigSubscriber func(event ConfigEvent)
 
+// subscriberWrapper 包装一个订阅者及其串行分发 goroutine：
+// publishEvent 只把事件投递到带缓冲的队列，由专属 goroutine 依序消费，
+// 保证同一订阅者内事件有序（此前对每个 subscriber 裸 go sub(event)，
+// 事件可能乱序到达，且慢订阅者会无界堆积 goroutine）。
+type subscriberWrapper struct {
+	fn   ConfigSubscriber
+	queue chan ConfigEvent
+	done chan struct{}
+}
+
+// subscriberQueueSize 是单个订阅者事件队列的缓冲上限。
+// 队列满时丢弃最旧事件并记录警告，避免发布方阻塞或内存无界增长。
+const subscriberQueueSize = 256
+
 var (
 	subscribersMu sync.RWMutex
-	subscribers   []ConfigSubscriber
+	subscribers   []*subscriberWrapper
 )
 
 // Subscribe registers a subscriber for all config events.
 func Subscribe(subscriber ConfigSubscriber) {
+	if subscriber == nil {
+		return
+	}
 	subscribersMu.Lock()
 	defer subscribersMu.Unlock()
-	subscribers = append(subscribers, subscriber)
+
+	w := &subscriberWrapper{
+		fn:    subscriber,
+		queue: make(chan ConfigEvent, subscriberQueueSize),
+		done:  make(chan struct{}),
+	}
+	go w.dispatchLoop()
+	subscribers = append(subscribers, w)
+}
+
+func (w *subscriberWrapper) dispatchLoop() {
+	defer close(w.done)
+	for event := range w.queue {
+		func() {
+			defer func() {
+				if r := recover(); r != nil {
+					logger.Errorf("config", "Config subscriber panicked: %v", r)
+				}
+			}()
+			w.fn(event)
+		}()
+	}
 }
 
 // publishEvent notifies all subscribers of a config change.
+// 每个订阅者有独立队列与串行消费 goroutine，同一订阅者内事件保序。
 func publishEvent(oldVal, newVal map[string]any) {
+	event := ConfigEvent{Old: oldVal, New: newVal}
 	subscribersMu.RLock()
 	defer subscribersMu.RUnlock()
-	for _, sub := range subscribers {
-		event := ConfigEvent{Old: oldVal, New: newVal}
-		go sub(event)
+	for _, w := range subscribers {
+		select {
+		case w.queue <- event:
+		default:
+			// 队列满：慢订阅者可能已经失去同步，丢弃事件并警告。
+			logger.Warn("config", "config subscriber queue is full, dropping event", "queue_size", subscriberQueueSize)
+		}
 	}
 }
