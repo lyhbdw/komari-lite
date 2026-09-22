@@ -26,6 +26,8 @@ import (
 )
 
 // zipDirectoryExcluding 将 srcDir 打包为 dstZip，exclude 是绝对路径集合需要排除
+//
+// 任一步失败时删除半成品 zip，避免留下截断的归档被误当作可用备份。
 func zipDirectoryExcluding(srcDir, dstZip string, exclude map[string]struct{}) error {
 	// 规范化排除路径为绝对路径
 	normExclude := make(map[string]struct{}, len(exclude))
@@ -41,7 +43,6 @@ func zipDirectoryExcluding(srcDir, dstZip string, exclude map[string]struct{}) e
 	defer out.Close()
 
 	zw := zip.NewWriter(out)
-	defer zw.Close()
 
 	absSrc, _ := filepath.Abs(srcDir)
 	walkErr := filepath.Walk(absSrc, func(path string, info os.FileInfo, err error) error {
@@ -89,9 +90,17 @@ func zipDirectoryExcluding(srcDir, dstZip string, exclude map[string]struct{}) e
 		return nil
 	})
 	if walkErr != nil {
+		_ = zw.Close()
+		_ = out.Close()
+		_ = os.Remove(dstZip)
 		return walkErr
 	}
-	return zw.Close()
+	if err := zw.Close(); err != nil {
+		_ = out.Close()
+		_ = os.Remove(dstZip)
+		return err
+	}
+	return out.Close()
 }
 
 var (
