@@ -8,6 +8,7 @@ import (
 
 	"github.com/komari-monitor/komari/database/models"
 	"github.com/komari-monitor/komari/pkg/metric"
+	logger "github.com/komari-monitor/komari/utils/log"
 )
 
 // GetRecordsByClientAndTime 从 metric store 查询记录并重构为 models.Record
@@ -109,6 +110,13 @@ func recordSeriesInterval(s *metric.Store, start, end, now time.Time) time.Durat
 	return s.CompatibleSeriesInterval(start, now, interval)
 }
 
+// gpuSeriesInterval 选择 GPU 记录查询的降采样间隔，与 recordSeriesInterval
+// 相同地经过 CompatibleSeriesInterval 对齐到可用 rollup 层级。
+func gpuSeriesInterval(s *metric.Store, start, end, now time.Time) time.Duration {
+	interval := recordDownsampleInterval(end.Sub(start), 500)
+	return s.CompatibleSeriesInterval(start, now, interval)
+}
+
 func recordDownsampleInterval(rangeDuration time.Duration, maxPoints int) time.Duration {
 	if maxPoints <= 0 {
 		maxPoints = 500
@@ -197,9 +205,11 @@ func GetGPURecordsByClientAndTime(ctx context.Context, clientUUID string, start,
 	if s == nil {
 		return nil, fmt.Errorf("metric store not enabled")
 	}
+	now := time.Now().UTC()
 
 	// 查询 GPU 相关指标（每设备利用率使用独立指标 gpu.device.usage）
 	gpuMetrics := []string{MetricGPUDeviceUsage, MetricGPUMem, MetricGPUMemTotal, MetricGPUTemp}
+	interval := gpuSeriesInterval(s, start, end, now)
 
 	// 按设备索引和时间组织数据
 	type gpuKey struct {
@@ -209,15 +219,23 @@ func GetGPURecordsByClientAndTime(ctx context.Context, clientUUID string, start,
 	recordMap := make(map[gpuKey]*models.GPURecord)
 
 	for _, metricName := range gpuMetrics {
-		points, err := s.Query(ctx, metric.Query{
-			MetricName: metricName,
-			EntityID:   clientUUID,
-			Start:      start,
-			End:        end,
-			Order:      metric.OrderAsc,
-		})
+		points, err := s.Series(ctx, metric.AggregateQuery{
+			Query: metric.Query{
+				MetricName: metricName,
+				EntityID:   clientUUID,
+				Start:      start,
+				End:        end,
+				Order:      metric.OrderAsc,
+			},
+			Aggregation:    metric.AggLast,
+			Interval:       interval,
+			PreserveSeries: true,
+		}, now)
 		if err != nil {
-			continue // GPU 数据可能不存在
+			// GPU 数据可能不存在（例如该 agent 没有 GPU），但其他错误仍应
+			// 留下日志，避免静默吞掉存储故障。
+			logger.Errorf("metricstore", "failed to query GPU metric %s for %s: %v", metricName, clientUUID, err)
+			continue
 		}
 
 		for _, p := range points {
@@ -230,11 +248,11 @@ func GetGPURecordsByClientAndTime(ctx context.Context, clientUUID string, start,
 				deviceName = name
 			}
 
-			key := gpuKey{deviceIndex: deviceIndex, timestamp: p.Timestamp.Unix()}
+			key := gpuKey{deviceIndex: deviceIndex, timestamp: p.Bucket.Unix()}
 			if recordMap[key] == nil {
 				recordMap[key] = &models.GPURecord{
 					Client:      clientUUID,
-					Time:        p.Timestamp.UTC(),
+					Time:        p.Bucket.UTC(),
 					DeviceIndex: deviceIndex,
 					DeviceName:  deviceName,
 				}
