@@ -1,27 +1,19 @@
 {
   "menu": [
-
     {
       "labelKey": "common.serverList",
       "path": "/admin/servers",
       "icon": "Server"
     },
     {
-      "labelKey": "operations.title",
+      "labelKey": "ping.title",
       "path": "/admin/ping",
-      "icon": "Bolt",
-      "children": [
-        {
-          "labelKey": "ping.title",
-          "path": "/admin/ping",
-          "icon": "Activity"
-        },
-        {
-          "labelKey": "sessions.title",
-          "path": "/admin/sessions",
-          "icon": "Users"
-        }
-      ]
+      "icon": "Activity"
+    },
+    {
+      "labelKey": "logs.title",
+      "path": "/admin/logs",
+      "icon": "FileText"
     },
     {
       "labelKey": "notification.title",
@@ -48,7 +40,7 @@
     {
       "labelKey": "system.title",
       "path": "/admin/settings/site",
-      "icon": "Bolt",
+      "icon": "Settings",
       "children": [
         {
           "labelKey": "settings.site.title",
@@ -60,11 +52,10 @@
           "path": "/admin/settings/general",
           "icon": "Ellipsis"
         },
-
         {
-          "labelKey": "logs.title",
-          "path": "/admin/logs",
-          "icon": "FileText"
+          "labelKey": "sessions.title",
+          "path": "/admin/sessions",
+          "icon": "Users"
         }
       ]
     },
@@ -74,21 +65,15 @@
       "icon": "Palette"
     },
     {
-      "labelKey": "account.menu",
+      "labelKey": "account.title",
       "path": "/admin/account",
-      "icon": "UserCircle",
-      "children": [
-        {
-          "labelKey": "account.title",
-          "path": "/admin/account",
-          "icon": "UserCircle"
-        },
-        {
-          "labelKey": "common.about",
-          "path": "/admin/about",
-          "icon": "AtSign"
-        }
-      ]
+      "icon": "UserCircle"
+    },
+    {
+      "labelKey": "common.about",
+      "path": "/admin/about",
+      "icon": "Info",
+      "bottom": true
     },
     {
       "labelKey": "common.documentation",

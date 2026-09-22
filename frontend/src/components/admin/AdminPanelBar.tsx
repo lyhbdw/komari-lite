@@ -93,16 +93,22 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
     const newState: { [key: string]: boolean } = {};
     mergedBaseMenuItems.forEach((item) => {
       if (item.children) {
-        newState[item.path] = item.children.some((child: MenuItem) => {
+        const isMatched = item.children.some((child: MenuItem) => {
           const childPath = child.path.split("?")[0];
           return (
             location.pathname === childPath ||
             (childPath !== "/" && location.pathname.startsWith(childPath + "/"))
           );
         });
+        if (isMatched) {
+          newState[item.path] = true;
+        }
       }
     });
-    setOpenSubMenus(newState);
+    setOpenSubMenus((prev: Record<string, boolean>) => ({
+      ...prev,
+      ...newState,
+    }));
   }, [location.pathname, mergedBaseMenuItems]);
 
   // 侧边栏动画变体
