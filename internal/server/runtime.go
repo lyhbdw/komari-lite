@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -150,12 +151,26 @@ func (a *App) runCleanups(ctx context.Context) error {
 	return errors.Join(cleanupErrors...)
 }
 
+// scheduledTaskGates 防止同一调度任务的重叠执行：
+// 上一轮还没跑完时下一轮 tick 直接跳过（与 metricstore 的
+// compactOperations.TryAcquire 门同一做法）。
+var (
+	cleanupGate   atomic.Bool
+	trafficGate   atomic.Bool
+)
+
 func registerScheduledWork() {
 	if err := tasks.ReloadPingSchedule(); err != nil {
 		logger.ErrorArgs("server", "Failed to reload ping schedule:", err)
 	}
 
-	if err := scheduler.AddFunc("records:cleanup", "@every 30m", cleanupScheduledData); err != nil {
+	if err := scheduler.AddFunc("records:cleanup", "@every 30m", func() {
+		if !cleanupGate.CompareAndSwap(false, true) {
+			return
+		}
+		defer cleanupGate.Store(false)
+		cleanupScheduledData()
+	}); err != nil {
 		logger.ErrorArgs("server", "Failed to add cleanup scheduled task:", err)
 	}
 	if err := scheduler.AddContextFunc("metrics:compact", "@every 5m", true, compactMetricStore); err != nil {
@@ -164,7 +179,13 @@ func registerScheduledWork() {
 	if err := scheduler.AddContextFunc("metrics:retention", "@every 1h", true, cleanupMetricStore); err != nil {
 		logger.ErrorArgs("server", "Failed to add metric retention scheduled task:", err)
 	}
-	if err := scheduler.AddFunc("notifier:traffic", "@every 1m", notifier.CheckTraffic); err != nil {
+	if err := scheduler.AddFunc("notifier:traffic", "@every 1m", func() {
+		if !trafficGate.CompareAndSwap(false, true) {
+			return
+		}
+		defer trafficGate.Store(false)
+		notifier.CheckTraffic()
+	}); err != nil {
 		logger.ErrorArgs("server", "Failed to add traffic notification task:", err)
 	}
 }
