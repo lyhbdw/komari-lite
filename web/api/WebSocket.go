@@ -3,8 +3,6 @@ package api
 import (
 	"fmt"
 	"net/http"
-	"os"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
@@ -57,10 +55,8 @@ func checkWebSocketOriginForContext(c *gin.Context, r *http.Request) bool {
 		return true
 	}
 	origin := r.Header.Get("Origin")
-	development := strings.EqualFold(os.Getenv("GIN_MODE"), "debug") || strings.EqualFold(os.Getenv("GIN_MODE"), "test") || strings.EqualFold(os.Getenv("KOMARI_ENV"), "development")
-	if development && strings.EqualFold(os.Getenv("KOMARI_WS_DISABLE_ORIGIN"), "true") {
-		return true
-	}
+	// 不提供基于 GIN_MODE 的 Origin 校验旁路：生产安全不应依赖运行模式环境变量。
+	// 测试/本地联调请通过配置项（WsAllowedOriginsKey / 关闭 WsOriginCheckEnabledKey）放行。
 	enabled, err := config.GetAs[bool](config.WsOriginCheckEnabledKey, true)
 	if err != nil {
 		enabled = true
