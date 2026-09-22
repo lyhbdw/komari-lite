@@ -169,7 +169,9 @@ func backupOnVersionUpgrade() {
 		return
 	}
 
-	backupDir := filepath.Join(".", "data", "backup")
+	// 备份目录从实际 DB 路径推算（与 createUpgradeBackup 的 dataDir 一致），
+	// 避免硬编码 ./data/backup 与自定义 -database 路径不一致。
+	backupDir := filepath.Join(filepath.Dir(resolveDatabaseFile()), "backup")
 	if err := os.MkdirAll(backupDir, 0755); err != nil {
 		logger.Errorf("dbcore", "[upgrade-backup] failed to create backup dir: %v", err)
 		return
