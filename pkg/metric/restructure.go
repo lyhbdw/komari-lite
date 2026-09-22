@@ -468,6 +468,8 @@ func (s *Store) Restructure(ctx context.Context, report func(RestructureProgress
 	if err := s.replaceLegacyTables(ctx, shadow); err != nil {
 		return RestructureResult{}, err
 	}
+	// The definitions table was swapped; drop the write-path snapshot.
+	s.invalidateDefinitionCache()
 	if err := s.validateNormalizedRestructure(ctx, len(definitions)); err != nil {
 		return RestructureResult{}, fmt.Errorf("validate rebuilt schema after switch: %w", err)
 	}
@@ -535,6 +537,8 @@ func (s *Store) rebuildNormalizedSchema(ctx context.Context, report func(Restruc
 	if err := s.replaceLegacyTables(ctx, shadow); err != nil {
 		return RestructureResult{}, err
 	}
+	// The definitions table was swapped; drop the write-path snapshot.
+	s.invalidateDefinitionCache()
 	if err := s.validateNormalizedRestructure(ctx, len(definitions)); err != nil {
 		return RestructureResult{}, fmt.Errorf("validate relationship rebuild after switch: %w", err)
 	}

@@ -84,6 +84,11 @@ type Store struct {
 	//
 	// closed 表示 Close 是否已经被调用。
 	closed bool
+	// definitionCacheMu protects definitionCache, the write-path snapshot of
+	// metric definitions. Mutations call invalidateDefinitionCache so the
+	// snapshot is rebuilt on the next WriteBatch.
+	definitionCacheMu sync.RWMutex
+	definitionCache   map[string]Definition
 }
 
 // Open initializes a Store from a Config.
@@ -491,6 +496,9 @@ func (s *Store) CreateMetric(ctx context.Context, def Definition) error {
 	if err != nil && isUniqueViolation(err) {
 		return fmt.Errorf("%w: metric %q", ErrAlreadyExists, def.Name)
 	}
+	if err == nil {
+		s.invalidateDefinitionCache()
+	}
 	return err
 }
 
@@ -533,8 +541,12 @@ func (s *Store) UpsertMetric(ctx context.Context, def Definition) error {
 		now,
 		now,
 	)
-	if err != nil || def.RetentionDays != 0 {
+	if err != nil {
 		return err
+	}
+	s.invalidateDefinitionCache()
+	if def.RetentionDays != 0 {
+		return nil
 	}
 	_, err = s.deleteSeries(ctx, Query{MetricName: def.Name})
 	return err
@@ -664,6 +676,7 @@ func (s *Store) DeleteMetric(ctx context.Context, name string) error {
 	if err := tx.Commit(); err != nil {
 		return err
 	}
+	s.invalidateDefinitionCache()
 	return s.deleteSeriesMemoryState(name, "", nil)
 }
 
@@ -710,6 +723,7 @@ func (s *Store) UpdateMetricRetention(ctx context.Context, name string, retentio
 	if err := tx.Commit(); err != nil {
 		return Definition{}, err
 	}
+	s.invalidateDefinitionCache()
 	return s.GetMetric(ctx, name)
 }
 
@@ -761,6 +775,7 @@ func (s *Store) SetMetricRetention(ctx context.Context, name string, retentionDa
 	if err := tx.Commit(); err != nil {
 		return Definition{}, err
 	}
+	s.invalidateDefinitionCache()
 	if retentionDays == 0 {
 		if err := s.deleteSeriesMemoryState(name, "", nil); err != nil {
 			return Definition{}, err
@@ -990,14 +1005,14 @@ func (s *Store) WriteBatch(ctx context.Context, points []Point) error {
 // points whose definition has zero retention. Definitions are the source of
 // truth for a metric's retention and lifecycle, so accepting an unknown name
 // would create data that compaction and retention cleanup cannot manage.
+//
+// Definitions are served from an in-memory snapshot invalidated by
+// invalidateDefinitionCache on every definition mutation, so the write path
+// does not re-query the whole definitions table on each batch.
 func (s *Store) filterDisabledMetricPoints(ctx context.Context, points []Point) ([]Point, error) {
-	defs, err := s.ListMetrics(ctx)
+	definitions, err := s.cachedDefinitions(ctx)
 	if err != nil {
 		return nil, err
-	}
-	definitions := make(map[string]Definition, len(defs))
-	for _, def := range defs {
-		definitions[def.Name] = def
 	}
 	filtered := make([]Point, 0, len(points))
 	for _, point := range points {
@@ -1010,6 +1025,37 @@ func (s *Store) filterDisabledMetricPoints(ctx context.Context, points []Point) 
 		}
 	}
 	return filtered, nil
+}
+
+// cachedDefinitions returns the metric definitions keyed by name, reusing the
+// cached snapshot until a definition mutation invalidates it.
+func (s *Store) cachedDefinitions(ctx context.Context) (map[string]Definition, error) {
+	s.definitionCacheMu.RLock()
+	cached := s.definitionCache
+	s.definitionCacheMu.RUnlock()
+	if cached != nil {
+		return cached, nil
+	}
+	defs, err := s.ListMetrics(ctx)
+	if err != nil {
+		return nil, err
+	}
+	definitions := make(map[string]Definition, len(defs))
+	for _, def := range defs {
+		definitions[def.Name] = def
+	}
+	s.definitionCacheMu.Lock()
+	s.definitionCache = definitions
+	s.definitionCacheMu.Unlock()
+	return definitions, nil
+}
+
+// invalidateDefinitionCache drops the cached definition snapshot. Call after
+// any definition mutation (create/upsert/delete/retention change).
+func (s *Store) invalidateDefinitionCache() {
+	s.definitionCacheMu.Lock()
+	s.definitionCache = nil
+	s.definitionCacheMu.Unlock()
 }
 
 // querier is satisfied by both *sql.DB and *sql.Tx, letting read helpers run
