@@ -206,9 +206,6 @@ func init() {
 			Returns: "Record | { [uuid]: Record }",
 		},
 	)
-	Register("getMe", func(ctx context.Context, req *rpc.JsonRpcRequest) (any, *rpc.JsonRpcError) {
-		return getMe(ctx, req)
-	})
 	Register("getPublicInfo", getPublicInfo)
 	Register("getVersion", getVersion)
 	Register("getNodeRecentStatus", getNodeRecentStatus)
@@ -420,40 +417,6 @@ func getNodesLatestStatus(ctx context.Context, req *rpc.JsonRpcRequest) (any, *r
 		appendOne(uuid, rep)
 	}
 	return respMap, nil
-}
-
-func getMe(ctx context.Context, _ *rpc.JsonRpcRequest) (any, *rpc.JsonRpcError) {
-	var resp struct {
-		TwoFAEnabled bool `json:"2fa_enabled"`
-		LoggedIn     bool `json:"logged_in"`
-
-		Username string `json:"username"`
-		UUID     string `json:"uuid"`
-	}
-
-	meta := rpc.MetaFromContext(ctx)
-
-	switch meta.Principal.Type {
-	case rpc.PrincipalUser:
-		resp.TwoFAEnabled = meta.User.TwoFactor != ""
-		resp.LoggedIn = true
-
-		resp.Username = meta.User.Username
-		resp.UUID = meta.User.UUID
-		return resp, nil
-	case rpc.PrincipalAnonymous:
-		resp.LoggedIn = false
-		return resp, nil
-	case rpc.PrincipalAgent:
-		return publicAgentIdentity(meta), nil
-	default:
-		resp.LoggedIn = false
-		return resp, nil
-	}
-}
-
-func publicAgentIdentity(meta *rpc.ContextMeta) map[string]any {
-	return map[string]any{"username": "client", "logged_in": true, "uuid": meta.ClientUUID}
 }
 
 func getVersion(_ context.Context, _ *rpc.JsonRpcRequest) (any, *rpc.JsonRpcError) {

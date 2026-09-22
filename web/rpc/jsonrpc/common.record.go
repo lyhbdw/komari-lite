@@ -17,6 +17,20 @@ func init() {
 	Register("getRecords", getRecords)
 }
 
+// Query-window and result-size limits for common:getRecords. The method is
+// reachable by guests, so an unbounded window or unlimited point count can be
+// used to force expensive scans or huge responses.
+const (
+	// maxCommonRecordsHours caps the hours window at one year, matching the
+	// public metric query cap (24*365).
+	maxCommonRecordsHours = 8760
+	// maxCommonRecordsWindow caps an explicit start/end window at one year.
+	maxCommonRecordsWindow = 365 * 24 * time.Hour
+	// maxCommonRecordsCount caps the number of returned points; -1
+	// (unlimited) is clamped to this value.
+	maxCommonRecordsCount = 10000
+)
+
 func getRecords(ctx context.Context, req *rpc.JsonRpcRequest) (any, *rpc.JsonRpcError) {
 	meta := rpc.MetaFromContext(ctx)
 	var params struct {
@@ -52,13 +66,31 @@ func getRecords(ctx context.Context, req *rpc.JsonRpcRequest) (any, *rpc.JsonRpc
 		} else {
 			startTime = params.Start.UTC()
 		}
+		// clamp the explicit window to at most one year
+		if startTime.After(endTime) {
+			startTime = endTime
+		}
+		if endTime.Sub(startTime) > maxCommonRecordsWindow {
+			startTime = endTime.Add(-maxCommonRecordsWindow)
+		}
 	} else {
 		hours := params.Hours
 		if hours <= 0 {
 			hours = 1 // default 1 hour
 		}
+		if hours > maxCommonRecordsHours {
+			hours = maxCommonRecordsHours
+		}
 		endTime = time.Now().UTC()
 		startTime = endTime.Add(-time.Duration(hours) * time.Hour)
+	}
+
+	// clamp maxCount: negative (unlimited) becomes the hard cap
+	maxCount := params.MaxCount
+	if maxCount == 0 {
+		maxCount = 4000
+	} else if maxCount < 0 || maxCount > maxCommonRecordsCount {
+		maxCount = maxCommonRecordsCount
 	}
 
 	// Hidden filtering for non-admin
@@ -98,11 +130,7 @@ func getRecords(ctx context.Context, req *rpc.JsonRpcRequest) (any, *rpc.JsonRpc
 			recs = filtered
 		}
 
-		// resolve maxCount default for load
-		maxCount := params.MaxCount
-		if maxCount == 0 {
-			maxCount = 4000
-		}
+		// maxCount was clamped earlier
 
 		// optional load_type filtering -> group by client
 		if params.LoadType != "" && params.LoadType != "all" {
@@ -376,17 +404,25 @@ func getRecords(ctx context.Context, req *rpc.JsonRpcRequest) (any, *rpc.JsonRpc
 				"p99_p50_ratio": ratio,
 			}
 			if params.UUID == "" && taskId != -1 { // retain existing behavior of exposing clients only when filtering by task
-				info["clients"] = t.Clients
+				// 非管理员时过滤隐藏节点 UUID，避免通过任务摘要暴露隐藏节点。
+				if !isAdmin && len(t.Clients) > 0 {
+					visibleClients := make([]string, 0, len(t.Clients))
+					for _, uuid := range t.Clients {
+						if hidden[uuid] {
+							continue
+						}
+						visibleClients = append(visibleClients, uuid)
+					}
+					info["clients"] = visibleClients
+				} else {
+					info["clients"] = t.Clients
+				}
 			}
 			toList = append(toList, info)
 		}
 		response.Tasks = toList
-		// apply maxCount for ping
-		maxCount := params.MaxCount
-		if maxCount == 0 {
-			maxCount = 4000
-		}
-		if maxCount != -1 && len(response.Records) > maxCount {
+		// maxCount was clamped earlier
+		if len(response.Records) > maxCount {
 			// group records by TaskId for proportional downsampling
 			taskGroups := make(map[uint][]RecordsResp)
 			for _, r := range response.Records {

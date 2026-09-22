@@ -33,11 +33,13 @@ func init() {
 		Summary: "Delete a session by token",
 		Returns: "null",
 	})
+	rpc.MarkSensitive("admin:deleteSession")
 	RegisterWithGroupAndMeta("deleteAllSessions", rpc.RoleAdmin, adminDeleteAllSessions, &rpc.MethodMeta{
 		Name:    "admin:deleteAllSessions",
 		Summary: "Delete all sessions",
 		Returns: "null",
 	})
+	rpc.MarkSensitive("admin:deleteAllSessions")
 	RegisterWithGroupAndMeta("getSettings", rpc.RoleAdmin, adminGetSettings, &rpc.MethodMeta{
 		Name:    "admin:getSettings",
 		Summary: "Get all settings",
@@ -48,11 +50,13 @@ func init() {
 		Summary: "Update settings (partial)",
 		Returns: "null | { restart_required: true }",
 	})
+	rpc.MarkSensitive("admin:editSettings")
 	RegisterWithGroupAndMeta("clearAllRecords", rpc.RoleAdmin, adminClearAllRecords, &rpc.MethodMeta{
 		Name:    "admin:clearAllRecords",
 		Summary: "Delete all load and ping records",
 		Returns: "null",
 	})
+	rpc.MarkSensitive("admin:clearAllRecords")
 	RegisterWithGroupAndMeta("orderClients", rpc.RoleAdmin, adminOrderClients, &rpc.MethodMeta{
 		Name:    "admin:orderClients",
 		Summary: "Reorder clients (map of uuid->weight)",

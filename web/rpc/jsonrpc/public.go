@@ -112,6 +112,18 @@ func publicGetClientRecentRecords(ctx context.Context, req *rpc.JsonRpcRequest) 
 	return agent_runtime.GetRecentReports(params.UUID), nil
 }
 
+// hiddenClientUUIDMap 返回所有隐藏节点 uuid 的集合（查询失败时返回空集合，宁可少泄露）。
+func hiddenClientUUIDMap() map[string]bool {
+	hidden := map[string]bool{}
+	var hiddenClients []models.Client
+	db := dbcore.GetDBInstance()
+	_ = db.Select("uuid").Where("hidden = ?", true).Find(&hiddenClients).Error
+	for _, cli := range hiddenClients {
+		hidden[cli.UUID] = true
+	}
+	return hidden
+}
+
 // isHiddenClient 查询指定 uuid 是否为隐藏节点。
 func isHiddenClient(uuid string) bool {
 	var hiddenClients []models.Client
@@ -202,10 +214,16 @@ func publicGetRecordsByUUID(ctx context.Context, req *rpc.JsonRpcRequest) (any, 
 	return response, nil
 }
 
-func publicGetPublicPingTasks(_ context.Context, _ *rpc.JsonRpcRequest) (any, *rpc.JsonRpcError) {
+func publicGetPublicPingTasks(ctx context.Context, _ *rpc.JsonRpcRequest) (any, *rpc.JsonRpcError) {
 	pingTasks, err := tasks.GetAllPingTasks()
 	if err != nil {
 		return nil, rpc.MakeError(rpc.InternalError, err.Error(), nil)
+	}
+	// 未登录（非管理员）时过滤隐藏节点的 UUID，避免通过 ping 任务暴露隐藏节点。
+	isLogin := isLoginFromCtx(ctx)
+	var hiddenMap map[string]bool
+	if !isLogin {
+		hiddenMap = hiddenClientUUIDMap()
 	}
 	type publicPingTask struct {
 		Id        uint     `json:"id"`
@@ -218,11 +236,21 @@ func publicGetPublicPingTasks(_ context.Context, _ *rpc.JsonRpcRequest) (any, *r
 	}
 	out := make([]publicPingTask, len(pingTasks))
 	for i, task := range pingTasks {
+		clients := task.Clients
+		if hiddenMap != nil {
+			clients = make([]string, 0, len(task.Clients))
+			for _, uuid := range task.Clients {
+				if hiddenMap[uuid] {
+					continue
+				}
+				clients = append(clients, uuid)
+			}
+		}
 		out[i] = publicPingTask{
 			Id:        task.Id,
 			Weight:    task.Weight,
 			Name:      task.Name,
-			Clients:   task.Clients,
+			Clients:   clients,
 			DefaultOn: task.DefaultOn,
 			Type:      task.Type,
 			Interval:  task.Interval,
@@ -335,6 +363,12 @@ func publicGetPingRecords(ctx context.Context, req *rpc.JsonRpcRequest) (any, *r
 	hoursInt, err := strconv.Atoi(hours)
 	if err != nil {
 		hoursInt = 4
+	}
+	if hoursInt > maxPublicMetricQueryHours {
+		hoursInt = maxPublicMetricQueryHours
+	}
+	if hoursInt < 1 {
+		hoursInt = 1
 	}
 	endTime := time.Now().UTC()
 	startTime := endTime.Add(-time.Duration(hoursInt) * time.Hour)

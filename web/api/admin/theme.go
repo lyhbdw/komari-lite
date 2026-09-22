@@ -2,6 +2,8 @@ package admin
 
 import (
 	"archive/zip"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -19,6 +21,7 @@ import (
 	"github.com/komari-monitor/komari/internal/config"
 	"github.com/komari-monitor/komari/web/api"
 	"github.com/komari-monitor/komari/web/public"
+	logger "github.com/komari-monitor/komari/utils/log"
 )
 
 const (
@@ -70,48 +73,23 @@ func ListThemes(c *gin.Context) {
 	api.RespondSuccess(c, themes)
 }
 
-// DeleteTheme 删除主题
-func DeleteTheme(c *gin.Context) {
-	var req struct {
-		Short string `json:"short" binding:"required"`
-	}
-
-	if err := c.ShouldBindJSON(&req); err != nil {
-		api.RespondError(c, http.StatusBadRequest, "参数错误: "+err.Error())
-		return
-	}
-
-	if req.Short == public.DefaultTheme {
-		api.RespondError(c, http.StatusBadRequest, "默认主题不能删除")
-		return
-	}
-
-	// 校验主题短名称，防止路径穿越（如 ../）导致删除工作目录外的任意文件
-	if !isValidMarketShort(req.Short) {
-		api.RespondError(c, http.StatusBadRequest, "无效的主题名称")
-		return
-	}
-
-	themeDir := filepath.Join("./data/theme", req.Short)
-
-	// 检查主题是否存在
-	if _, err := os.Stat(themeDir); os.IsNotExist(err) {
-		api.RespondError(c, http.StatusNotFound, "主题不存在")
-		return
-	}
-
-	// 删除主题目录
-	if err := os.RemoveAll(themeDir); err != nil {
-		api.RespondError(c, http.StatusInternalServerError, "删除主题失败: "+err.Error())
-		return
-	}
-
-	api.RespondSuccessMessage(c, "主题删除成功", nil)
-}
-
 // SetTheme 设置主题
 func SetTheme(c *gin.Context) {
+	// CSRF 防御：状态变更端点仅接受 POST（原为 GET，可被跨站 <img> 触发）。
+	if c.Request.Method != http.MethodPost {
+		api.RespondError(c, http.StatusMethodNotAllowed, "仅支持 POST")
+		return
+	}
+	// 兼容 query 与 JSON body 两种传参方式。
 	themeName := c.Query("theme")
+	if themeName == "" {
+		var body struct {
+			Theme string `json:"theme"`
+		}
+		if err := c.ShouldBindJSON(&body); err == nil {
+			themeName = body.Theme
+		}
+	}
 	if themeName == "" {
 		api.RespondError(c, http.StatusBadRequest, "主题名称不能为空")
 		return
@@ -202,7 +180,8 @@ func extractAndValidateTheme(zipPath string) (models.Theme, error) {
 		}
 
 		if f.FileInfo().IsDir() {
-			os.MkdirAll(path, f.FileInfo().Mode())
+			// 目录固定 0755，剥除压缩包内记录的任何附加位（如 setgid）。
+			os.MkdirAll(path, 0755)
 			continue
 		}
 
@@ -217,7 +196,9 @@ func extractAndValidateTheme(zipPath string) (models.Theme, error) {
 			return themeInfo, fmt.Errorf("打开压缩文件失败: %v", err)
 		}
 
-		outFile, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.FileInfo().Mode())
+		// 文件 mode 白名单化：固定 0644，剥除 setuid/setgid/可执行等
+		// 压缩包内记录的权限位（web 根目录内容无需可执行）。
+		outFile, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 		if err != nil {
 			rc.Close()
 			return themeInfo, fmt.Errorf("创建文件失败: %v", err)
@@ -347,6 +328,10 @@ func getGitHubReleaseDownloadURL(owner, repo string) (string, error) {
 	if owner == "" || repo == "" {
 		return "", errors.New("GitHub仓库所有者和仓库名称不能为空")
 	}
+	// 校验 owner/repo 字符集，防止注入路径段或查询参数（如 "a/b?x=" 或 "../api"）。
+	if !isValidGitHubName(owner) || !isValidGitHubName(repo) {
+		return "", errors.New("GitHub仓库所有者或仓库名称包含非法字符")
+	}
 
 	// 构建GitHub API URL
 	// 使用GitHub API获取最新release信息
@@ -358,6 +343,7 @@ func getGitHubReleaseDownloadURL(owner, repo string) (string, error) {
 
 	var releaseInfo struct {
 		Assets []struct {
+			Name               string `json:"name"`
 			BrowserDownloadURL string `json:"browser_download_url"`
 		} `json:"assets"`
 	}
@@ -371,9 +357,39 @@ func getGitHubReleaseDownloadURL(owner, repo string) (string, error) {
 		return "", errors.New("GitHub release中没有可下载的资源")
 	}
 
-	// 返回第一个资源的下载链接
-	// 相当于shell命令: curl -s https://api.github.com/repos/owner/repo/releases/latest | jq -r ".assets[0].browser_download_url"
-	return releaseInfo.Assets[0].BrowserDownloadURL, nil
+	// 选择资产：优先匹配主题名的 zip，其次任意 .zip 后缀；不再盲取第一个
+	// （release 常含 sha256/签名等非主题资产）。
+	target := ""
+	for _, asset := range releaseInfo.Assets {
+		name := strings.ToLower(asset.Name)
+		if strings.HasSuffix(name, ".zip") {
+			if strings.Contains(name, strings.ToLower(public.DefaultTheme)) {
+				target = asset.BrowserDownloadURL
+				break
+			}
+			if target == "" {
+				target = asset.BrowserDownloadURL
+			}
+		}
+	}
+	if target == "" {
+		return "", errors.New("GitHub release中没有可下载的 zip 资源")
+	}
+	return target, nil
+}
+
+// isValidGitHubName 校验 GitHub 用户名/仓库名：仅字母数字与 - _ .，且不得以 . 开头/结尾。
+func isValidGitHubName(name string) bool {
+	if name == "" || len(name) > 100 || strings.HasPrefix(name, ".") || strings.HasSuffix(name, ".") {
+		return false
+	}
+	for _, r := range name {
+		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '-' || r == '_' || r == '.' {
+			continue
+		}
+		return false
+	}
+	return true
 }
 
 // isGitHubRepoURL 检查URL是否是GitHub仓库地址
@@ -437,7 +453,38 @@ func downloadThemeSource(rawURL string) ([]byte, error) {
 	return downloadThemeFromURL(rawURL)
 }
 
-func updateThemeFromBytes(c *gin.Context, data []byte) {
+// verifyThemeSHA256 校验下载内容与请求方提供的可选 sha256 是否一致。
+// expected 为空表示调用方未提供校验值，返回 unchecked=true。
+func verifyThemeSHA256(data []byte, expected string) (unchecked bool, err error) {
+	expected = strings.ToLower(strings.TrimSpace(expected))
+	if expected == "" {
+		return true, nil
+	}
+	if len(expected) != sha256.Size*2 {
+		return false, fmt.Errorf("sha256 字段格式无效：应为 %d 个十六进制字符", sha256.Size*2)
+	}
+	digest := sha256.Sum256(data)
+	if hex.EncodeToString(digest[:]) != expected {
+		return false, fmt.Errorf("主题包 SHA-256 校验失败：期望 %s，实际 %s", expected, hex.EncodeToString(digest[:]))
+	}
+	return false, nil
+}
+
+// warnThemeUnverified 在未提供 sha256 时记录警告，提示本次下载没有完整性校验。
+func warnThemeUnverified(source string) {
+	logger.Warn("theme", "[theme-update] downloading from "+source+" without sha256 verification; the downloaded archive is not integrity-checked")
+}
+
+func updateThemeFromBytes(c *gin.Context, data []byte, sha256Expected string) {
+	unchecked, err := verifyThemeSHA256(data, sha256Expected)
+	if err != nil {
+		// 校验失败：拒绝安装。data 仅在内存中，不落盘，无需额外清理。
+		api.RespondError(c, http.StatusBadRequest, err.Error())
+		return
+	}
+	if unchecked {
+		warnThemeUnverified("update source")
+	}
 	tempFile, err := os.CreateTemp("./data/theme", ".Emerald-download-*.zip")
 	if err != nil {
 		api.RespondError(c, http.StatusInternalServerError, "保存文件失败: "+err.Error())
@@ -473,6 +520,9 @@ func UpdateTheme(c *gin.Context) {
 		URL      string `json:"url"`                      // 新的URL地址（可选）
 		GitOwner string `json:"git_owner"`                // GitHub仓库所有者（可选）
 		GitRepo  string `json:"git_repo"`                 // GitHub仓库名称（可选）
+		// SHA256 为可选的下载包完整性校验值（hex）。提供时下载后校验，
+		// 不匹配则拒绝安装；未提供时仅记录无校验警告。
+		SHA256 string `json:"sha256"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -513,13 +563,15 @@ func UpdateTheme(c *gin.Context) {
 			api.RespondError(c, http.StatusBadRequest, "下载主题失败: "+err.Error())
 			return
 		}
-		updateThemeFromBytes(c, result)
+		updateThemeFromBytes(c, result, req.SHA256)
 		return
 	}
 
 	// 方式1和方式4: 尝试从原始URL下载主题
 	// 如果原始URL是GitHub仓库地址，则自动获取最新release
 	var themeData []byte
+	// 记录实际下载来源，用于无 sha256 校验时的警告日志。
+	var themeSource string
 	// 不保存下载链接，更新后由主题覆盖
 	//var downloadURL string
 	// var err2 error
@@ -535,6 +587,7 @@ func UpdateTheme(c *gin.Context) {
 			if err == nil {
 				// 使用获取到的GitHub release下载链接下载主题
 				themeData, _ = downloadThemeFromURL(gitHubURL)
+				themeSource = gitHubURL
 				//if err2 == nil {
 				// 注意：这里我们保存的是release的下载链接，而不是GitHub仓库地址
 				// 这样做是为了在下载成功后，将这个具体的release下载链接保存到主题配置中
@@ -545,6 +598,7 @@ func UpdateTheme(c *gin.Context) {
 		} else {
 			// 原始URL不是GitHub仓库地址，直接尝试下载（方式1）
 			themeData, _ = downloadThemeFromURL(themeInfo.URL)
+			themeSource = themeInfo.URL
 			//if err2 == nil {
 			// downloadURL = themeInfo.URL
 			//}
@@ -570,6 +624,7 @@ func UpdateTheme(c *gin.Context) {
 				api.RespondError(c, http.StatusBadRequest, "从GitHub下载主题失败: "+err.Error())
 				return
 			}
+			themeSource = gitHubURL
 			// 保存下载链接，稍后更新到主题配置中
 			// downloadURL = gitHubURL
 		} else if req.URL != "" {
@@ -591,6 +646,7 @@ func UpdateTheme(c *gin.Context) {
 					api.RespondError(c, http.StatusBadRequest, "从GitHub下载主题失败: "+err.Error())
 					return
 				}
+				themeSource = gitHubURL
 				// 保存GitHub仓库URL，而不是release下载链接，以便将来可以获取最新版本
 				// 这是一个重要的设计决策：我们保存的是GitHub仓库URL，而不是具体的release下载链接
 				// 这样在下次更新时，系统会再次检测到这是GitHub仓库，并自动获取最新的release
@@ -602,6 +658,7 @@ func UpdateTheme(c *gin.Context) {
 					api.RespondError(c, http.StatusBadRequest, "从新URL下载主题失败: "+err.Error())
 					return
 				}
+				themeSource = req.URL
 				// downloadURL = req.URL
 			}
 		}
@@ -619,16 +676,35 @@ func UpdateTheme(c *gin.Context) {
 	// 3. 用户提供的新URL下载
 	// 4. 用户提供的GitHub仓库信息，获取最新release下载
 
-	// 临时文件名
-	tempFile := filepath.Join(os.TempDir(), "downloaded_theme.zip")
-	if err := os.WriteFile(tempFile, themeData, 0644); err != nil {
+	// 可选 sha256 完整性校验：提供时校验下载内容，不匹配则拒绝安装
+	// （数据尚未落盘，无需清理）；未提供时记录无校验警告。
+	unchecked, err := verifyThemeSHA256(themeData, req.SHA256)
+	if err != nil {
+		api.RespondError(c, http.StatusBadRequest, err.Error())
+		return
+	}
+	if unchecked {
+		warnThemeUnverified(themeSource)
+	}
+
+	// 临时文件名（随机名，避免并发请求互相覆盖/竞争固定路径）
+	tempFile, err := os.CreateTemp("", "komari-theme-download-*.zip")
+	if err != nil {
 		api.RespondError(c, http.StatusInternalServerError, "保存文件失败: "+err.Error())
 		return
 	}
-	defer os.Remove(tempFile)
+	defer os.Remove(tempFile.Name())
+	if err := tempFile.Close(); err != nil {
+		api.RespondError(c, http.StatusInternalServerError, "保存文件失败: "+err.Error())
+		return
+	}
+	if err := os.WriteFile(tempFile.Name(), themeData, 0644); err != nil {
+		api.RespondError(c, http.StatusInternalServerError, "保存文件失败: "+err.Error())
+		return
+	}
 
 	// 解压ZIP文件并验证
-	updatedThemeInfo, err := extractAndValidateTheme(tempFile)
+	updatedThemeInfo, err := extractAndValidateTheme(tempFile.Name())
 	if err != nil {
 		api.RespondError(c, http.StatusBadRequest, err.Error())
 		return
@@ -740,18 +816,26 @@ func ImportTheme(c *gin.Context) {
 		return
 	}
 
-	// 保存到临时文件
-	tempFile := filepath.Join(os.TempDir(), "import_theme.zip")
-	if err := os.WriteFile(tempFile, themeData, 0644); err != nil {
+	// 保存到临时文件（随机名，避免并发请求互相覆盖/竞争固定路径）
+	tempFile, err := os.CreateTemp("", "komari-theme-import-*.zip")
+	if err != nil {
 		api.RespondError(c, http.StatusInternalServerError, "保存文件失败: "+err.Error())
 		return
 	}
-	defer os.Remove(tempFile)
+	defer os.Remove(tempFile.Name())
+	if err := tempFile.Close(); err != nil {
+		api.RespondError(c, http.StatusInternalServerError, "保存文件失败: "+err.Error())
+		return
+	}
+	if err := os.WriteFile(tempFile.Name(), themeData, 0644); err != nil {
+		api.RespondError(c, http.StatusInternalServerError, "保存文件失败: "+err.Error())
+		return
+	}
 
 	// preview模式：仅解析并返回主题信息
 	preview := c.Query("preview")
 	if preview == "true" {
-		themeInfo, err := peekThemeFromZip(tempFile)
+		themeInfo, err := peekThemeFromZip(tempFile.Name())
 		if err != nil {
 			api.RespondError(c, http.StatusBadRequest, err.Error())
 			return
@@ -773,7 +857,7 @@ func ImportTheme(c *gin.Context) {
 
 	// 安装模式：检查是否存在同名主题
 	// 先peek一下获取short名称用于检测冲突
-	themeInfo, err := peekThemeFromZip(tempFile)
+	themeInfo, err := peekThemeFromZip(tempFile.Name())
 	if err != nil {
 		api.RespondError(c, http.StatusBadRequest, err.Error())
 		return
@@ -786,7 +870,7 @@ func ImportTheme(c *gin.Context) {
 	}
 
 	// 解压安装
-	installedTheme, err := extractAndValidateTheme(tempFile)
+	installedTheme, err := extractAndValidateTheme(tempFile.Name())
 	if err != nil {
 		api.RespondError(c, http.StatusBadRequest, err.Error())
 		return
@@ -800,10 +884,32 @@ func ImportTheme(c *gin.Context) {
 	api.RespondSuccessMessage(c, msg, installedTheme)
 }
 
+// isInstalledTheme 判断主题是否已安装（嵌入式默认主题或 data/theme 下的目录）。
+func isInstalledTheme(short string) bool {
+	if !isValidMarketShort(short) {
+		return false
+	}
+	if short == public.DefaultTheme {
+		// 默认主题：本地覆盖或嵌入式基线任一存在即可。
+		if _, err := os.Stat(filepath.Join("./data/theme", short)); err == nil {
+			return true
+		}
+		_, err := public.PublicFS.ReadFile("defaultTheme/komari-theme.json")
+		return err == nil
+	}
+	_, err := os.Stat(filepath.Join("./data/theme", short))
+	return err == nil
+}
+
 func UpdateThemeSettings(c *gin.Context) {
 	theme := c.Query("theme")
 	if theme == "" {
 		api.RespondError(c, http.StatusBadRequest, "主题名称不能为空")
+		return
+	}
+	// 校验主题已安装：防止为不存在的主题写入配置记录。
+	if !isInstalledTheme(theme) {
+		api.RespondError(c, http.StatusNotFound, "主题不存在或未安装")
 		return
 	}
 	var req map[string]any

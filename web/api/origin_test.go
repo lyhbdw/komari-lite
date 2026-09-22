@@ -10,7 +10,9 @@ import (
 	"gorm.io/gorm"
 )
 
-func TestWebSocketOriginBypassRequiresDevelopmentMode(t *testing.T) {
+// TestWebSocketOriginBypassRemoved 守卫：GIN_MODE/KOMARI_WS_DISABLE_ORIGIN 组合
+// 不得再提供 Origin 校验旁路（生产安全不应依赖运行模式环境变量）。
+func TestWebSocketOriginBypassRemoved(t *testing.T) {
 	t.Setenv("KOMARI_WS_DISABLE_ORIGIN", "true")
 	r := httptest.NewRequest("GET", "http://api.example/socket", nil)
 	r.Host = "api.example"
@@ -24,15 +26,12 @@ func TestWebSocketOriginBypassRequiresDevelopmentMode(t *testing.T) {
 	t.Cleanup(func() { sqlDB.Close() })
 	config.SetDb(db)
 
-	for _, mode := range []string{"release", ""} {
+	for _, mode := range []string{"release", "", "debug", "test"} {
 		t.Setenv("GIN_MODE", mode)
+		t.Setenv("KOMARI_ENV", "development")
 		if CheckWebSocketOrigin(r) {
-			t.Fatalf("origin bypass enabled in mode %q", mode)
+			t.Fatalf("origin bypass must not exist in mode %q", mode)
 		}
-	}
-	t.Setenv("GIN_MODE", "debug")
-	if !CheckWebSocketOrigin(r) {
-		t.Fatal("explicit development origin bypass was not honored")
 	}
 }
 

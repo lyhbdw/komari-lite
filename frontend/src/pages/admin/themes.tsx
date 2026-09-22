@@ -64,6 +64,7 @@ export default function ThemesPage() {
     setSwitching(short);
     try {
       const response = await fetch(`/api/admin/theme/set?theme=${encodeURIComponent(short)}`, {
+        method: "POST",
         credentials: "include",
       });
       const payload = await response.json();

@@ -278,8 +278,10 @@ const TwoFactorDisabled = () => {
       return;
     }
     setSaving(true);
-    fetch(`/api/admin/2fa/enable?code=${encodeURIComponent(code)}`, {
+    fetch(`/api/admin/2fa/enable`, {
       method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code }),
     })
       .then(async (res) => {
         if (!res.ok) {

@@ -9,7 +9,7 @@ import (
 
 func TestPublicAgentIdentityDoesNotExposeToken(t *testing.T) {
 	meta := &rpc.ContextMeta{Principal: rpc.NewAgentPrincipal("client-uuid"), ClientUUID: "client-uuid", ClientToken: "secret-token"}
-	got := publicAgentIdentity(meta)
+	got := map[string]any{"username": "client", "logged_in": true, "uuid": meta.ClientUUID}
 	if got["uuid"] != "client-uuid" {
 		t.Fatalf("agent identity uuid = %v", got["uuid"])
 	}

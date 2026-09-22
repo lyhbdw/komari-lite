@@ -6,8 +6,11 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"sync"
+	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gorilla/websocket"
 	"github.com/komari-monitor/komari/database/accounts"
 	"github.com/komari-monitor/komari/pkg/rpc"
 	"github.com/komari-monitor/komari/web/api"
@@ -15,6 +18,10 @@ import (
 
 const (
 	maxJSONRPCBodyBytes = 1 << 20
+	// wsIdleTimeout: 一条消息到达后允许的最大等待时长，超时视为空闲并关闭连接。
+	wsIdleTimeout = 5 * time.Minute
+	// wsSessionRecheckInterval: 每处理 N 条消息重校验一次会话有效性。
+	wsSessionRecheckEvery = 32
 )
 
 // OnRpcRequest 是 /api/rpc2 的统一入口：GET 升级为 WebSocket，POST 处理单条/批量 JSON-RPC。
@@ -90,6 +97,20 @@ func headerOrQueryTwoFACode(c *gin.Context) string {
 	return ""
 }
 
+// wsSessionStillValid 重校验建立连接时的主体身份是否仍然有效。
+// 会话被删除（如登出、管理员删除会话）后长连接不应继续以该身份执行方法。
+func wsSessionStillValid(meta *rpc.ContextMeta) bool {
+	if meta == nil || meta.Principal == nil || meta.Principal.Type != rpc.PrincipalUser {
+		return true // 匿名/agent 连接无会话可失效
+	}
+	if meta.SessionToken == "" {
+		// 无会话 token（如 API Key 场景），无法重校验，保持原状。
+		return true
+	}
+	_, err := accounts.GetSession(meta.SessionToken)
+	return err == nil
+}
+
 func serveWebSocket(c *gin.Context) {
 	conn, err := api.UpgradeSafeConn(c)
 	if err != nil {
@@ -97,9 +118,36 @@ func serveWebSocket(c *gin.Context) {
 		return
 	}
 	defer conn.Close()
-	conn.GetConn().SetReadLimit(maxJSONRPCBodyBytes)
+	rawConn := conn.GetConn()
+	rawConn.SetReadLimit(maxJSONRPCBodyBytes)
+
+	// 服务端定期发 ping 控制帧，配合读超时检测半开/死连接。
+	var pingMu sync.Mutex // 由 ping ticker 串行写入控制帧
+	stopPinger := make(chan struct{})
+	pingTicker := time.NewTicker(wsIdleTimeout / 2)
+	defer pingTicker.Stop()
+	go func() {
+		for {
+			select {
+			case <-stopPinger:
+				return
+			case <-pingTicker.C:
+				pingMu.Lock()
+				_ = conn.WriteMessage(websocket.PingMessage, []byte("keepalive"))
+				pingMu.Unlock()
+			}
+		}
+	}()
+	defer close(stopPinger)
+
+	// pong（及任何帧）都会刷新读超时。
+	_ = rawConn.SetReadDeadline(time.Now().Add(wsIdleTimeout))
+	rawConn.SetPongHandler(func(string) error {
+		return rawConn.SetReadDeadline(time.Now().Add(wsIdleTimeout))
+	})
 
 	meta := buildContextMeta(c)
+	messages := 0
 	for {
 		var req rpc.JsonRpcRequest
 		if err := conn.ReadJSON(&req); err != nil {
@@ -112,9 +160,16 @@ func serveWebSocket(c *gin.Context) {
 			// 其它视为连接/IO 错误，结束循环
 			break
 		}
+		messages++
+		_ = rawConn.SetReadDeadline(time.Now().Add(wsIdleTimeout))
 		if jerr := req.Validate(); jerr != nil {
 			conn.WriteJSON(jerr.ResponseWithID(req.ID))
 			continue
+		}
+		// 周期性重校验会话：会话失效（登出/删除）即断开长连接。
+		if messages%wsSessionRecheckEvery == 0 && !wsSessionStillValid(meta) {
+			conn.WriteJSON(rpc.ErrorResponse(req.ID, rpc.PermissionDenied, "session is no longer valid", nil))
+			break
 		}
 		// 同步写：SafeConn 内部有锁，串行写避免响应乱序与并发竞态。
 		conn.WriteJSON(dispatchWithSensitive(context.Background(), c, meta, &req))

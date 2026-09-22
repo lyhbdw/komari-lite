@@ -98,10 +98,27 @@ func normalizeThemeMarketSource(source ThemeMarketSource) (ThemeMarketSource, er
 		return source, errors.New("source name is required")
 	}
 	parsed, err := url.Parse(source.URL)
-	if err != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") || parsed.Hostname() == "" || parsed.User != nil {
-		return source, errors.New("source URL must be a valid HTTP or HTTPS URL")
+	// 明文 HTTP 源会被中间人替换目录内容（目录 sha256 与条目一起被替换），
+	// 因此市场源只接受 HTTPS。
+	if err != nil || parsed.Scheme != "https" || parsed.Hostname() == "" || parsed.User != nil {
+		return source, errors.New("source URL must be a valid HTTPS URL")
 	}
 	return source, nil
+}
+
+// isHTTPThemeMarketSource 判断存量源是否为明文 HTTP（保存于强制 HTTPS 之前）。
+func isHTTPThemeMarketSource(rawURL string) bool {
+	parsed, err := url.Parse(strings.TrimSpace(rawURL))
+	return err == nil && parsed.Scheme == "http" && parsed.Hostname() != ""
+}
+
+// urlToHostname 提取 URL 的主机名（解析失败返回空串）。
+func urlToHostname(rawURL string) string {
+	parsed, err := url.Parse(strings.TrimSpace(rawURL))
+	if err != nil {
+		return ""
+	}
+	return parsed.Hostname()
 }
 
 func newMarketSourceID() (string, error) {
@@ -251,8 +268,12 @@ func ListThemeMarketCatalog(c *gin.Context) {
 		}
 		wg.Add(1)
 		go func(index int, item ThemeMarketSource) {
-			defer wg.Done()
-			items, fetchErr := fetchThemeMarketCatalog(item, force)
+		defer wg.Done()
+		if isHTTPThemeMarketSource(item.URL) {
+			statuses[index].Error = "insecure source: plain HTTP market sources are no longer supported; update the source URL to HTTPS"
+			return
+		}
+		items, fetchErr := fetchThemeMarketCatalog(item, force)
 			if fetchErr != nil {
 				statuses[index].Error = fetchErr.Error()
 				return
@@ -315,6 +336,12 @@ func InstallThemeFromMarket(c *gin.Context) {
 	}
 	if selected.SourceID != "" && selected.SourceID != source.ID {
 		api.RespondError(c, http.StatusBadRequest, "Theme source does not match the selected market source")
+		return
+	}
+	// 去中心化设计下 sha256 与下载 URL 可能不同源，无法完全防御；但目录源与
+	// 下载 URL 不同源意味着校验值与下载内容来自不同信任域，安装时明确拒绝。
+	if downloadHost := strings.ToLower(urlToHostname(selected.Download)); downloadHost != "" && downloadHost != strings.ToLower(urlToHostname(source.URL)) {
+		api.RespondError(c, http.StatusBadRequest, "Theme download URL host does not match the market source host; refusing cross-origin install")
 		return
 	}
 	data, err := DownloadMarketURL(selected.Download, marketPackageMaxSize)

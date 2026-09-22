@@ -147,7 +147,12 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
   };
 
   function logout() {
-    window.open("/api/logout", "_self");
+    // CSRF 防御：登出改为 POST（服务端仅接受 POST）。
+    const form = document.createElement("form");
+    form.method = "POST";
+    form.action = "/api/logout";
+    document.body.appendChild(form);
+    form.submit();
   }
 
   const renderIcon = (

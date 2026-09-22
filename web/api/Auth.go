@@ -22,6 +22,32 @@ const (
 	RoleGuest  = "guest"
 )
 
+// sessionUpdateThrottle 节流同一会话的 UpdateLatest 调用：
+// 每个会话在 updateLatestThrottleInterval 内只写一次库，避免每个请求
+// 都触发一次 accounts UPDATE。
+var sessionUpdateThrottle = struct {
+	sync.Mutex
+	last map[string]time.Time
+}{last: map[string]time.Time{}}
+
+const updateLatestThrottleInterval = 5 * time.Minute
+
+// shouldUpdateLatest 返回该会话是否应当更新 latest_online（节流后）。
+func shouldUpdateLatest(session string) bool {
+	now := time.Now()
+	sessionUpdateThrottle.Lock()
+	defer sessionUpdateThrottle.Unlock()
+	if last, ok := sessionUpdateThrottle.last[session]; ok && now.Sub(last) < updateLatestThrottleInterval {
+		return false
+	}
+	// 简单容量控制：条目过多时整体重置。
+	if len(sessionUpdateThrottle.last) > 10000 {
+		sessionUpdateThrottle.last = map[string]time.Time{}
+	}
+	sessionUpdateThrottle.last[session] = now
+	return true
+}
+
 // IdentityMiddleware 统一身份识别中间件，在路由栈最外层运行。
 // 负责识别当前请求者身份（Admin / Client / Guest），并写入 Context。
 // 身份识别统一委托给 IdentifyPrincipal，同时保留现有 handler 使用的
@@ -37,7 +63,9 @@ func IdentityMiddleware() gin.HandlerFunc {
 		case rpc.PrincipalUser:
 			if session, err := c.Cookie("session_token"); err == nil && session != "" {
 				c.Set("session", session)
-				accounts.UpdateLatest(session, c.Request.UserAgent(), c.ClientIP())
+				if shouldUpdateLatest(session) {
+					accounts.UpdateLatest(session, c.Request.UserAgent(), c.ClientIP())
+				}
 			}
 			c.Set("uuid", p.UserUUID)
 		case rpc.PrincipalAgent:

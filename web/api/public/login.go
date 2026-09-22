@@ -150,6 +150,11 @@ func Login(c *gin.Context) {
 	api.RespondSuccess(c, nil)
 }
 func Logout(c *gin.Context) {
+	// CSRF 防御：登出是状态变更操作，仅接受 POST（原 GET 可被跨站触发）。
+	if c.Request.Method != http.MethodPost {
+		c.Redirect(302, "/")
+		return
+	}
 	session, _ := c.Cookie("session_token")
 	accounts.DeleteSession(session)
 	setSessionCookie(c, "", -1)
