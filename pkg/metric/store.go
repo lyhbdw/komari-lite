@@ -1582,6 +1582,12 @@ func isUniqueViolation(err error) bool {
 		return false
 	}
 	msg := strings.ToLower(err.Error())
+	// A foreign-key failure shares the "constraint failed" text with
+	// unique violations on SQLite; exclude it so an FK problem is never
+	// misreported as a duplicate name.
+	if strings.Contains(msg, "foreign key constraint failed") {
+		return false
+	}
 	switch {
 	case strings.Contains(msg, "unique constraint"): // sqlite, postgres
 		return true
