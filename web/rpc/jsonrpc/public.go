@@ -336,6 +336,12 @@ func publicGetPingRecords(ctx context.Context, req *rpc.JsonRpcRequest) (any, *r
 	if err != nil {
 		hoursInt = 4
 	}
+	if hoursInt > maxPublicMetricQueryHours {
+		hoursInt = maxPublicMetricQueryHours
+	}
+	if hoursInt < 1 {
+		hoursInt = 1
+	}
 	endTime := time.Now().UTC()
 	startTime := endTime.Add(-time.Duration(hoursInt) * time.Hour)
 
