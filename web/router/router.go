@@ -223,4 +223,11 @@ func registerAdminRoutes(r *gin.Engine) {
 		pingTask.POST("/edit", jsonRpc.Bind("admin:editPingTask"))
 		pingTask.POST("/order", jsonRpc.Bind("admin:orderPingTask"))
 	}
+
+	// legacy monitoring migration（升级向导：检查只读，执行为敏感操作需 2FA）
+	migration := g.Group("/migration")
+	{
+		migration.GET("/legacy", jsonRpc.Bind("admin:getLegacyMigrationStatus"))
+		migration.POST("/legacy", jsonRpc.Bind("admin:runLegacyMigration"))
+	}
 }
