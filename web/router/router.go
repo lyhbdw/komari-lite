@@ -57,6 +57,16 @@ func registerPublicRoutes(r *gin.Engine) {
 	r.POST("/api/rpc2", jsonRpc.OnRpcRequest)
 }
 
+// registerLiteDisabledRoutes 显式 404 掉 Lite 版未实现的 API 路径。
+//
+// 该黑名单的真正作用是防止 SPA fallback（NoRoute -> 静态文件服务）在这些
+// API 路径上返回 HTML（index.html），而非安全防线：未注册的路由本身就不
+// 存在对应 handler，任何请求都到不了业务逻辑，这里只是把"返回 HTML 的
+// 404"换成"返回 JSON 的 404"，避免客户端把 SPA 页面误当 API 响应解析。
+//
+// 因此，上游新增敏感路由时 Lite 不会自动继承（handler 从未注册，无暴露），
+// 新增的暴露风险仅在于 SPA fallback 语义——即这些路径会返回 HTML 而非
+// JSON 404。若上游新增的路径需要保持 JSON 语义，需手动加入此列表。
 func registerLiteDisabledRoutes(r *gin.Engine) {
 	disabled := func(c *gin.Context) {
 		c.AbortWithStatusJSON(404, gin.H{"status": "error", "message": "Not found"})
