@@ -187,7 +187,10 @@ func migrateLegacyLoadNotification(db *gorm.DB) error {
 }
 
 func migrateLegacyMessageSenderConfig(db *gorm.DB) error {
-	if db.Migrator().HasTable(&models.MessageSenderProvider{}) {
+	// 列级检查而非表级：HasTable guard 会让中途失败的迁移不可重入
+	// （表已建好但列还没删完时，重跑会直接跳过剩余步骤）。
+	if !hasTableColumn(db, "configs", "telegram_bot_token") &&
+		!hasTableColumn(db, "configs", "email_host") {
 		return nil
 	}
 
@@ -208,54 +211,59 @@ func migrateLegacyMessageSenderConfig(db *gorm.DB) error {
 	if err := db.Raw("SELECT * FROM configs LIMIT 1").Scan(&oldData).Error; err != nil {
 		return fmt.Errorf("get legacy message sender config: %w", err)
 	}
-	if err := db.AutoMigrate(&models.MessageSenderProvider{}); err != nil {
-		return err
-	}
 
-	if oldData.NotificationMethod == "telegram" && oldData.TelegramBotToken != "" {
-		telegramConfig := map[string]interface{}{
-			"bot_token": oldData.TelegramBotToken,
-			"chat_id":   oldData.TelegramChatID,
-			"endpoint":  oldData.TelegramEndpoint,
-		}
-		if telegramConfig["endpoint"] == "" {
-			telegramConfig["endpoint"] = "https://api.telegram.org/bot"
-		}
-		if err := saveLegacyMessageSenderConfig(db, "telegram", telegramConfig); err != nil {
+	// 整个迁移子步骤包在一个事务里：AutoMigrate、保存 provider 配置、
+	// 删除旧列要么全部完成，要么全部回滚，保证可重入。
+	return db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.AutoMigrate(&models.MessageSenderProvider{}); err != nil {
 			return err
 		}
-	}
 
-	// 旧 configs 表在 migrateLegacyConfigToItems 中会被整体 drop，其中
-	// email_* 列若不在此处读出并保存，邮件配置会被静默丢弃。
-	if oldData.NotificationMethod == "email" && oldData.EmailHost != "" {
-		emailConfig := map[string]interface{}{
-			"host":     oldData.EmailHost,
-			"port":     oldData.EmailPort,
-			"username": oldData.EmailUsername,
-			"password": oldData.EmailPassword,
-			"sender":   oldData.EmailSender,
-			"receiver": oldData.EmailReceiver,
-			"use_ssl":  oldData.EmailUseSSL,
-		}
-		if err := saveLegacyMessageSenderConfig(db, "email", emailConfig); err != nil {
-			return err
-		}
-	}
-
-	for _, column := range []string{
-		"telegram_bot_token",
-		"telegram_chat_id",
-		"telegram_endpoint",
-	} {
-		if hasTableColumn(db, "configs", column) {
-			if err := db.Migrator().DropColumn(&legacyModelConfig{}, column); err != nil {
+		if oldData.NotificationMethod == "telegram" && oldData.TelegramBotToken != "" {
+			telegramConfig := map[string]interface{}{
+				"bot_token": oldData.TelegramBotToken,
+				"chat_id":   oldData.TelegramChatID,
+				"endpoint":  oldData.TelegramEndpoint,
+			}
+			if telegramConfig["endpoint"] == "" {
+				telegramConfig["endpoint"] = "https://api.telegram.org/bot"
+			}
+			if err := saveLegacyMessageSenderConfig(tx, "telegram", telegramConfig); err != nil {
 				return err
 			}
 		}
-	}
 
-	return nil
+		// 旧 configs 表在 migrateLegacyConfigToItems 中会被整体 drop，其中
+		// email_* 列若不在此处读出并保存，邮件配置会被静默丢弃。
+		if oldData.NotificationMethod == "email" && oldData.EmailHost != "" {
+			emailConfig := map[string]interface{}{
+				"host":     oldData.EmailHost,
+				"port":     oldData.EmailPort,
+				"username": oldData.EmailUsername,
+				"password": oldData.EmailPassword,
+				"sender":   oldData.EmailSender,
+				"receiver": oldData.EmailReceiver,
+				"use_ssl":  oldData.EmailUseSSL,
+			}
+			if err := saveLegacyMessageSenderConfig(tx, "email", emailConfig); err != nil {
+				return err
+			}
+		}
+
+		for _, column := range []string{
+			"telegram_bot_token",
+			"telegram_chat_id",
+			"telegram_endpoint",
+		} {
+			if hasTableColumn(tx, "configs", column) {
+				if err := tx.Migrator().DropColumn(&legacyModelConfig{}, column); err != nil {
+					return err
+				}
+			}
+		}
+
+		return nil
+	})
 }
 
 func saveLegacyMessageSenderConfig(db *gorm.DB, name string, config map[string]interface{}) error {
