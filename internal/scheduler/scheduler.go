@@ -266,7 +266,9 @@ func (m *Manager) run(ctx context.Context, name string, s schedule, runImmediate
 		case <-timer.C:
 			m.wg.Add(1)
 			go safeRun(ctx, m, name, fn)
-			nextTick = s.Next(nextTick)
+			// 基于当前时间而非旧基准计算下一次触发：调度停摆（宿主机
+			// 挂起、GC 长停顿）后按旧基准追赶会连发多个 tick 造成突发。
+			nextTick = s.Next(time.Now())
 			if nextTick.IsZero() {
 				return
 			}
