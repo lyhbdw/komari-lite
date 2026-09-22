@@ -54,7 +54,10 @@ func bindV2Params[T any](raw any, target *T) error {
 	return json.Unmarshal(b, target)
 }
 
-func handleV2RPC(uuid string, req v2.Request, allowWait bool) v2.Response {
+// handleV2RPC 处理一条 v2 JSON-RPC 请求。
+// viaWebSocket 为 true 时表示请求来自长连接（WS），此时不刷新 POST 在线状态：
+// WS 连接的在线状态由连接生命周期自行管理，POST presence 只属于 HTTP 上报者。
+func handleV2RPC(uuid string, req v2.Request, allowWait, viaWebSocket bool) v2.Response {
 	if req.JSONRPC != v2.Version {
 		return v2.Error(req.ID, -32600, "invalid jsonrpc version", nil)
 	}
@@ -64,7 +67,7 @@ func handleV2RPC(uuid string, req v2.Request, allowWait bool) v2.Response {
 		if err := bindV2Params(req.Params, &params); err != nil {
 			return v2.Error(req.ID, -32602, "invalid report params", err.Error())
 		}
-		if err := ingestReport(uuid, params.Report, true); err != nil {
+		if err := ingestReport(uuid, params.Report, !viaWebSocket); err != nil {
 			return v2.Error(req.ID, -32000, "failed to save report", err.Error())
 		}
 		return v2.Success(req.ID, gin.H{
@@ -95,7 +98,9 @@ func handleV2RPC(uuid string, req v2.Request, allowWait bool) v2.Response {
 		if err := bindV2Params(req.Params, &params); err != nil {
 			return v2.Error(req.ID, -32602, "invalid pull params", err.Error())
 		}
-		refreshPostPresence(uuid)
+		if !viaWebSocket {
+			refreshPostPresence(uuid)
+		}
 		agent_runtime.MarkV2Client(uuid)
 		timeout := 0 * time.Second
 		if allowWait {
@@ -126,7 +131,7 @@ func UploadV2RPC(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, v2.Error(req.ID, -32001, "invalid token", nil))
 		return
 	}
-	resp := handleV2RPC(uuid, req, true)
+	resp := handleV2RPC(uuid, req, true, false)
 	status := http.StatusOK
 	if resp.Error != nil {
 		status = http.StatusBadRequest
@@ -181,7 +186,7 @@ func WebSocketV2RPC(c *gin.Context) {
 			conn.WriteJSON(v2.Error(nil, -32700, "parse error", err.Error()))
 			continue
 		}
-		resp := handleV2RPC(uuid, req, false)
+		resp := handleV2RPC(uuid, req, false, true)
 		if req.ID != nil {
 			if err := conn.WriteJSON(resp); err != nil {
 				logger.Errorf("client-api", "failed to write v2 rpc response: %v", err)
