@@ -983,7 +983,51 @@ func (s *Store) EntityIDs(ctx context.Context, query Query) ([]string, error) {
 	s.rollupViewMu.RLock()
 	defer s.rollupViewMu.RUnlock()
 
-	args := []any{query.MetricName, bucketStartMillis(query.Start.UnixMilli(), time.Minute.Milliseconds()), query.End.UnixMilli()}
+	// Long ranges reach beyond the minute tier's retention, so scan every tier
+	// whose retention still covers the window start (same tier selection as
+	// SeriesBatch), including the in-memory hot and coarse views.
+	policy := s.cfg.RollupPolicy
+	if def, err := s.GetMetric(ctx, query.MetricName); err == nil {
+		if def.RetentionDays <= 0 {
+			policy = RollupPolicy{}
+		} else {
+			policy = policy.withMetricRetention(time.Duration(def.RetentionDays) * 24 * time.Hour)
+		}
+	} else if !errors.Is(err, ErrNotFound) {
+		return nil, err
+	}
+	now := time.Now().UTC()
+	for _, tier := range policy.Tiers {
+		if now.Add(-tier.Retention).After(query.Start) {
+			continue
+		}
+		if err := s.entityIDsFromRollupTier(ctx, query, tier.Interval, seen); err != nil {
+			return nil, err
+		}
+		if tier.Interval == time.Minute {
+			hot, err := s.hotRollupRows(query.MetricName, query.EntityID, query.Tags, query.Start, query.End, false)
+			if err != nil {
+				return nil, err
+			}
+			for _, row := range hot {
+				seen[row.entityID] = struct{}{}
+			}
+			continue
+		}
+		s.coarseEntityIDs(tier.Interval, query, seen)
+	}
+	out := make([]string, 0, len(seen))
+	for entityID := range seen {
+		out = append(out, entityID)
+	}
+	sort.Strings(out)
+	return out, nil
+}
+
+// entityIDsFromRollupTier collects distinct entity ids from one persisted
+// rollup resolution.
+func (s *Store) entityIDsFromRollupTier(ctx context.Context, query Query, resolution time.Duration, seen map[string]struct{}) error {
+	args := []any{query.MetricName, bucketStartMillis(query.Start.UnixMilli(), resolution.Milliseconds()), query.End.UnixMilli(), resolution.Milliseconds()}
 	parts := []string{
 		"s.metric_name = " + s.dialect.placeholder(1),
 		"r.bucket_milli >= " + s.dialect.placeholder(2),
@@ -997,16 +1041,15 @@ func (s *Store) EntityIDs(ctx context.Context, query Query) ([]string, error) {
 		args = append(args, query.Tags[k])
 		parts = append(parts, s.dialect.jsonExtractEquals("s.tags", k, s.dialect.placeholder(len(args))))
 	}
-	sqlText := fmt.Sprintf(`SELECT DISTINCT s.entity_id FROM %s r JOIN %s s ON s.id = r.series_id JOIN %s d ON d.id = r.resolution_id WHERE %s AND d.resolution_milli = %s ORDER BY s.entity_id ASC`, s.tables.rollups, s.tables.series, s.tables.resolutions, strings.Join(parts, " AND "), s.dialect.placeholder(len(args)+1))
-	args = append(args, time.Minute.Milliseconds())
+	sqlText := fmt.Sprintf(`SELECT DISTINCT s.entity_id FROM %s r JOIN %s s ON s.id = r.series_id JOIN %s d ON d.id = r.resolution_id WHERE %s AND d.resolution_milli = %s ORDER BY s.entity_id ASC`, s.tables.rollups, s.tables.series, s.tables.resolutions, strings.Join(parts, " AND "), s.dialect.placeholder(len(args)))
 	rows, err := s.reader().QueryContext(ctx, sqlText, args...)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	for rows.Next() {
 		var entityID string
 		if err := rows.Scan(&entityID); err != nil {
-			return nil, err
+			return err
 		}
 		if entityID != "" {
 			seen[entityID] = struct{}{}
@@ -1014,24 +1057,43 @@ func (s *Store) EntityIDs(ctx context.Context, query Query) ([]string, error) {
 	}
 	if err := rows.Err(); err != nil {
 		_ = rows.Close()
-		return nil, err
+		return err
 	}
-	if err := rows.Close(); err != nil {
-		return nil, err
+	return rows.Close()
+}
+
+// coarseEntityIDs collects entity ids from in-memory coarse parents of one
+// tier whose window intersects the query range.
+func (s *Store) coarseEntityIDs(resolution time.Duration, query Query, seen map[string]struct{}) {
+	startMilli := bucketStartMillis(query.Start.UnixMilli(), resolution.Milliseconds())
+	endMilli := query.End.UnixMilli()
+	s.coarseMu.RLock()
+	defer s.coarseMu.RUnlock()
+	for key, parent := range s.coarse {
+		if key.interval != resolution || key.metricName != query.MetricName {
+			continue
+		}
+		if key.bucket < startMilli || key.bucket > endMilli || len(parent.children) == 0 {
+			continue
+		}
+		if query.EntityID != "" && key.entityID != query.EntityID {
+			continue
+		}
+		if len(query.Tags) > 0 {
+			var childTagsJSON string
+			for _, child := range parent.children {
+				childTagsJSON = child.tagsJSON
+				break
+			}
+			_, matched, err := matchRawTags(childTagsJSON, query.Tags)
+			if err != nil || !matched {
+				continue
+			}
+		}
+		if key.entityID != "" {
+			seen[key.entityID] = struct{}{}
+		}
 	}
-	hot, err := s.hotRollupRows(query.MetricName, query.EntityID, query.Tags, query.Start, query.End, false)
-	if err != nil {
-		return nil, err
-	}
-	for _, row := range hot {
-		seen[row.entityID] = struct{}{}
-	}
-	out := make([]string, 0, len(seen))
-	for entityID := range seen {
-		out = append(out, entityID)
-	}
-	sort.Strings(out)
-	return out, nil
 }
 
 // Latest loads the newest points for a metric and entity.
