@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -21,6 +22,10 @@ import (
 )
 
 const maxAgentBodyBytes int64 = 4 << 20
+
+// takeoverMu 串行化 WS 连接的“踢旧登记新”操作，保证同一 uuid 的并发
+// 重连不会互相覆盖或踢掉对方。
+var takeoverMu sync.Mutex
 
 func readMaybeCompressedBody(r *http.Request) ([]byte, error) {
 	defer r.Body.Close()
@@ -157,10 +162,14 @@ func WebSocketV2RPC(c *gin.Context) {
 		conn.WriteJSON(v2.Error(nil, -32001, "invalid token", nil))
 		return
 	}
+	// WS takeover：关闭旧连接并登记新连接必须原子完成，
+	// 否则两个并发的新连接会互相踢掉对方。
+	takeoverMu.Lock()
 	if oldConn, exists := agent_runtime.GetConnectedClients()[uuid]; exists {
 		go oldConn.Close()
 	}
 	agent_runtime.SetConnectedClients(uuid, conn)
+	takeoverMu.Unlock()
 	agent_runtime.MarkV2Client(uuid)
 	go notifierOnline(uuid, conn.ID)
 	defer func() {
