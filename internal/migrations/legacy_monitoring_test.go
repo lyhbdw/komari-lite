@@ -112,7 +112,8 @@ func TestLegacyMonitoringTablesMigratedByOneShotMigration(t *testing.T) {
 	}
 
 	pingPoints := queryLegacyRollups(t, ctx, metricStore, metric.Query{MetricName: metricstore.MetricPingLatency, EntityID: "client-a", Start: hour.Add(-time.Second), End: hour.Add(time.Hour), Tags: map[string]string{"task_id": "7"}})
-	if len(pingPoints) != 1 || math.Abs(pingPoints[0].Value-34.15) > 1e-9 || !pingPoints[0].Bucket.Equal(hour) {
+	// 丢包行（Value=-1）不再写成 latency 点，小时 P95 只由真实采样 36 组成。
+	if len(pingPoints) != 1 || math.Abs(pingPoints[0].Value-36) > 1e-9 || !pingPoints[0].Bucket.Equal(hour) {
 		t.Fatalf("unexpected ping points: %#v", pingPoints)
 	}
 
