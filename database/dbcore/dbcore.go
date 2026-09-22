@@ -454,6 +454,11 @@ func doInitialize() error {
 	config.SetDb(instance)
 
 	if err := migrations.Run(migrations.Context{DB: instance}); err != nil {
+		// 迁移失败时关闭已打开的连接池，避免初始化失败后泄漏。
+		if sqlDB, dbErr := instance.DB(); dbErr == nil {
+			_ = sqlDB.Close()
+		}
+		instance = nil
 		return fmt.Errorf("failed to run startup migrations: %w", err)
 	}
 
