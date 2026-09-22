@@ -197,16 +197,21 @@ func legacyEpochTime(value int64) time.Time {
 
 // legacyTimestampLocation is intentionally migration-only. The old custom
 // type used TZ and defaulted to UTC; current runtime code uses system time.Local.
+//
+// 迁移时明确记录所使用的时区；TZ 未设置或无法加载时给出警告（不阻断），
+// 因为时区猜错会把旧时间戳整体平移，管理员需要据此判断是否需要修正。
 func legacyTimestampLocation() *time.Location {
 	name := strings.TrimSpace(os.Getenv("TZ"))
 	if name == "" {
+		logger.Warnf("migration", "TZ environment variable is not set; interpreting legacy offset-free timestamps as UTC. If the old deployment ran in a different timezone, set TZ before upgrading to avoid shifted timestamps.")
 		return time.UTC
 	}
 	location, err := time.LoadLocation(name)
 	if err != nil {
-		logger.Infof("migration", "Legacy timezone %q cannot be loaded; interpreting old timestamps as UTC: %v", name, err)
+		logger.Warnf("migration", "Legacy timezone %q cannot be loaded; interpreting old timestamps as UTC: %v", name, err)
 		return time.UTC
 	}
+	logger.Infof("migration", "Interpreting legacy offset-free timestamps in timezone %q (from TZ environment variable)", name)
 	return location
 }
 
