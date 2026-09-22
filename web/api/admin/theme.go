@@ -868,10 +868,32 @@ func ImportTheme(c *gin.Context) {
 	api.RespondSuccessMessage(c, msg, installedTheme)
 }
 
+// isInstalledTheme 判断主题是否已安装（嵌入式默认主题或 data/theme 下的目录）。
+func isInstalledTheme(short string) bool {
+	if !isValidMarketShort(short) {
+		return false
+	}
+	if short == public.DefaultTheme {
+		// 默认主题：本地覆盖或嵌入式基线任一存在即可。
+		if _, err := os.Stat(filepath.Join("./data/theme", short)); err == nil {
+			return true
+		}
+		_, err := public.PublicFS.ReadFile("defaultTheme/komari-theme.json")
+		return err == nil
+	}
+	_, err := os.Stat(filepath.Join("./data/theme", short))
+	return err == nil
+}
+
 func UpdateThemeSettings(c *gin.Context) {
 	theme := c.Query("theme")
 	if theme == "" {
 		api.RespondError(c, http.StatusBadRequest, "主题名称不能为空")
+		return
+	}
+	// 校验主题已安装：防止为不存在的主题写入配置记录。
+	if !isInstalledTheme(theme) {
+		api.RespondError(c, http.StatusNotFound, "主题不存在或未安装")
 		return
 	}
 	var req map[string]any
