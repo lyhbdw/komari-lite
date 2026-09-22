@@ -111,7 +111,21 @@ func DeleteTheme(c *gin.Context) {
 
 // SetTheme 设置主题
 func SetTheme(c *gin.Context) {
+	// CSRF 防御：状态变更端点仅接受 POST（原为 GET，可被跨站 <img> 触发）。
+	if c.Request.Method != http.MethodPost {
+		api.RespondError(c, http.StatusMethodNotAllowed, "仅支持 POST")
+		return
+	}
+	// 兼容 query 与 JSON body 两种传参方式。
 	themeName := c.Query("theme")
+	if themeName == "" {
+		var body struct {
+			Theme string `json:"theme"`
+		}
+		if err := c.ShouldBindJSON(&body); err == nil {
+			themeName = body.Theme
+		}
+	}
 	if themeName == "" {
 		api.RespondError(c, http.StatusBadRequest, "主题名称不能为空")
 		return

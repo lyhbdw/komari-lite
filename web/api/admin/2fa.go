@@ -30,7 +30,12 @@ func Generate2FA(c *gin.Context) {
 func Enable2FA(c *gin.Context) {
 	uuid, _ := c.Get("uuid")
 	secret, _ := c.Cookie("2fa_secret")
-	code := c.Query("code")
+	// CSRF 防御：code 从 POST body 读取（原走 URL query，会进浏览器历史与日志）。
+	var body struct {
+		Code string `json:"code"`
+	}
+	_ = c.ShouldBindJSON(&body)
+	code := body.Code
 	if secret == "" || uuid == nil || code == "" {
 		api.RespondError(c, 400, "2FA secret or code not provided")
 		return

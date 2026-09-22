@@ -36,7 +36,7 @@ func registerPublicRoutes(r *gin.Engine) {
 		c.Data(200, "text/x-shellscript; charset=utf-8", public.AgentInstallScript)
 	})
 	r.GET("/download/agent/:version/:asset", public.ServeAgentAsset)
-	r.GET("/api/logout", public_api.Logout)
+	r.POST("/api/logout", public_api.Logout)
 	registerLiteDisabledRoutes(r)
 	// /api/clients 是 WebSocket 端点（客户端发 "get"/"get <uuid>" 拉取在线列表与最新上报），
 	// 非 JSON-RPC，保留为 WS handler。
@@ -145,7 +145,7 @@ func registerAdminRoutes(r *gin.Engine) {
 	theme := g.Group("/theme")
 	{
 		theme.GET("/list", admin.ListThemes)
-		theme.GET("/set", admin.SetTheme)
+		theme.POST("/set", admin.SetTheme)
 		theme.POST("/update", admin.UpdateTheme)
 		theme.POST("/import", admin.ImportTheme)
 		theme.POST("/settings", admin.UpdateThemeSettings)
