@@ -35,6 +35,7 @@ const (
 	reportBatchInterval     = 3 * time.Second
 	reportBatchQueueSize    = 4096
 	pingBatchMaxRecords     = 512
+	reportBatchMaxReports   = 512
 	reportBatchWriteTimeout = 10 * time.Second
 )
 
@@ -297,13 +298,10 @@ func drainPingQueue(queue <-chan models.PingRecord, limit int) []models.PingReco
 }
 
 func writePendingReports(ctx context.Context, pending *[]v2.Report) error {
-	if len(*pending) == 0 {
-		return nil
-	}
-	batchSize := len(*pending)
 	for len(*pending) > 0 {
-		if batchSize > len(*pending) {
-			batchSize = len(*pending)
+		batchSize := len(*pending)
+		if batchSize > reportBatchMaxReports {
+			batchSize = reportBatchMaxReports
 		}
 		writeCtx, cancel := context.WithTimeout(ctx, reportBatchWriteTimeout)
 		_, err := writeReportBatch(writeCtx, (*pending)[:batchSize])
