@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/komari-monitor/komari/database/dbcore"
@@ -16,7 +17,14 @@ import (
 	"github.com/komari-monitor/komari/web/public"
 )
 
+// publicInfoQueryTimeout 限制访客信息聚合查询的后台耗时，防止慢查询
+// 无限期挂起请求 goroutine。
+const publicInfoQueryTimeout = 30 * time.Second
+
 func GetPublicInfo() (map[string]interface{}, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), publicInfoQueryTimeout)
+	defer cancel()
+
 	cstPtr, err := config.GetManyAs[config.Settings]()
 	if err != nil {
 		return nil, err
@@ -52,7 +60,7 @@ func GetPublicInfo() (map[string]interface{}, error) {
 			cst.Description = "Komari Monitor, a simple server monitoring tool."
 		}
 	}
-	retention, err := metricstore.GetRetentionSummary(context.Background())
+	retention, err := metricstore.GetRetentionSummary(ctx)
 	if err != nil {
 		return nil, err
 	}
