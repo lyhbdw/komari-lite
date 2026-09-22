@@ -137,7 +137,10 @@ func migrateTimestampColumn(db *gorm.DB, target timestampColumn, location *time.
 			}
 			stamp, err := parseLegacyTimestamp(raw, location)
 			if err != nil {
-				return converted, fmt.Errorf("convert legacy timestamp %s.%s rowid=%d: %w", target.table, target.column, row.rowID, err)
+				// 坏行只跳过并记录错误日志，保留原值，不阻断启动：
+				// 单条脏数据不应让整个服务无法起来（此前会直接 Fatalf）。
+				logger.Errorf("migration", "Skip unparseable legacy timestamp %s.%s rowid=%d (kept as-is): %v", target.table, target.column, row.rowID, err)
+				continue
 			}
 			update := fmt.Sprintf("UPDATE %s SET %s = ? WHERE rowid = ?", table, column)
 			if err := db.Exec(update, stamp.UTC(), row.rowID).Error; err != nil {
