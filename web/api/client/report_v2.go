@@ -171,6 +171,20 @@ func WebSocketV2RPC(c *gin.Context) {
 		return
 	}
 
+	// 服务端心跳：定期发 PingMessage 控制帧。gorilla/websocket 的 agent 端
+	// 默认自动回 pong，浏览器端也会自动回 pong；任何消息（含 pong）都会
+	// 重置下方的读超时，因此上报间隔较长的 agent 也不会被误判为离线。
+	// 写失败（含写超时）说明连接已不可用，直接退出读循环清理连接。
+	heartbeat := time.NewTicker(pingPeriod)
+	defer heartbeat.Stop()
+	go func() {
+		for range heartbeat.C {
+			if err := conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+				return
+			}
+		}
+	}()
+
 	for {
 		conn.SetReadDeadline(time.Now().Add(readWait))
 		_, message, err := conn.ReadMessage()

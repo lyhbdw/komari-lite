@@ -9,8 +9,12 @@ import (
 )
 
 const (
-	// 如果超过这个时间没有收到任何消息，则认为连接已死
-	readWait        = 11 * time.Second
+	// 如果超过这个时间没有收到任何消息（含 pong 控制帧），则认为连接已死。
+	// 兼容上报间隔较长的 agent（komari-agent-lite 可能 30s+ 上报一次），
+	// 由服务端心跳 ping 周期性保活。
+	readWait = 60 * time.Second
+	// 服务端心跳间隔，必须显著小于 readWait。
+	pingPeriod = 30 * time.Second
 	postPresenceTTL = 35 * time.Second
 )
 
