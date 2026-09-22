@@ -27,12 +27,19 @@ func WritePingRecord(ctx context.Context, rec models.PingRecord) error {
 }
 
 func writePingRecords(ctx context.Context, records []models.PingRecord) error {
+	if len(records) == 0 {
+		return nil
+	}
+	// 与 report 写入路径一致地持有共享操作门，避免与 ReclaimSpace 的
+	// VACUUM 等独占维护操作并发写库。
+	if err := storeOperations.AcquireShared(ctx); err != nil {
+		return fmt.Errorf("wait for metric store operation before writing ping records: %w", err)
+	}
+	defer storeOperations.ReleaseShared()
+
 	s := GetStore()
 	if s == nil {
 		return fmt.Errorf("metric store not enabled")
-	}
-	if len(records) == 0 {
-		return nil
 	}
 
 	points := make([]metric.Point, 0, len(records)*2)
