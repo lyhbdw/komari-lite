@@ -615,10 +615,7 @@ func (s *Store) DeleteMetric(ctx context.Context, name string) error {
 	if err := tx.Commit(); err != nil {
 		return err
 	}
-	_, rawErr := s.deleteRawPoints(name, "", nil)
-	_, hotErr := s.deleteHotRollups(name, "", nil, nil)
-	_, coarseErr := s.deleteCoarseRollupsMatching(name, "", nil)
-	return errors.Join(rawErr, hotErr, coarseErr)
+	return s.deleteSeriesMemoryState(name, "", nil)
 }
 
 // UpdateMetricRetention updates one metric's retention policy without deleting
@@ -716,10 +713,7 @@ func (s *Store) SetMetricRetention(ctx context.Context, name string, retentionDa
 		return Definition{}, err
 	}
 	if retentionDays == 0 {
-		_, rawErr := s.deleteRawPoints(name, "", nil)
-		_, hotErr := s.deleteHotRollups(name, "", nil, nil)
-		_, coarseErr := s.deleteCoarseRollupsMatching(name, "", nil)
-		if err := errors.Join(rawErr, hotErr, coarseErr); err != nil {
+		if err := s.deleteSeriesMemoryState(name, "", nil); err != nil {
 			return Definition{}, err
 		}
 	}
@@ -766,10 +760,7 @@ func (s *Store) DeleteMetricDataIfDisabled(ctx context.Context, name string) (bo
 	if err := tx.Commit(); err != nil {
 		return false, err
 	}
-	_, rawErr := s.deleteRawPoints(name, "", nil)
-	_, hotErr := s.deleteHotRollups(name, "", nil, nil)
-	_, coarseErr := s.deleteCoarseRollupsMatching(name, "", nil)
-	if err := errors.Join(rawErr, hotErr, coarseErr); err != nil {
+	if err := s.deleteSeriesMemoryState(name, "", nil); err != nil {
 		return false, err
 	}
 	return true, nil
@@ -807,7 +798,15 @@ func (s *Store) DeleteEntity(ctx context.Context, entityID string) (int64, error
 	raw, rawErr := s.deleteRawPoints("", entityID, nil)
 	hot, hotErr := s.deleteHotRollups("", entityID, nil, nil)
 	_, coarseErr := s.deleteCoarseRollupsMatching("", entityID, nil)
-	return rollups + raw + hot, errors.Join(rawErr, hotErr, coarseErr)
+	if err := errors.Join(rawErr, hotErr, coarseErr); err != nil {
+		// The database rows are already gone; force the matching buckets out
+		// of memory so the stale views cannot resurrect the deleted entity.
+		_, _ = s.deleteRawPoints("", entityID, nil)
+		_, _ = s.deleteHotRollups("", entityID, nil, nil)
+		_, _ = s.deleteCoarseRollupsMatching("", entityID, nil)
+		return rollups, err
+	}
+	return rollups + raw + hot, nil
 }
 
 // DeleteSeries deletes raw and rollup data matching a query-shaped series filter.
@@ -860,7 +859,37 @@ func (s *Store) deleteSeries(ctx context.Context, filter Query) (int64, error) {
 	raw, rawErr := s.deleteRawPoints(filter.MetricName, filter.EntityID, filter.Tags)
 	hot, hotErr := s.deleteHotRollups(filter.MetricName, filter.EntityID, filter.Tags, nil)
 	_, coarseErr := s.deleteCoarseRollupsMatching(filter.MetricName, filter.EntityID, filter.Tags)
-	return rollups + raw + hot, errors.Join(rawErr, hotErr, coarseErr)
+	if err := errors.Join(rawErr, hotErr, coarseErr); err != nil {
+		// The database rows are already gone; force the matching buckets out
+		// of memory so the stale views cannot resurrect the deleted series.
+		_, _ = s.deleteRawPoints(filter.MetricName, filter.EntityID, nil)
+		_, _ = s.deleteHotRollups(filter.MetricName, filter.EntityID, nil, nil)
+		_, _ = s.deleteCoarseRollupsMatching(filter.MetricName, filter.EntityID, nil)
+		return rollups, err
+	}
+	return rollups + raw + hot, nil
+}
+
+// deleteSeriesMemoryState removes the in-memory raw/hot/coarse views of a
+// series after its database rows were committed for deletion. The precise
+// tag-filtered delete runs first; if it fails (e.g. undecodable tag JSON), a
+// forced metric+entity-wide removal follows so stale buckets cannot resurrect
+// the deleted data or make later flushes fail on missing definitions.
+func (s *Store) deleteSeriesMemoryState(metricName, entityID string, tags map[string]string) error {
+	_, rawErr := s.deleteRawPoints(metricName, entityID, tags)
+	_, hotErr := s.deleteHotRollups(metricName, entityID, tags, nil)
+	_, coarseErr := s.deleteCoarseRollupsMatching(metricName, entityID, tags)
+	err := errors.Join(rawErr, hotErr, coarseErr)
+	if err == nil {
+		return nil
+	}
+	// Forced fallback: drop every matching bucket regardless of tags. The
+	// database rows are already gone, so over-removing memory state is safe
+	// while leaving it would corrupt the rollup view.
+	_, _ = s.deleteRawPoints(metricName, entityID, nil)
+	_, _ = s.deleteHotRollups(metricName, entityID, nil, nil)
+	_, _ = s.deleteCoarseRollupsMatching(metricName, entityID, nil)
+	return err
 }
 
 // Write stores one metric point.
