@@ -22,12 +22,19 @@ func (ConfigItem) TableName() string {
 }
 
 var (
-	db    *gorm.DB
-	SetDb = func(gdb *gorm.DB) {
+	db *gorm.DB
+	// SetDb 注入配置库并确保 configs 表存在。返回错误而非 panic：
+	// 调用方（启动生命周期）应统一处理失败，直接 panic 会绕过清理流程。
+	SetDb = func(gdb *gorm.DB) error {
+		if gdb == nil {
+			return fmt.Errorf("config database is nil")
+		}
 		db = gdb
 		if err := db.AutoMigrate(&ConfigItem{}); err != nil {
-			panic("failed to migrate config item table: " + err.Error())
+			db = nil
+			return fmt.Errorf("failed to migrate config item table: %w", err)
 		}
+		return nil
 	}
 )
 

@@ -248,7 +248,9 @@ func TestCompleteLegacyMonitoringMigrationFinalizesBeforeMarkingDone(t *testing.
 	} else {
 		t.Fatalf("finalization sql db: %v", err)
 	}
-	appconfig.SetDb(db)
+	if err := appconfig.SetDb(db); err != nil {
+		t.Fatalf("set config db: %v", err)
+	}
 	if err := db.AutoMigrate(&models.Record{}); err != nil {
 		t.Fatalf("migrate legacy table: %v", err)
 	}

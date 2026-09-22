@@ -22,7 +22,9 @@ func TestWebSocketOriginBypassRequiresDevelopmentMode(t *testing.T) {
 	}
 	sqlDB, _ := db.DB()
 	t.Cleanup(func() { sqlDB.Close() })
-	config.SetDb(db)
+	if err := config.SetDb(db); err != nil {
+		t.Fatalf("set config db: %v", err)
+	}
 
 	for _, mode := range []string{"release", ""} {
 		t.Setenv("GIN_MODE", mode)
