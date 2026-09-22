@@ -32,6 +32,9 @@ var (
 )
 
 // GetAs 获取并转换为指定类型 (泛型)，支持数值类型自动转换
+//
+// miss 时仍会把默认值写回数据库（自愈），但不再广播配置变更事件：
+// 这是读路径，广播"变更"会触发订阅者无意义的重载。
 func GetAs[T any](key string, defaul ...any) (T, error) {
 	var t T
 	var item ConfigItem
@@ -41,7 +44,7 @@ func GetAs[T any](key string, defaul ...any) (T, error) {
 		if len(defaul) > 0 {
 			// 尝试直接类型断言
 			if v, ok := defaul[0].(T); ok {
-				err = Set(key, v)
+				err = setDefaultQuietly(key, v)
 				return v, err
 			}
 			// 尝试类型转换
@@ -49,7 +52,7 @@ func GetAs[T any](key string, defaul ...any) (T, error) {
 			if err := convertAndSet(defaul[0], val); err != nil {
 				return t, fmt.Errorf("default value type mismatch: expected %T, got %T", t, defaul[0])
 			}
-			err = Set(key, t)
+			err = setDefaultQuietly(key, t)
 			return t, err
 		}
 		return t, err
@@ -70,9 +73,23 @@ func GetAs[T any](key string, defaul ...any) (T, error) {
 	return t, nil
 }
 
+// setDefaultQuietly 把默认值写回数据库（自愈），但不广播配置变更事件。
+// 读路径 miss 时的回填不是真正的配置变更，不应触发订阅者重载。
+func setDefaultQuietly(key string, value any) error {
+	bytes, err := json.Marshal(value)
+	if err != nil {
+		return err
+	}
+	item := ConfigItem{Key: key, Value: string(bytes)}
+	return db.Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "key"}},
+		DoUpdates: clause.AssignmentColumns([]string{"value"}),
+	}).Create(&item).Error
+}
+
 // GetMany 获取多个配置项，keys 为 map[key]defaultValue
 // 如果 defaultValue 为 nil，则数据库不存在时不写入
-// 如果 defaultValue 不为 nil，则数据库不存在时写入默认值
+// 如果 defaultValue 不为 nil，则数据库不存在时写入默认值（不广播事件）
 func GetMany(keys map[string]any) (map[string]any, error) {
 	var items []ConfigItem
 	result := make(map[string]any)
