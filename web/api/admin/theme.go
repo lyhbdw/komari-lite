@@ -619,16 +619,24 @@ func UpdateTheme(c *gin.Context) {
 	// 3. 用户提供的新URL下载
 	// 4. 用户提供的GitHub仓库信息，获取最新release下载
 
-	// 临时文件名
-	tempFile := filepath.Join(os.TempDir(), "downloaded_theme.zip")
-	if err := os.WriteFile(tempFile, themeData, 0644); err != nil {
+	// 临时文件名（随机名，避免并发请求互相覆盖/竞争固定路径）
+	tempFile, err := os.CreateTemp("", "komari-theme-download-*.zip")
+	if err != nil {
 		api.RespondError(c, http.StatusInternalServerError, "保存文件失败: "+err.Error())
 		return
 	}
-	defer os.Remove(tempFile)
+	defer os.Remove(tempFile.Name())
+	if err := tempFile.Close(); err != nil {
+		api.RespondError(c, http.StatusInternalServerError, "保存文件失败: "+err.Error())
+		return
+	}
+	if err := os.WriteFile(tempFile.Name(), themeData, 0644); err != nil {
+		api.RespondError(c, http.StatusInternalServerError, "保存文件失败: "+err.Error())
+		return
+	}
 
 	// 解压ZIP文件并验证
-	updatedThemeInfo, err := extractAndValidateTheme(tempFile)
+	updatedThemeInfo, err := extractAndValidateTheme(tempFile.Name())
 	if err != nil {
 		api.RespondError(c, http.StatusBadRequest, err.Error())
 		return
@@ -740,18 +748,26 @@ func ImportTheme(c *gin.Context) {
 		return
 	}
 
-	// 保存到临时文件
-	tempFile := filepath.Join(os.TempDir(), "import_theme.zip")
-	if err := os.WriteFile(tempFile, themeData, 0644); err != nil {
+	// 保存到临时文件（随机名，避免并发请求互相覆盖/竞争固定路径）
+	tempFile, err := os.CreateTemp("", "komari-theme-import-*.zip")
+	if err != nil {
 		api.RespondError(c, http.StatusInternalServerError, "保存文件失败: "+err.Error())
 		return
 	}
-	defer os.Remove(tempFile)
+	defer os.Remove(tempFile.Name())
+	if err := tempFile.Close(); err != nil {
+		api.RespondError(c, http.StatusInternalServerError, "保存文件失败: "+err.Error())
+		return
+	}
+	if err := os.WriteFile(tempFile.Name(), themeData, 0644); err != nil {
+		api.RespondError(c, http.StatusInternalServerError, "保存文件失败: "+err.Error())
+		return
+	}
 
 	// preview模式：仅解析并返回主题信息
 	preview := c.Query("preview")
 	if preview == "true" {
-		themeInfo, err := peekThemeFromZip(tempFile)
+		themeInfo, err := peekThemeFromZip(tempFile.Name())
 		if err != nil {
 			api.RespondError(c, http.StatusBadRequest, err.Error())
 			return
@@ -773,7 +789,7 @@ func ImportTheme(c *gin.Context) {
 
 	// 安装模式：检查是否存在同名主题
 	// 先peek一下获取short名称用于检测冲突
-	themeInfo, err := peekThemeFromZip(tempFile)
+	themeInfo, err := peekThemeFromZip(tempFile.Name())
 	if err != nil {
 		api.RespondError(c, http.StatusBadRequest, err.Error())
 		return
@@ -786,7 +802,7 @@ func ImportTheme(c *gin.Context) {
 	}
 
 	// 解压安装
-	installedTheme, err := extractAndValidateTheme(tempFile)
+	installedTheme, err := extractAndValidateTheme(tempFile.Name())
 	if err != nil {
 		api.RespondError(c, http.StatusBadRequest, err.Error())
 		return
