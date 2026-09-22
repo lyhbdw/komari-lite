@@ -44,7 +44,7 @@ func refreshPostPresence(uuid string) {
 	connID := time.Now().UnixNano()
 	agent_runtime.KeepAlivePresence(uuid, connID, postPresenceTTL)
 	agent_runtime.MarkV2Client(uuid)
-	go notifier.OnlineNotification(uuid, connID)
+	go safeOnlineNotification(uuid, connID)
 
 	defaultGeneration := uint64(0)
 	entry := &postPresenceEntry{connID: connID, generation: defaultGeneration}
@@ -64,7 +64,22 @@ func postPresenceExpired(uuid string, connID int64, gen uint64) {
 	delete(postPresenceStates, uuid)
 	postPresenceMu.Unlock()
 
+	// time.AfterFunc 回调里同步做运行时清理和通知，任何一处 panic
+	// 都会击穿 timer goroutine 导致进程崩溃，必须 recover。
+	defer func() { _ = recover() }()
 	agent_runtime.SetPresence(uuid, connID, false)
 	agent_runtime.ClearV2ClientIfOffline(uuid)
+	safeOfflineNotification(uuid, connID)
+}
+
+// safeOnlineNotification 在独立 goroutine 中做上线通知，panic 不外泄。
+func safeOnlineNotification(uuid string, connID int64) {
+	defer func() { _ = recover() }()
+	notifier.OnlineNotification(uuid, connID)
+}
+
+// safeOfflineNotification 做下线通知，panic 不外泄。
+func safeOfflineNotification(uuid string, connID int64) {
+	defer func() { _ = recover() }()
 	notifier.OfflineNotification(uuid, connID)
 }
