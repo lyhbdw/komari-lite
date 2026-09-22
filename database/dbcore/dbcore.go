@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -23,6 +24,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 // zipDirectoryExcluding 将 srcDir 打包为 dstZip，exclude 是绝对路径集合需要排除
@@ -337,12 +339,22 @@ func readSystemVersion() (string, error) {
 }
 
 // writeVersionMarker 将当前 versionID 写入配置库.
+// 注意：backupOnVersionUpgrade 在 config.SetDb 之前执行（必须在破坏性迁移前
+// 备份），此时 config 包尚未注入数据库，因此这里直接通过全局 gorm 实例 upsert，
+// 不能走 config.Set。
 func writeVersionMarker() {
 	if instance == nil {
 		logger.Errorf("dbcore", "[upgrade-backup] cannot persist version marker: main database is not initialized")
 		return
 	}
-	if err := config.Set(SystemVersionKey, versionID); err != nil {
+	item := appconfig.ConfigItem{
+		Key:   SystemVersionKey,
+		Value: strconv.Quote(versionID),
+	}
+	if err := instance.Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "key"}},
+		DoUpdates: clause.AssignmentColumns([]string{"value"}),
+	}).Create(&item).Error; err != nil {
 		logger.Errorf("dbcore", "[upgrade-backup] failed to persist version marker: %v", err)
 	}
 }
