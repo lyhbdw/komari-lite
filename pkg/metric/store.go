@@ -1235,7 +1235,31 @@ func (s *Store) DeleteBefore(ctx context.Context, metricName string, before time
 	raw := s.deleteRawBefore(metricName, before.UnixMilli())
 	hotCutoff := fromMillis(bucketStartMillis(before.UnixMilli(), time.Minute.Milliseconds()))
 	hot, hotErr := s.deleteHotRollups(metricName, "", nil, &hotCutoff)
-	return deleted + raw + hot, hotErr
+	// In-memory coarse parents must be dropped with the same cutoff, otherwise
+	// FlushCoarse would re-persist the deleted window from the stale children.
+	coarse, coarseErr := s.deleteCoarseRollupsBefore(metricName, before)
+	return deleted + raw + hot + coarse, errors.Join(hotErr, coarseErr)
+}
+
+// deleteCoarseRollupsBefore removes in-memory coarse parents whose bucket
+// window ends at or before the cutoff. A parent whose window is still open may
+// receive late children, so only fully sealed parents are dropped.
+func (s *Store) deleteCoarseRollupsBefore(metricName string, before time.Time) (int64, error) {
+	s.coarseMu.Lock()
+	defer s.coarseMu.Unlock()
+	cutoffMilli := before.UTC().UnixMilli()
+	var deleted int64
+	for key, parent := range s.coarse {
+		if metricName != "" && key.metricName != metricName {
+			continue
+		}
+		if key.bucket+key.interval.Milliseconds() > cutoffMilli {
+			continue
+		}
+		deleted += int64(len(parent.children))
+		delete(s.coarse, key)
+	}
+	return deleted, nil
 }
 
 // CleanupExpired deletes data past each metric's effective retention in one

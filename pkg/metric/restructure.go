@@ -782,6 +782,11 @@ func (s *Store) discardNormalizedHistory(ctx context.Context, report func(Restru
 	clear(s.hot)
 	clear(s.hotReplace)
 	s.hotMu.Unlock()
+	// In-memory coarse parents hold unsealed downsampled summaries; leaving
+	// them behind would let the next FlushCoarse resurrect discarded history.
+	s.coarseMu.Lock()
+	clear(s.coarse)
+	s.coarseMu.Unlock()
 	if err := s.validateNormalizedRestructure(ctx, len(definitions)); err != nil {
 		return RestructureResult{}, fmt.Errorf("validate empty normalized schema: %w", err)
 	}
