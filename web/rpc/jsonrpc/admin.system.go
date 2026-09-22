@@ -34,6 +34,13 @@ func init() {
 	reg("testGeoip", adminTestGeoip, "Test GeoIP lookup")
 }
 
+const (
+	// maxAdminLogsLimit 限制单页日志条数，防止超大 limit 拖垮数据库/内存。
+	maxAdminLogsLimit = 500
+	// maxAdminLogsPage 防止 offset 溢出（page*limit 过大时直接拒绝）。
+	maxAdminLogsPage = 100000
+)
+
 func adminGetLogs(_ context.Context, req *rpc.JsonRpcRequest) (any, *rpc.JsonRpcError) {
 	var params struct {
 		Limit   string `json:"limit"`
@@ -51,9 +58,15 @@ func adminGetLogs(_ context.Context, req *rpc.JsonRpcRequest) (any, *rpc.JsonRpc
 	if err != nil || limitInt <= 0 {
 		return nil, rpc.MakeError(rpc.InvalidParams, "Invalid limit: "+params.Limit, nil)
 	}
+	if limitInt > maxAdminLogsLimit {
+		return nil, rpc.MakeError(rpc.InvalidParams, "Invalid limit: must be <= 500", nil)
+	}
 	pageInt, err := strconv.Atoi(params.Page)
 	if err != nil || pageInt <= 0 {
 		return nil, rpc.MakeError(rpc.InvalidParams, "Invalid page: "+params.Page, nil)
+	}
+	if pageInt > maxAdminLogsPage {
+		return nil, rpc.MakeError(rpc.InvalidParams, "Invalid page: too large", nil)
 	}
 	db := dbcore.GetDBInstance()
 	logs, total, err := queryAdminLogs(db, limitInt, pageInt, params.MsgType)
