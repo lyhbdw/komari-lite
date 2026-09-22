@@ -216,7 +216,8 @@ func extractAndValidateTheme(zipPath string) (models.Theme, error) {
 		}
 
 		if f.FileInfo().IsDir() {
-			os.MkdirAll(path, f.FileInfo().Mode())
+			// 目录固定 0755，剥除压缩包内记录的任何附加位（如 setgid）。
+			os.MkdirAll(path, 0755)
 			continue
 		}
 
@@ -231,7 +232,9 @@ func extractAndValidateTheme(zipPath string) (models.Theme, error) {
 			return themeInfo, fmt.Errorf("打开压缩文件失败: %v", err)
 		}
 
-		outFile, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.FileInfo().Mode())
+		// 文件 mode 白名单化：固定 0644，剥除 setuid/setgid/可执行等
+		// 压缩包内记录的权限位（web 根目录内容无需可执行）。
+		outFile, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 		if err != nil {
 			rc.Close()
 			return themeInfo, fmt.Errorf("创建文件失败: %v", err)
