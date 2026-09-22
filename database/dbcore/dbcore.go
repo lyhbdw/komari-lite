@@ -363,7 +363,10 @@ func buildSQLiteDSN(databaseFile string) string {
 	}
 
 	if databaseFile == ":memory:" {
-		return "file::memory:?cache=shared&" + params
+		// 不使用 cache=shared：主库固定单连接（SetMaxOpenConns(1)），
+		// 共享缓存没有意义，且其表级锁（SQLITE_LOCKED，busy_timeout 对其
+		// 无效）与 metricstore/config.go 阐述的问题一致。
+		return "file::memory:?" + params
 	}
 
 	return "file:" + filepath.ToSlash(databaseFile) + separator + params
