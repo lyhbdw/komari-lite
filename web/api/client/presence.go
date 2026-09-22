@@ -73,6 +73,8 @@ func postPresenceExpired(uuid string, connID int64, gen uint64) {
 	defer func() { _ = recover() }()
 	agent_runtime.SetPresence(uuid, connID, false)
 	agent_runtime.ClearV2ClientIfOffline(uuid)
+	// POST 上报会话彻底过期后清理其事件队列，避免 map 只增不减。
+	agent_runtime.DeleteV2EventQueue(uuid)
 	safeOfflineNotification(uuid, connID)
 }
 

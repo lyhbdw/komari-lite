@@ -165,6 +165,7 @@ func WebSocketV2RPC(c *gin.Context) {
 	go notifierOnline(uuid, conn.ID)
 	defer func() {
 		agent_runtime.DeleteClientConditionally(uuid, conn)
+		agent_runtime.DeleteV2EventQueue(uuid)
 		notifierOffline(uuid, conn.ID)
 	}()
 	if !pushQueuedV2Events(conn, uuid) {

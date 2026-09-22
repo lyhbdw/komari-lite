@@ -14,6 +14,8 @@ import (
 const (
 	v2EventQueueLimit = 128
 	v2PingEventTTL    = 3 * time.Second
+	// 零 TTL 事件的默认过期时间，防止它们在队列中永久保留。
+	v2EventDefaultTTL = 10 * time.Minute
 )
 
 type v2EventQueue struct {
@@ -33,6 +35,19 @@ func getV2EventQueueLocked(uuid string) *v2EventQueue {
 		v2EventQueues[uuid] = q
 	}
 	return q
+}
+
+// DeleteV2EventQueue 清理客户端的事件队列并唤醒可能正在 WaitV2Events 中
+// 等待的 goroutine，防止 map 只增不减以及等待者永久阻塞。
+func DeleteV2EventQueue(uuid string) {
+	v2EventMu.Lock()
+	defer v2EventMu.Unlock()
+	q := v2EventQueues[uuid]
+	if q == nil {
+		return
+	}
+	delete(v2EventQueues, uuid)
+	close(q.signal)
 }
 
 func DispatchPing(uuid string, params v2.PingParams) bool {
@@ -147,8 +162,8 @@ func pruneExpiredV2EventsLocked(q *v2EventQueue) {
 	filtered := q.events[:0]
 	for _, event := range q.events {
 		if event.ExpiresAt.IsZero() {
-			filtered = append(filtered, event)
-			continue
+			// 零 TTL 事件按入队时间 + 默认 TTL 过期，避免永久保留。
+			event.ExpiresAt = event.CreatedAt.Add(v2EventDefaultTTL)
 		}
 		if event.ExpiresAt.After(now) {
 			filtered = append(filtered, event)
@@ -161,7 +176,12 @@ func TakeV2Events(uuid string, ackIDs []string, limit int) []v2.Event {
 	v2EventMu.Lock()
 	defer v2EventMu.Unlock()
 
-	q := getV2EventQueueLocked(uuid)
+	q := v2EventQueues[uuid]
+	if q == nil {
+		// 队列已被清理（客户端断开）：返回空，不重建，
+		// 否则等待者被唤醒后会重新把条目塞回 map。
+		return []v2.Event{}
+	}
 	ackV2EventsLocked(q, ackIDs)
 	pruneExpiredV2EventsLocked(q)
 	return takeV2EventsLocked(q, limit)
