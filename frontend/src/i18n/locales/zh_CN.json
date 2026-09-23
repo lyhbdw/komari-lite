@@ -1,10 +1,4 @@
 {
-  "about": {
-    "ai": "Komari 项目的开发过程得到了人工智能工具的辅助。这些工具被用于执行代码生成、重构和调试等任务，以提高开发效率和代码质量。所有由 AI 生成的代码和建议都经过了人类开发者的审查与验证。",
-    "open_source": "Komari 基于 MIT 协议开源，并使用了以下开源软件构建：",
-    "open_source_title": "开源软件许可协议",
-    "readme_open_in_new_tab": "在新标签页中打开"
-  },
   "account": {
     "2fa_disabled": "双重身份验证已禁用",
     "2fa_enabled": "双重身份验证已启用",
@@ -117,7 +111,6 @@
       "price": "价格",
       "priceTips": "0不显示，-1表示免费",
       "searchByName": "查找服务器",
-
       "setToLongTerm": "设置为长期",
       "submit": "提交",
       "submitting": "等待"
@@ -231,7 +224,6 @@
     "yellow": "黄色"
   },
   "common": {
-    "about": "关于",
     "action": "操作",
     "add": "添加",
     "added_successfully": "成功添加",

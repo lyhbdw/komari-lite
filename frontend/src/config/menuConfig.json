@@ -70,19 +70,6 @@
       "icon": "UserCircle"
     },
     {
-      "labelKey": "common.about",
-      "path": "/admin/about",
-      "icon": "Info",
-      "bottom": true
-    },
-    {
-      "labelKey": "common.documentation",
-      "path": "https://komari-document.pages.dev/",
-      "icon": "Book",
-      "newTab": true,
-      "bottom": true
-    },
-    {
       "labelKey": "common.home",
       "path": "/",
       "icon": "Home",
