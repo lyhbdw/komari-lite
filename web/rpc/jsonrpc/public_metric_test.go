@@ -357,7 +357,7 @@ func TestMetricDownsampleIntervalCeilsToStandardInterval(t *testing.T) {
 	}
 }
 
-func TestLoadPublicMetricPointsReturnsAllRecentRawSamples(t *testing.T) {
+func TestPublicRawWindowQueryReturnsAllRecentSamples(t *testing.T) {
 	ctx := context.Background()
 	store, err := metric.Open(ctx, metric.SQLite(":memory:",
 		metric.WithMaxOpenConns(1),
@@ -373,13 +373,8 @@ func TestLoadPublicMetricPointsReturnsAllRecentRawSamples(t *testing.T) {
 		t.Fatalf("open metric store: %v", err)
 	}
 	defer store.Close()
-
-	const metricName = "query.raw"
-	if err := store.CreateMetric(ctx, metric.Definition{
-		Name:          metricName,
-		Type:          metric.TypeGauge,
-		RetentionDays: 1,
-	}); err != nil {
+	const metricName = "query.recent"
+	if err := store.CreateMetric(ctx, metric.Definition{Name: metricName, Type: metric.TypeGauge, RetentionDays: 1}); err != nil {
 		t.Fatalf("create metric: %v", err)
 	}
 	now := time.Now().UTC().Truncate(time.Millisecond)
@@ -394,55 +389,30 @@ func TestLoadPublicMetricPointsReturnsAllRecentRawSamples(t *testing.T) {
 	}
 
 	queryEnd := now.Add(-3 * time.Second)
-	got, err := loadPublicMetricPoints(ctx, store, metric.Query{
+	got, err := store.Query(ctx, metric.Query{
 		MetricName: metricName,
 		EntityID:   "node-a",
 		Start:      queryEnd.Add(-10 * time.Minute),
 		End:        queryEnd,
 		Order:      metric.OrderAsc,
-	}, metric.AggAvg, 1, false, now)
+	})
 	if err != nil {
-		t.Fatalf("load public metric points: %v", err)
+		t.Fatalf("query public metric points: %v", err)
 	}
-	if got.downsampled || got.interval != 0 {
-		t.Fatalf("recent raw query was marked downsampled: %#v", got)
+	if len(got) != len(input) {
+		t.Fatalf("recent query returned %d points, want all %d: %#v", len(got), len(input), got)
 	}
-	if len(got.points) != len(input) {
-		t.Fatalf("recent query returned %d points, want all %d: %#v", len(got.points), len(input), got.points)
-	}
-	for i, point := range got.points {
-		if !point.Time.Equal(input[i].Timestamp) || point.Value == nil || *point.Value != input[i].Value || point.Count != 1 {
+	for i, point := range got {
+		if !point.Timestamp.Equal(input[i].Timestamp) || point.Value != input[i].Value {
 			t.Fatalf("point %d = %#v, want %#v", i, point, input[i])
 		}
 	}
-	if got.points[0].Labels["source"] != "oldest" {
-		t.Fatalf("compressed raw point lost labels: %#v", got.points[0])
+	if got[0].Labels["source"] != "oldest" {
+		t.Fatalf("compressed raw point lost labels: %#v", got[0])
 	}
 }
 
-func TestPublicMetricUsesRawWindowOnlyForCurrentlyRetainedRange(t *testing.T) {
-	now := time.Date(2026, 7, 27, 12, 0, 0, 0, time.UTC)
-	if !publicMetricUsesRawWindow(now.Add(-10*time.Minute), now, now) {
-		t.Fatal("exact ten-minute current range should use raw samples")
-	}
-	delayedEnd := now.Add(-3 * time.Second)
-	if !publicMetricUsesRawWindow(delayedEnd.Add(-10*time.Minute), delayedEnd, now) {
-		t.Fatal("client-side ten-minute range should tolerate transit delay while it overlaps raw retention")
-	}
-	cutoff := now.Add(-10 * time.Minute)
-	if publicMetricUsesRawWindow(cutoff.Add(-10*time.Minute), cutoff, now) {
-		t.Fatal("range ending exactly at the raw cutoff should use rollups")
-	}
-	historicalEnd := cutoff.Add(-time.Millisecond)
-	if publicMetricUsesRawWindow(historicalEnd.Add(-10*time.Minute), historicalEnd, now) {
-		t.Fatal("fully historical range should use rollups")
-	}
-	if publicMetricUsesRawWindow(now.Add(-10*time.Minute-time.Millisecond), now, now) {
-		t.Fatal("range longer than ten minutes should use rollups")
-	}
-}
-
-func TestLoadPublicMetricPointsReturnsOnlyRawAfterRestart(t *testing.T) {
+func TestPublicRawWindowQueryReturnsOnlyRawAfterRestart(t *testing.T) {
 	ctx := context.Background()
 	dsn := filepath.Join(t.TempDir(), "metrics.db")
 	policy := metric.RollupPolicy{
@@ -494,26 +464,23 @@ func TestLoadPublicMetricPointsReturnsOnlyRawAfterRestart(t *testing.T) {
 		t.Fatalf("write post-restart point: %v", err)
 	}
 
-	got, err := loadPublicMetricPoints(ctx, store, metric.Query{
+	got, err := store.Query(ctx, metric.Query{
 		MetricName: metricName,
 		EntityID:   "node-a",
 		Start:      now.Add(-10 * time.Minute),
 		End:        now,
 		Order:      metric.OrderAsc,
-	}, metric.AggAvg, 500, false, now)
+	})
 	if err != nil {
-		t.Fatalf("load mixed restart window: %v", err)
+		t.Fatalf("query mixed restart window: %v", err)
 	}
-	if got.downsampled || got.interval != 0 {
-		t.Fatalf("raw query metadata = %#v", got)
+	if len(got) != 1 {
+		t.Fatalf("restart window returned %d points, want one raw point: %#v", len(got), got)
 	}
-	if len(got.points) != 1 {
-		t.Fatalf("restart window returned %d points, want one raw point: %#v", len(got.points), got.points)
+	if got[0].Value != 3 {
+		t.Fatalf("raw point = %#v, want value 3", got[0])
 	}
-	if got.points[0].Value == nil || *got.points[0].Value != 3 {
-		t.Fatalf("raw point = %#v, want value 3", got.points[0])
-	}
-	if got.points[0].Count != 1 || got.points[0].Labels["source"] != "raw" {
-		t.Fatalf("post-restart exact point changed: %#v", got.points[0])
+	if got[0].Labels["source"] != "raw" {
+		t.Fatalf("post-restart exact point changed: %#v", got[0])
 	}
 }
