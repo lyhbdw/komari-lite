@@ -182,34 +182,34 @@ const MetricsOverview = ({ nodes }: { nodes: NodeDetail[] }) => {
 
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-      <div className="p-4 rounded-xl border border-border bg-card shadow-2xs hover:border-foreground/30 transition-all">
-        <div className="flex items-center justify-between text-muted-foreground mb-1.5">
-          <span className="text-xs font-medium uppercase tracking-wider">
-            {t("admin.overview.total_servers", "接入节点")}
+      <div className="p-3.5 rounded-lg border border-border bg-card shadow-2xs hover:border-foreground/30 transition-all">
+        <div className="flex items-center justify-between text-muted-foreground mb-1">
+          <span className="text-[11px] font-medium uppercase tracking-wider">
+            {t("admin.overview.total_nodes", "接入节点")}
           </span>
-          <Server size={15} className="opacity-70" />
+          <Server size={14} className="opacity-70" />
         </div>
-        <div className="text-2xl font-bold font-mono tracking-tight text-foreground">
+        <div className="text-xl font-bold font-mono tracking-tight text-foreground">
           {total}
         </div>
-        <div className="text-[11px] text-muted-foreground mt-1 flex items-center gap-1.5">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+        <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground mt-1">
+          <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
           <span>
             {total > 0
-              ? t("admin.overview.monitoring_active", "监控探针心跳正常")
+              ? t("admin.overview.all_reported", "探针状态正常")
               : t("admin.overview.no_nodes", "等待节点接入")}
           </span>
         </div>
       </div>
 
-      <div className="p-4 rounded-xl border border-border bg-card shadow-2xs hover:border-foreground/30 transition-all">
-        <div className="flex items-center justify-between text-muted-foreground mb-1.5">
-          <span className="text-xs font-medium uppercase tracking-wider">
+      <div className="p-3.5 rounded-lg border border-border bg-card shadow-2xs hover:border-foreground/30 transition-all">
+        <div className="flex items-center justify-between text-muted-foreground mb-1">
+          <span className="text-[11px] font-medium uppercase tracking-wider">
             {t("admin.overview.regions", "地区覆盖")}
           </span>
-          <Globe size={15} className="opacity-70" />
+          <Globe size={14} className="opacity-70" />
         </div>
-        <div className="text-2xl font-bold font-mono tracking-tight text-foreground">
+        <div className="text-xl font-bold font-mono tracking-tight text-foreground">
           {uniqueRegions.length || (total > 0 ? 1 : 0)}
         </div>
         <div className="text-[11px] text-muted-foreground mt-1 truncate">
@@ -219,14 +219,14 @@ const MetricsOverview = ({ nodes }: { nodes: NodeDetail[] }) => {
         </div>
       </div>
 
-      <div className="p-4 rounded-xl border border-border bg-card shadow-2xs hover:border-foreground/30 transition-all">
-        <div className="flex items-center justify-between text-muted-foreground mb-1.5">
-          <span className="text-xs font-medium uppercase tracking-wider">
+      <div className="p-3.5 rounded-lg border border-border bg-card shadow-2xs hover:border-foreground/30 transition-all">
+        <div className="flex items-center justify-between text-muted-foreground mb-1">
+          <span className="text-[11px] font-medium uppercase tracking-wider">
             {t("admin.overview.groups", "分组数")}
           </span>
-          <Folder size={15} className="opacity-70" />
+          <Folder size={14} className="opacity-70" />
         </div>
-        <div className="text-2xl font-bold font-mono tracking-tight text-foreground">
+        <div className="text-xl font-bold font-mono tracking-tight text-foreground">
           {uniqueGroups.length || (total > 0 ? 1 : 0)}
         </div>
         <div className="text-[11px] text-muted-foreground mt-1">
@@ -234,14 +234,14 @@ const MetricsOverview = ({ nodes }: { nodes: NodeDetail[] }) => {
         </div>
       </div>
 
-      <div className="p-4 rounded-xl border border-border bg-card shadow-2xs hover:border-foreground/30 transition-all">
-        <div className="flex items-center justify-between text-muted-foreground mb-1.5">
-          <span className="text-xs font-medium uppercase tracking-wider">
+      <div className="p-3.5 rounded-lg border border-border bg-card shadow-2xs hover:border-foreground/30 transition-all">
+        <div className="flex items-center justify-between text-muted-foreground mb-1">
+          <span className="text-[11px] font-medium uppercase tracking-wider">
             {t("admin.overview.system", "引擎架构")}
           </span>
-          <Activity size={15} className="opacity-70" />
+          <Activity size={14} className="opacity-70" />
         </div>
-        <div className="text-2xl font-bold font-mono tracking-tight text-foreground">
+        <div className="text-xl font-bold font-mono tracking-tight text-foreground">
           Lite Core
         </div>
         <div className="text-[11px] text-muted-foreground mt-1 font-mono">
@@ -424,7 +424,7 @@ const SortableRow = ({
     toast.success(t("copy_success"));
   }
   return (
-    <TableRow ref={setNodeRef} style={style} className="hover:bg-muted/40 transition-colors">
+    <TableRow ref={setNodeRef} style={style} className="hover:bg-muted/40 transition-colors h-14">
       <TableCell className="w-8 pl-3.5">
         <div
           {...attributes}
@@ -643,7 +643,7 @@ const NodeTable = ({
       >
         <Table>
           <TableHeader>
-            <TableRow className="bg-muted/40 border-b border-border/80">
+            <TableRow className="bg-muted/40 border-b border-border/80 text-[11px]">
               <TableHead className="w-8 pl-3.5"></TableHead>
               <TableHead className="w-8">
                 <Checkbox
@@ -654,13 +654,13 @@ const NodeTable = ({
                   onCheckedChange={handleSelectAll}
                 />
               </TableHead>
-              <TableHead>{t("admin.nodeTable.name")}</TableHead>
-              <TableHead>{t("admin.nodeDetail.ipAddress")}</TableHead>
-              <TableHead>{t("admin.nodeDetail.clientVersion")}</TableHead>
-              <TableHead>{t("common.group")}</TableHead>
-              <TableHead>{t("admin.nodeEdit.remark")}</TableHead>
-              <TableHead>{t("admin.nodeTable.billing")}</TableHead>
-              <TableHead className="w-36 text-right pr-4">{t("common.actions", "操作")}</TableHead>
+              <TableHead className="min-w-[200px]">{t("admin.nodeTable.name")}</TableHead>
+              <TableHead className="min-w-[160px]">{t("admin.nodeDetail.ipAddress")}</TableHead>
+              <TableHead className="w-20">{t("admin.nodeDetail.clientVersion")}</TableHead>
+              <TableHead className="w-24">{t("common.group")}</TableHead>
+              <TableHead className="w-24">{t("admin.nodeEdit.remark")}</TableHead>
+              <TableHead className="w-56">{t("admin.nodeTable.billing")}</TableHead>
+              <TableHead className="w-32 text-right pr-4">{t("common.actions", "操作")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
