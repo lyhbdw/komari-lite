@@ -106,19 +106,23 @@ export default function Sessions() {
   }
 
   return (
-    <div className="km-page-admin-sessions p-4">
-      <h1 className="text-2xl font-semibold mb-4">{t("sessions.title")}</h1>
-      <div className="mb-4">
+    <div className="km-page-admin-sessions space-y-4">
+      <div className="flex justify-between items-center">
+        <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-foreground">
+          {t("sessions.title")}
+        </h1>
         <Dialog.Root>
           <Dialog.Trigger>
-            <Button color="red">{t("sessions.delete_all")}</Button>
+            <Button color="red" variant="soft" size="2">
+              {t("sessions.delete_all")}
+            </Button>
           </Dialog.Trigger>
           <Dialog.Content>
             <Dialog.Title>{t("sessions.delete_all")}</Dialog.Title>
             <Dialog.Description>
               {t("sessions.delete_all_desc")}
             </Dialog.Description>
-            <Flex gap="2" justify={"end"}>
+            <Flex gap="2" justify={"end"} mt="4">
               <Dialog.Trigger>
                 <Button variant="soft">{t("common.cancel")}</Button>
               </Dialog.Trigger>

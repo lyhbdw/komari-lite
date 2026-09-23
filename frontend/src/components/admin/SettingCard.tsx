@@ -62,13 +62,13 @@ function SettingCard({
         <Flex
           direction="column"
           gap="1"
-          className="min-h-10 justify-center"
+          className="min-h-10 justify-center pr-4"
         >
-          <label className="text-sm font-semibold tracking-tight text-foreground">
+          <label className="text-sm font-medium tracking-tight text-foreground">
             {title}
           </label>
           {description && (
-            <label className="text-xs text-muted-foreground leading-relaxed">
+            <label className="text-xs text-muted-foreground leading-relaxed mt-0.5">
               {description}
             </label>
           )}
@@ -728,9 +728,9 @@ export function SettingCardLabel({
   children: React.ReactNode | null;
 }) {
   return (
-    <label className="text-base font-semibold tracking-tight text-foreground block my-1">
+    <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/80 mt-6 mb-2 first:mt-1 flex items-center gap-2">
       {children}
-    </label>
+    </h3>
   );
 }
 

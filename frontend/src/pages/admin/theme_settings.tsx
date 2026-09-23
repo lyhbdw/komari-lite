@@ -127,7 +127,7 @@ export default function ThemeSettingsPage() {
   }
 
   return (
-    <Flex direction="column" gap="4" className="km-page-admin-theme-settings p-2 md:p-4">
+    <Flex direction="column" gap="4" className="km-page-admin-theme-settings max-w-4xl">
       <Flex align="center" gap="3">
         <Button variant="soft" onClick={() => navigate("/admin/themes")}>
           <ArrowLeft size={16} />

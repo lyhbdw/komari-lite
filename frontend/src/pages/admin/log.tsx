@@ -88,9 +88,11 @@ const LogPage = () => {
   }
 
   return (
-    <div className="km-page-admin-log flex flex-col gap-2 p-4">
+    <div className="km-page-admin-log flex flex-col gap-4">
       <div className="km-log-toolbar flex justify-between items-center">
-        <h1 className="text-2xl font-bold">{t("logs.title")}</h1>
+        <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-foreground">
+          {t("logs.title")}
+        </h1>
         <div className="flex items-center gap-2">
 
           Limit

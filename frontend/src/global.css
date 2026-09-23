@@ -66,7 +66,7 @@
 }
 
 :root {
-  --radius: 0.5rem;
+  --radius: 0.625rem;
   --background: #f8fafc;
   --foreground: #0f172a;
   --card: #ffffff;
@@ -96,50 +96,56 @@
   --sidebar-primary-foreground: #f8fafc;
   --sidebar-accent: #f1f5f9;
   --sidebar-accent-foreground: #0f172a;
-  --sidebar-border: #f1f5f9;
+  --sidebar-border: #eef2f6;
   --sidebar-ring: #94a3b8;
 }
 
 .dark {
-  --background: #090d16;
-  --foreground: #f8fafc;
-  --card: #0e1526;
-  --card-foreground: #f8fafc;
-  --popover: #0e1526;
-  --popover-foreground: #f8fafc;
+  --background: #090a0f;
+  --foreground: #f1f5f9;
+  --card: #11141d;
+  --card-foreground: #f1f5f9;
+  --popover: #11141d;
+  --popover-foreground: #f1f5f9;
   --primary: #f8fafc;
-  --primary-foreground: #090d16;
-  --secondary: #172033;
-  --secondary-foreground: #f8fafc;
-  --muted: #172033;
-  --muted-foreground: #94a3b8;
-  --accent: #172033;
-  --accent-foreground: #f8fafc;
-  --destructive: #991b1b;
-  --border: #1e293b;
-  --input: #1e293b;
-  --ring: #475569;
+  --primary-foreground: #090a0f;
+  --secondary: #161a26;
+  --secondary-foreground: #f1f5f9;
+  --muted: #161a26;
+  --muted-foreground: #8a99ad;
+  --accent: #161a26;
+  --accent-foreground: #f1f5f9;
+  --destructive: #ef4444;
+  --border: #1f2536;
+  --input: #1f2536;
+  --ring: #3b82f6;
   --chart-1: oklch(0.488 0.243 264.376);
   --chart-2: oklch(0.696 0.17 162.48);
   --chart-3: oklch(0.769 0.188 70.08);
   --chart-4: oklch(0.627 0.265 303.9);
   --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: #0b111e;
+  --sidebar: #0b0e16;
   --sidebar-foreground: #e2e8f0;
   --sidebar-primary: #f8fafc;
-  --sidebar-primary-foreground: #090d16;
-  --sidebar-accent: #172033;
+  --sidebar-primary-foreground: #090a0f;
+  --sidebar-accent: #161a26;
   --sidebar-accent-foreground: #f8fafc;
-  --sidebar-border: #1e293b;
-  --sidebar-ring: #475569;
+  --sidebar-border: #181c28;
+  --sidebar-ring: #3b82f6;
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
+  html {
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11", "tnum";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
   body {
     @apply bg-background text-foreground antialiased;
+    letter-spacing: -0.011em;
   }
 }
 
@@ -217,9 +223,9 @@ body, * {
   background-color: var(--card);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  transition: border-color 0.15s ease;
+  transition: border-color 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .km-setting-card:hover {
-  border-color: var(--ring);
+  border-color: color-mix(in srgb, var(--border) 60%, var(--foreground) 40%);
 }

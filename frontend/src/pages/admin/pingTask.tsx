@@ -44,9 +44,11 @@ const InnerLayout = () => {
     return <div>{error || nodeDetailError}</div>;
   }
   return (
-    <Flex direction="column" gap="4" className="km-page-admin-pingtask p-4">
+    <Flex direction="column" gap="4" className="km-page-admin-pingtask">
       <div className="flex justify-between items-center">
-        <label className="text-2xl font-bold">{t("ping.title")}</label>
+        <label className="text-xl sm:text-2xl font-semibold tracking-tight text-foreground">
+          {t("ping.title")}
+        </label>
         <AddButton />
       </div>
       <Tabs.Root defaultValue="task" className="km-pingtask-nav">

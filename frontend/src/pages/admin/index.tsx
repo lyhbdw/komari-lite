@@ -111,7 +111,7 @@ const Layout = () => {
   const isEmpty = Array.isArray(nodeDetail) && nodeDetail.length === 0;
 
   return (
-    <Flex direction="column" gap="4" p="4" className="km-page-admin-index">
+    <Flex direction="column" gap="4" className="km-page-admin-index">
       <Header
         searchTerm={searchTerm}
         setSearchTerm={setSearchTerm}
@@ -1071,7 +1071,7 @@ function DetailView({ node }: { node: NodeDetail }) {
   return (
     <Drawer direction={isMobile ? "bottom" : "right"}>
       <DrawerTrigger asChild>
-        <div className="h-8 flex items-center hover:underline cursor-pointer font-bold text-base">
+        <div className="h-8 flex items-center gap-2 hover:underline cursor-pointer font-medium text-sm text-foreground hover:text-primary transition-colors">
           <Flag flag={node.region} size="6" />
           {node.name.length > 25 ? node.name.slice(0, 25) + "..." : node.name}
         </div>

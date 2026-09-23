@@ -208,7 +208,7 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
   return (
     <div className="km-admin-layout flex flex-col h-screen w-screen overflow-hidden bg-background text-foreground">
       {/* Top Navbar */}
-      <header className="km-admin-panel-topbar h-12 shrink-0 border-b border-border bg-background px-4 flex items-center justify-between sticky top-0 z-30">
+      <header className="km-admin-panel-topbar h-[50px] shrink-0 border-b border-border/70 bg-background/85 backdrop-blur-md px-4 flex items-center justify-between sticky top-0 z-30 transition-colors">
         <Flex gap="3" align="center">
           <IconButton
             variant="ghost"
@@ -223,17 +223,20 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
           >
             <TablerMenu2 />
           </IconButton>
-          <Link to="/admin/servers" className="flex items-center gap-2 group">
+          <Link to="/admin/servers" className="flex items-center gap-2.5 group">
+            <div className="w-6 h-6 rounded-md bg-foreground text-background flex items-center justify-center font-bold text-xs tracking-tighter shadow-2xs group-hover:opacity-90 transition-opacity select-none">
+              K
+            </div>
             <span className="text-sm font-semibold tracking-tight text-foreground">
               Komari
             </span>
-            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-muted text-muted-foreground uppercase font-medium">
+            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-md bg-muted text-muted-foreground border border-border/60 uppercase font-medium">
               Lite
             </span>
           </Link>
           {(publicInfo?.version || versionInfo?.version) && (
             <span
-              className="text-xs text-muted-foreground font-mono hidden sm:inline-block ml-1 opacity-70"
+              className="text-xs text-muted-foreground/60 font-mono hidden sm:inline-block ml-1 hover:text-muted-foreground transition-colors"
               title={versionInfo?.hash ? `Commit: ${versionInfo.hash}` : undefined}
             >
               v{publicInfo?.version || versionInfo?.version}
@@ -256,7 +259,7 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
             href="/"
             target="_blank"
             rel="noopener noreferrer"
-            className="hidden sm:inline-flex items-center gap-1.5 px-2 py-1 text-xs font-medium rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors"
             title={t("common.home", "View Site")}
           >
             <span>{t("common.home", "监控前端")}</span>
@@ -278,7 +281,7 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
             </svg>
           </a>
 
-          <div className="h-3 w-px bg-border mx-1 hidden sm:block" />
+          <div className="h-3.5 w-px bg-border/60 mx-1 hidden sm:block" />
 
           <ThemeSwitch />
           <ColorSwitch />
@@ -286,7 +289,7 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
           <IconButton
             variant="ghost"
             size="2"
-            className="km-admin-panel-account text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+            className="km-admin-panel-account text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
             onClick={logout}
             title={t("common.logout", "Logout")}
             aria-label={t("common.logout", "Logout")}
@@ -305,7 +308,7 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
             initial="closed"
             animate={sidebarOpen ? "open" : "closed"}
             exit="closed"
-            className="km-admin-panel-nav border-r border-sidebar-border/60 bg-sidebar shrink-0"
+            className="km-admin-panel-nav border-r border-sidebar-border/70 bg-sidebar/95 backdrop-blur-xs shrink-0"
             style={{
               height: "100%",
               position: isMobile ? "absolute" : "relative",
@@ -344,7 +347,7 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
                           className={`group flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium cursor-pointer transition-all duration-150 ${
                             isOpen
                               ? "text-sidebar-foreground bg-sidebar-accent/50"
-                              : "text-sidebar-foreground/75 hover:text-sidebar-foreground hover:bg-sidebar-accent/40"
+                              : "text-muted-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent/40"
                           }`}
                           onClick={() => {
                             setOpenSubMenus((prev) => ({
@@ -381,7 +384,7 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
                           transition={{ duration: 0.15 }}
                           style={{ overflow: "hidden" }}
                         >
-                          <div className="ml-4 pl-2.5 my-1 border-l border-border/50 flex flex-col gap-0.5">
+                          <div className="ml-4 pl-3 my-1 border-l border-border/40 flex flex-col gap-0.5">
                             {item.children.map((child: MenuItem) => (
                               <SidebarItem
                                 key={child.path}
@@ -521,12 +524,12 @@ const SidebarItem = ({
   const baseClasses = isSubItem
     ? `group flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[13px] transition-all duration-150 ${
         isActive
-          ? "bg-accent/80 text-accent-foreground font-semibold"
-          : "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/40"
+          ? "bg-accent/80 text-accent-foreground font-medium"
+          : "text-muted-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent/40"
       }`
     : `group flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all duration-150 ${
         isActive
-          ? "bg-accent text-accent-foreground font-semibold shadow-2xs"
+          ? "bg-accent text-accent-foreground font-medium shadow-2xs"
           : "text-sidebar-foreground/80 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
       }`;
 

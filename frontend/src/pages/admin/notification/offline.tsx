@@ -178,9 +178,9 @@ const InnerLayout = () => {
     return <div>Error: {onError?.message || onNodeError}</div>;
   }
   return (
-    <div className="km-page-admin-notification-offline flex flex-col gap-4 md:p-4 p-1">
+    <div className="km-page-admin-notification-offline flex flex-col gap-4">
       <Flex justify="between" align="center" wrap="wrap">
-        <label className="text-2xl font-semibold">
+        <label className="text-xl sm:text-2xl font-semibold tracking-tight text-foreground">
           {t("notification.offline.full_title", "离线通知设置")}
         </label>
         <TextField.Root
