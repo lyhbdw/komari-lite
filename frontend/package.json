@@ -34,6 +34,7 @@
     "sonner": "^2.0.3",
     "tailwind-merge": "^3.3.0",
     "tailwindcss": "^4.1.5",
+    "uplot": "^1.6.32",
     "vaul": "^1.1.2"
   },
   "devDependencies": {
