@@ -530,9 +530,8 @@ func doInitialize() error {
 	default:
 		return fmt.Errorf("unsupported database type: %s (supported: %s)", flags.DatabaseType, flags.SupportedDatabaseTypes())
 	}
-	// 版本升级备份必须在 migrations.Run 之前执行：startup migrations 会 drop 旧表、
-	// 改写时间戳，若先迁移再备份，备份里已是破坏后的数据，无法用于回滚。
-	// 此处配置库尚未就绪，backupOnVersionUpgrade 通过 instance 直接读取版本标记。
+	// 版本升级备份必须在启动迁移前执行：升级迁移会改写配置表，
+	// 若先迁移再备份，备份里已是改写后的数据，无法用于回滚。
 	backupOnVersionUpgrade()
 	if err := config.SetDb(instance); err != nil {
 		if sqlDB, dbErr := instance.DB(); dbErr == nil {
@@ -542,7 +541,7 @@ func doInitialize() error {
 		return fmt.Errorf("failed to initialize config store: %w", err)
 	}
 
-	if err := migrations.Run(migrations.Context{DB: instance}); err != nil {
+	if err := migrations.Run(context.Background(), migrations.Context{DB: instance}); err != nil {
 		// 迁移失败时关闭已打开的连接池，避免初始化失败后泄漏。
 		if sqlDB, dbErr := instance.DB(); dbErr == nil {
 			_ = sqlDB.Close()
