@@ -304,49 +304,6 @@ func (s *Store) normalizedForeignKeyExists(ctx context.Context, expected normali
 	return count > 0, nil
 }
 
-// LegacyStorageSize measures every table that may exist before rebuilding. It
-// is separate from StorageSize because transitional stores can contain both
-// normalized dictionaries and obsolete point/watermark tables.
-func (s *Store) LegacyStorageSize(ctx context.Context) (int64, error) {
-	if s.cfg.Driver == DriverSQLite {
-		return s.StorageSize(ctx)
-	}
-	names := []string{
-		s.tables.definitions,
-		s.tables.points,
-		s.tables.series,
-		s.tables.labels,
-		s.tables.resolutions,
-		s.tables.rollups,
-		s.tables.watermarks,
-	}
-	if s.cfg.Driver == DriverMySQL {
-		names = append(names, s.mysqlLegacyBackupTables()...)
-	}
-	placeholders := make([]string, len(names))
-	args := make([]any, len(names))
-	for i, name := range names {
-		placeholders[i], args[i] = s.dialect.placeholder(i+1), name
-	}
-	var query string
-	switch s.cfg.Driver {
-	case DriverMySQL:
-		query = `SELECT COALESCE(SUM(DATA_LENGTH + INDEX_LENGTH), 0) FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME IN (` + strings.Join(placeholders, ", ") + `)`
-	case DriverPostgreSQL:
-		for i := range args {
-			args[i] = strings.ToLower(names[i])
-		}
-		query = `SELECT COALESCE(SUM(pg_total_relation_size(c.oid)), 0) FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = current_schema() AND c.relname IN (` + strings.Join(placeholders, ", ") + `)`
-	default:
-		return 0, fmt.Errorf("%w: unsupported driver %q", ErrInvalidArgument, s.cfg.Driver)
-	}
-	var size int64
-	if err := s.db.QueryRowContext(ctx, query, args...).Scan(&size); err != nil {
-		return 0, err
-	}
-	return size, nil
-}
-
 // NeedsRestructure reports whether an existing metric schema predates the
 // normalized millisecond rollup layout. A database without metric tables is a
 // fresh install and will be created normally by AutoMigrate.

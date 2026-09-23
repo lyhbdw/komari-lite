@@ -76,22 +76,6 @@ func (s *Store) StorageSize(ctx context.Context) (int64, error) {
 	return size, nil
 }
 
-// CheckpointWAL copies committed SQLite WAL pages into the main database and
-// truncates the sidecar. Other backends have no local WAL sidecar.
-func (s *Store) CheckpointWAL(ctx context.Context) error {
-	s.maintenanceMu.Lock()
-	defer s.maintenanceMu.Unlock()
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	if s.closed || s.db == nil {
-		return ErrClosed
-	}
-	if s.cfg.Driver != DriverSQLite {
-		return nil
-	}
-	return sqliteCheckpoint(ctx, s.db)
-}
-
 // SnapshotTo writes a consistent SQLite snapshot to destPath. SQLite reads
 // committed pages from the live database and includes WAL content in the
 // snapshot, so callers never copy an active database file by itself.

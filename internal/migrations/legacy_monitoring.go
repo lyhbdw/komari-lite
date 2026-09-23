@@ -342,17 +342,6 @@ func legacyRecordAvailableColumns(db *gorm.DB, table string) (map[string]struct{
 	return available, nil
 }
 
-// legacyOrderedProjection 生成单表的有序流式查询。
-func legacyOrderedProjection(db *gorm.DB, table string) string {
-	projection, err := legacyRecordProjection(db, table)
-	if err != nil {
-		// legacyRecordProjection 的错误在调用方已检查过；此处兜底。
-		return "SELECT * FROM " + table + " ORDER BY client ASC, time ASC"
-	}
-	base := strings.TrimSuffix(strings.TrimPrefix(projection, "SELECT "), " FROM "+table)
-	return "SELECT " + base + " FROM " + table + " ORDER BY client ASC, time ASC"
-}
-
 func migrateLegacyGPURecordTable(ctx context.Context, s *metric.Store, db *gorm.DB, table string, progress legacyBatchProgress) (int64, error) {
 	if !db.Migrator().HasTable(table) {
 		return 0, nil

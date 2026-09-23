@@ -8,7 +8,7 @@ import type {
 
 export const PING_LATENCY_METRIC = "ping.latency_ms";
 
-export const METRIC_SERIES_COLORS = [
+const METRIC_SERIES_COLORS = [
   "#2563EB",
   "#F97316",
   "#8B5CF6",
@@ -57,7 +57,7 @@ export const metricSeriesColor = (index: number) => {
   return `hsl(${hue} 68% 48%)`;
 };
 
-export const normalizeMetricSeries = (series: MetricSeries): MetricSeries[] => {
+const normalizeMetricSeries = (series: MetricSeries): MetricSeries[] => {
   const seriesTags = metricTags(series);
   if (!series.points?.length) {
     return [{ ...series, tags: seriesTags, points: [] }];

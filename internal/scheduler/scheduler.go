@@ -110,24 +110,6 @@ func (s cronSchedule) matchDay(t time.Time) bool {
 	return domOK && dowOK
 }
 
-// match 保留用于测试的逐秒匹配语义（与 advance 一致）。
-func (s cronSchedule) match(t time.Time) bool {
-	t = t.In(time.Local)
-	if _, ok := s.months[int(t.Month())]; !ok {
-		return false
-	}
-	if _, ok := s.hours[t.Hour()]; !ok {
-		return false
-	}
-	if _, ok := s.minutes[t.Minute()]; !ok {
-		return false
-	}
-	if _, ok := s.seconds[t.Second()]; !ok {
-		return false
-	}
-	return s.matchDay(t)
-}
-
 type Manager struct {
 	mu   sync.Mutex
 	jobs map[string]job
@@ -156,20 +138,12 @@ func Every(duration time.Duration) string {
 	return "@every " + duration.String()
 }
 
-func Remove(name string) {
-	defaultManager.Remove(name)
-}
-
 func RemovePrefix(prefix string) {
 	defaultManager.RemovePrefix(prefix)
 }
 
 func StopAll() {
 	defaultManager.StopAll()
-}
-
-func (m *Manager) AddFunc(name string, spec string, fn func()) error {
-	return m.AddContextFunc(name, spec, false, func(context.Context) { fn() })
 }
 
 func (m *Manager) AddContextFunc(name string, spec string, runImmediately bool, fn Func) error {
@@ -189,16 +163,6 @@ func (m *Manager) AddContextFunc(name string, spec string, runImmediately bool, 
 
 	go m.run(ctx, name, s, runImmediately, fn)
 	return nil
-}
-
-func (m *Manager) Remove(name string) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	if old, ok := m.jobs[name]; ok {
-		old.cancel()
-		delete(m.jobs, name)
-	}
 }
 
 func (m *Manager) RemovePrefix(prefix string) {

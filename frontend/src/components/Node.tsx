@@ -272,7 +272,6 @@ const Node = React.memo(
   );
 });
 
-export default Node;
 
 type NodeGridProps = {
   nodes: NodeBasicInfo[];

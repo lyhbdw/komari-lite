@@ -22,7 +22,7 @@ interface SettingCardProps {
   onHeaderClick?: () => void;
 }
 
-export function SettingCard({
+function SettingCard({
   title = "",
   description = "",
   children,

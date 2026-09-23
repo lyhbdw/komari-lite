@@ -90,8 +90,3 @@ func (sc *SafeConn) GetConn() *websocket.Conn {
 	defer sc.mu.Unlock()
 	return sc.conn
 }
-
-// SetCloseHandler forwards to the underlying connection.
-func (sc *SafeConn) SetCloseHandler(h func(code int, text string) error) {
-	sc.conn.SetCloseHandler(h)
-}

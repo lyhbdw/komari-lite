@@ -2,7 +2,6 @@ package metric
 
 import (
 	"strconv"
-	"strings"
 )
 
 // Pxx builds the Aggregation for an arbitrary percentile. The argument is a
@@ -55,22 +54,4 @@ func parsePercentile(agg Aggregation) (float64, bool) {
 func isPercentile(agg Aggregation) bool {
 	_, ok := parsePercentile(agg)
 	return ok
-}
-
-// percentileFractionString renders the fraction for SQL percentile_cont, e.g.
-// "p99.9" -> "0.999". Trailing zeros are trimmed for stable SQL text.
-//
-// percentileFractionString 把百分位聚合转换为 SQL percentile_cont 需要的
-// 小数字符串，并去掉尾随零以保持 SQL 文本稳定。
-func percentileFractionString(agg Aggregation) (string, bool) {
-	f, ok := parsePercentile(agg)
-	if !ok {
-		return "", false
-	}
-	s := strconv.FormatFloat(f, 'f', -1, 64)
-	if !strings.Contains(s, ".") {
-		// f is in (0,1) so this should not happen, but guard anyway.
-		s = strconv.FormatFloat(f, 'f', 1, 64)
-	}
-	return s, true
 }

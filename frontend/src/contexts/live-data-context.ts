@@ -15,11 +15,11 @@ export const LiveDataContext = React.createContext<LiveDataContextType>({
 
 export const LIVE_DATA_INTERVAL_MS = 2000;
 
-export const sameStringArray = (left: string[], right: string[]) =>
+const sameStringArray = (left: string[], right: string[]) =>
   left.length === right.length &&
   left.every((value, index) => value === right[index]);
 
-export const sameLiveRecord = (left: LiveRecord, right: LiveRecord) =>
+const sameLiveRecord = (left: LiveRecord, right: LiveRecord) =>
   left.cpu.usage === right.cpu.usage &&
   left.ram.used === right.ram.used &&
   left.swap.used === right.swap.used &&

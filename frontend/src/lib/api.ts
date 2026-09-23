@@ -25,7 +25,7 @@ export interface SettingsResponse {
  * Fetch settings from the API
  * @returns Promise containing the settings data
  */
-export async function getSettings(): Promise<SettingsResponse> {
+async function getSettings(): Promise<SettingsResponse> {
   try {
     const response = await fetch("/api/admin/settings");
 
@@ -63,7 +63,7 @@ export async function getSettings(): Promise<SettingsResponse> {
  * @param settings - The settings object to update
  * @returns Promise containing the response
  */
-export async function updateSettings(
+async function updateSettings(
   settings: Partial<SettingsResponse>
 ): Promise<void> {
   const response = await fetch("/api/admin/settings", {
@@ -117,7 +117,7 @@ export async function updateSettingsWithToast(
  * @param currentSettings - The current settings object (to merge with)
  * @returns Promise containing the response
  */
-export async function updateSingleSetting<K extends keyof SettingsResponse>(
+async function updateSingleSetting<K extends keyof SettingsResponse>(
   key: K,
   value: SettingsResponse[K],
   currentSettings: SettingsResponse

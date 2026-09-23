@@ -71,7 +71,7 @@ export type JSONRPC2BatchResponse = JSONRPC2Response[];
 /**
  * 预定义的错误代码
  */
-export const JSONRPC2ErrorCode = {
+const JSONRPC2ErrorCode = {
   /** 解析错误 - 服务器收到无效的JSON */
   PARSE_ERROR: -32700,
   /** 无效请求 - 发送的JSON不是有效的请求对象 */

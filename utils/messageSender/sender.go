@@ -83,28 +83,6 @@ func Initialize() {
 	LoadProvider(NotificationMethod, senderConfig.Addition)
 }
 
-func SendTextMessage(message string, title string) error {
-	if CurrentProvider() == nil {
-		return fmt.Errorf("message sender provider is not initialized")
-	}
-	var err error
-	NotificationEnabled, err := config.GetAs[bool](config.NotificationEnabledKey, false)
-	if err != nil {
-		return err
-	}
-	if !NotificationEnabled {
-		return nil
-	}
-	for i := 0; i < 3; i++ {
-		err = CurrentProvider().SendTextMessage(message, title)
-		if err == nil {
-			auditlog.Log("", "", "Message sent: "+title, "info")
-			return nil
-		}
-	}
-	auditlog.Log("", "", "Failed to send message after 3 attempts: "+err.Error()+","+title, "error")
-	return err
-}
 
 // SendNotification 是通知发送的统一实现：解析事件中的客户端 UUID（外部传入可只含
 // UUID 字段）后委托 SendEvent。

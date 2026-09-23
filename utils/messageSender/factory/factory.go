@@ -43,18 +43,4 @@ func GetConstructor(name string) (MessageSenderConstructor, bool) {
 	return constructor, exists
 }
 
-func GetAllMessageSenderNames() []string {
-	names := make([]string, 0, len(senders))
-	for name := range senders {
-		names = append(names, name)
-	}
-	return names
-}
 
-func Initialize() {
-	for _, sender := range senders {
-		if err := sender.Init(); err != nil {
-			logger.Errorf("message-sender", "Failed to initialize message sender %s: %v", sender.GetName(), err)
-		}
-	}
-}

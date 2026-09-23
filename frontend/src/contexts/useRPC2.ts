@@ -2,7 +2,7 @@ import React, { useCallback } from "react";
 import i18n from "../i18n/config";
 import { RPC2Context } from "./rpc2-context";
 
-export const useRPC2 = () => {
+const useRPC2 = () => {
   const context = React.useContext(RPC2Context);
   if (context === undefined) {
     throw new Error(i18n.t("rpc2.provider_required"));

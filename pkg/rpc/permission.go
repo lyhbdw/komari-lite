@@ -172,11 +172,6 @@ func resolveMinRole(method string) string {
 	return bestRole
 }
 
-// RequiredRole 返回调用 method 所需的最低角色。
-func RequiredRole(method string) string {
-	return resolveMinRole(method)
-}
-
 // CheckPermission 判定 group 角色是否有权调用 method。
 func CheckPermission(group, method string) bool {
 	return CheckPrincipal(PrincipalFromRole(group), method)

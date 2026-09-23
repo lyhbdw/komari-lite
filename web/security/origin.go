@@ -1,7 +1,6 @@
 package security
 
 import (
-	"net/http"
 	"net/url"
 	"strings"
 )
@@ -42,18 +41,6 @@ func OriginInAllowlist(origin, rawAllowlist string) bool {
 			continue
 		}
 		if strings.EqualFold(entry, originHost) {
-			return true
-		}
-	}
-	return false
-}
-
-func IsAuthorizationPreflight(r *http.Request) bool {
-	if r.Method != http.MethodOptions {
-		return false
-	}
-	for _, header := range strings.Split(r.Header.Get("Access-Control-Request-Headers"), ",") {
-		if strings.EqualFold(strings.TrimSpace(header), "authorization") {
 			return true
 		}
 	}

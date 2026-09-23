@@ -2,11 +2,9 @@ package metricstore
 
 import (
 	"context"
-	"fmt"
 	"strconv"
 	"time"
 
-	"github.com/komari-monitor/komari/database/models"
 	"github.com/komari-monitor/komari/pkg/metric"
 	v2 "github.com/komari-monitor/komari/protocol/v2"
 )
@@ -58,39 +56,6 @@ func latestReportCounter(ctx context.Context, s *metric.Store, metricName, entit
 		return 0, false, nil
 	}
 	return int64(point.Value), true, nil
-}
-
-// GetLatestTrafficBefore returns the latest retained upload/download counters
-// before a boundary, transparently reading raw points or rollup summaries.
-func GetLatestTrafficBefore(ctx context.Context, entityIDs []string, before time.Time) (map[string]models.Record, error) {
-	s := GetStore()
-	if s == nil {
-		return nil, fmt.Errorf("metric store not enabled")
-	}
-	result := make(map[string]models.Record, len(entityIDs))
-	for _, entityID := range entityIDs {
-		if entityID == "" {
-			continue
-		}
-		up, hasUp, err := latestReportCounter(ctx, s, MetricNetTotalUp, entityID, before)
-		if err != nil {
-			return nil, err
-		}
-		down, hasDown, err := latestReportCounter(ctx, s, MetricNetTotalDown, entityID, before)
-		if err != nil {
-			return nil, err
-		}
-		if !hasUp && !hasDown {
-			continue
-		}
-		result[entityID] = models.Record{
-			Client:       entityID,
-			Time:         before.UTC().Add(-time.Nanosecond),
-			NetTotalUp:   up,
-			NetTotalDown: down,
-		}
-	}
-	return result, nil
 }
 
 // maxResetAwareDelta is the largest per-sample increase accepted when a

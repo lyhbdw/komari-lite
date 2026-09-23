@@ -307,4 +307,3 @@ export function SelectOrInput<T extends Primitive = string>(
   );
 }
 
-export default SelectOrInput;

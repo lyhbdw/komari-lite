@@ -177,15 +177,6 @@ func DefaultConfig(driver Driver, dsn string) Config {
 	}
 }
 
-// Backend builds a generic backend configuration and applies options.
-//
-// Backend 构造通用后端配置，并应用额外选项。
-func Backend(driver Driver, dsn string, opts ...Option) Config {
-	cfg := DefaultConfig(driver, dsn)
-	applyOptions(&cfg, opts...)
-	return cfg
-}
-
 // SQLite builds a SQLite backend configuration.
 //
 // SQLite 构造 SQLite 后端配置。
@@ -332,15 +323,6 @@ func WithSQLiteProfile(profile SQLitePerformanceProfile) Option {
 	}
 }
 
-// WithSQLiteBusyTimeout sets SQLite busy_timeout.
-//
-// WithSQLiteBusyTimeout 设置 SQLite busy_timeout。
-func WithSQLiteBusyTimeout(d time.Duration) Option {
-	return func(c *Config) {
-		c.SQLite.BusyTimeout = d
-	}
-}
-
 // WithSQLiteCacheSizeKB sets the SQLite page cache size in KB.
 //
 // WithSQLiteCacheSizeKB 设置 SQLite 页缓存大小，单位为 KB。
@@ -356,15 +338,6 @@ func WithSQLiteCacheSizeKB(kb int) Option {
 func WithSQLiteMMapSize(bytes int64) Option {
 	return func(c *Config) {
 		c.SQLite.MMapSizeBytes = bytes
-	}
-}
-
-// WithSQLitePageSize sets SQLite page_size.
-//
-// WithSQLitePageSize 设置 SQLite page_size。
-func WithSQLitePageSize(bytes int) Option {
-	return func(c *Config) {
-		c.SQLite.PageSize = bytes
 	}
 }
 

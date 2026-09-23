@@ -103,15 +103,7 @@ func GetAllPingTasks() ([]models.PingTask, error) {
 	return tasks, nil
 }
 
-// GetPingTasksByClient 获取指定服务器需要执行的延迟监测任务。
-func GetPingTasksByClient(uuid string) []models.PingTask {
-	db := dbcore.GetDBInstance()
-	var tasks []models.PingTask
-	if err := db.Where("clients LIKE ?", `%"`+uuid+`"%`).Order("weight ASC").Order("id ASC").Find(&tasks).Error; err != nil {
-		return nil
-	}
-	return tasks
-}
+// UpdatePingTaskOrder 及以下为保留的排序/CRUD 辅助。
 
 func UpdatePingTaskOrder(order map[uint]int) error {
 	if len(order) == 0 {

@@ -1,6 +1,6 @@
 import { createContext } from 'react';
 
-export const allowedColors = [
+const allowedColors = [
   "gray", "gold", "bronze", "brown", "yellow", "amber",
   "orange", "tomato", "red", "ruby", "crimson", "pink",
   "plum", "purple", "violet", "iris", "indigo", "blue",
@@ -10,7 +10,7 @@ export const allowedColors = [
 
 export type Colors = typeof allowedColors[number];
 
-export const allowedAppearances = ["light", "dark", "system"] as const;
+const allowedAppearances = ["light", "dark", "system"] as const;
 export type Appearance = typeof allowedAppearances[number];
 
 export const THEME_DEFAULTS = {

@@ -2,7 +2,7 @@ import { resolveI18nText } from "@/utils/i18nText";
 
 // 法律声明与合规指引全文（按语言本地化）
 // EULA full text, localized per language.
-export const EULAS: Record<string, string> = {
+const EULAS: Record<string, string> = {
   "zh_CN": `法律声明与合规指引
 
 重要提示

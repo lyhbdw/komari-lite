@@ -81,31 +81,6 @@ func (s *Store) Series(ctx context.Context, query AggregateQuery, now time.Time)
 	return pageBuckets(result.Values[query.MetricName][query.Aggregation], query.BucketLimit, query.BucketOffset), nil
 }
 
-// SeriesAggregates derives multiple aggregations from the same streamed scan.
-func (s *Store) SeriesAggregates(ctx context.Context, query Query, aggregations []Aggregation, interval time.Duration, preserveSeries bool, now time.Time) (map[Aggregation][]AggregatePoint, error) {
-	entityIDs := []string(nil)
-	if query.EntityID != "" {
-		entityIDs = []string{query.EntityID}
-	}
-	result, err := s.SeriesBatch(ctx, BatchSeriesQuery{
-		Specs: []BatchSeriesSpec{{
-			MetricName:     query.MetricName,
-			Aggregations:   aggregations,
-			Interval:       interval,
-			PreserveSeries: preserveSeries,
-		}},
-		EntityIDs: entityIDs,
-		Start:     query.Start,
-		End:       query.End,
-		Tags:      query.Tags,
-		Order:     query.Order,
-	}, now)
-	if err != nil {
-		return nil, err
-	}
-	return result.Values[query.MetricName], nil
-}
-
 func seriesResolutionForPolicy(start time.Time, interval time.Duration, now time.Time, policy RollupPolicy) time.Duration {
 	preferred := policy.Tiers[0].Interval
 	if tier := bestRollupTier(policy, interval, start.UTC(), now.UTC()); tier != nil {
