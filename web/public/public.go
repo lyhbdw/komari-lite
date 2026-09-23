@@ -146,13 +146,6 @@ func Static(r *gin.RouterGroup, noRoute func(handlers ...gin.HandlerFunc)) {
 	static(r, noRoute, false)
 }
 
-// StaticRestricted serves only the embedded default frontend. Restricted
-// startup listeners must not let an installed theme override same-named JS,
-// CSS, manifest, or favicon assets used by login and recovery pages.
-func StaticRestricted(r *gin.RouterGroup, noRoute func(handlers ...gin.HandlerFunc)) {
-	static(r, noRoute, true)
-}
-
 func static(r *gin.RouterGroup, noRoute func(handlers ...gin.HandlerFunc), forceDefaultTheme bool) {
 	// 初始化嵌入式文件系统，指向 defaultTheme 根目录。
 	defaultThemeFS, err := fs.Sub(PublicFS, "defaultTheme")

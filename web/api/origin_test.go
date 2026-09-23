@@ -31,7 +31,7 @@ func TestWebSocketOriginBypassRemoved(t *testing.T) {
 	for _, mode := range []string{"release", "", "debug", "test"} {
 		t.Setenv("GIN_MODE", mode)
 		t.Setenv("KOMARI_ENV", "development")
-		if CheckWebSocketOrigin(r) {
+		if checkWebSocketOriginForContext(nil, r) {
 			t.Fatalf("origin bypass must not exist in mode %q", mode)
 		}
 	}

@@ -46,10 +46,6 @@ func UpgradeSafeConn(c *gin.Context, options ...WebSocketUpgradeOption) (*connec
 	return connection.NewSafeConn(unsafeConn), nil
 }
 
-func CheckWebSocketOrigin(r *http.Request) bool {
-	return checkWebSocketOriginForContext(nil, r)
-}
-
 func checkWebSocketOriginForContext(c *gin.Context, r *http.Request) bool {
 	if c != nil && r.URL.Path == "/api/clients/v2/rpc" && GetRole(c) == RoleClient && r.Header.Get("Origin") == "" {
 		return true

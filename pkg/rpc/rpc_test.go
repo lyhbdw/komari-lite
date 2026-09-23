@@ -48,20 +48,19 @@ func TestRegisterWithoutMetadataIsDiscoverable(t *testing.T) {
 
 // 内部函数
 func TestInternalMethods(t *testing.T) {
-	res, err := Invoke("rpc.ping", nil)
-	if err != nil {
-		t.Fatalf("rpc.ping returned error: %+v", err)
+	resp := CallWithContext(context.Background(), 1, "rpc.ping", nil)
+	if resp.Error != nil {
+		t.Fatalf("rpc.ping returned error: %+v", resp.Error)
 	}
-	if res != "pong" {
-		t.Fatalf("expected pong got %v", res)
+	if resp.Result != "pong" {
+		t.Fatalf("expected pong got %v", resp.Result)
 	}
-	// version
-	res, err = Invoke("rpc.version", nil)
-	if err != nil {
-		t.Fatalf("rpc.version returned error: %+v", err)
+	resp = CallWithContext(context.Background(), 2, "rpc.version", nil)
+	if resp.Error != nil {
+		t.Fatalf("rpc.version returned error: %+v", resp.Error)
 	}
-	if res != RPC_VERSION {
-		t.Fatalf("expected version %s got %v", RPC_VERSION, res)
+	if resp.Result != RPC_VERSION {
+		t.Fatalf("expected version %s got %v", RPC_VERSION, resp.Result)
 	}
 }
 

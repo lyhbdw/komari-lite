@@ -18,9 +18,6 @@ func TestSystemDateHelpersUseSystemLocal(t *testing.T) {
 	if got := FormatSystemDate(lateUTC); got != "2026-07-18" {
 		t.Fatalf("formatted system date = %q, want 2026-07-18", got)
 	}
-	if got := SystemDateDistance(lateUTC.AddDate(0, 0, -2), lateUTC); got != 2 {
-		t.Fatalf("system date distance = %d, want 2", got)
-	}
 }
 
 func TestFormatSystemDateReturnsEmptyForZeroTime(t *testing.T) {
