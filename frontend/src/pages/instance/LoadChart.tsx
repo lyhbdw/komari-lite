@@ -40,17 +40,10 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
 import { toast } from "sonner";
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-  type ChartConfig,
-} from "@/components/ui/chart";
+import UplotChart from "@/components/ui/chartUplot";
 import { Button } from "@/components/ui/button";
 import Loading from "@/components/loading";
-import MetricBoundaryAxisTick from "@/components/MetricBoundaryAxisTick";
 import PingMetricStatContent from "@/components/PingMetricStatContent";
 import Tips from "@/components/ui/tips";
 import { useAccount } from "@/contexts/useAccount";
@@ -71,8 +64,8 @@ import {
   applyMetricEwma,
   comparePingTaskOrder,
   formatRemainingTags,
+  formatMetricBoundaryTime,
   isPingMetric,
-  metricChartBoundaryTicks,
   trimMetricChartBoundaryRows,
   metricSeriesColor,
   metricSeriesDataKey,
@@ -577,17 +570,6 @@ const buildTimeViews = (
 
   views.push({ key: "custom", label: t("chart.customRange") });
   return views;
-};
-
-const toChartConfig = (series: RenderSeries[]) => {
-  const config: ChartConfig = {};
-  for (const item of series) {
-    config[item.dataKey] = {
-      label: item.label,
-      color: item.color,
-    };
-  }
-  return config;
 };
 
 const buildRowsFromMetricSeries = (
@@ -1541,10 +1523,36 @@ const LoadChart = ({ data = [], onRealtimeActiveChange }: LoadChartProps) => {
             applyMetricEwma(built.rows, built.series, ewmaEnabled),
             built.series.map((item) => item.dataKey),
           );
-          const chartTicks = metricChartBoundaryTicks(chartRows);
-          const chartConfig = toChartConfig(built.series);
           const latestText = getLatestText(chartRows, built.series);
           const allHidden = built.series.length > 0 && built.series.every((item) => isSeriesHidden(chart.id, item));
+
+          // Column-align the rows for uPlot: one shared x column plus one y
+          // column per visible series. Hidden series are excluded entirely so
+          // they neither draw nor influence the y domain.
+          const visibleSeries = built.series.filter(
+            (item) => !isSeriesHidden(chart.id, item),
+          );
+          const uplotData: [Array<number | null>, ...Array<Array<number | null>>] = [
+            chartRows.map((row) => new Date(String(row.time)).getTime()),
+            ...visibleSeries.map((item) =>
+              chartRows.map((row) => {
+                const value = row[item.dataKey];
+                return typeof value === "number" && Number.isFinite(value)
+                  ? value
+                  : null;
+              }),
+            ),
+          ];
+          // Formatters keyed by the same series the rows were built from, so the
+          // axis and tooltip use identical units as the recharts version.
+          const kindByLabel = new Map(
+            visibleSeries.map((item) => [item.label, item.kind]),
+          );
+          const axisSeries =
+            visibleSeries.find((item) => item.yAxisId === built.axes[0]?.id) ??
+            visibleSeries[0];
+          const pointCountOfItem = (item: (typeof built.series)[number]) =>
+            item.pointCount ?? chartRows.length;
 
           return (
             <SortableChartCard
@@ -1692,73 +1700,57 @@ const LoadChart = ({ data = [], onRealtimeActiveChange }: LoadChartProps) => {
                   {t("common.none")}
                 </div>
               ) : (
-                <ChartContainer config={chartConfig} className="min-h-[220px] w-full">
-                  <LineChart
-                    data={chartRows}
-                    accessibilityLayer
-                    margin={{ top: 16, right: 8, bottom: 4, left: 8 }}
-                  >
-                    <CartesianGrid vertical={false} />
-                    <XAxis
-                      dataKey="time"
-                      tickLine={false}
-                      axisLine={false}
-                      ticks={chartTicks}
-                      tick={<MetricBoundaryAxisTick boundaries={chartTicks} />}
-                      interval={0}
-                      height={32}
-                      allowDuplicatedCategory={false}
-                    />
-                    {built.axes.map((axis) => (
-                      <YAxis
-                        key={axis.id}
-                        yAxisId={axis.id}
-                        tickLine={false}
-                        axisLine={false}
-                        domain={axis.kind === "percent" ? [0, 100] : undefined}
-                        tickFormatter={(value) =>
-                          formatValue(Number(value), axis.kind).replace(
-                            / /g,
-                            "\u00a0",
-                          )
-                        }
-                        orientation={axis.orientation}
-                        type="number"
-                        width={1}
-                        mirror
-                        tick={{ dx: axis.orientation === "left" ? 8 : -8 }}
-                      />
-                    ))}
-                    <ChartTooltip
-                      cursor={false}
-                      formatter={(value, name) => {
-                        const item = built.series.find((series) => series.dataKey === name);
-                        return formatValue(value, item?.kind ?? "raw");
-                      }}
-                      content={
-                        <ChartTooltipContent
-                          labelFormatter={labelFormatter(displayRangeHours)}
-                          indicator="dot"
-                        />
-                      }
-                    />
-                    {built.series.map((item) => (
-                      <Line
-                        key={item.dataKey}
-                        dataKey={item.dataKey}
-                        name={item.dataKey}
-                        yAxisId={item.yAxisId}
-                        stroke={item.color}
-                        dot={item.pointCount !== undefined && item.pointCount <= 30}
-                        isAnimationActive={false}
-                        strokeWidth={2}
-                        connectNulls={false}
-                        type="linear"
-                        hide={isSeriesHidden(chart.id, item)}
-                      />
-                    ))}
-                  </LineChart>
-                </ChartContainer>
+                <UplotChart
+                  className="min-h-[220px] w-full"
+                  height={220}
+                  data={uplotData}
+                  isEmpty={chartRows.length === 0}
+                  series={visibleSeries.map((item) => ({
+                    label: item.label,
+                    stroke: item.color,
+                    width: 2,
+                    showPoints: pointCountOfItem(item) <= 30,
+                  }))}
+                  axisLabels={{
+                    // Boundary-only x ticks, mirroring MetricBoundaryAxisTick.
+                    xValues: (values) =>
+                      values.map((value) => formatMetricBoundaryTime(value)),
+                    // One formatted tick per grid line; percent axes stay 0-100.
+                    yValues: (splits) =>
+                      splits.map((value) =>
+                        formatValue(value, axisSeries?.kind ?? "raw").replace(
+                          / /g,
+                          "\u00a0",
+                        ),
+                      ),
+                  }}
+                  renderTooltip={(_index, xValue, rows) => (
+                    <div className="km-chart-tooltip">
+                      <div className="km-chart-tooltip-label">
+                        {labelFormatter(displayRangeHours)(xValue)}
+                      </div>
+                      <div className="km-chart-tooltip-rows">
+                        {rows.map((row) => (
+                          <div className="km-chart-tooltip-row" key={row.label}>
+                            <span
+                              className="km-chart-tooltip-dot"
+                              style={{ backgroundColor: row.color }}
+                            />
+                            <span className="text-muted-foreground">
+                              {row.label}
+                            </span>
+                            <span className="km-chart-tooltip-value">
+                              {formatValue(
+                                Number(row.value),
+                                kindByLabel.get(row.label) ?? "raw",
+                              )}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                />
               )}
             </SortableChartCard>
           );

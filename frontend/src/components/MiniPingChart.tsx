@@ -1,16 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { Card, Switch } from "@radix-ui/themes";
-import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
 import { useTranslation } from "react-i18next";
 import Loading from "@/components/loading";
-import MetricBoundaryAxisTick from "@/components/MetricBoundaryAxisTick";
+import UplotChart from "@/components/ui/chartUplot";
 import PingMetricStatContent from "@/components/PingMetricStatContent";
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-  type ChartConfig,
-} from "@/components/ui/chart";
 import Tips from "@/components/ui/tips";
 import { useRPC2Call } from "@/contexts/useRPC2";
 import { cn } from "@/lib/utils";
@@ -26,8 +19,8 @@ import {
   PING_LATENCY_METRIC,
   applyMetricEwma,
   comparePingTaskOrder,
+  formatMetricBoundaryTime,
   formatRemainingTags,
-  metricChartBoundaryTicks,
   metricSeriesColor,
   metricSeriesDataKey,
   metricSeriesKey,
@@ -206,18 +199,6 @@ const MiniPingChart = ({
     [built.rows, built.series, ewmaEnabled],
   );
 
-  const chartConfig = useMemo(() => {
-    const config: ChartConfig = {};
-    for (const item of built.series) {
-      config[item.dataKey] = { label: item.name, color: item.color };
-    }
-    return config;
-  }, [built.series]);
-  const chartTicks = useMemo(
-    () => metricChartBoundaryTicks(chartData),
-    [chartData],
-  );
-
   const labelFormatter = (value: string | number) =>
     new Date(value).toLocaleString([], {
       month: "2-digit",
@@ -230,6 +211,21 @@ const MiniPingChart = ({
   const toggleLine = (dataKey: string) => {
     setHiddenLines((current) => ({ ...current, [dataKey]: !current[dataKey] }));
   };
+
+  const visibleSeries = built.series.filter(
+    (item) => hiddenLines[item.dataKey] !== true,
+  );
+  const uplotData: [Array<number | null>, ...Array<Array<number | null>>] = [
+    chartData.map((row) => new Date(String(row.time)).getTime()),
+    ...visibleSeries.map((item) =>
+      chartData.map((row) => {
+        const value = row[item.dataKey];
+        return typeof value === "number" && Number.isFinite(value)
+          ? value
+          : null;
+      }),
+    ),
+  ];
 
   return (
     <Card
@@ -299,64 +295,45 @@ const MiniPingChart = ({
             })}
           </div>
 
-          <ChartContainer
-            config={chartConfig}
+          <UplotChart
             className="km-mini-ping-chart-canvas min-h-0 h-10/12 w-full flex-1"
-          >
-            <LineChart
-              data={chartData}
-              accessibilityLayer
-              margin={{ top: 16, right: 8, bottom: 4, left: 8 }}
-            >
-              <CartesianGrid vertical={false} />
-              <XAxis
-                dataKey="time"
-                tickLine={false}
-                axisLine={false}
-                ticks={chartTicks}
-                tick={<MetricBoundaryAxisTick boundaries={chartTicks} />}
-                interval={0}
-                height={32}
-              />
-              <YAxis
-                tickLine={false}
-                axisLine={false}
-                allowDecimals={false}
-                orientation="left"
-                type="number"
-                width={1}
-                mirror
-                tick={{ dx: 8 }}
-                tickFormatter={(value) => `${value}\u00a0ms`}
-              />
-              <ChartTooltip
-                cursor={false}
-                formatter={(value) =>
-                  typeof value === "number" ? `${Math.round(value)} ms` : value
-                }
-                content={
-                  <ChartTooltipContent
-                    labelFormatter={labelFormatter}
-                    indicator="dot"
-                  />
-                }
-              />
-              {built.series.map((item) => (
-                <Line
-                  key={item.dataKey}
-                  dataKey={item.dataKey}
-                  name={item.dataKey}
-                  stroke={item.color}
-                  dot={item.pointCount <= 30}
-                  isAnimationActive={false}
-                  strokeWidth={2}
-                  connectNulls={false}
-                  type="linear"
-                  hide={hiddenLines[item.dataKey] === true}
-                />
-              ))}
-            </LineChart>
-          </ChartContainer>
+            data={uplotData}
+            isEmpty={chartData.length === 0}
+            series={visibleSeries.map((item) => ({
+              label: item.name,
+              stroke: item.color,
+              width: 2,
+              showPoints: item.pointCount <= 30,
+            }))}
+            axisLabels={{
+              // Boundary-only x ticks, mirroring MetricBoundaryAxisTick.
+              xValues: (values) =>
+                values.map((value) => formatMetricBoundaryTime(value)),
+              yValues: (splits) =>
+                splits.map((value) => `${Math.round(value)}\u00a0ms`),
+            }}
+            renderTooltip={(_index, xValue, rows) => (
+              <div className="km-chart-tooltip">
+                <div className="km-chart-tooltip-label">
+                  {labelFormatter(xValue)}
+                </div>
+                <div className="km-chart-tooltip-rows">
+                  {rows.map((row) => (
+                    <div className="km-chart-tooltip-row" key={row.label}>
+                      <span
+                        className="km-chart-tooltip-dot"
+                        style={{ backgroundColor: row.color }}
+                      />
+                      <span className="text-muted-foreground">{row.label}</span>
+                      <span className="km-chart-tooltip-value">
+                        {`${Math.round(Number(row.value))} ms`}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          />
 
           <div className="flex shrink-0 items-center gap-2">
             <Switch

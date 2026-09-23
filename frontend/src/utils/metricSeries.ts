@@ -183,6 +183,17 @@ export const metricChartBoundaryTicks = (rows: MetricChartRow[]) => {
   return first === last ? [first] : [first, last];
 };
 
+const padDatePart = (value: number) => String(value).padStart(2, "0");
+
+/** Boundary label shared by the axis ticks and the chart tooltips. */
+export const formatMetricBoundaryTime = (value: string | number) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return `${padDatePart(date.getMonth() + 1)}/${padDatePart(date.getDate())} ${padDatePart(
+    date.getHours(),
+  )}:${padDatePart(date.getMinutes())}`;
+};
+
 export const applyMetricEwma = <TSeries extends { dataKey: string }>(
   rows: MetricChartRow[],
   series: readonly TSeries[],
