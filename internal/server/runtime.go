@@ -16,6 +16,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/komari-monitor/komari/database/accounts"
 	"github.com/komari-monitor/komari/database/auditlog"
+	"github.com/komari-monitor/komari/database/clients"
 
 	"github.com/komari-monitor/komari/database/tasks"
 	"github.com/komari-monitor/komari/internal/config"
@@ -225,6 +226,12 @@ func registerScheduledWork() {
 	if err := scheduler.AddContextFunc("metrics:retention", "@every 1h", true, cleanupMetricStore); err != nil {
 		logger.ErrorArgs("server", "Failed to add metric retention scheduled task:", err)
 	}
+	if err := scheduler.AddFunc("metrics:orphan-cleanup", "@every 24h", cleanupOrphanMetricEntities); err != nil {
+		logger.ErrorArgs("server", "Failed to add metric orphan cleanup scheduled task:", err)
+	}
+	if err := scheduler.AddFunc("metrics:reclaim", "@every 720h", reclaimMetricStoreSpace); err != nil {
+		logger.ErrorArgs("server", "Failed to add metric space reclaim scheduled task:", err)
+	}
 	if err := scheduler.AddFunc("notifier:traffic", "@every 1m", func() {
 		if !trafficGate.CompareAndSwap(false, true) {
 			return
@@ -271,4 +278,56 @@ func cleanupMetricStore(ctx context.Context) {
 	if deleted > 0 {
 		logger.Infof("server", "Metric retention cleanup deleted %d rows", deleted)
 	}
+}
+
+// orphanCleanupGate 防止孤儿清理任务与自身重叠（DeleteEntity 是重操作，
+// 且 ReclaimSpace 的独占门会与之互斥，重叠执行只会互相等待）。
+var orphanCleanupGate atomic.Bool
+
+// cleanupOrphanMetricEntities 删除 metric store 中已不存在于 clients 表的
+// 实体（1.0.0 时代删除节点未清理指标数据留下的残留）。每 24h 跑一次。
+func cleanupOrphanMetricEntities() {
+	if !orphanCleanupGate.CompareAndSwap(false, true) {
+		return
+	}
+	defer orphanCleanupGate.Store(false)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Minute)
+	defer cancel()
+
+	known := make(map[string]struct{})
+	if all, err := clients.GetAllClientBasicInfo(); err != nil {
+		logger.Errorf("server", "Failed to list clients for metric orphan cleanup: %v", err)
+		return
+	} else {
+		for _, c := range all {
+			known[c.UUID] = struct{}{}
+		}
+	}
+	deleted, err := metricstore.CleanupOrphanEntities(ctx, known)
+	if err != nil {
+		logger.Errorf("server", "Failed to clean orphan metric entities after deleting %d: %v", deleted, err)
+		return
+	}
+	if deleted > 0 {
+		logger.Infof("server", "Metric orphan cleanup deleted %d entities", deleted)
+	}
+}
+
+// reclaimMetricStoreSpace 定期执行 metric store 的物理空间回收（SQLite
+// VACUUM）。SQLite 删除只把页挂到 freelist，文件不收缩；90 天保留的
+// 滚动删除会让空洞持续累积。每 30 天（720h）在低频窗口自动回收一次，
+// 管理员也可随时通过 admin:reclaimSpace 手动触发。
+func reclaimMetricStoreSpace() {
+	// ReclaimSpace 内部故意忽略 ctx（不可取消的独占维护），这里只限制
+	// 等待操作门的时长，避免调度器 cancel 导致 goroutine 泄漏在门上。
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+	result, err := metricstore.ReclaimSpace(ctx)
+	if err != nil {
+		logger.Errorf("server", "Scheduled metric store space reclaim failed: %v", err)
+		return
+	}
+	logger.Infof("server", "Scheduled metric store space reclaim done (%s): %d -> %d bytes",
+		result.Action, result.Before, result.After)
 }

@@ -434,6 +434,37 @@ func (s *Store) QueryContext(ctx context.Context, query string, args ...any) (*s
 	return s.reader().QueryContext(ctx, query, args...)
 }
 
+// ListEntityIDs returns every distinct non-empty entity id that has at least
+// one interned series row, regardless of retention tier or time window.
+//
+// 与 EntityIDs 不同：EntityIDs 面向查询窗口（只扫 minute 层），会漏掉
+// 只剩粗层数据的实体；本方法扫 series 表本身，用于维护性任务（如孤儿
+// 实体清理）需要枚举"曾经上报过的全部实体"的场景。
+func (s *Store) ListEntityIDs(ctx context.Context) ([]string, error) {
+	if err := s.ensureOpen(); err != nil {
+		return nil, err
+	}
+	rows, err := s.reader().QueryContext(ctx,
+		fmt.Sprintf("SELECT DISTINCT entity_id FROM %s WHERE entity_id != '' ORDER BY entity_id ASC", s.tables.series))
+	if err != nil {
+		return nil, err
+	}
+	var ids []string
+	for rows.Next() {
+		var entityID string
+		if err := rows.Scan(&entityID); err != nil {
+			_ = rows.Close()
+			return nil, err
+		}
+		ids = append(ids, entityID)
+	}
+	if err := rows.Err(); err != nil {
+		_ = rows.Close()
+		return nil, err
+	}
+	return ids, rows.Close()
+}
+
 // ExecContext executes a raw statement against the Store's primary write pool.
 func (s *Store) ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error) {
 	if err := s.ensureOpen(); err != nil {

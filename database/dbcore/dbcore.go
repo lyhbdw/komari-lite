@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -195,7 +196,58 @@ func backupOnVersionUpgrade() {
 	}
 	logger.Infof("dbcore", "[upgrade-backup] ./data backed up to %s before upgrade (from %q to %q)", bakPath, prevVersion, versionID)
 
+	pruneUpgradeBackups(backupDir)
+
 	writeVersionMarker()
+}
+
+// maxUpgradeBackups 是升级备份的保留份数。每次版本升级都会产生一个
+// ~数百 MB 的全量 zip，只增不减会持续吃掉磁盘；保留最近 2 份足够覆盖
+// "升级后发现严重问题 → 回滚到上一稳定版"的场景。
+const maxUpgradeBackups = 2
+
+// pruneUpgradeBackups 删除 backupDir 中超出保留份数的最旧 upgrade-*.zip。
+// 只匹配 upgrade- 前缀 + .zip 后缀，不触碰管理员手动放置的其他归档；
+// 任何删除失败只记日志，绝不影响启动。
+func pruneUpgradeBackups(backupDir string) {
+	entries, err := os.ReadDir(backupDir)
+	if err != nil {
+		logger.Errorf("dbcore", "[upgrade-backup] failed to list backup dir for pruning: %v", err)
+		return
+	}
+	type backupFile struct {
+		name string
+		mod  time.Time
+	}
+	var backups []backupFile
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		name := entry.Name()
+		if !strings.HasPrefix(name, "upgrade-") || !strings.HasSuffix(name, ".zip") {
+			continue
+		}
+		info, err := entry.Info()
+		if err != nil {
+			continue
+		}
+		backups = append(backups, backupFile{name: name, mod: info.ModTime()})
+	}
+	if len(backups) <= maxUpgradeBackups {
+		return
+	}
+	// 按修改时间从旧到新排序，删掉最旧的超出部分。
+	sort.Slice(backups, func(i, j int) bool {
+		return backups[i].mod.Before(backups[j].mod)
+	})
+	for _, old := range backups[:len(backups)-maxUpgradeBackups] {
+		if err := os.Remove(filepath.Join(backupDir, old.name)); err != nil {
+			logger.Errorf("dbcore", "[upgrade-backup] failed to remove stale upgrade backup %s: %v", old.name, err)
+			continue
+		}
+		logger.Infof("dbcore", "[upgrade-backup] pruned stale upgrade backup %s", old.name)
+	}
 }
 
 // createUpgradeBackup archives non-database data together with SQLite-consistent
