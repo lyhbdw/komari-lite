@@ -126,7 +126,7 @@ const InnerLayout = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Username form */}
-        <div className="rounded-xl border border-border/60 bg-card p-5 shadow-2xs space-y-4">
+        <div className="rounded-lg border border-border bg-card p-5 shadow-2xs space-y-4">
           <div>
             <h2 className="text-sm font-semibold tracking-tight text-foreground">
               {t("account.change_username_title")}
@@ -154,7 +154,7 @@ const InnerLayout = () => {
         </div>
 
         {/* 2FA section */}
-        <div className="rounded-xl border border-border/60 bg-card p-5 shadow-2xs space-y-4">
+        <div className="rounded-lg border border-border bg-card p-5 shadow-2xs space-y-4">
           <div>
             <h2 className="text-sm font-semibold tracking-tight text-foreground">2FA 两步验证</h2>
             <p className="text-xs text-muted-foreground mt-0.5">
@@ -307,7 +307,7 @@ const TwoFactorDisabled = () => {
       <Dialog.Root open={isOpen} onOpenChange={setIsOpen}>
         <Dialog.Trigger>
           <div>
-            <Button className="w-full">{t("account.enable_2fa")}</Button>
+            <Button variant="solid" className="w-full cursor-pointer">{t("account.enable_2fa")}</Button>
           </div>
         </Dialog.Trigger>
         <Dialog.Content>

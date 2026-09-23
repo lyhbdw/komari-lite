@@ -18,6 +18,7 @@ import {
 import React from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { Plus } from "lucide-react";
 import { TaskView } from "./pingTask_Task";
 import { ServerView } from "./pingTask_Server";
 
@@ -131,7 +132,13 @@ const AddButton: React.FC = () => {
   return (
     <Dialog.Root open={isOpen} onOpenChange={setIsOpen}>
       <Dialog.Trigger>
-        <Button>{t("common.add")}</Button>
+        <button
+          onClick={() => setIsOpen(true)}
+          className="h-9 px-3.5 rounded-lg bg-foreground text-background font-medium text-xs flex items-center gap-1.5 shadow-sm hover:opacity-90 active:scale-[0.98] transition-all cursor-pointer shrink-0"
+        >
+          <Plus size={14} strokeWidth={2.5} />
+          <span>{t("common.add")}</span>
+        </button>
       </Dialog.Trigger>
       <Dialog.Content>
         <Dialog.Title>{t("common.add")}</Dialog.Title>

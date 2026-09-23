@@ -135,17 +135,17 @@ export default function Sessions() {
           </Dialog.Content>
         </Dialog.Root>
       </div>
-      <div className="km-sessions-table overflow-hidden rounded-xl border border-border/60 bg-card shadow-2xs">
+      <div className="km-sessions-table overflow-hidden rounded-lg border border-border bg-card shadow-2xs">
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead>{t("sessions.session_id")}</TableHead>
+            <TableRow className="bg-muted/40 border-b border-border/80 text-[11px]">
+              <TableHead className="font-mono">{t("sessions.session_id")}</TableHead>
               <TableHead>UA</TableHead>
-              <TableHead>IP</TableHead>
-              <TableHead>Latest IP</TableHead>
+              <TableHead className="font-mono">IP</TableHead>
+              <TableHead className="font-mono">Latest IP</TableHead>
               <TableHead>{t("sessions.expires_at")}</TableHead>
               <TableHead>{t("sessions.last_login")}</TableHead>
-              <TableHead>{t("sessions.actions")}</TableHead>
+              <TableHead className="text-right pr-4">{t("sessions.actions")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>

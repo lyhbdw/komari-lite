@@ -13,14 +13,9 @@ const UsageBar = React.memo(
     // Ensure value is between 0 and 100
     const clampedValue = Math.min(Math.max(value, 0), max);
 
-    // Determine color based on thresholds
-    const getColor = (val: number) => {
-      if (val >= 80) return "red";
-      if (val >= 60) return "orange";
-      return "green";
-    };
-
-    const barColor = getColor(clampedValue);
+    // Determine color based on thresholds (Monochrome with high-usage red alert)
+    const isAlert = clampedValue >= 85;
+    const barColor = isAlert ? "var(--destructive, #ef4444)" : "var(--foreground)";
 
     if (compact) {
       return (
@@ -29,9 +24,10 @@ const UsageBar = React.memo(
             className="km-usage-bar-track"
             style={{
               width: "100%",
-              height: "6px",
-              backgroundColor: "var(--gray-5)",
-              borderRadius: "3px",
+              height: "5px",
+              backgroundColor: "var(--muted)",
+              border: "1px solid var(--border)",
+              borderRadius: "9999px",
               overflow: "hidden",
               marginBottom: "2px",
             }}
@@ -39,8 +35,8 @@ const UsageBar = React.memo(
             <div
               style={{
                 height: "100%",
-                backgroundColor: `var(--${barColor}-9)`,
-                borderRadius: "3px",
+                backgroundColor: barColor,
+                borderRadius: "9999px",
                 width: "100%",
                 transform: `scaleX(${clampedValue / 100})`,
                 transformOrigin: "left center",
@@ -69,17 +65,18 @@ const UsageBar = React.memo(
           className="km-usage-bar-track"
           style={{
             width: "100%",
-            height: "8px",
-            backgroundColor: "var(--gray-5)",
-            borderRadius: "4px",
+            height: "6px",
+            backgroundColor: "var(--muted)",
+            border: "1px solid var(--border)",
+            borderRadius: "9999px",
             overflow: "hidden",
           }}
         >
           <div
             style={{
               height: "100%",
-              backgroundColor: `var(--${barColor}-9)`,
-              borderRadius: "4px",
+              backgroundColor: barColor,
+              borderRadius: "9999px",
               width: "100%",
               transform: `scaleX(${clampedValue / 100})`,
               transformOrigin: "left center",

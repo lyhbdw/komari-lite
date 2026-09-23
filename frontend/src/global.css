@@ -237,3 +237,264 @@ body, * {
 :root:not(.dark) .km-setting-card {
   box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.04);
 }
+
+/* ========================================================
+   Vercel Bauhaus Monochrome Component Overrides (Radix UI)
+   ======================================================== */
+
+/* --- Primary Solid Buttons (Inverted High Contrast) --- */
+.rt-Button.rt-variant-solid,
+.rt-IconButton.rt-variant-solid {
+  background-color: var(--foreground) !important;
+  color: var(--background) !important;
+  border: 1px solid var(--foreground) !important;
+  border-radius: var(--radius) !important;
+  font-weight: 500 !important;
+  transition: all 0.15s ease !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+  cursor: pointer !important;
+}
+
+.rt-Button.rt-variant-solid:hover:not(:disabled),
+.rt-IconButton.rt-variant-solid:hover:not(:disabled) {
+  opacity: 0.88 !important;
+}
+
+.rt-Button.rt-variant-solid:active:not(:disabled),
+.rt-IconButton.rt-variant-solid:active:not(:disabled) {
+  transform: scale(0.98) !important;
+}
+
+.rt-Button.rt-variant-solid:disabled,
+.rt-IconButton.rt-variant-solid:disabled {
+  opacity: 0.4 !important;
+  cursor: not-allowed !important;
+}
+
+/* Red / Destructive Buttons */
+.rt-Button[data-accent-color="red"].rt-variant-solid,
+.rt-Button[color="red"].rt-variant-solid {
+  background-color: #ef4444 !important;
+  color: #ffffff !important;
+  border-color: #ef4444 !important;
+}
+
+.dark .rt-Button[data-accent-color="red"].rt-variant-solid,
+.dark .rt-Button[color="red"].rt-variant-solid {
+  background-color: #f43f5e !important;
+  color: #ffffff !important;
+  border-color: #f43f5e !important;
+}
+
+/* --- Secondary / Soft Buttons --- */
+.rt-Button.rt-variant-soft,
+.rt-IconButton.rt-variant-soft {
+  background-color: var(--secondary) !important;
+  color: var(--foreground) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius) !important;
+  font-weight: 500 !important;
+  transition: all 0.15s ease !important;
+  cursor: pointer !important;
+}
+
+.rt-Button.rt-variant-soft:hover:not(:disabled),
+.rt-IconButton.rt-variant-soft:hover:not(:disabled) {
+  background-color: var(--accent) !important;
+  border-color: var(--foreground) !important;
+}
+
+/* Red Soft Buttons */
+.rt-Button[data-accent-color="red"].rt-variant-soft,
+.rt-Button[color="red"].rt-variant-soft {
+  background-color: rgba(239, 68, 68, 0.1) !important;
+  color: #ef4444 !important;
+  border-color: rgba(239, 68, 68, 0.2) !important;
+}
+
+/* --- Outline Buttons --- */
+.rt-Button.rt-variant-outline,
+.rt-IconButton.rt-variant-outline {
+  background-color: transparent !important;
+  color: var(--foreground) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius) !important;
+  transition: all 0.15s ease !important;
+  cursor: pointer !important;
+}
+
+.rt-Button.rt-variant-outline:hover:not(:disabled),
+.rt-IconButton.rt-variant-outline:hover:not(:disabled) {
+  border-color: var(--foreground) !important;
+  background-color: var(--muted) !important;
+}
+
+/* --- Ghost Buttons --- */
+.rt-Button.rt-variant-ghost,
+.rt-IconButton.rt-variant-ghost {
+  color: var(--muted-foreground) !important;
+  border-radius: var(--radius) !important;
+  transition: all 0.15s ease !important;
+  cursor: pointer !important;
+}
+
+.rt-Button.rt-variant-ghost:hover:not(:disabled),
+.rt-IconButton.rt-variant-ghost:hover:not(:disabled) {
+  color: var(--foreground) !important;
+  background-color: var(--muted) !important;
+}
+
+/* --- Inputs and Textareas --- */
+.rt-TextFieldRoot,
+.rt-TextAreaRoot {
+  background-color: var(--card) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius) !important;
+  color: var(--foreground) !important;
+  box-shadow: none !important;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
+}
+
+.rt-TextFieldRoot:focus-within,
+.rt-TextAreaRoot:focus-within {
+  border-color: var(--foreground) !important;
+  box-shadow: 0 0 0 1px var(--foreground) !important;
+}
+
+.rt-TextFieldInput {
+  color: var(--foreground) !important;
+}
+
+.rt-TextFieldInput::placeholder,
+.rt-TextAreaInput::placeholder {
+  color: var(--muted-foreground) !important;
+  opacity: 0.6 !important;
+}
+
+/* --- Switches (Toggles) --- */
+.rt-SwitchRoot {
+  border-radius: 9999px !important;
+  transition: background-color 0.15s ease, border-color 0.15s ease !important;
+}
+
+:root:not(.dark) .rt-SwitchRoot {
+  background-color: #e5e5e5 !important;
+  border: 1px solid #d4d4d4 !important;
+}
+
+:root:not(.dark) .rt-SwitchRoot[data-state="checked"] {
+  background-color: #000000 !important;
+  border-color: #000000 !important;
+}
+
+.dark .rt-SwitchRoot {
+  background-color: #262626 !important;
+  border: 1px solid #333333 !important;
+}
+
+.dark .rt-SwitchRoot[data-state="checked"] {
+  background-color: #ffffff !important;
+  border-color: #ffffff !important;
+}
+
+:root:not(.dark) .rt-SwitchThumb {
+  background-color: #ffffff !important;
+}
+
+:root:not(.dark) .rt-SwitchRoot[data-state="checked"] .rt-SwitchThumb {
+  background-color: #ffffff !important;
+}
+
+.dark .rt-SwitchThumb {
+  background-color: #a3a3a3 !important;
+}
+
+.dark .rt-SwitchRoot[data-state="checked"] .rt-SwitchThumb {
+  background-color: #000000 !important;
+}
+
+/* --- Dropdown Select Trigger --- */
+.rt-SelectTrigger {
+  background-color: var(--card) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius) !important;
+  color: var(--foreground) !important;
+  box-shadow: none !important;
+  transition: border-color 0.15s ease !important;
+}
+
+.rt-SelectTrigger:focus-within,
+.rt-SelectTrigger:hover {
+  border-color: var(--foreground) !important;
+}
+
+/* --- Tabs (Vercel Underline Tabs) --- */
+.rt-TabsList {
+  border-bottom: 1px solid var(--border) !important;
+  background-color: transparent !important;
+  gap: 1.5rem !important;
+  box-shadow: none !important;
+}
+
+.rt-TabsTrigger {
+  color: var(--muted-foreground) !important;
+  font-weight: 500 !important;
+  font-size: 0.8125rem !important;
+  padding: 0.5rem 0.125rem !important;
+  background-color: transparent !important;
+  border-radius: 0 !important;
+  border-bottom: 2px solid transparent !important;
+  margin-bottom: -1px !important;
+  transition: all 0.15s ease !important;
+  cursor: pointer !important;
+}
+
+.rt-TabsTrigger:hover {
+  color: var(--foreground) !important;
+}
+
+.rt-TabsTrigger[data-state="active"] {
+  color: var(--foreground) !important;
+  border-bottom-color: var(--foreground) !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+}
+
+/* --- Dialog and Popover Content --- */
+.rt-DialogContent,
+.rt-PopoverContent {
+  background-color: var(--card) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 0.75rem !important;
+  color: var(--foreground) !important;
+}
+
+:root:not(.dark) .rt-DialogContent,
+:root:not(.dark) .rt-PopoverContent {
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04) !important;
+}
+
+.dark .rt-DialogContent,
+.dark .rt-PopoverContent {
+  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.8) !important;
+}
+
+/* --- Cards --- */
+.rt-Card {
+  background-color: var(--card) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius) !important;
+  color: var(--foreground) !important;
+}
+
+/* --- Checkbox --- */
+.rt-CheckboxRoot {
+  border: 1px solid var(--border) !important;
+  border-radius: calc(var(--radius) - 2px) !important;
+}
+
+.rt-CheckboxRoot[data-state="checked"] {
+  background-color: var(--foreground) !important;
+  border-color: var(--foreground) !important;
+  color: var(--background) !important;
+}

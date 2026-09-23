@@ -137,17 +137,17 @@ export const TaskView = ({ pingTasks }: { pingTasks: PingTask[] }) => {
   };
 
   return (
-    <div className="km-page-admin-pingtask-task km-pingtask-task-table rounded-xl overflow-hidden">
+    <div className="km-page-admin-pingtask-task km-pingtask-task-table rounded-lg border border-border bg-card overflow-hidden shadow-2xs">
       <Table>
         <TableHeader>
-          <TableRow>
+          <TableRow className="bg-muted/40 border-b border-border/80 text-[11px]">
             <TableHead className="w-10" aria-label={t("common.sort")}></TableHead>
             <TableHead>{t("common.name")}</TableHead>
             <TableHead>{t("common.server")}</TableHead>
             <TableHead>{t("ping.target")}</TableHead>
             <TableHead>{t("common.type")}</TableHead>
             <TableHead>{t("ping.interval")}</TableHead>
-            <TableHead>{t("common.action")}</TableHead>
+            <TableHead className="text-right pr-4">{t("common.action")}</TableHead>
           </TableRow>
         </TableHeader>
         <DndContext

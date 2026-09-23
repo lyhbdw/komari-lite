@@ -104,15 +104,15 @@ const LogPage = () => {
           />
         </div>
       </div>
-      <div className="km-log-output rounded-xl border border-border/60 bg-card overflow-hidden shadow-2xs">
+      <div className="km-log-output rounded-lg border border-border bg-card overflow-hidden shadow-2xs">
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead>ID</TableHead>
-              <TableHead>IP</TableHead>
-              <TableHead>Type</TableHead>
+            <TableRow className="bg-muted/40 border-b border-border/80 text-[11px]">
+              <TableHead className="w-16 font-mono">ID</TableHead>
+              <TableHead className="w-36 font-mono">IP</TableHead>
+              <TableHead className="w-24">Type</TableHead>
               <TableHead>Message</TableHead>
-              <TableHead>Time</TableHead>
+              <TableHead className="w-48 text-right pr-4">Time</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
