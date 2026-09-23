@@ -142,24 +142,6 @@ func (s *Store) deleteRollupBucketTx(ctx context.Context, metricName string, int
 	return err
 }
 
-func buildCoarserBucketsFromDelta(delta map[rollupKey]*rollupBucket, interval time.Duration, compression float64) map[rollupKey]*rollupBucket {
-	out := make(map[rollupKey]*rollupBucket, len(delta))
-	for key, source := range delta {
-		coarse := rollupKey{
-			entityID: key.entityID, tagsHash: key.tagsHash, labelsHash: key.labelsHash,
-			bucket: bucketStartMillis(key.bucket, interval.Milliseconds()),
-		}
-		bucket := out[coarse]
-		if bucket == nil {
-			bucket = newRollupBucket(compression)
-			bucket.tagsHash, bucket.tagsJSON = source.tagsHash, source.tagsJSON
-			bucket.labelsHash, bucket.labelsJSON = source.labelsHash, source.labelsJSON
-			out[coarse] = bucket
-		}
-		bucket.mergeStored(source)
-	}
-	return out
-}
 
 // mergeRollupBatchSize bounds how many buckets share one existing-row SELECT
 // and one multi-row UPSERT. Fifteen bound values per row keep a batch well

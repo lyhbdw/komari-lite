@@ -7,49 +7,6 @@ import (
 	"time"
 )
 
-// AggregateRollup reduces one explicitly selected materialized tier into the
-// requested output interval.
-func (s *Store) AggregateRollup(ctx context.Context, query AggregateQuery, resolution time.Duration) ([]AggregatePoint, error) {
-	return s.aggregateRollupAt(ctx, query, resolution, time.Now().UTC())
-}
-
-func (s *Store) aggregateRollupAt(ctx context.Context, query AggregateQuery, resolution time.Duration, now time.Time) ([]AggregatePoint, error) {
-	if err := s.ensureOpen(); err != nil {
-		return nil, err
-	}
-	if err := query.Validate(); err != nil {
-		return nil, err
-	}
-	if resolution <= 0 {
-		return nil, fmt.Errorf("%w: rollup resolution must be positive", ErrInvalidArgument)
-	}
-	entityIDs := []string(nil)
-	if query.EntityID != "" {
-		entityIDs = []string{query.EntityID}
-	}
-	batch := BatchSeriesQuery{
-		Specs: []BatchSeriesSpec{{
-			MetricName:     query.MetricName,
-			Aggregations:   []Aggregation{query.Aggregation},
-			Interval:       query.Interval,
-			PreserveSeries: query.PreserveSeries,
-		}},
-		EntityIDs: entityIDs,
-		Start:     query.Start,
-		End:       query.End,
-		Tags:      query.Tags,
-		Order:     query.Order,
-	}
-	if err := batch.Validate(); err != nil {
-		return nil, err
-	}
-	result, err := s.seriesBatchAt(ctx, batch.normalized(), now.UTC(), map[string]time.Duration{query.MetricName: resolution})
-	if err != nil {
-		return nil, err
-	}
-	return pageBuckets(result.Values[query.MetricName][query.Aggregation], query.BucketLimit, query.BucketOffset), nil
-}
-
 // Series selects one deterministic backing tier and delegates to SeriesBatch.
 func (s *Store) Series(ctx context.Context, query AggregateQuery, now time.Time) ([]AggregatePoint, error) {
 	if err := s.ensureOpen(); err != nil {
@@ -209,21 +166,6 @@ func scanStoredRollupsForMaintenance(rows *sql.Rows, needDigest bool, compressio
 	return result, rows.Err()
 }
 
-func representativePoints(metricName string, rows []storedRollup) []Point {
-	points := make([]Point, 0, len(rows))
-	for _, row := range rows {
-		tags, err := rollupTagsFromJSON(row.bucketData.tagsJSON)
-		if err != nil {
-			continue
-		}
-		labels, err := rollupTagsFromJSON(row.bucketData.labelsJSON)
-		if err != nil {
-			continue
-		}
-		points = append(points, Point{MetricName: metricName, EntityID: row.entityID, Timestamp: fromMillis(row.bucketData.lastTS), Value: row.bucketData.lastVal, Tags: tags, Labels: labels})
-	}
-	return points
-}
 
 func rawJSONToString(value any) (string, error) {
 	switch v := value.(type) {

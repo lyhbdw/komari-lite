@@ -58,7 +58,7 @@ func TestRollupKeepsTagSeriesSeparate(t *testing.T) {
 		}
 	}
 	// device 0: avg of 10..19 = 14.5
-	res0, err := s.AggregateRollup(ctx, q("0"), time.Minute)
+	res0, err := s.Series(ctx, q("0"), time.Now().UTC())
 	if err != nil {
 		t.Fatalf("rollup dev0: %v", err)
 	}
@@ -69,7 +69,7 @@ func TestRollupKeepsTagSeriesSeparate(t *testing.T) {
 		t.Fatalf("device 0 rollup should keep tags, got %#v", res0[0])
 	}
 	// device 1: avg of 80..89 = 84.5
-	res1, err := s.AggregateRollup(ctx, q("1"), time.Minute)
+	res1, err := s.Series(ctx, q("1"), time.Now().UTC())
 	if err != nil {
 		t.Fatalf("rollup dev1: %v", err)
 	}
@@ -82,12 +82,12 @@ func TestRollupKeepsTagSeriesSeparate(t *testing.T) {
 
 	// No tag filter => both tag series are returned independently, matching
 	// raw Aggregate and preserving the tag dimension for public query callers.
-	all, err := s.AggregateRollup(ctx, AggregateQuery{
+	all, err := s.Series(ctx, AggregateQuery{
 		Query:          Query{MetricName: "util", EntityID: "host-1", Start: base, End: base.Add(10 * time.Minute)},
 		Aggregation:    AggAvg,
 		Interval:       time.Minute,
 		PreserveSeries: true,
-	}, time.Minute)
+	}, time.Now().UTC())
 	if err != nil {
 		t.Fatalf("rollup all: %v", err)
 	}
@@ -142,7 +142,7 @@ func TestRollupTagPercentileSurvivesRetention(t *testing.T) {
 	}
 	// p90 of region=ap must be near the ap-only exact (≈89), NOT pulled up toward
 	// the eu values (which would happen if tags were merged).
-	res, err := s.AggregateRollup(ctx, AggregateQuery{
+	res, err := s.Series(ctx, AggregateQuery{
 		Query: Query{
 			MetricName: "lat", EntityID: "n1",
 			Start: base, End: base.Add(time.Hour),
@@ -150,7 +150,7 @@ func TestRollupTagPercentileSurvivesRetention(t *testing.T) {
 		},
 		Aggregation: Pxx(90),
 		Interval:    time.Minute,
-	}, time.Minute)
+	}, time.Now().UTC())
 	if err != nil {
 		t.Fatalf("rollup ap p90: %v", err)
 	}
@@ -265,7 +265,7 @@ func TestDeleteSeriesRemovesTaggedTaskAcrossAgents(t *testing.T) {
 		t.Fatalf("delete series: %v", err)
 	}
 
-	task2, err := s.AggregateRollup(ctx, AggregateQuery{
+	task2, err := s.Series(ctx, AggregateQuery{
 		Query: Query{
 			MetricName: "ping.latency_ms",
 			Start:      base, End: base.Add(time.Minute),
@@ -273,14 +273,14 @@ func TestDeleteSeriesRemovesTaggedTaskAcrossAgents(t *testing.T) {
 		},
 		Aggregation: AggAvg,
 		Interval:    time.Minute,
-	}, time.Minute)
+	}, time.Now().UTC())
 	if err != nil {
 		t.Fatalf("rollup task2: %v", err)
 	}
 	if len(task2) != 0 {
 		t.Fatalf("deleted task still has rollup buckets: %#v", task2)
 	}
-	task1, err := s.AggregateRollup(ctx, AggregateQuery{
+	task1, err := s.Series(ctx, AggregateQuery{
 		Query: Query{
 			MetricName: "ping.latency_ms",
 			Start:      base, End: base.Add(time.Minute),
@@ -288,7 +288,7 @@ func TestDeleteSeriesRemovesTaggedTaskAcrossAgents(t *testing.T) {
 		},
 		Aggregation: AggAvg,
 		Interval:    time.Minute,
-	}, time.Minute)
+	}, time.Now().UTC())
 	if err != nil {
 		t.Fatalf("rollup task1: %v", err)
 	}

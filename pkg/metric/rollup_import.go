@@ -95,68 +95,6 @@ func (s *Store) ReplaceRollupPoints(ctx context.Context, interval time.Duration,
 	return tx.Commit()
 }
 
-// RebuildCoarserRollups recomputes every configured tier coarser than source
-// from the complete source tier. Existing coarser-only history is preserved.
-func (s *Store) RebuildCoarserRollups(ctx context.Context, source time.Duration) error {
-	if err := s.ensureOpen(); err != nil {
-		return err
-	}
-	sourceIndex := -1
-	for i, tier := range s.cfg.RollupPolicy.Tiers {
-		if tier.Interval == source {
-			sourceIndex = i
-			break
-		}
-	}
-	if sourceIndex < 0 {
-		return fmt.Errorf("%w: source rollup interval %s is not configured", ErrInvalidArgument, source)
-	}
-	if sourceIndex == len(s.cfg.RollupPolicy.Tiers)-1 {
-		return nil
-	}
-
-	s.retentionMu.RLock()
-	defer s.retentionMu.RUnlock()
-	defs, err := s.ListMetrics(ctx)
-	if err != nil {
-		return err
-	}
-	tx, err := s.db.BeginTx(ctx, nil)
-	if err != nil {
-		return err
-	}
-	defer func() { _ = tx.Rollback() }()
-	cache := newRollupDictionaryCache()
-	for _, def := range defs {
-		rows, err := s.scanRollupRows(ctx, tx, def.Name, source)
-		if err != nil {
-			return err
-		}
-		current := make(map[rollupKey]*rollupBucket, len(rows))
-		for _, row := range rows {
-			key := rollupKey{
-				entityID: row.entityID, tagsHash: row.bucketData.tagsHash,
-				labelsHash: row.bucketData.labelsHash, bucket: row.bucket,
-			}
-			current[key] = row.bucketData
-		}
-		for _, tier := range s.cfg.RollupPolicy.Tiers[sourceIndex+1:] {
-			current = buildCoarserBucketsFromDelta(current, tier.Interval, s.cfg.RollupPolicy.compression())
-			keys := make([]rollupKey, 0, len(current))
-			for key := range current {
-				keys = append(keys, key)
-			}
-			sortRollupKeys(keys)
-			for _, key := range keys {
-				if err := s.upsertRollupWithDictionaryTx(ctx, def.Name, tier.Interval, key, current[key], cache, tx); err != nil {
-					return err
-				}
-			}
-		}
-	}
-	return tx.Commit()
-}
-
 func (s *Store) hasRollupTier(interval time.Duration) bool {
 	for _, tier := range s.cfg.RollupPolicy.Tiers {
 		if tier.Interval == interval {

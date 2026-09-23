@@ -104,56 +104,6 @@ func TestTagFilterPushdownWithPaging(t *testing.T) {
 	}
 }
 
-// TestAggregateMatchesAggregatePoints compares Store aggregation with the
-// standalone aggregation helper.
-//
-// TestAggregateMatchesAggregatePoints 对比 Store 聚合和独立聚合 helper 的结果。
-func TestAggregateMatchesAggregatePoints(t *testing.T) {
-	ctx := context.Background()
-	s := newMemStore(t)
-	if err := s.CreateMetric(ctx, Definition{Name: "g", Type: TypeGauge, RetentionDays: 30}); err != nil {
-		t.Fatalf("create: %v", err)
-	}
-	base := time.Now().UTC().Truncate(time.Minute)
-	var batch []Point
-	vals := []float64{5, 15, 25, 35, 100, 200}
-	for i, v := range vals {
-		batch = append(batch, Point{
-			MetricName: "g", EntityID: "n1",
-			Timestamp: base.Add(time.Duration(i) * 5 * time.Second),
-			Value:     v,
-		})
-	}
-	if err := s.WriteBatch(ctx, batch); err != nil {
-		t.Fatalf("write: %v", err)
-	}
-	q := AggregateQuery{
-		Query:       Query{MetricName: "g", EntityID: "n1", Start: base, End: base.Add(time.Minute)},
-		Aggregation: AggAvg,
-		Interval:    15 * time.Second,
-	}
-	storeRes, err := s.Aggregate(ctx, q)
-	if err != nil {
-		t.Fatalf("store aggregate: %v", err)
-	}
-	// In-memory reference over the same raw points.
-	pts, err := s.Query(ctx, q.Query)
-	if err != nil {
-		t.Fatalf("query: %v", err)
-	}
-	memRes, err := AggregatePoints(pts, q)
-	if err != nil {
-		t.Fatalf("mem aggregate: %v", err)
-	}
-	if len(storeRes) != len(memRes) {
-		t.Fatalf("bucket count mismatch: store=%d helper=%d", len(storeRes), len(memRes))
-	}
-	for i := range storeRes {
-		if !storeRes[i].Bucket.Equal(memRes[i].Bucket) || storeRes[i].Value != memRes[i].Value || storeRes[i].Count != memRes[i].Count {
-			t.Fatalf("bucket %d mismatch: store=%#v helper=%#v", i, storeRes[i], memRes[i])
-		}
-	}
-}
 
 // TestCounterRateHandlesReset verifies reset-aware counter rate calculation.
 //
@@ -189,53 +139,7 @@ func TestAlignTimeNegativeTimestamp(t *testing.T) {
 	}
 }
 
-// TestLatestReturnsMostRecent verifies latest-point ordering.
-//
-// TestLatestReturnsMostRecent 验证 Latest 返回最新采样点。
-func TestLatestReturnsMostRecent(t *testing.T) {
-	ctx := context.Background()
-	s := newMemStore(t)
-	if err := s.CreateMetric(ctx, Definition{Name: "l", Type: TypeGauge, RetentionDays: 30}); err != nil {
-		t.Fatalf("create: %v", err)
-	}
-	base := time.Now().UTC().Add(-30 * time.Second)
-	for i := 0; i < 5; i++ {
-		if err := s.Write(ctx, Point{MetricName: "l", EntityID: "n1", Timestamp: base.Add(time.Duration(i) * 5 * time.Second), Value: float64(i)}); err != nil {
-			t.Fatalf("write: %v", err)
-		}
-	}
-	got, err := s.Latest(ctx, "l", "n1", 2)
-	if err != nil {
-		t.Fatalf("latest: %v", err)
-	}
-	if len(got) != 2 || got[0].Value != 4 || got[1].Value != 3 {
-		t.Fatalf("unexpected latest: %#v", got)
-	}
-}
 
-// TestStatsDistinguishesNoDataFromUnknownMetric verifies stats error semantics.
-//
-// TestStatsDistinguishesNoDataFromUnknownMetric 验证 Stats 能区分无数据和未知指标。
-func TestStatsDistinguishesNoDataFromUnknownMetric(t *testing.T) {
-	ctx := context.Background()
-	s := newMemStore(t)
-	base := time.Now().UTC().Truncate(time.Minute)
-
-	// Unknown metric -> ErrNotFound.
-	_, err := s.Stats(ctx, Query{MetricName: "nope", Start: base, End: base.Add(time.Hour)})
-	if !errors.Is(err, ErrNotFound) {
-		t.Fatalf("unknown metric: expected ErrNotFound, got %v", err)
-	}
-
-	// Known metric but empty window -> ErrNoData.
-	if err := s.CreateMetric(ctx, Definition{Name: "known", Type: TypeGauge, RetentionDays: 30}); err != nil {
-		t.Fatalf("create: %v", err)
-	}
-	_, err = s.Stats(ctx, Query{MetricName: "known", Start: base, End: base.Add(time.Hour)})
-	if !errors.Is(err, ErrNoData) {
-		t.Fatalf("empty window: expected ErrNoData, got %v", err)
-	}
-}
 
 // TestStdDevPopMatchesCalculateStats verifies population standard deviation.
 //
@@ -260,39 +164,6 @@ func TestStdDevPopMatchesCalculateStats(t *testing.T) {
 	}
 }
 
-// TestAggregateStdDev verifies raw population standard deviation aggregation.
-//
-// TestAggregateStdDev 验证原始样本总体标准差聚合。
-func TestAggregateStdDev(t *testing.T) {
-	ctx := context.Background()
-	s := newMemStore(t)
-	if err := s.CreateMetric(ctx, Definition{Name: "sd", Type: TypeGauge, RetentionDays: 30}); err != nil {
-		t.Fatalf("create: %v", err)
-	}
-	base := time.Now().UTC().Truncate(time.Minute)
-	var batch []Point
-	for i, v := range []float64{10, 20, 30} {
-		batch = append(batch, Point{MetricName: "sd", EntityID: "n1", Timestamp: base.Add(time.Duration(i) * 5 * time.Second), Value: v})
-	}
-	if err := s.WriteBatch(ctx, batch); err != nil {
-		t.Fatalf("write: %v", err)
-	}
-	res, err := s.Aggregate(ctx, AggregateQuery{
-		Query:       Query{MetricName: "sd", EntityID: "n1", Start: base, End: base.Add(time.Minute)},
-		Aggregation: AggStdDev,
-		Interval:    time.Hour,
-	})
-	if err != nil {
-		t.Fatalf("aggregate stddev: %v", err)
-	}
-	if len(res) != 1 {
-		t.Fatalf("expected 1 bucket, got %d", len(res))
-	}
-	// Population stddev of {10,20,30} = sqrt(200/3) ~= 8.16496.
-	if math.Abs(res[0].Value-8.16496580927726) > 1e-9 {
-		t.Fatalf("unexpected stddev bucket value: %v", res[0].Value)
-	}
-}
 
 // TestSQLiteReadPoolOpens verifies SQLite read-pool creation.
 //
@@ -319,7 +190,7 @@ func TestSQLiteReadPoolOpens(t *testing.T) {
 	if err := store.Write(ctx, Point{MetricName: "rp", EntityID: "n1", Timestamp: base, Value: 7}); err != nil {
 		t.Fatalf("write: %v", err)
 	}
-	got, err := store.Latest(ctx, "rp", "n1", 1)
+	got, err := store.Query(ctx, Query{MetricName: "rp", EntityID: "n1", Start: base.Add(-time.Minute), End: base.Add(time.Minute), Order: OrderDesc, Limit: 1})
 	if err != nil {
 		t.Fatalf("latest: %v", err)
 	}
@@ -373,173 +244,10 @@ func TestWriteBatchAtomicAcrossChunks(t *testing.T) {
 	}
 }
 
-// TestAggregateBucketPaging verifies bucket paging.
-//
-// TestAggregateBucketPaging 验证聚合桶分页。
-func TestAggregateBucketPaging(t *testing.T) {
-	ctx := context.Background()
-	s := newMemStore(t)
-	if err := s.CreateMetric(ctx, Definition{Name: "bp", Type: TypeGauge, RetentionDays: 30}); err != nil {
-		t.Fatalf("create: %v", err)
-	}
-	base := time.Now().UTC().Truncate(time.Minute)
-	// 6 points across 6 ten-second buckets, values 0..5.
-	var batch []Point
-	for i := 0; i < 6; i++ {
-		batch = append(batch, Point{MetricName: "bp", EntityID: "n1", Timestamp: base.Add(time.Duration(i) * 10 * time.Second), Value: float64(i)})
-	}
-	if err := s.WriteBatch(ctx, batch); err != nil {
-		t.Fatalf("write: %v", err)
-	}
-	// One bucket per ten seconds. Page: offset 1, limit 2.
-	res, err := s.Aggregate(ctx, AggregateQuery{
-		Query:        Query{MetricName: "bp", EntityID: "n1", Start: base, End: base.Add(time.Minute)},
-		Aggregation:  AggAvg,
-		Interval:     10 * time.Second,
-		BucketLimit:  2,
-		BucketOffset: 1,
-	})
-	if err != nil {
-		t.Fatalf("aggregate: %v", err)
-	}
-	if len(res) != 2 {
-		t.Fatalf("expected 2 paged buckets, got %d", len(res))
-	}
-	// Buckets are values 0..5; offset 1 skips the value-0 bucket, so we expect 1,2.
-	if res[0].Value != 1 || res[1].Value != 2 {
-		t.Fatalf("unexpected paged bucket values: %#v", res)
-	}
-}
 
-// TestAggregateBucketPagingMatchesAcrossAggregations compares bucket paging
-// across aggregation types.
-//
-// TestAggregateBucketPagingMatchesAcrossAggregations 对比不同聚合类型的桶分页语义。
-func TestAggregateBucketPagingMatchesAcrossAggregations(t *testing.T) {
-	ctx := context.Background()
-	s := newMemStore(t)
-	if err := s.CreateMetric(ctx, Definition{Name: "bp2", Type: TypeGauge, RetentionDays: 30}); err != nil {
-		t.Fatalf("create: %v", err)
-	}
-	base := time.Now().UTC().Truncate(time.Minute)
-	var batch []Point
-	for i := 0; i < 6; i++ {
-		batch = append(batch, Point{MetricName: "bp2", EntityID: "n1", Timestamp: base.Add(time.Duration(i) * 10 * time.Second), Value: float64(i * 10)})
-	}
-	if err := s.WriteBatch(ctx, batch); err != nil {
-		t.Fatalf("write: %v", err)
-	}
-	q := Query{MetricName: "bp2", EntityID: "n1", Start: base, End: base.Add(time.Minute)}
-	minPaged, err := s.Aggregate(ctx, AggregateQuery{Query: q, Aggregation: AggMin, Interval: 10 * time.Second, BucketLimit: 3, BucketOffset: 2})
-	if err != nil {
-		t.Fatalf("min aggregate: %v", err)
-	}
-	p50Paged, err := s.Aggregate(ctx, AggregateQuery{Query: q, Aggregation: AggP50, Interval: 10 * time.Second, BucketLimit: 3, BucketOffset: 2})
-	if err != nil {
-		t.Fatalf("p50 aggregate: %v", err)
-	}
-	if len(minPaged) != 3 || len(p50Paged) != 3 {
-		t.Fatalf("expected 3 buckets each, got min=%d p50=%d", len(minPaged), len(p50Paged))
-	}
-	for i := range minPaged {
-		if !minPaged[i].Bucket.Equal(p50Paged[i].Bucket) {
-			t.Fatalf("bucket window mismatch at %d: min=%v p50=%v", i, minPaged[i].Bucket, p50Paged[i].Bucket)
-		}
-	}
-	// Per-bucket single point, so min == p50 == the value.
-	for i := range minPaged {
-		if minPaged[i].Value != p50Paged[i].Value {
-			t.Fatalf("value mismatch at %d: min=%v p50=%v", i, minPaged[i].Value, p50Paged[i].Value)
-		}
-	}
-}
 
-func TestAggregateSeparatesTagSeries(t *testing.T) {
-	ctx := context.Background()
-	s := newMemStore(t)
-	if err := s.CreateMetric(ctx, Definition{Name: "tagged.util", Type: TypeGauge, RetentionDays: 30}); err != nil {
-		t.Fatalf("create: %v", err)
-	}
-	base := time.Now().UTC().Truncate(time.Minute)
-	points := []Point{
-		{MetricName: "tagged.util", EntityID: "n1", Timestamp: base.Add(10 * time.Second), Value: 10, Tags: map[string]string{"device": "0"}},
-		{MetricName: "tagged.util", EntityID: "n1", Timestamp: base.Add(20 * time.Second), Value: 30, Tags: map[string]string{"device": "0"}},
-		{MetricName: "tagged.util", EntityID: "n1", Timestamp: base.Add(10 * time.Second), Value: 100, Tags: map[string]string{"device": "1"}},
-		{MetricName: "tagged.util", EntityID: "n1", Timestamp: base.Add(20 * time.Second), Value: 200, Tags: map[string]string{"device": "1"}},
-	}
-	if err := s.WriteBatch(ctx, points); err != nil {
-		t.Fatalf("write: %v", err)
-	}
-	query := Query{MetricName: "tagged.util", EntityID: "n1", Start: base, End: base.Add(time.Minute)}
 
-	sqlRes, err := s.Aggregate(ctx, AggregateQuery{
-		Query:       query,
-		Aggregation: AggAvg,
-		Interval:    time.Minute,
-	})
-	if err != nil {
-		t.Fatalf("sql aggregate: %v", err)
-	}
-	assertTaggedAggregate(t, sqlRes, "0", 20, 2)
-	assertTaggedAggregate(t, sqlRes, "1", 150, 2)
 
-	memRes, err := s.Aggregate(ctx, AggregateQuery{
-		Query:       query,
-		Aggregation: AggP50,
-		Interval:    time.Minute,
-	})
-	if err != nil {
-		t.Fatalf("memory aggregate: %v", err)
-	}
-	assertTaggedAggregate(t, memRes, "0", 20, 2)
-	assertTaggedAggregate(t, memRes, "1", 150, 2)
-}
-
-func assertTaggedAggregate(t *testing.T, points []AggregatePoint, device string, wantValue float64, wantCount int) {
-	t.Helper()
-	for _, point := range points {
-		if point.Tags["device"] != device {
-			continue
-		}
-		if point.Value != wantValue || point.Count != wantCount {
-			t.Fatalf("device %s aggregate = value %v count %d, want value %v count %d; all=%#v", device, point.Value, point.Count, wantValue, wantCount, points)
-		}
-		return
-	}
-	t.Fatalf("missing aggregate for device %s; all=%#v", device, points)
-}
-
-// TestAggregateIgnoresRawPointLimit verifies raw limits do not affect aggregation.
-//
-// TestAggregateIgnoresRawPointLimit 验证原始点分页参数不会影响聚合输入。
-func TestAggregateIgnoresRawPointLimit(t *testing.T) {
-	ctx := context.Background()
-	s := newMemStore(t)
-	if err := s.CreateMetric(ctx, Definition{Name: "ig", Type: TypeGauge, RetentionDays: 30}); err != nil {
-		t.Fatalf("create: %v", err)
-	}
-	base := time.Now().UTC().Truncate(time.Minute)
-	var batch []Point
-	for i := 0; i < 6; i++ {
-		batch = append(batch, Point{MetricName: "ig", EntityID: "n1", Timestamp: base.Add(time.Duration(i) * 5 * time.Second), Value: float64(i)})
-	}
-	if err := s.WriteBatch(ctx, batch); err != nil {
-		t.Fatalf("write: %v", err)
-	}
-	// The embedded Query.Limit must be ignored for aggregation: a single 1-hour
-	// bucket should aggregate ALL 6 points (count 6), not just 2.
-	res, err := s.Aggregate(ctx, AggregateQuery{
-		Query:       Query{MetricName: "ig", EntityID: "n1", Start: base, End: base.Add(time.Hour), Limit: 2},
-		Aggregation: AggP95, // memory path, where the bug would have surfaced
-		Interval:    time.Hour,
-	})
-	if err != nil {
-		t.Fatalf("aggregate: %v", err)
-	}
-	if len(res) != 1 || res[0].Count != 6 {
-		t.Fatalf("embedded Limit leaked into aggregation: %#v", res)
-	}
-}
 
 // TestJSONTagKeyWithSpecialChars verifies JSON tag keys with special characters.
 //

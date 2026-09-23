@@ -286,7 +286,7 @@ func TestCompressedRawQueryAndLateReplacementPreserveSamples(t *testing.T) {
 	if len(series) != 1 || series[0].Count != 1 || series[0].Value != 1 {
 		t.Fatalf("late compressed replacement counted twice: %#v", series)
 	}
-	latest, err := s.Latest(ctx, "raw-compressed", "n2", 1)
+	latest, err := s.Query(ctx, Query{MetricName: "raw-compressed", EntityID: "n2", Start: now.Add(-10 * time.Minute), End: now, Order: OrderDesc, Limit: 1})
 	if err != nil {
 		t.Fatal(err)
 	}

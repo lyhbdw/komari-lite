@@ -39,11 +39,11 @@ func TestAggregateRollupIncludesPartialMinute(t *testing.T) {
 	}
 
 	// Window [00:00:40, 00:01:30] partially overlaps the single 1m bucket.
-	res, err := s.AggregateRollup(ctx, AggregateQuery{
+	res, err := s.Series(ctx, AggregateQuery{
 		Query:       Query{MetricName: "win", EntityID: "n1", Start: base.Add(40 * time.Second), End: base.Add(90 * time.Second)},
 		Aggregation: AggSum,
 		Interval:    time.Minute,
-	}, time.Minute)
+	}, base.Add(time.Hour))
 	if err != nil {
 		t.Fatalf("aggregate rollup: %v", err)
 	}
@@ -82,11 +82,11 @@ func TestAggregateRollupEndBoundaryInclusive(t *testing.T) {
 		t.Fatalf("compact: %v", err)
 	}
 
-	res, err := s.AggregateRollup(ctx, AggregateQuery{
+	res, err := s.Series(ctx, AggregateQuery{
 		Query:       Query{MetricName: "edge", EntityID: "n1", Start: base, End: base.Add(2 * time.Minute)},
 		Aggregation: AggSum,
 		Interval:    time.Minute,
-	}, time.Minute)
+	}, base.Add(time.Hour))
 	if err != nil {
 		t.Fatalf("aggregate rollup: %v", err)
 	}
@@ -404,22 +404,12 @@ func TestSeriesAndAggregateRollupBridgeSealedCoarseTail(t *testing.T) {
 		Aggregation: AggSum,
 		Interval:    15 * time.Minute,
 	}
-	for _, result := range []struct {
-		name string
-		read func() ([]AggregatePoint, error)
-	}{
-		{name: "series", read: func() ([]AggregatePoint, error) { return s.Series(ctx, query, base.Add(16*time.Minute)) }},
-		{name: "aggregate", read: func() ([]AggregatePoint, error) {
-			return s.aggregateRollupAt(ctx, query, 5*time.Minute, base.Add(16*time.Minute))
-		}},
-	} {
-		points, err := result.read()
-		if err != nil {
-			t.Fatalf("%s: %v", result.name, err)
-		}
-		if len(points) != 1 || points[0].Count != 3 || points[0].Value != 71 {
-			t.Fatalf("%s bridged values = %#v, want count=3 sum=71", result.name, points)
-		}
+	points, err := s.Series(ctx, query, base.Add(16*time.Minute))
+	if err != nil {
+		t.Fatalf("series: %v", err)
+	}
+	if len(points) != 1 || points[0].Count != 3 || points[0].Value != 71 {
+		t.Fatalf("series bridged values = %#v, want count=3 sum=71", points)
 	}
 	rateQuery := query
 	rateQuery.Aggregation = AggRate

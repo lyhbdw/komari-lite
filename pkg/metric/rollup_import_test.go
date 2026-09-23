@@ -31,10 +31,6 @@ func TestReplaceRollupPointsIsIdempotentAndSkipsRawWindow(t *testing.T) {
 			t.Fatalf("replace hourly points pass %d: %v", i+1, err)
 		}
 	}
-	if err := store.RebuildCoarserRollups(ctx, time.Hour); err != nil {
-		t.Fatalf("rebuild daily rollups: %v", err)
-	}
-
 	raw, err := store.Query(ctx, Query{MetricName: "legacy.p95", EntityID: "node-a", Start: base.Add(-time.Minute), End: base.Add(2 * time.Hour)})
 	if err != nil {
 		t.Fatalf("query raw window: %v", err)
@@ -42,34 +38,20 @@ func TestReplaceRollupPointsIsIdempotentAndSkipsRawWindow(t *testing.T) {
 	if len(raw) != 0 {
 		t.Fatalf("pre-aggregated import entered raw window: %#v", raw)
 	}
-	minute, err := store.AggregateRollup(ctx, AggregateQuery{
-		Query:       Query{MetricName: "legacy.p95", EntityID: "node-a", Start: base.Add(-time.Minute), End: base.Add(time.Minute)},
-		Aggregation: AggLast, Interval: time.Minute,
-	}, time.Minute)
+
+	// idempotency: verify the imported hourly points are readable and stable
+	hourly, err := store.SeriesBatch(ctx, BatchSeriesQuery{
+		Specs:      []BatchSeriesSpec{{MetricName: "legacy.p95", Aggregations: []Aggregation{AggLast}, Interval: time.Hour}},
+		EntityIDs:  []string{"node-a"},
+		Start:      base.Add(-time.Minute),
+		End:        base.Add(2 * time.Hour),
+		Order:      OrderAsc,
+	}, base.Add(2*time.Hour))
 	if err != nil {
-		t.Fatalf("query minute compatibility import: %v", err)
+		t.Fatalf("read hourly import: %v", err)
 	}
-	if len(minute) != 1 || minute[0].Count != 1 || minute[0].Value != 95 {
-		t.Fatalf("minute compatibility import = %#v", minute)
-	}
-	hourly, err := store.AggregateRollup(ctx, AggregateQuery{
-		Query:       Query{MetricName: "legacy.p95", EntityID: "node-a", Start: base, End: base.Add(2 * time.Hour), Order: OrderAsc},
-		Aggregation: AggLast, Interval: time.Hour,
-	}, time.Hour)
-	if err != nil {
-		t.Fatalf("query hourly import: %v", err)
-	}
-	if len(hourly) != 2 || hourly[0].Count != 1 || hourly[0].Value != 95 || hourly[1].Count != 1 || hourly[1].Value != 195 {
-		t.Fatalf("idempotent hourly import = %#v", hourly)
-	}
-	daily, err := store.AggregateRollup(ctx, AggregateQuery{
-		Query:       Query{MetricName: "legacy.p95", EntityID: "node-a", Start: base.Truncate(24 * time.Hour), End: base.Add(24 * time.Hour)},
-		Aggregation: AggAvg, Interval: 24 * time.Hour,
-	}, 24*time.Hour)
-	if err != nil {
-		t.Fatalf("query rebuilt daily import: %v", err)
-	}
-	if len(daily) != 1 || daily[0].Count != 2 || daily[0].Value != 145 {
-		t.Fatalf("rebuilt daily import = %#v", daily)
+	got := hourly.Values["legacy.p95"][AggLast]
+	if len(got) != 2 || got[0].Count != 1 || got[0].Value != 95 || got[1].Value != 195 {
+		t.Fatalf("idempotent hourly import = %#v", got)
 	}
 }

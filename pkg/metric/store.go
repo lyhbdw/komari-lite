@@ -414,15 +414,6 @@ func (s *Store) Close() error {
 	return firstErr
 }
 
-// Ping verifies that the database connection is usable.
-//
-// Ping 检查底层数据库连接是否可用。
-func (s *Store) Ping(ctx context.Context) error {
-	if err := s.ensureOpen(); err != nil {
-		return err
-	}
-	return s.db.PingContext(ctx)
-}
 
 
 // ListEntityIDs returns every distinct non-empty entity id that has at least
@@ -695,52 +686,6 @@ func (s *Store) DeleteMetric(ctx context.Context, name string) error {
 	return s.deleteSeriesMemoryState(name, "", nil)
 }
 
-// UpdateMetricRetention updates one metric's retention policy without deleting
-// its existing data. A value of zero disables subsequent persistence. Negative
-// values are invalid.
-func (s *Store) UpdateMetricRetention(ctx context.Context, name string, retentionDays int) (Definition, error) {
-	if err := s.ensureOpen(); err != nil {
-		return Definition{}, err
-	}
-	name = strings.TrimSpace(name)
-	if name == "" {
-		return Definition{}, fmt.Errorf("%w: metric name is required", ErrInvalidArgument)
-	}
-	if retentionDays < 0 {
-		return Definition{}, fmt.Errorf("%w: retention days cannot be negative", ErrInvalidArgument)
-	}
-
-	s.retentionMu.Lock()
-	defer s.retentionMu.Unlock()
-
-	tx, err := s.db.BeginTx(ctx, nil)
-	if err != nil {
-		return Definition{}, err
-	}
-	defer func() { _ = tx.Rollback() }()
-
-	updatedAt := timeMillis(time.Now())
-	result, err := tx.ExecContext(ctx,
-		fmt.Sprintf(`UPDATE %s SET retention_days = %s, updated_at_milli = %s WHERE name = %s`,
-			s.tables.definitions, s.dialect.placeholder(1), s.dialect.placeholder(2), s.dialect.placeholder(3)),
-		retentionDays, updatedAt, name,
-	)
-	if err != nil {
-		return Definition{}, err
-	}
-	affected, err := result.RowsAffected()
-	if err != nil {
-		return Definition{}, err
-	}
-	if affected == 0 {
-		return Definition{}, fmt.Errorf("%w: metric %q", ErrNotFound, name)
-	}
-	if err := tx.Commit(); err != nil {
-		return Definition{}, err
-	}
-	s.invalidateDefinitionCache()
-	return s.GetMetric(ctx, name)
-}
 
 // SetMetricRetention updates one metric's retention policy. A value of zero
 // disables persistence for that metric and removes its raw and rollup data.
@@ -799,51 +744,6 @@ func (s *Store) SetMetricRetention(ctx context.Context, name string, retentionDa
 	return s.GetMetric(ctx, name)
 }
 
-// DeleteMetricDataIfDisabled removes a metric's data only while its retention
-// policy is still disabled. It prevents a delayed background cleanup from
-// deleting data after an administrator has re-enabled the metric.
-func (s *Store) DeleteMetricDataIfDisabled(ctx context.Context, name string) (bool, error) {
-	if err := s.ensureOpen(); err != nil {
-		return false, err
-	}
-	name = strings.TrimSpace(name)
-	if name == "" {
-		return false, fmt.Errorf("%w: metric name is required", ErrInvalidArgument)
-	}
-
-	s.retentionMu.Lock()
-	defer s.retentionMu.Unlock()
-
-	tx, err := s.db.BeginTx(ctx, nil)
-	if err != nil {
-		return false, err
-	}
-	defer func() { _ = tx.Rollback() }()
-
-	var retentionDays int
-	if err := tx.QueryRowContext(ctx,
-		fmt.Sprintf(`SELECT retention_days FROM %s WHERE name = %s`, s.tables.definitions, s.dialect.placeholder(1)),
-		name,
-	).Scan(&retentionDays); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return false, fmt.Errorf("%w: metric %q", ErrNotFound, name)
-		}
-		return false, err
-	}
-	if retentionDays != 0 {
-		return false, nil
-	}
-	if err := s.deleteRollupsForMetricTx(ctx, name, tx); err != nil {
-		return false, err
-	}
-	if err := tx.Commit(); err != nil {
-		return false, err
-	}
-	if err := s.deleteSeriesMemoryState(name, "", nil); err != nil {
-		return false, err
-	}
-	return true, nil
-}
 
 // DeleteEntity deletes all raw and rollup data for one entity across every metric.
 //
@@ -1246,31 +1146,6 @@ func (s *Store) coarseEntityIDs(resolution time.Duration, query Query, seen map[
 	}
 }
 
-// Latest loads the newest points for a metric and entity.
-//
-// Latest 查询某指标和实体的最新采样点。
-func (s *Store) Latest(ctx context.Context, metricName, entityID string, limit int) ([]Point, error) {
-	if err := s.ensureOpen(); err != nil {
-		return nil, err
-	}
-	if strings.TrimSpace(metricName) == "" {
-		return nil, fmt.Errorf("%w: metric name is required", ErrInvalidArgument)
-	}
-	if strings.TrimSpace(entityID) == "" {
-		return nil, fmt.Errorf("%w: entity id is required", ErrInvalidArgument)
-	}
-	if limit <= 0 {
-		limit = 1
-	}
-	return s.Query(ctx, Query{
-		MetricName: metricName,
-		EntityID:   entityID,
-		Start:      time.Unix(0, 0),
-		End:        time.Now().UTC(),
-		Order:      OrderDesc,
-		Limit:      limit,
-	})
-}
 
 // LatestBefore returns the newest raw point or rollup representative before an
 // exclusive boundary. The active in-memory minute is included.
@@ -1307,27 +1182,6 @@ func (s *Store) LatestBefore(ctx context.Context, metricName, entityID string, b
 	return latest, found, nil
 }
 
-// Aggregate computes bucketed aggregates from retained raw samples.
-func (s *Store) Aggregate(ctx context.Context, query AggregateQuery) ([]AggregatePoint, error) {
-	if err := s.ensureOpen(); err != nil {
-		return nil, err
-	}
-	if err := query.Validate(); err != nil {
-		return nil, err
-	}
-	rawQuery := query.Query
-	rawQuery.Limit = 0
-	rawQuery.Offset = 0
-	points, err := s.Query(ctx, rawQuery)
-	if err != nil {
-		return nil, err
-	}
-	buckets, err := AggregatePoints(points, query)
-	if err != nil {
-		return nil, err
-	}
-	return pageBuckets(buckets, query.BucketLimit, query.BucketOffset), nil
-}
 
 // pageBuckets applies bucket-level paging to an ordered slice of aggregate
 // points. offset buckets are skipped from the front; at most limit buckets are
@@ -1348,93 +1202,6 @@ func pageBuckets(buckets []AggregatePoint, limit, offset int) []AggregatePoint {
 	return buckets
 }
 
-// Stats computes summary statistics from the rollup tiers that cover the
-// query window, plus the active in-memory minute summaries.
-func (s *Store) Stats(ctx context.Context, query Query) (Stats, error) {
-	if err := s.ensureOpen(); err != nil {
-		return Stats{}, err
-	}
-	if err := query.Validate(); err != nil {
-		return Stats{}, err
-	}
-	query = query.normalized()
-	s.rollupViewMu.RLock()
-	defer s.rollupViewMu.RUnlock()
-
-	// Merge every tier whose retention still covers the window start (the same
-	// cascade SeriesBatch uses), so ranges beyond the minute tier's retention
-	// no longer return ErrNoData.
-	policy := s.cfg.RollupPolicy
-	if def, err := s.GetMetric(ctx, query.MetricName); err == nil {
-		if def.RetentionDays <= 0 {
-			policy = RollupPolicy{}
-		} else {
-			policy = policy.withMetricRetention(time.Duration(def.RetentionDays) * 24 * time.Hour)
-		}
-	} else if !errors.Is(err, ErrNotFound) {
-		return Stats{}, err
-	}
-	now := time.Now().UTC()
-	var rows []storedRollup
-	for _, tier := range policy.Tiers {
-		if now.Add(-tier.Retention).After(query.Start) {
-			continue
-		}
-		stored, err := s.scanRollupRowsBetween(ctx, query.MetricName, query.EntityID, query.Tags,
-			tier.Interval.Milliseconds(), bucketStartMillis(query.Start.UnixMilli(), tier.Interval.Milliseconds()), query.End.UnixMilli(), true)
-		if err != nil {
-			return Stats{}, err
-		}
-		rows = append(rows, stored...)
-		if tier.Interval == time.Minute {
-			hot, err := s.hotRollupRows(query.MetricName, query.EntityID, query.Tags, query.Start, query.End, true)
-			if err != nil {
-				return Stats{}, err
-			}
-			rows = append(rows, hot...)
-		} else {
-			coarse, err := s.coarseRollupRows(tier.Interval, query)
-			if err != nil {
-				return Stats{}, err
-			}
-			rows = append(rows, coarse...)
-		}
-	}
-	if len(rows) == 0 {
-		// No samples in range. Disambiguate from a non-existent metric so the
-		// caller can tell "empty window" apart from "unknown metric".
-		if _, gerr := s.GetMetric(ctx, query.MetricName); errors.Is(gerr, ErrNotFound) {
-			return Stats{}, ErrNotFound
-		} else if gerr != nil {
-			return Stats{}, gerr
-		}
-		return Stats{}, ErrNoData
-	}
-	bucket := newRollupBucket(s.cfg.RollupPolicy.compression())
-	for _, row := range rows {
-		bucket.mergeStored(row.bucketData)
-	}
-	value := func(aggregation Aggregation) float64 {
-		result, _ := bucket.value(aggregation)
-		return result
-	}
-	representatives := representativePoints(query.MetricName, rows)
-	sort.Slice(representatives, func(i, j int) bool { return representatives[i].Timestamp.Before(representatives[j].Timestamp) })
-	return Stats{
-		Count: int(bucket.count), Min: bucket.min, Max: bucket.max,
-		Avg: value(AggAvg), Sum: bucket.sum,
-		P50: value(AggP50), P95: value(AggP95), P99: value(AggP99),
-		First: bucket.firstVal, Last: bucket.lastVal,
-		Rate:  valueFromPoints(representatives, AggRate),
-		Start: fromMillis(bucket.firstTS), End: fromMillis(bucket.lastTS),
-		StdDev: value(AggStdDev),
-	}, nil
-}
-
-func valueFromPoints(points []Point, aggregation Aggregation) float64 {
-	value, _ := aggregateValue(points, aggregation)
-	return value
-}
 
 // DeleteBefore deletes retained raw points and summaries older than a cutoff
 // across every resolution, including matching active in-memory minute buckets.

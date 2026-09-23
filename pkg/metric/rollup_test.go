@@ -109,11 +109,11 @@ func TestArbitraryPercentileOverRaw(t *testing.T) {
 		{Pxx(99.9), percentileSortedRange(1, 100, 0.999)},
 		{Pxx(75), percentileSortedRange(1, 100, 0.75)},
 	} {
-		res, err := s.Aggregate(ctx, AggregateQuery{
+		res, err := s.Series(ctx, AggregateQuery{
 			Query:       Query{MetricName: "lat", EntityID: "n1", Start: base, End: base.Add(time.Minute)},
 			Aggregation: tc.agg,
 			Interval:    time.Minute,
-		})
+		}, base.Add(time.Hour))
 		if err != nil {
 			t.Fatalf("aggregate %s: %v", tc.agg, err)
 		}
@@ -154,14 +154,14 @@ func TestAggregateRollupSkipsDigestForNonPercentile(t *testing.T) {
 	}
 
 	query := Query{MetricName: "latency", EntityID: "node", Start: base, End: base.Add(time.Minute)}
-	avg, err := s.AggregateRollup(ctx, AggregateQuery{Query: query, Aggregation: AggAvg, Interval: time.Minute}, time.Minute)
+	avg, err := s.Series(ctx, AggregateQuery{Query: query, Aggregation: AggAvg, Interval: time.Minute}, time.Now().UTC())
 	if err != nil {
 		t.Fatalf("average should not read digest: %v", err)
 	}
 	if len(avg) != 1 || avg[0].Value != 15 {
 		t.Fatalf("average = %#v, want one bucket with value 15", avg)
 	}
-	if _, err := s.AggregateRollup(ctx, AggregateQuery{Query: query, Aggregation: Pxx(4), Interval: time.Minute}, time.Minute); err == nil {
+	if _, err := s.Series(ctx, AggregateQuery{Query: query, Aggregation: Pxx(4), Interval: time.Minute}, time.Now().UTC()); err == nil {
 		t.Fatal("percentile query should reject an invalid digest")
 	}
 }
@@ -227,11 +227,11 @@ func TestCompactBuildsFinestTier(t *testing.T) {
 		t.Fatalf("compact unexpectedly rewrote %d rollup buckets", written)
 	}
 	// AggregateRollup at the 1m resolution should reproduce per-bucket stats.
-	res, err := s.AggregateRollup(ctx, AggregateQuery{
+	res, err := s.Series(ctx, AggregateQuery{
 		Query:       Query{MetricName: "m", EntityID: "n1", Start: base, End: base.Add(10 * time.Minute)},
 		Aggregation: AggAvg,
 		Interval:    time.Minute,
-	}, time.Minute)
+	}, time.Now().UTC())
 	if err != nil {
 		t.Fatalf("aggregate rollup: %v", err)
 	}
@@ -254,11 +254,11 @@ func TestCompactBuildsFinestTier(t *testing.T) {
 		{AggMin, 0, 60},
 		{AggMax, 59, 119},
 	} {
-		r, err := s.AggregateRollup(ctx, AggregateQuery{
+		r, err := s.Series(ctx, AggregateQuery{
 			Query:       Query{MetricName: "m", EntityID: "n1", Start: base, End: base.Add(10 * time.Minute)},
 			Aggregation: tc.agg,
 			Interval:    time.Minute,
-		}, time.Minute)
+		}, time.Now().UTC())
 		if err != nil {
 			t.Fatalf("rollup %s: %v", tc.agg, err)
 		}
@@ -296,11 +296,11 @@ func TestCompactCascadeFineToCoarse(t *testing.T) {
 		t.Fatalf("compact: %v", err)
 	}
 	// The single 5m coarse bucket should cover all 300 points.
-	res, err := s.AggregateRollup(ctx, AggregateQuery{
+	res, err := s.Series(ctx, AggregateQuery{
 		Query:       Query{MetricName: "c", EntityID: "n1", Start: base, End: base.Add(5 * time.Minute)},
 		Aggregation: AggAvg,
 		Interval:    5 * time.Minute,
-	}, 5*time.Minute)
+	}, base.Add(time.Hour))
 	if err != nil {
 		t.Fatalf("rollup: %v", err)
 	}
@@ -311,11 +311,11 @@ func TestCompactCascadeFineToCoarse(t *testing.T) {
 		t.Fatalf("coarse avg wrong: %v", res[0].Value)
 	}
 	// Percentile from the cascaded coarse digest should be close to the exact.
-	pres, err := s.AggregateRollup(ctx, AggregateQuery{
+	pres, err := s.Series(ctx, AggregateQuery{
 		Query:       Query{MetricName: "c", EntityID: "n1", Start: base, End: base.Add(5 * time.Minute)},
 		Aggregation: Pxx(95),
 		Interval:    5 * time.Minute,
-	}, 5*time.Minute)
+	}, base.Add(time.Hour))
 	if err != nil {
 		t.Fatalf("rollup p95: %v", err)
 	}
@@ -352,7 +352,7 @@ func TestCompactDoesNotOverwriteCoarseRollupWithPartialFineRows(t *testing.T) {
 		Aggregation: AggCount,
 		Interval:    5 * time.Minute,
 	}
-	before, err := s.AggregateRollup(ctx, query, 5*time.Minute)
+	before, err := s.Series(ctx, query, base.Add(time.Hour))
 	if err != nil {
 		t.Fatalf("rollup before: %v", err)
 	}
@@ -362,7 +362,7 @@ func TestCompactDoesNotOverwriteCoarseRollupWithPartialFineRows(t *testing.T) {
 	if _, err := s.Compact(ctx, base.Add(18*time.Minute)); err != nil {
 		t.Fatalf("compact after fine retention moves: %v", err)
 	}
-	after, err := s.AggregateRollup(ctx, query, 5*time.Minute)
+	after, err := s.Series(ctx, query, base.Add(time.Hour))
 	if err != nil {
 		t.Fatalf("rollup after: %v", err)
 	}
@@ -375,7 +375,7 @@ func TestCompactDoesNotOverwriteCoarseRollupWithPartialFineRows(t *testing.T) {
 	if _, err := s.Compact(ctx, base.Add(19*time.Minute)); err != nil {
 		t.Fatalf("compact late: %v", err)
 	}
-	late, err := s.AggregateRollup(ctx, query, 5*time.Minute)
+	late, err := s.Series(ctx, query, base.Add(time.Hour))
 	if err != nil {
 		t.Fatalf("rollup after late: %v", err)
 	}
@@ -385,7 +385,7 @@ func TestCompactDoesNotOverwriteCoarseRollupWithPartialFineRows(t *testing.T) {
 	if _, err := s.Compact(ctx, base.Add(20*time.Minute)); err != nil {
 		t.Fatalf("compact late again: %v", err)
 	}
-	again, err := s.AggregateRollup(ctx, query, 5*time.Minute)
+	again, err := s.Series(ctx, query, base.Add(time.Hour))
 	if err != nil {
 		t.Fatalf("rollup after repeated compact: %v", err)
 	}
@@ -423,11 +423,11 @@ func TestCompactMergesLateFineDeltaLargerThanCoarseBucket(t *testing.T) {
 	if _, err := s.Compact(ctx, base.Add(19*time.Minute)); err != nil {
 		t.Fatalf("compact late: %v", err)
 	}
-	got, err := s.AggregateRollup(ctx, AggregateQuery{
+	got, err := s.Series(ctx, AggregateQuery{
 		Query:       Query{MetricName: "latebig", EntityID: "n1", Start: base, End: base.Add(5*time.Minute - time.Nanosecond)},
 		Aggregation: AggCount,
 		Interval:    5 * time.Minute,
-	}, 5*time.Minute)
+	}, base.Add(time.Hour))
 	if err != nil {
 		t.Fatalf("rollup: %v", err)
 	}
@@ -465,11 +465,11 @@ func TestRetentionDropsRawButPercentileSurvives(t *testing.T) {
 		t.Fatalf("compact: %v", err)
 	}
 	// Percentile must still be answerable from the surviving rollup.
-	res, err := s.AggregateRollup(ctx, AggregateQuery{
+	res, err := s.Series(ctx, AggregateQuery{
 		Query:       Query{MetricName: "old", EntityID: "n1", Start: base, End: base.Add(time.Hour)},
 		Aggregation: Pxx(90),
 		Interval:    time.Minute,
-	}, time.Minute)
+	}, time.Now().UTC())
 	if err != nil {
 		t.Fatalf("rollup p90 after retention: %v", err)
 	}
@@ -518,11 +518,11 @@ func TestRollupOmitsAndReconstructsConstantDigests(t *testing.T) {
 		t.Fatalf("omitted constant digests = %d, want 2", smallDigests)
 	}
 
-	minute, err := s.AggregateRollup(ctx, AggregateQuery{
+	minute, err := s.Series(ctx, AggregateQuery{
 		Query:       Query{MetricName: "small", EntityID: "n1", Start: base, End: base.Add(2 * time.Minute)},
 		Aggregation: AggP95,
 		Interval:    time.Minute,
-	}, time.Minute)
+	}, time.Now().UTC())
 	if err != nil {
 		t.Fatalf("query minute percentile: %v", err)
 	}
@@ -584,11 +584,11 @@ func TestCompactMergesLateRawIntoExpiredRollup(t *testing.T) {
 	if _, err := s.Compact(ctx, base.Add(2*time.Hour)); err != nil {
 		t.Fatalf("compact late: %v", err)
 	}
-	res, err := s.AggregateRollup(ctx, AggregateQuery{
+	res, err := s.Series(ctx, AggregateQuery{
 		Query:       Query{MetricName: "late", EntityID: "n1", Start: base, End: base.Add(time.Minute)},
 		Aggregation: AggSum,
 		Interval:    time.Minute,
-	}, time.Minute)
+	}, time.Now().UTC())
 	if err != nil {
 		t.Fatalf("rollup sum: %v", err)
 	}
@@ -1027,20 +1027,20 @@ func TestCompactIdempotent(t *testing.T) {
 	if _, err := s.Compact(ctx, now); err != nil {
 		t.Fatalf("compact 1: %v", err)
 	}
-	r1, err := s.AggregateRollup(ctx, AggregateQuery{
+	r1, err := s.Series(ctx, AggregateQuery{
 		Query:       Query{MetricName: "idem", EntityID: "n1", Start: base, End: base.Add(10 * time.Minute)},
 		Aggregation: AggAvg, Interval: time.Minute,
-	}, time.Minute)
+	}, time.Now().UTC())
 	if err != nil {
 		t.Fatalf("rollup 1: %v", err)
 	}
 	if _, err := s.Compact(ctx, now); err != nil {
 		t.Fatalf("compact 2: %v", err)
 	}
-	r2, err := s.AggregateRollup(ctx, AggregateQuery{
+	r2, err := s.Series(ctx, AggregateQuery{
 		Query:       Query{MetricName: "idem", EntityID: "n1", Start: base, End: base.Add(10 * time.Minute)},
 		Aggregation: AggAvg, Interval: time.Minute,
-	}, time.Minute)
+	}, time.Now().UTC())
 	if err != nil {
 		t.Fatalf("rollup 2: %v", err)
 	}
@@ -1096,11 +1096,11 @@ func TestCompactWithRawRetentionOnlyWritesChangedBuckets(t *testing.T) {
 	if late != 0 {
 		t.Fatalf("late compact rewrote %d buckets, want 0", late)
 	}
-	got, err := s.aggregateRollupAt(ctx, AggregateQuery{
+	got, err := s.Series(ctx, AggregateQuery{
 		Query:       Query{MetricName: "incremental", EntityID: "n1", Start: base, End: base.Add(5*time.Minute - time.Nanosecond)},
 		Aggregation: AggSum,
 		Interval:    5 * time.Minute,
-	}, 5*time.Minute, now.Add(2*time.Minute))
+	}, now.Add(2*time.Minute))
 	if err != nil {
 		t.Fatalf("rollup: %v", err)
 	}
@@ -1140,11 +1140,11 @@ func TestCompactHonorsMetricRetentionForCoarsestTier(t *testing.T) {
 		t.Fatalf("compact: %v", err)
 	}
 
-	got, err := s.AggregateRollup(ctx, AggregateQuery{
+	got, err := s.Series(ctx, AggregateQuery{
 		Query:       Query{MetricName: "retained", EntityID: "n1", Start: now.Add(-80 * 24 * time.Hour), End: now},
 		Aggregation: AggSum,
 		Interval:    time.Hour,
-	}, time.Hour)
+	}, time.Now().UTC())
 	if err != nil {
 		t.Fatalf("rollup: %v", err)
 	}
@@ -1154,11 +1154,11 @@ func TestCompactHonorsMetricRetentionForCoarsestTier(t *testing.T) {
 	if got[0].Value != 2 || got[1].Value != 3 {
 		t.Fatalf("unexpected retained values: %#v", got)
 	}
-	longer, err := s.AggregateRollup(ctx, AggregateQuery{
+	longer, err := s.Series(ctx, AggregateQuery{
 		Query:       Query{MetricName: "longer-retained", EntityID: "n1", Start: now.Add(-130 * 24 * time.Hour), End: now},
 		Aggregation: AggSum,
 		Interval:    time.Hour,
-	}, time.Hour)
+	}, time.Now().UTC())
 	if err != nil {
 		t.Fatalf("longer rollup: %v", err)
 	}
@@ -1202,11 +1202,11 @@ func TestZeroRetentionPurgesDataAndDisablesFurtherPersistence(t *testing.T) {
 	if _, err := s.CompactMetric(ctx, "disabled", now); err != nil {
 		t.Fatalf("compact: %v", err)
 	}
-	rollups, err := s.AggregateRollup(ctx, AggregateQuery{
+	rollups, err := s.Series(ctx, AggregateQuery{
 		Query:       Query{MetricName: "disabled", EntityID: "node", Start: now.Add(-2 * time.Hour), End: now},
 		Aggregation: AggSum,
 		Interval:    time.Minute,
-	}, time.Minute)
+	}, time.Now().UTC())
 	if err != nil || len(rollups) == 0 {
 		t.Fatalf("expected persisted rollup before disable, got %#v, err=%v", rollups, err)
 	}
@@ -1222,11 +1222,11 @@ func TestZeroRetentionPurgesDataAndDisablesFurtherPersistence(t *testing.T) {
 	if err != nil || len(raw) != 0 {
 		t.Fatalf("raw data remained after disable: %#v, err=%v", raw, err)
 	}
-	rollups, err = s.AggregateRollup(ctx, AggregateQuery{
+	rollups, err = s.Series(ctx, AggregateQuery{
 		Query:       Query{MetricName: "disabled", EntityID: "node", Start: now.Add(-2 * time.Hour), End: now},
 		Aggregation: AggSum,
 		Interval:    time.Minute,
-	}, time.Minute)
+	}, time.Now().UTC())
 	if err != nil || len(rollups) != 0 {
 		t.Fatalf("rollup data remained after disable: %#v, err=%v", rollups, err)
 	}

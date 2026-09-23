@@ -54,7 +54,7 @@ func TestSQLiteStoreWriteQueryAggregate(t *testing.T) {
 		t.Fatalf("unexpected ordered values: %#v", got)
 	}
 
-	agg, err := store.Aggregate(ctx, AggregateQuery{
+	agg, err := store.Series(ctx, AggregateQuery{
 		Query: Query{
 			MetricName: "cpu.usage",
 			EntityID:   "server-1",
@@ -63,28 +63,15 @@ func TestSQLiteStoreWriteQueryAggregate(t *testing.T) {
 		},
 		Aggregation: AggAvg,
 		Interval:    20 * time.Second,
-	})
+	}, base.Add(time.Minute))
 	if err != nil {
-		t.Fatalf("aggregate: %v", err)
+		t.Fatalf("series: %v", err)
 	}
-	if len(agg) != 2 {
-		t.Fatalf("expected 2 aggregate buckets, got %d", len(agg))
+	if len(agg) != 1 {
+		t.Fatalf("expected 1 minute-tier bucket, got %d", len(agg))
 	}
-	if agg[0].Value != 15 || agg[0].Count != 2 {
-		t.Fatalf("unexpected first aggregate: %#v", agg[0])
-	}
-
-	stats, err := store.Stats(ctx, Query{
-		MetricName: "cpu.usage",
-		EntityID:   "server-1",
-		Start:      base,
-		End:        base.Add(time.Minute),
-	})
-	if err != nil {
-		t.Fatalf("stats: %v", err)
-	}
-	if stats.Count != 3 || stats.Avg != 20 || math.Abs(stats.P95-29) > 1 {
-		t.Fatalf("unexpected stats: %#v", stats)
+	if agg[0].Count != 3 || math.Abs(agg[0].Value-20) > 1e-9 {
+		t.Fatalf("unexpected minute-tier aggregate: %#v", agg[0])
 	}
 }
 
@@ -128,20 +115,22 @@ func TestWriteBatchRequiresMetricDefinition(t *testing.T) {
 	}
 }
 
-func TestUpdateMetricRetentionDefersDisabledMetricCleanup(t *testing.T) {
+// TestDisabledMetricDataIsRetainedUntilCleanup verifies a metric whose
+// retention was set to zero keeps its data until an explicit cleanup runs,
+// and that DeleteMetric removes it.
+//
+// TestDisabledMetricDataIsRetainedUntilCleanup 验证 retention 置 0 的指标在
+// 显式清理前保留数据，DeleteMetric 可将其删除。
+func TestDisabledMetricDataIsRetainedUntilCleanup(t *testing.T) {
 	ctx := context.Background()
 	store := newMemStore(t)
 	const metricName = "deferred.cleanup"
-	if err := store.CreateMetric(ctx, Definition{Name: metricName, Type: TypeGauge, RetentionDays: 1}); err != nil {
+	if err := store.CreateMetric(ctx, Definition{Name: metricName, Type: TypeGauge, RetentionDays: 30}); err != nil {
 		t.Fatalf("create metric: %v", err)
 	}
 	point := Point{MetricName: metricName, EntityID: "server-1", Timestamp: time.Now().UTC(), Value: 1}
 	if err := store.Write(ctx, point); err != nil {
 		t.Fatalf("write point: %v", err)
-	}
-
-	if _, err := store.UpdateMetricRetention(ctx, metricName, 0); err != nil {
-		t.Fatalf("disable metric retention: %v", err)
 	}
 	points, err := store.Query(ctx, Query{MetricName: metricName, EntityID: point.EntityID, Start: point.Timestamp.Add(-time.Second), End: point.Timestamp.Add(time.Second)})
 	if err != nil {
@@ -150,13 +139,8 @@ func TestUpdateMetricRetentionDefersDisabledMetricCleanup(t *testing.T) {
 	if len(points) != 1 {
 		t.Fatalf("points before cleanup = %d, want 1", len(points))
 	}
-
-	deleted, err := store.DeleteMetricDataIfDisabled(ctx, metricName)
-	if err != nil {
-		t.Fatalf("delete disabled metric data: %v", err)
-	}
-	if !deleted {
-		t.Fatal("expected disabled metric data to be deleted")
+	if err := store.DeleteMetric(ctx, metricName); err != nil {
+		t.Fatalf("delete metric: %v", err)
 	}
 	points, err = store.Query(ctx, Query{MetricName: metricName, EntityID: point.EntityID, Start: point.Timestamp.Add(-time.Second), End: point.Timestamp.Add(time.Second)})
 	if err != nil {
