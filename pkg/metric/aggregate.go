@@ -7,19 +7,6 @@ import (
 	"time"
 )
 
-type aggregateSeriesKey struct {
-	metricName string
-	entityID   string
-	tagsHash   string
-}
-
-type aggregateGroupKey struct {
-	aggregateSeriesKey
-	bucket int64
-}
-
-
-
 func cloneStringMap(in map[string]string) map[string]string {
 	if len(in) == 0 {
 		return map[string]string{}

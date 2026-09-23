@@ -142,14 +142,6 @@ func rollupPolicyFromConfig(cfg *MetricStoreConfig) (metric.RollupPolicy, error)
 	return policy, nil
 }
 
-func rollupPolicyFromValues(minuteRetentionMinutes, fiveMinuteRetentionMinutes, hourRetentionHours int) metric.RollupPolicy {
-	return rollupPolicyFromDurations(
-		time.Duration(minuteRetentionMinutes)*time.Minute,
-		time.Duration(fiveMinuteRetentionMinutes)*time.Minute,
-		time.Duration(hourRetentionHours)*time.Hour,
-	)
-}
-
 func rollupPolicyFromDurations(minuteRetention, fiveMinuteRetention, hourRetention time.Duration) metric.RollupPolicy {
 	return metric.RollupPolicy{
 		RawRetention: DefaultRollupRawRetention,

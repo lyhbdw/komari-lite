@@ -17,7 +17,6 @@ import (
 
 	"github.com/komari-monitor/komari/cmd/flags"
 	"github.com/komari-monitor/komari/database/models"
-	"github.com/komari-monitor/komari/internal/config"
 	appconfig "github.com/komari-monitor/komari/internal/config"
 	"github.com/komari-monitor/komari/internal/migrations"
 	"github.com/komari-monitor/komari/internal/sqlitetune"
@@ -533,7 +532,7 @@ func doInitialize() error {
 	// 版本升级备份必须在启动迁移前执行：升级迁移会改写配置表，
 	// 若先迁移再备份，备份里已是改写后的数据，无法用于回滚。
 	backupOnVersionUpgrade()
-	if err := config.SetDb(instance); err != nil {
+	if err := appconfig.SetDb(instance); err != nil {
 		if sqlDB, dbErr := instance.DB(); dbErr == nil {
 			_ = sqlDB.Close()
 		}

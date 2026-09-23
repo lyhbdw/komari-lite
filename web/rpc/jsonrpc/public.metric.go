@@ -236,7 +236,7 @@ func publicQueryMetrics(ctx context.Context, req *rpc.JsonRpcRequest) (any, *rpc
 
 	metricFillEmpty := resolveMetricFillEmpty(params)
 	useRaw := publicMetricUsesRawWindow(start, end, queryNow)
-	definitions := make(map[string]metric.Definition, len(metricKeys))
+	var definitions map[string]metric.Definition
 	rawValues := make(map[string][]metric.Point)
 	rollupValues := make(map[string]map[metric.Aggregation][]metric.AggregatePoint)
 	if len(entityIDs) > 0 && useRaw {
