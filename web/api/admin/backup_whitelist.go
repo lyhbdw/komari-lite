@@ -15,8 +15,6 @@ var backupWhitelist = []string{
 	"favicon.ico",
 	"font.ttf",
 	"theme/",
-	"plugin/",
-	"plguin-data/",
 }
 
 // copyWhitelistedFiles 将白名单中存在的文件/目录复制到临时目录。

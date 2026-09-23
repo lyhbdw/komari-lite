@@ -41,27 +41,6 @@ func (d sqliteDialect) renderSeriesDictionary(tables tables, indexName string, p
 	return renderExpandedSeriesDictionary(d, tables, " INDEXED BY "+indexName, plan)
 }
 
-func (d mysqlDialect) renderSeriesDictionary(tables tables, indexName string, plan seriesDictionaryPlan) renderedSQL {
-	return renderExpandedSeriesDictionary(d, tables, " FORCE INDEX ("+indexName+")", plan)
-}
-
-func (d postgresDialect) renderSeriesDictionary(tables tables, _ string, plan seriesDictionaryPlan) renderedSQL {
-	args := []any{plan.MetricNames}
-	parts := []string{"s.metric_name = ANY(" + d.placeholder(1) + "::text[])"}
-	if len(plan.EntityIDs) > 0 {
-		args = append(args, plan.EntityIDs)
-		parts = append(parts, "s.entity_id = ANY("+d.placeholder(len(args))+"::text[])")
-	}
-	for _, key := range sortedKeys(plan.Tags) {
-		args = append(args, plan.Tags[key])
-		parts = append(parts, d.jsonExtractEquals("s.tags", key, d.placeholder(len(args))))
-	}
-	return renderedSQL{
-		Query: fmt.Sprintf("SELECT s.id, s.metric_name, s.entity_id, s.tags_hash, s.tags FROM %s s WHERE %s ORDER BY s.id ASC", tables.series, strings.Join(parts, " AND ")),
-		Args:  args,
-	}
-}
-
 func renderExpandedSeriesDictionary(d dialect, tables tables, indexHint string, plan seriesDictionaryPlan) renderedSQL {
 	args := make([]any, 0, len(plan.MetricNames)+len(plan.EntityIDs)+len(plan.Tags))
 	metricPlaceholders := appendPlaceholders(d, &args, plan.MetricNames)
@@ -95,31 +74,6 @@ func (d sqliteDialect) renderRollupRead(tables tables, indexName string, plan ro
 	return renderedSQL{
 		Query: fmt.Sprintf("SELECT %s FROM %s r INDEXED BY %s WHERE r.resolution_id = %s AND r.bucket_milli >= %s AND r.bucket_milli <= %s AND r.series_id IN (SELECT CAST(value AS INTEGER) FROM json_each(%s)) ORDER BY r.bucket_milli ASC, r.series_id ASC, r.label_id ASC",
 			rollupReadColumns(plan.Fields), tables.rollups, indexName,
-			d.placeholder(1), d.placeholder(2), d.placeholder(3), d.placeholder(4)),
-		Args: args,
-	}
-}
-
-func (d mysqlDialect) renderRollupRead(tables tables, indexName string, plan rollupReadPlan) renderedSQL {
-	args := []any{plan.ResolutionID, plan.StartMilli, plan.EndMilli}
-	seriesPlaceholders := make([]string, 0, len(plan.SeriesIDs))
-	for _, seriesID := range plan.SeriesIDs {
-		args = append(args, seriesID)
-		seriesPlaceholders = append(seriesPlaceholders, d.placeholder(len(args)))
-	}
-	return renderedSQL{
-		Query: fmt.Sprintf("SELECT %s FROM %s r FORCE INDEX (%s) WHERE r.resolution_id = %s AND r.bucket_milli >= %s AND r.bucket_milli <= %s AND r.series_id IN (%s) ORDER BY r.bucket_milli ASC, r.series_id ASC, r.label_id ASC",
-			rollupReadColumns(plan.Fields), tables.rollups, indexName,
-			d.placeholder(1), d.placeholder(2), d.placeholder(3), strings.Join(seriesPlaceholders, ", ")),
-		Args: args,
-	}
-}
-
-func (d postgresDialect) renderRollupRead(tables tables, _ string, plan rollupReadPlan) renderedSQL {
-	args := []any{plan.ResolutionID, plan.StartMilli, plan.EndMilli, plan.SeriesIDs}
-	return renderedSQL{
-		Query: fmt.Sprintf("SELECT %s FROM %s r WHERE r.resolution_id = %s AND r.bucket_milli >= %s AND r.bucket_milli <= %s AND r.series_id = ANY(%s::bigint[]) ORDER BY r.bucket_milli ASC, r.series_id ASC, r.label_id ASC",
-			rollupReadColumns(plan.Fields), tables.rollups,
 			d.placeholder(1), d.placeholder(2), d.placeholder(3), d.placeholder(4)),
 		Args: args,
 	}

@@ -17,14 +17,6 @@ const (
 	//
 	// DriverSQLite 选择 SQLite 后端。
 	DriverSQLite Driver = "sqlite"
-	// DriverMySQL selects the MySQL backend.
-	//
-	// DriverMySQL 选择 MySQL 后端。
-	DriverMySQL Driver = "mysql"
-	// DriverPostgreSQL selects the PostgreSQL backend.
-	//
-	// DriverPostgreSQL 选择 PostgreSQL 后端。
-	DriverPostgreSQL Driver = "postgresql"
 )
 
 // MetricType describes the semantic type of a metric.

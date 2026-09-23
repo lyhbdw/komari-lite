@@ -12,8 +12,6 @@ import (
 	"sync"
 	"time"
 
-	_ "github.com/go-sql-driver/mysql"
-	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/komari-monitor/komari/internal/sqlitetune"
 )
 

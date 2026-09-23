@@ -97,21 +97,6 @@ func normalizedIndexesFor(prefix string, tables tables) []normalizedIndex {
 }
 
 func (s *Store) createNormalizedIndexes(ctx context.Context) error {
-	if s.cfg.Driver == DriverMySQL {
-		for _, index := range s.normalizedIndexes() {
-			exists, err := s.mysqlIndexExists(ctx, index.table, index.name)
-			if err != nil {
-				return err
-			}
-			if exists {
-				continue
-			}
-			if _, err := s.db.ExecContext(ctx, fmt.Sprintf("CREATE INDEX %s ON %s (%s)", index.name, index.table, index.columns)); err != nil {
-				return err
-			}
-		}
-		return nil
-	}
 	return s.createPortableNormalizedIndexes(ctx, s.db)
 }
 
@@ -124,36 +109,3 @@ func (s *Store) createPortableNormalizedIndexes(ctx context.Context, exec sqlExe
 	return nil
 }
 
-func (s *Store) dropNormalizedIndexes(ctx context.Context) error {
-	for _, index := range s.normalizedIndexes() {
-		if s.cfg.Driver == DriverMySQL {
-			exists, err := s.mysqlIndexExists(ctx, index.table, index.name)
-			if err != nil {
-				return err
-			}
-			if exists {
-				if _, err := s.db.ExecContext(ctx, fmt.Sprintf("ALTER TABLE %s DROP INDEX %s", index.table, index.name)); err != nil {
-					return err
-				}
-			}
-			continue
-		}
-		if _, err := s.db.ExecContext(ctx, "DROP INDEX IF EXISTS "+index.name); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (s *Store) mysqlIndexExists(ctx context.Context, table, index string) (bool, error) {
-	var found int
-	err := s.db.QueryRowContext(ctx, `SELECT 1 FROM information_schema.STATISTICS
-		WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND INDEX_NAME = ? LIMIT 1`, table, index).Scan(&found)
-	if err == sql.ErrNoRows {
-		return false, nil
-	}
-	if err != nil {
-		return false, err
-	}
-	return true, nil
-}

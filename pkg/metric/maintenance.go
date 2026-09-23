@@ -60,20 +60,10 @@ func (s *Store) StorageSize(ctx context.Context) (int64, error) {
 	if s.closed || s.db == nil {
 		return 0, ErrClosed
 	}
-
-	if s.cfg.Driver == DriverSQLite {
-		return s.sqliteStorageSize(ctx)
+	if s.cfg.Driver != DriverSQLite {
+		return 0, fmt.Errorf("%w: storage size requires SQLite", ErrInvalidArgument)
 	}
-
-	query, args, err := managedStorageSizeQuery(s.cfg.Driver, s.tables)
-	if err != nil {
-		return 0, err
-	}
-	var size int64
-	if err := s.db.QueryRowContext(ctx, query, args...).Scan(&size); err != nil {
-		return 0, fmt.Errorf("metric: query %s storage size: %w", s.cfg.Driver, err)
-	}
-	return size, nil
+	return s.sqliteStorageSize(ctx)
 }
 
 // SnapshotTo writes a consistent SQLite snapshot to destPath. SQLite reads
@@ -128,9 +118,6 @@ func (s *Store) ReclaimSpace(ctx context.Context) error {
 
 	switch s.cfg.Driver {
 	case DriverSQLite:
-		if err := s.reencodeLegacyDigests(ctx); err != nil {
-			return err
-		}
 		if err := sqliteCheckpoint(ctx, s.db); err != nil {
 			return err
 		}
@@ -143,21 +130,6 @@ func (s *Store) ReclaimSpace(ctx context.Context) error {
 		// VACUUM itself can populate the WAL; truncate it again so the reported
 		// physical size reflects the completed reclamation.
 		return sqliteCheckpoint(ctx, s.db)
-	case DriverMySQL:
-		query, err := managedReclaimQuery(s.cfg.Driver, s.tables)
-		if err != nil {
-			return err
-		}
-		return s.optimizeMySQLTables(ctx, query)
-	case DriverPostgreSQL:
-		query, err := managedReclaimQuery(s.cfg.Driver, s.tables)
-		if err != nil {
-			return err
-		}
-		if _, err := s.db.ExecContext(ctx, query); err != nil {
-			return fmt.Errorf("metric: vacuum PostgreSQL metric tables: %w", err)
-		}
-		return nil
 	default:
 		return fmt.Errorf("%w: unsupported driver %q", ErrInvalidArgument, s.cfg.Driver)
 	}
@@ -253,124 +225,18 @@ func sqliteCheckpoint(ctx context.Context, db *sql.DB) error {
 	return nil
 }
 
-func (s *Store) optimizeMySQLTables(ctx context.Context, query string) error {
-	rows, err := s.db.QueryContext(ctx, query)
-	if err != nil {
-		return fmt.Errorf("metric: optimize MySQL metric tables: %w", err)
-	}
-
-	var resultErrors []error
-	for rows.Next() {
-		var table, operation, messageType, message string
-		if err := rows.Scan(&table, &operation, &messageType, &message); err != nil {
-			_ = rows.Close()
-			return fmt.Errorf("metric: scan MySQL optimize result: %w", err)
-		}
-		if err := mysqlOptimizeResultError(table, messageType, message); err != nil {
-			resultErrors = append(resultErrors, err)
-		}
-	}
-	if err := rows.Err(); err != nil {
-		_ = rows.Close()
-		return fmt.Errorf("metric: read MySQL optimize results: %w", err)
-	}
-	if err := rows.Close(); err != nil {
-		return fmt.Errorf("metric: close MySQL optimize results: %w", err)
-	}
-	return errors.Join(resultErrors...)
-}
-
-func mysqlOptimizeResultError(table, messageType, message string) error {
-	if !strings.EqualFold(strings.TrimSpace(messageType), "error") {
-		return nil
-	}
-	table = strings.TrimSpace(table)
-	if table == "" {
-		table = "unknown table"
-	}
-	message = strings.TrimSpace(message)
-	if message == "" {
-		message = "unknown error"
-	}
-	return fmt.Errorf("metric: optimize MySQL table %s: %s", table, message)
-}
-
 func maintenanceActionFor(driver Driver) MaintenanceAction {
-	switch driver {
-	case DriverSQLite:
+	if driver == DriverSQLite {
 		return MaintenanceVacuum
-	case DriverMySQL:
-		return MaintenanceOptimize
-	case DriverPostgreSQL:
-		return MaintenanceVacuumFull
-	default:
-		return ""
 	}
+	return ""
 }
 
-func managedStorageSizeQuery(driver Driver, t tables) (string, []any, error) {
-	names := managedTableNames(t)
-	d := newDialect(driver)
-	placeholders := make([]string, len(names))
-	for i := range names {
-		placeholders[i] = d.placeholder(i + 1)
-	}
-	inClause := strings.Join(placeholders, ", ")
-	switch driver {
-	case DriverMySQL:
-		return fmt.Sprintf(`SELECT COALESCE(SUM(DATA_LENGTH + INDEX_LENGTH), 0)
-FROM information_schema.TABLES
-WHERE TABLE_SCHEMA = DATABASE()
-	  AND TABLE_NAME IN (%s)`, inClause), stringsToAny(names), nil
-	case DriverPostgreSQL:
-		for i := range names {
-			names[i] = strings.ToLower(names[i])
-		}
-		return fmt.Sprintf(`SELECT COALESCE(SUM(pg_total_relation_size(c.oid)), 0)
-FROM pg_catalog.pg_class AS c
-JOIN pg_catalog.pg_namespace AS n ON n.oid = c.relnamespace
-WHERE n.nspname = current_schema()
-	  AND c.relname IN (%s)`, inClause), stringsToAny(names), nil
-	default:
-		return "", nil, fmt.Errorf("%w: storage-size query is unavailable for driver %q", ErrInvalidArgument, driver)
-	}
-}
-
-func managedReclaimQuery(driver Driver, t tables) (string, error) {
-	names := managedTableNames(t)
-	switch driver {
-	case DriverSQLite:
+func managedReclaimQuery(driver Driver, _ tables) (string, error) {
+	if driver == DriverSQLite {
 		return sqliteVacuumSQL, nil
-	case DriverMySQL:
-		for i := range names {
-			names[i] = quoteMaintenanceIdentifier(driver, names[i])
-		}
-		return "OPTIMIZE TABLE " + strings.Join(names, ", "), nil
-	case DriverPostgreSQL:
-		for i := range names {
-			names[i] = quoteMaintenanceIdentifier(driver, strings.ToLower(names[i]))
-		}
-		return "VACUUM (FULL, ANALYZE) " + strings.Join(names, ", "), nil
-	default:
-		return "", fmt.Errorf("%w: reclaim query is unavailable for driver %q", ErrInvalidArgument, driver)
 	}
+	return "", fmt.Errorf("%w: reclaim query is unavailable for driver %q", ErrInvalidArgument, driver)
 }
 
-func managedTableNames(t tables) []string {
-	return []string{t.definitions, t.series, t.labels, t.resolutions, t.rollups}
-}
 
-func quoteMaintenanceIdentifier(driver Driver, identifier string) string {
-	if driver == DriverMySQL {
-		return "`" + strings.ReplaceAll(identifier, "`", "``") + "`"
-	}
-	return `"` + strings.ReplaceAll(identifier, `"`, `""`) + `"`
-}
-
-func stringsToAny(values []string) []any {
-	args := make([]any, len(values))
-	for i := range values {
-		args[i] = values[i]
-	}
-	return args
-}

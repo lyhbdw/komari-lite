@@ -80,14 +80,7 @@ func (c *rollupDictionaryCache) resolutionID(ctx context.Context, s *Store, tx *
 }
 
 func (s *Store) insertIgnoreSQL(table, columns, values string) string {
-	switch s.cfg.Driver {
-	case DriverMySQL:
-		return fmt.Sprintf("INSERT IGNORE INTO %s %s VALUES %s", table, columns, values)
-	case DriverPostgreSQL:
-		return fmt.Sprintf("INSERT INTO %s %s VALUES %s ON CONFLICT DO NOTHING", table, columns, values)
-	default:
-		return fmt.Sprintf("INSERT OR IGNORE INTO %s %s VALUES %s", table, columns, values)
-	}
+	return fmt.Sprintf("INSERT OR IGNORE INTO %s %s VALUES %s", table, columns, values)
 }
 
 // internSeriesTx stores the immutable name/entity/tag tuple once. Labels are
@@ -164,14 +157,7 @@ func joinSQL(parts []string) string {
 }
 
 func (s *Store) normalizedRollupUpsertSuffix() string {
-	switch s.cfg.Driver {
-	case DriverMySQL:
-		return " ON DUPLICATE KEY UPDATE count=VALUES(count), sum=VALUES(sum), sum_sq=VALUES(sum_sq), min_val=VALUES(min_val), max_val=VALUES(max_val), first_val=VALUES(first_val), first_ts_milli=VALUES(first_ts_milli), last_val=VALUES(last_val), last_ts_milli=VALUES(last_ts_milli), digest=VALUES(digest), created_at_milli=VALUES(created_at_milli)"
-	case DriverPostgreSQL:
-		return " ON CONFLICT(series_id, resolution_id, label_id, bucket_milli) DO UPDATE SET count=EXCLUDED.count, sum=EXCLUDED.sum, sum_sq=EXCLUDED.sum_sq, min_val=EXCLUDED.min_val, max_val=EXCLUDED.max_val, first_val=EXCLUDED.first_val, first_ts_milli=EXCLUDED.first_ts_milli, last_val=EXCLUDED.last_val, last_ts_milli=EXCLUDED.last_ts_milli, digest=EXCLUDED.digest, created_at_milli=EXCLUDED.created_at_milli"
-	default:
-		return " ON CONFLICT(series_id, resolution_id, label_id, bucket_milli) DO UPDATE SET count=excluded.count, sum=excluded.sum, sum_sq=excluded.sum_sq, min_val=excluded.min_val, max_val=excluded.max_val, first_val=excluded.first_val, first_ts_milli=excluded.first_ts_milli, last_val=excluded.last_val, last_ts_milli=excluded.last_ts_milli, digest=excluded.digest, created_at_milli=excluded.created_at_milli"
-	}
+	return " ON CONFLICT(series_id, resolution_id, label_id, bucket_milli) DO UPDATE SET count=excluded.count, sum=excluded.sum, sum_sq=excluded.sum_sq, min_val=excluded.min_val, max_val=excluded.max_val, first_val=excluded.first_val, first_ts_milli=excluded.first_ts_milli, last_val=excluded.last_val, last_ts_milli=excluded.last_ts_milli, digest=excluded.digest, created_at_milli=excluded.created_at_milli"
 }
 
 func (s *Store) upsertNormalizedRollupRowsTx(ctx context.Context, rows []normalizedRollupRow, tx *sql.Tx) error {

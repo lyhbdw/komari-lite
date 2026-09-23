@@ -197,24 +197,6 @@ func SQLiteInDir(dir string, opts ...Option) Config {
 	return cfg
 }
 
-// MySQL builds a MySQL backend configuration.
-//
-// MySQL 构造 MySQL 后端配置。
-func MySQL(dsn string, opts ...Option) Config {
-	cfg := MySQLConfig(dsn)
-	applyOptions(&cfg, opts...)
-	return cfg
-}
-
-// PostgreSQL builds a PostgreSQL backend configuration.
-//
-// PostgreSQL 构造 PostgreSQL 后端配置。
-func PostgreSQL(dsn string, opts ...Option) Config {
-	cfg := PostgreSQLConfig(dsn)
-	applyOptions(&cfg, opts...)
-	return cfg
-}
-
 // SQLiteConfig returns the default SQLite configuration.
 //
 // SQLiteConfig 返回 SQLite 后端的默认配置。
@@ -235,20 +217,6 @@ func SQLiteConfig(dsn string) Config {
 	// them until the Store closes. Callers can still set a lifetime explicitly.
 	cfg.ConnMaxLifetime = 0
 	return cfg
-}
-
-// MySQLConfig returns the default MySQL configuration.
-//
-// MySQLConfig 返回 MySQL 后端的默认配置。
-func MySQLConfig(dsn string) Config {
-	return DefaultConfig(DriverMySQL, dsn)
-}
-
-// PostgreSQLConfig returns the default PostgreSQL configuration.
-//
-// PostgreSQLConfig 返回 PostgreSQL 后端的默认配置。
-func PostgreSQLConfig(dsn string) Config {
-	return DefaultConfig(DriverPostgreSQL, dsn)
 }
 
 // WithDB sets a caller-owned database connection pool.
@@ -408,7 +376,7 @@ func applyOptions(cfg *Config, opts ...Option) {
 // Validate 检查 Config 的后端、表名前缀、保留时间和 rollup 策略是否合法。
 func (c Config) Validate() error {
 	switch c.Driver {
-	case DriverSQLite, DriverMySQL, DriverPostgreSQL:
+	case DriverSQLite:
 	default:
 		return fmt.Errorf("%w: unsupported driver %q", ErrInvalidArgument, c.Driver)
 	}
@@ -425,16 +393,6 @@ func (c Config) Validate() error {
 	}
 	// Bound generated index names to the backend identifier limit. Restructure
 	// performs the stricter check required by its temporary "rebuild_" prefix.
-	switch c.Driver {
-	case DriverMySQL:
-		if len(c.TablePrefix) > 35 {
-			return fmt.Errorf("%w: table prefix is too long for MySQL identifiers", ErrInvalidArgument)
-		}
-	case DriverPostgreSQL:
-		if len(c.TablePrefix) > 34 {
-			return fmt.Errorf("%w: table prefix is too long for PostgreSQL identifiers", ErrInvalidArgument)
-		}
-	}
 	if err := c.RollupPolicy.Validate(); err != nil {
 		return err
 	}
@@ -445,16 +403,8 @@ func (c Config) Validate() error {
 //
 // driverName 返回 database/sql 注册使用的驱动名称。
 func (c Config) driverName() string {
-	switch c.Driver {
-	case DriverSQLite:
-		return "sqlite3"
-	case DriverMySQL:
-		return "mysql"
-	case DriverPostgreSQL:
-		return "pgx"
-	default:
-		return string(c.Driver)
-	}
+	// Lite 只支持 SQLite。
+	return "sqlite3"
 }
 
 // sqliteFileDSN converts a filesystem path into a SQLite file DSN.

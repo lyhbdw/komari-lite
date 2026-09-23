@@ -32,6 +32,8 @@ func Register(r *gin.Engine) {
 func registerPublicRoutes(r *gin.Engine) {
 	// 非 JSON / 特殊流程，保留 REST handler。
 	r.POST("/api/login", public_api.Login)
+	r.GET("/api/setup/status", api.SetupStatus)
+	r.POST("/api/setup/create-admin", api.SetupCreateAdmin)
 	r.GET("/download/agent-install.sh", func(c *gin.Context) {
 		c.Data(200, "text/x-shellscript; charset=utf-8", public.AgentInstallScript)
 	})
@@ -76,7 +78,6 @@ func registerLiteDisabledRoutes(r *gin.Engine) {
 		"/api/oauth",
 		"/api/oauth_callback",
 		"/api/terminal",
-		"/api/plugins",
 		"/api/restore",
 		"/api/upload",
 		"/api/file",
@@ -88,7 +89,6 @@ func registerLiteDisabledRoutes(r *gin.Engine) {
 		"/api/admin/backup/status",
 		"/api/admin/dbquery",
 		"/api/admin/database",
-		"/api/admin/plugins",
 		"/api/admin/backup/restore",
 		"/api/admin/pprof",
 		"/api/admin/settings/xtermjs",
@@ -96,7 +96,6 @@ func registerLiteDisabledRoutes(r *gin.Engine) {
 		"/download/agent-migration.sh",
 
 		"/api/admin/clipboard",
-		"/api/admin/plugin",
 		"/api/admin/task",
 		"/api/admin/theme",
 		"/api/admin/theme/delete",
@@ -105,7 +104,6 @@ func registerLiteDisabledRoutes(r *gin.Engine) {
 	}
 	for _, path := range []string{
 		"/api/terminal/*path",
-		"/api/plugins/*path",
 		"/api/restore/*path",
 		"/api/upload/*path",
 		"/api/file/*path",
@@ -120,7 +118,6 @@ func registerLiteDisabledRoutes(r *gin.Engine) {
 		"/api/admin/backup/status/*path",
 
 		"/api/admin/clipboard/*path",
-		"/api/admin/plugin/*path",
 
 		"/api/admin/task/*path",
 		"/api/admin/client/:uuid/terminal",

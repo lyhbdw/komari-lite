@@ -16,7 +16,7 @@ type sqliteForeignKey struct {
 }
 
 func TestNormalizedSchemaDeclaresPortableForeignKeys(t *testing.T) {
-	for _, driver := range []Driver{DriverSQLite, DriverMySQL, DriverPostgreSQL} {
+	for _, driver := range []Driver{DriverSQLite} {
 		t.Run(string(driver), func(t *testing.T) {
 			s := schemaTestStore(driver, "er_")
 			ddl := strings.Join(s.normalizedSchemaStatements(), "\n")

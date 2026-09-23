@@ -101,8 +101,3 @@ func decodeStoredTDigest(blob []byte) ([]byte, error) {
 		return nil, fmt.Errorf("metric: invalid stored t-digest type %q", blob[1])
 	}
 }
-
-// isLegacyRawTDigest reports whether a blob is the pre-compression format.
-func isLegacyRawTDigest(blob []byte) bool {
-	return len(blob) >= 2 && blob[0] == tdigestMagic0 && blob[1] == tdigestMagic1
-}

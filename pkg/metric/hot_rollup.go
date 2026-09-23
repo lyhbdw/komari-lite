@@ -350,3 +350,10 @@ func (s *Store) deleteHotRollups(metricName, entityID string, tags map[string]st
 	}
 	return int64(len(matched)), nil
 }
+
+// emptyLabelsHash is the fingerprint of an empty label set, precomputed
+// for tests and fast paths that build label-less buckets.
+var emptyLabelsHash = func() string {
+	hash, _, _ := tagsFingerprint(map[string]string{})
+	return hash
+}()

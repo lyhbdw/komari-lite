@@ -2,51 +2,29 @@ package metric
 
 import "testing"
 
-// TestDialectsGenerateBackendSpecificSQL verifies backend-specific SQL rendering.
+// TestDialectsGenerateBackendSpecificSQL verifies SQLite dialect rendering.
 //
-// TestDialectsGenerateBackendSpecificSQL 验证不同数据库后端生成各自的 SQL。
+// TestDialectsGenerateBackendSpecificSQL 验证 SQLite 方言渲染。
+// Lite 只支持 SQLite，此测试同时锁定 newDialect 对任何 driver 输入都返回
+// sqlite 行为（防止未来重新引入多后端时静默回归）。
 func TestDialectsGenerateBackendSpecificSQL(t *testing.T) {
-	tests := []struct {
-		name        string
-		driver      Driver
-		placeholder string
-		jsonType    string
-		blobType    string
-	}{
-		{
-			name:        "sqlite",
-			driver:      DriverSQLite,
-			placeholder: "?",
-			jsonType:    "TEXT",
-			blobType:    "BLOB",
-		},
-		{
-			name:        "mysql",
-			driver:      DriverMySQL,
-			placeholder: "?",
-			jsonType:    "JSON",
-			blobType:    "LONGBLOB",
-		},
-		{
-			name:        "postgresql",
-			driver:      DriverPostgreSQL,
-			placeholder: "$1",
-			jsonType:    "JSONB",
-			blobType:    "BYTEA",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			d := newDialect(tt.driver)
-			if got := d.placeholder(1); got != tt.placeholder {
-				t.Fatalf("placeholder: expected %q, got %q", tt.placeholder, got)
+	for _, driver := range []Driver{DriverSQLite} {
+		t.Run(string(driver), func(t *testing.T) {
+			d := newDialect(driver)
+			if got := d.placeholder(1); got != "?" {
+				t.Fatalf("placeholder: expected %q, got %q", "?", got)
 			}
-			if got := d.jsonType(); got != tt.jsonType {
-				t.Fatalf("json type: expected %q, got %q", tt.jsonType, got)
+			if got := d.jsonType(); got != "TEXT" {
+				t.Fatalf("json type: expected %q, got %q", "TEXT", got)
 			}
-			if got := d.blobType(); got != tt.blobType {
-				t.Fatalf("blob type: expected %q, got %q", tt.blobType, got)
+			if got := d.blobType(); got != "BLOB" {
+				t.Fatalf("blob type: expected %q, got %q", "BLOB", got)
+			}
+			if got := d.jsonPlaceholder(1); got != "?" {
+				t.Fatalf("json placeholder: expected %q, got %q", "?", got)
+			}
+			if got := d.autoIncrementPrimaryKey(); got != "INTEGER PRIMARY KEY AUTOINCREMENT" {
+				t.Fatalf("auto increment: unexpected %q", got)
 			}
 		})
 	}

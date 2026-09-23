@@ -1,14 +1,11 @@
 package metric
 
 import (
+	"fmt"
 	"context"
 	"errors"
-	"fmt"
-	"math"
 	"os"
 	"path/filepath"
-	"reflect"
-	"strings"
 	"testing"
 	"time"
 )
@@ -126,168 +123,16 @@ func TestCleanupOrphanedMetricData(t *testing.T) {
 	}
 }
 
-func TestSQLiteReclaimSpaceReencodesLegacyDigestsOnce(t *testing.T) {
-	ctx := context.Background()
-	store := newMemStore(t)
-	if err := store.CreateMetric(ctx, Definition{Name: "latency", Type: TypeGauge, RetentionDays: 30}); err != nil {
-		t.Fatalf("create metric: %v", err)
-	}
-	base := time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)
-	digest := NewTDigest(30)
-	for i := 0; i < 1000; i++ {
-		digest.Add(float64(i%73), 1)
-	}
-	rollup := PersistedRollup{
-		MetricName: "latency", EntityID: "node-a", Resolution: time.Minute, Bucket: base,
-		Count: 1000, Sum: 0, SumSq: 0, Min: 0, Max: 72,
-		FirstValue: 0, FirstTime: base, LastValue: 50, LastTime: base.Add(59 * time.Second),
-		Digest: digest.Encode(), CreatedAt: base.Add(time.Minute),
-	}
-	for i := 0; i < 1000; i++ {
-		rollup.Sum += float64(i % 73)
-		rollup.SumSq += float64(i%73) * float64(i%73)
-	}
-	if err := store.ImportRollups(ctx, []PersistedRollup{rollup}); err != nil {
-		t.Fatalf("import rollup: %v", err)
-	}
-	var rowID int64
-	if err := store.db.QueryRowContext(ctx, fmt.Sprintf("SELECT rowid FROM %s", store.tables.rollups)).Scan(&rowID); err != nil {
-		t.Fatalf("find rollup rowid: %v", err)
-	}
-	legacy := digest.Encode()
-	if _, err := store.db.ExecContext(ctx, fmt.Sprintf("UPDATE %s SET digest = ? WHERE rowid = ?", store.tables.rollups), legacy, rowID); err != nil {
-		t.Fatalf("seed legacy digest: %v", err)
-	}
-	canceledCtx, cancel := context.WithCancel(ctx)
-	cancel()
-	if err := store.ReclaimSpace(canceledCtx); err != nil {
-		t.Fatalf("reclaim with canceled context: %v", err)
-	}
-	var converted []byte
-	if err := store.db.QueryRowContext(ctx, fmt.Sprintf("SELECT digest FROM %s WHERE rowid = ?", store.tables.rollups), rowID).Scan(&converted); err != nil {
-		t.Fatalf("read converted digest: %v", err)
-	}
-	if isLegacyRawTDigest(converted) {
-		t.Fatalf("legacy digest was not re-encoded: %q", converted[:2])
-	}
-	convertedDigest, err := DecodeTDigest(converted)
-	if err != nil || math.Abs(convertedDigest.Quantile(0.95)-digest.Quantile(0.95)) > 1e-9 {
-		t.Fatalf("converted digest changed percentile semantics: %v", err)
-	}
-	var phase string
-	if err := store.db.QueryRowContext(ctx, fmt.Sprintf("SELECT phase FROM %s WHERE state_key = ?", store.tables.state), digestReencodeStateKey).Scan(&phase); err != nil {
-		t.Fatalf("read re-encode state: %v", err)
-	}
-	if phase != digestReencodeComplete {
-		t.Fatalf("re-encode state = %q, want %q", phase, digestReencodeComplete)
-	}
-	// Completion makes future reclamations skip the historical scan. This row
-	// can only be produced by a legacy/manual import path in practice.
-	if _, err := store.db.ExecContext(ctx, fmt.Sprintf("UPDATE %s SET digest = ? WHERE rowid = ?", store.tables.rollups), legacy, rowID); err != nil {
-		t.Fatalf("restore test legacy digest: %v", err)
-	}
-	if err := store.ReclaimSpace(ctx); err != nil {
-		t.Fatalf("second reclaim: %v", err)
-	}
-	if err := store.db.QueryRowContext(ctx, fmt.Sprintf("SELECT digest FROM %s WHERE rowid = ?", store.tables.rollups), rowID).Scan(&converted); err != nil {
-		t.Fatalf("read retained legacy digest: %v", err)
-	}
-	if !isLegacyRawTDigest(converted) {
-		t.Fatal("completed migration unexpectedly scanned legacy rows again")
-	}
-}
-
 func TestMaintenanceMappings(t *testing.T) {
-	tables := tables{
-		definitions: "Metric_definitions",
-		points:      "Metric_points",
-		series:      "Metric_series",
-		labels:      "Metric_label_sets",
-		resolutions: "Metric_resolutions",
-		rollups:     "Metric_rollups",
+	if got := maintenanceActionFor(DriverSQLite); got != MaintenanceVacuum {
+		t.Fatalf("maintenanceActionFor(sqlite) = %q, want %q", got, MaintenanceVacuum)
 	}
-
-	tests := []struct {
-		name       string
-		driver     Driver
-		action     MaintenanceAction
-		reclaim    string
-		sizeParts  []string
-		sizeArgs   []any
-		hasSizeSQL bool
-	}{
-		{
-			name:       "sqlite",
-			driver:     DriverSQLite,
-			action:     MaintenanceVacuum,
-			reclaim:    "VACUUM",
-			hasSizeSQL: false,
-		},
-		{
-			name:       "mysql",
-			driver:     DriverMySQL,
-			action:     MaintenanceOptimize,
-			reclaim:    "OPTIMIZE TABLE `Metric_definitions`, `Metric_series`, `Metric_label_sets`, `Metric_resolutions`, `Metric_rollups`",
-			sizeParts:  []string{"information_schema.TABLES", "TABLE_SCHEMA = DATABASE()", "TABLE_NAME IN (?, ?, ?, ?, ?)"},
-			sizeArgs:   []any{"Metric_definitions", "Metric_series", "Metric_label_sets", "Metric_resolutions", "Metric_rollups"},
-			hasSizeSQL: true,
-		},
-		{
-			name:       "postgresql",
-			driver:     DriverPostgreSQL,
-			action:     MaintenanceVacuumFull,
-			reclaim:    `VACUUM (FULL, ANALYZE) "metric_definitions", "metric_series", "metric_label_sets", "metric_resolutions", "metric_rollups"`,
-			sizeParts:  []string{"pg_total_relation_size(c.oid)", "n.nspname = current_schema()", "c.relname IN ($1, $2, $3, $4, $5)"},
-			sizeArgs:   []any{"metric_definitions", "metric_series", "metric_label_sets", "metric_resolutions", "metric_rollups"},
-			hasSizeSQL: true,
-		},
+	gotReclaim, err := managedReclaimQuery(DriverSQLite, tables{})
+	if err != nil {
+		t.Fatalf("managedReclaimQuery(sqlite): %v", err)
 	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := maintenanceActionFor(tt.driver); got != tt.action {
-				t.Fatalf("maintenanceActionFor(%q) = %q, want %q", tt.driver, got, tt.action)
-			}
-			gotReclaim, err := managedReclaimQuery(tt.driver, tables)
-			if err != nil {
-				t.Fatalf("managedReclaimQuery(%q): %v", tt.driver, err)
-			}
-			if gotReclaim != tt.reclaim {
-				t.Fatalf("managedReclaimQuery(%q) = %q, want %q", tt.driver, gotReclaim, tt.reclaim)
-			}
-
-			gotSize, gotArgs, err := managedStorageSizeQuery(tt.driver, tables)
-			if !tt.hasSizeSQL {
-				if err == nil {
-					t.Fatalf("managedStorageSizeQuery(%q) unexpectedly succeeded: %q", tt.driver, gotSize)
-				}
-				return
-			}
-			if err != nil {
-				t.Fatalf("managedStorageSizeQuery(%q): %v", tt.driver, err)
-			}
-			for _, part := range tt.sizeParts {
-				if !strings.Contains(gotSize, part) {
-					t.Errorf("size query for %q does not contain %q: %s", tt.driver, part, gotSize)
-				}
-			}
-			if !reflect.DeepEqual(gotArgs, tt.sizeArgs) {
-				t.Fatalf("size args for %q = %#v, want %#v", tt.driver, gotArgs, tt.sizeArgs)
-			}
-		})
-	}
-}
-
-func TestMySQLOptimizeResultError(t *testing.T) {
-	if err := mysqlOptimizeResultError("metric_points", "status", "OK"); err != nil {
-		t.Fatalf("status result returned an error: %v", err)
-	}
-	if err := mysqlOptimizeResultError("metric_points", "note", "recreate and analyze instead"); err != nil {
-		t.Fatalf("note result returned an error: %v", err)
-	}
-	err := mysqlOptimizeResultError("komari.metric_points", " Error ", "operation failed")
-	if err == nil || !strings.Contains(err.Error(), "komari.metric_points") || !strings.Contains(err.Error(), "operation failed") {
-		t.Fatalf("error result was not preserved: %v", err)
+	if gotReclaim != "VACUUM" {
+		t.Fatalf("managedReclaimQuery(sqlite) = %q, want VACUUM", gotReclaim)
 	}
 }
 

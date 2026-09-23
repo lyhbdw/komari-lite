@@ -64,18 +64,11 @@ type tables struct {
 	state      string
 }
 
-// newDialect returns the SQL dialect implementation for a backend.
+// newDialect returns the SQL dialect implementation.
 //
-// newDialect 根据数据库后端创建对应 SQL 方言实现。
-func newDialect(driver Driver) dialect {
-	switch driver {
-	case DriverPostgreSQL:
-		return postgresDialect{}
-	case DriverMySQL:
-		return mysqlDialect{}
-	default:
-		return sqliteDialect{}
-	}
+// newDialect 返回 SQL 方言实现。Lite 只支持 SQLite。
+func newDialect(Driver) dialect {
+	return sqliteDialect{}
 }
 
 // sqliteDialect implements SQL rendering for SQLite.
@@ -117,88 +110,6 @@ func (sqliteDialect) insertDefinitionSQL(t tables) string {
 			retention_days = excluded.retention_days,
 			metadata = excluded.metadata,
 			updated_at_milli = excluded.updated_at_milli`, t.definitions)
-}
-
-// mysqlDialect implements SQL rendering for MySQL.
-//
-// mysqlDialect 实现 MySQL 方言。
-type mysqlDialect struct{}
-
-// placeholder returns a bind placeholder for this SQL dialect.
-//
-// placeholder 返回 MySQL 的绑定参数占位符。
-func (mysqlDialect) placeholder(int) string { return "?" }
-
-// jsonPlaceholder returns a bind placeholder for JSON values.
-//
-// jsonPlaceholder 返回 MySQL JSON 值的绑定参数占位符。
-func (mysqlDialect) jsonPlaceholder(int) string { return "?" }
-
-// jsonType returns the SQL column type used for JSON values.
-//
-// jsonType 返回 MySQL 使用的 JSON 存储类型。
-func (mysqlDialect) jsonType() string { return "JSON" }
-
-// autoIncrementPrimaryKey returns the SQL definition for an auto-incrementing primary key.
-//
-// autoIncrementPrimaryKey 返回 MySQL 自增主键定义。
-func (mysqlDialect) autoIncrementPrimaryKey() string { return "BIGINT AUTO_INCREMENT PRIMARY KEY" }
-
-// insertDefinitionSQL builds SQL for inserting or updating a metric definition.
-//
-// insertDefinitionSQL 构造 MySQL 指标定义 upsert SQL。
-func (mysqlDialect) insertDefinitionSQL(t tables) string {
-	return fmt.Sprintf(`INSERT INTO %s
-		(name, type, unit, description, retention_days, metadata, created_at_milli, updated_at_milli)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-		ON DUPLICATE KEY UPDATE
-			type = VALUES(type),
-			unit = VALUES(unit),
-			description = VALUES(description),
-			retention_days = VALUES(retention_days),
-			metadata = VALUES(metadata),
-			updated_at_milli = VALUES(updated_at_milli)`, t.definitions)
-}
-
-// postgresDialect implements SQL rendering for PostgreSQL.
-//
-// postgresDialect 实现 PostgreSQL 方言。
-type postgresDialect struct{}
-
-// placeholder returns a bind placeholder for this SQL dialect.
-//
-// placeholder 返回 PostgreSQL 的编号绑定参数占位符。
-func (postgresDialect) placeholder(n int) string { return fmt.Sprintf("$%d", n) }
-
-// jsonPlaceholder returns a bind placeholder for JSON values.
-//
-// jsonPlaceholder 返回 PostgreSQL JSONB 值的绑定参数占位符。
-func (postgresDialect) jsonPlaceholder(n int) string { return fmt.Sprintf("$%d::jsonb", n) }
-
-// jsonType returns the SQL column type used for JSON values.
-//
-// jsonType 返回 PostgreSQL 使用的 JSONB 存储类型。
-func (postgresDialect) jsonType() string { return "JSONB" }
-
-// autoIncrementPrimaryKey returns the SQL definition for an auto-incrementing primary key.
-//
-// autoIncrementPrimaryKey 返回 PostgreSQL 自增主键定义。
-func (postgresDialect) autoIncrementPrimaryKey() string { return "BIGSERIAL PRIMARY KEY" }
-
-// insertDefinitionSQL builds SQL for inserting or updating a metric definition.
-//
-// insertDefinitionSQL 构造 PostgreSQL 指标定义 upsert SQL。
-func (postgresDialect) insertDefinitionSQL(t tables) string {
-	return fmt.Sprintf(`INSERT INTO %s
-		(name, type, unit, description, retention_days, metadata, created_at_milli, updated_at_milli)
-		VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7, $8)
-		ON CONFLICT(name) DO UPDATE SET
-			type = EXCLUDED.type,
-			unit = EXCLUDED.unit,
-			description = EXCLUDED.description,
-			retention_days = EXCLUDED.retention_days,
-			metadata = EXCLUDED.metadata,
-			updated_at_milli = EXCLUDED.updated_at_milli`, t.definitions)
 }
 
 // tableName combines a table prefix and logical table name.
@@ -273,19 +184,4 @@ func (sqliteDialect) jsonExtractEquals(column, key, placeholder string) string {
 	return fmt.Sprintf("json_extract(%s, '%s') = %s", column, sqlJSONPathQuoted(key), placeholder)
 }
 
-// jsonExtractEquals renders a JSON equality predicate.
-//
-// jsonExtractEquals 构造 MySQL JSON 字段等值过滤表达式。
-func (mysqlDialect) jsonExtractEquals(column, key, placeholder string) string {
-	return fmt.Sprintf("JSON_UNQUOTE(JSON_EXTRACT(%s, '%s')) = %s", column, sqlJSONPathQuoted(key), placeholder)
-}
 
-// jsonExtractEquals renders a JSON equality predicate.
-//
-// jsonExtractEquals 构造 PostgreSQL JSONB 字段等值过滤表达式。
-func (postgresDialect) jsonExtractEquals(column, key, placeholder string) string {
-	// PostgreSQL's ->> takes the key as a plain text literal (not a JSON path),
-	// so a dot or hyphen in the key is harmless; only single quotes need SQL
-	// escaping.
-	return fmt.Sprintf("%s->>'%s' = %s", column, sqlSingleQuote(key), placeholder)
-}
