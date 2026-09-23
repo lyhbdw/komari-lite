@@ -286,7 +286,7 @@ import type { NodeBasicInfo } from "@/contexts/node-list-context";
 import PriceTags from "./PriceTags";
 import { TrendingUp } from "lucide-react";
 import MiniPingChartFloat from "./MiniPingChartFloat";
-import { getOSImage, getOSName } from "@/utils";
+import { getOSImage, getOSName } from "@/utils/osImageHelper";
 import { usePublicInfo } from "@/contexts/usePublicInfo";
 export const NodeGrid = ({ nodes, liveData, onlineSet }: NodeGridProps) => {
   const { publicInfo } = usePublicInfo();

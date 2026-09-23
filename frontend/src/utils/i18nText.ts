@@ -1,4 +1,4 @@
-export type I18nText = string | Record<string, string>;
+type I18nText = string | Record<string, string>;
 
 // 语言键规范化：zh-CN / zh_CN / zh-cn / zh_cn 都归一为 "zhcn"。
 const normalizeLang = (value: string) =>

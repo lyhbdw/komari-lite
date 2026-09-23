@@ -176,13 +176,6 @@ export const trimMetricChartBoundaryRows = (
   return rows.slice(first, last + 1);
 };
 
-export const metricChartBoundaryTicks = (rows: MetricChartRow[]) => {
-  if (rows.length === 0) return [];
-  const first = String(rows[0].time);
-  const last = String(rows[rows.length - 1].time);
-  return first === last ? [first] : [first, last];
-};
-
 const padDatePart = (value: number) => String(value).padStart(2, "0");
 
 /** Boundary label shared by the axis ticks and the chart tooltips. */

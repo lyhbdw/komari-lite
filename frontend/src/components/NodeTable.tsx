@@ -21,7 +21,7 @@ import PriceTags from "./PriceTags";
 import Tips from "./ui/tips";
 import { DetailsGrid } from "./DetailsGrid";
 import MiniPingChart from "./MiniPingChart";
-import { getOSImage } from "@/utils";
+import { getOSImage } from "@/utils/osImageHelper";
 import { usePublicInfo } from "@/contexts/usePublicInfo";
 
 interface NodeTableProps {

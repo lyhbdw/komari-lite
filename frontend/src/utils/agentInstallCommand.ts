@@ -1,4 +1,4 @@
-export type AgentInstallOptions = {
+type AgentInstallOptions = {
   endpoint: string;
   token?: string;
   interval?: string;

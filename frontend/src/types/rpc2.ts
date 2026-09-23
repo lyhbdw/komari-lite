@@ -78,9 +78,6 @@ export type JSONRPC2ErrorCodeType =
   | -32602 // 无效参数 - 无效的方法参数
   | -32603; // 内部错误 - JSON-RPC内部错误
 
-// JSONRPC2ErrorCode 是 JSONRPC2ErrorCodeType 的别名，保持既有导入名可用。
-export type JSONRPC2ErrorCode = JSONRPC2ErrorCodeType;
-
 /**
  * RPC 连接状态
  */

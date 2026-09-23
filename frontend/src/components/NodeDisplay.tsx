@@ -16,7 +16,7 @@ const NodeTable = React.lazy(() => import("./NodeTable"));
 import { isRegionMatch } from "@/utils/regionHelper";
 import "./NodeDisplay.css";
 
-export type ViewMode = "grid" | "table";
+type ViewMode = "grid" | "table";
 
 interface NodeDisplayProps {
   nodes: NodeBasicInfo[];

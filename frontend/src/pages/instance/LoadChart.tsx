@@ -1712,7 +1712,7 @@ const LoadChart = ({ data = [], onRealtimeActiveChange }: LoadChartProps) => {
                     showPoints: pointCountOfItem(item) <= 30,
                   }))}
                   axisLabels={{
-                    // Boundary-only x ticks, mirroring MetricBoundaryAxisTick.
+                    // Boundary-only x ticks.
                     xValues: (values) =>
                       values.map((value) => formatMetricBoundaryTime(value)),
                     // One formatted tick per grid line; percent axes stay 0-100.

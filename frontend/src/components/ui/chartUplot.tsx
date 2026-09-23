@@ -4,13 +4,13 @@ import type { Axis, Series as UplotSeries, Cursor as UplotCursor } from "uplot";
 import "uplot/dist/uPlot.min.css";
 import "./chartUplot.css";
 
-export type ChartTooltipRow = {
+type ChartTooltipRow = {
   label: string;
   value: string;
   color: string;
 };
 
-export type ChartSeries = {
+type ChartSeries = {
   /** Shown in the legend/tooltip. */
   label: string;
   /** Line color. */

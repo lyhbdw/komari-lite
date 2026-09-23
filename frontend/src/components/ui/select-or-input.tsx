@@ -4,13 +4,13 @@ import { TextField } from "@radix-ui/themes";
 
 type Primitive = string | number;
 
-export type SelectOption<T extends Primitive = string> = {
+type SelectOption<T extends Primitive = string> = {
   label: string;
   value: T;
   disabled?: boolean;
 };
 
-export type SelectOrInputProps<T extends Primitive = string> = {
+type SelectOrInputProps<T extends Primitive = string> = {
   options: Array<SelectOption<T> | T>;
   value?: string;
   defaultValue?: string;

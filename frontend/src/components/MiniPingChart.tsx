@@ -306,7 +306,7 @@ const MiniPingChart = ({
               showPoints: item.pointCount <= 30,
             }))}
             axisLabels={{
-              // Boundary-only x ticks, mirroring MetricBoundaryAxisTick.
+              // Boundary-only x ticks.
               xValues: (values) =>
                 values.map((value) => formatMetricBoundaryTime(value)),
               yValues: (splits) =>

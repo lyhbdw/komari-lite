@@ -15,7 +15,7 @@ import {
  * 通用多选列表组件：提供搜索、全选、半选（indeterminate）和孤立值渲染能力。
  * 通过传入任意 items，并提供 getId / getLabel 来定义唯一标识与显示内容。
  */
-export interface SelectorProps<T> {
+interface SelectorProps<T> {
   className?: string;
   hiddenDescription?: boolean;
   /** 已选择的 id 列表 */
