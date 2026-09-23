@@ -28,6 +28,9 @@ func TestLegacyMonitoringTablesMigratedByOneShotMigration(t *testing.T) {
 	} else {
 		t.Fatalf("legacy sql db: %v", err)
 	}
+	if err := appconfig.SetDb(mainDB); err != nil {
+		t.Fatalf("set config db: %v", err)
+	}
 	if err := mainDB.AutoMigrate(&models.Record{}, &models.GPURecord{}, &models.PingRecord{}); err != nil {
 		t.Fatalf("migrate legacy tables: %v", err)
 	}
@@ -86,12 +89,15 @@ func TestLegacyMonitoringTablesMigratedByOneShotMigration(t *testing.T) {
 		t.Fatalf("unexpected final migration progress: %#v", lastProgress)
 	}
 
-	stats, err := runLegacyMonitoringMigration(ctx, mainDB, metricStore, false, func() error {
-		markDoneCalls++
-		return nil
-	})
+	stats, err := MigrateLegacyMonitoring(ctx, mainDB, metricStore, nil)
 	if err != nil {
 		t.Fatalf("run legacy monitoring migration: %v", err)
+	}
+	if err := CompleteLegacyMonitoringMigration(mainDB, func() error {
+		markDoneCalls++
+		return nil
+	}); err != nil {
+		t.Fatalf("complete legacy monitoring migration: %v", err)
 	}
 	if markDoneCalls != 1 {
 		t.Fatalf("expected migration marker to be written once, got %d", markDoneCalls)
@@ -128,16 +134,14 @@ func TestLegacyMonitoringTablesMigratedByOneShotMigration(t *testing.T) {
 		}
 	}
 
-	stats, err = runLegacyMonitoringMigration(ctx, mainDB, metricStore, true, func() error {
-		markDoneCalls++
-		return nil
-	})
+	required, _, err := LegacyMonitoringMigrationRequired(mainDB)
 	if err != nil {
-		t.Fatalf("rerun completed legacy monitoring migration: %v", err)
+		t.Fatalf("re-check legacy monitoring requirement: %v", err)
 	}
-	if stats != (LegacyMonitoringStats{}) {
-		t.Fatalf("completed migration should not scan legacy tables, got %#v", stats)
+	if required {
+		t.Fatal("completed migration still reports legacy tables as required")
 	}
+	stats = LegacyMonitoringStats{}
 	if markDoneCalls != 1 {
 		t.Fatalf("completed migration rewrote marker, calls=%d", markDoneCalls)
 	}
