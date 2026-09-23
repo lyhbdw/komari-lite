@@ -25,6 +25,21 @@ cleanup() { rm -rf "$work_dir"; }
 trap cleanup EXIT
 mkdir -p "$work_dir"
 
+# A previous run that died hard (SIGKILL, host power loss) leaves its hidden
+# staging directory behind. They are harmless to delete: the backup they were
+# building was never published, and a published snapshot is always a
+# timestamp-named directory. Match every hidden directory that is not our own
+# current staging dir or the lock file, not just this run's stamp prefix.
+for stale_work in "${KOMARI_BACKUP_DIR}"/.*; do
+  # Skip glob literals and the parent directory: never operate on . or ..
+  [[ -d "$stale_work" ]] || continue
+  case "$stale_work" in */"."|*/"..") continue ;; esac
+  [[ "$stale_work" == "$work_dir" ]] && continue
+  [[ -f "${KOMARI_BACKUP_DIR}/.lock" && "$stale_work" == "${KOMARI_BACKUP_DIR}/.lock" ]] && continue
+  printf 'removing stale staging directory from an interrupted run: %s\n' "$stale_work" >&2
+  rm -rf -- "$stale_work"
+done
+
 backup_database() {
   local source="$1" target="$2"
   [[ -f "$source" ]] || { printf 'database does not exist: %s\n' "$source" >&2; return 1; }
@@ -63,6 +78,21 @@ mapfile -t old_dirs < <(find "$KOMARI_BACKUP_DIR" -mindepth 1 -maxdepth 1 -type 
 if (( ${#old_dirs[@]} > RETENTION_COUNT )); then
   for old_dir in "${old_dirs[@]:RETENTION_COUNT}"; do
     rm -rf -- "$old_dir"
+  done
+fi
+
+# Prune directories this script does not produce. Retention above only counts
+# timestamp-named snapshots, so ad-hoc snapshots (pre-*, retention*-*, etc.)
+# used to accumulate forever and are never rotated away. A directory that is
+# not a timestamp-named snapshot and not hidden (hidden names are this script's
+# own staging dirs, already handled above) is an abandoned snapshot.
+mapfile -t foreign_dirs < <(find "$KOMARI_BACKUP_DIR" -mindepth 1 -maxdepth 1 \
+  -type d -regextype posix-extended \
+  ! -regex '.*/[0-9]{8}T[0-9]{6}Z' ! -name '.*' -printf '%p\n' | sort -r)
+if (( ${#foreign_dirs[@]} > 0 )); then
+  for foreign in "${foreign_dirs[@]}"; do
+    printf 'pruning unmanaged backup dir: %s\n' "$foreign" >&2
+    rm -rf -- "$foreign"
   done
 fi
 printf '%s\n' "$target_dir"
