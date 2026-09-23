@@ -7,7 +7,6 @@ import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useLocation } from "react-router-dom";
-import ColorSwitch from "../ColorSwitch";
 
 import ThemeSwitch from "../ThemeSwitch";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -284,7 +283,6 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
           <div className="h-3.5 w-px bg-border/60 mx-1 hidden sm:block" />
 
           <ThemeSwitch />
-          <ColorSwitch />
 
           <IconButton
             variant="ghost"

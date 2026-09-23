@@ -11,7 +11,7 @@ export type Appearance = "light" | "dark" | "system";
 
 export const THEME_DEFAULTS = {
   appearance: "system" as Appearance,
-  color: "jade" as Colors,
+  color: "gray" as Colors,
 } as const;
 
 export interface ThemeContextType {

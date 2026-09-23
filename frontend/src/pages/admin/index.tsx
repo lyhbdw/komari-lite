@@ -147,7 +147,7 @@ const EmptyNodesGuide = () => {
       <CornerRightUp
         size={72}
         strokeWidth={1.25}
-        className="text-[var(--accent-9)] animate-bounce"
+        className="text-muted-foreground animate-bounce"
         style={{ marginRight: "1.5rem" }}
       />
       <Flex direction="column" align="end" gap="1" mt="2" mr="2">
@@ -205,11 +205,11 @@ const Header = ({
   return (
     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
       <div className="flex items-center gap-3">
-        <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
+        <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-foreground">
           {t("admin.nodeTable.nodeList")}
         </h1>
         {selectedNodes.length > 0 && (
-          <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-accent text-accent-foreground border border-border/60">
+          <span className="px-2 py-0.5 text-xs font-mono font-medium rounded-full bg-foreground text-background">
             {selectedNodes.length} selected
           </span>
         )}
@@ -495,7 +495,7 @@ const NodeTable = ({
   };
   return (
     <div
-      className={`rounded-xl border border-border/60 bg-card overflow-hidden shadow-2xs ${
+      className={`rounded-lg border border-border bg-card overflow-hidden ${
         isDragging ? "select-none" : ""
       }`}
     >

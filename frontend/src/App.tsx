@@ -28,6 +28,14 @@ export default function App() {
   const resolvedAppearance = useSystemTheme(appearance);
 
   React.useEffect(() => {
+    // If previously saved default was jade, migrate to gray for Bauhaus monochrome theme
+    const storedColor = localStorage.getItem("color");
+    if (storedColor === '"jade"' || storedColor === 'jade') {
+      setColor("gray");
+    }
+  }, [setColor]);
+
+  React.useEffect(() => {
     const isDark = resolvedAppearance === "dark";
     document.documentElement.classList.toggle("dark", isDark);
   }, [resolvedAppearance]);

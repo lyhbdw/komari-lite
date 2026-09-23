@@ -159,7 +159,7 @@ export default function Sessions() {
                         <label className="hover:underline cursor-pointer">
                           {s.id.slice(0, 8)}...
                           {isCurrent && (
-                            <span className="ml-2 text-sm text-blue-600">
+                            <span className="ml-2 text-[11px] font-mono px-2 py-0.5 rounded-full bg-foreground text-background font-medium">
                               {t("sessions.current")}
                             </span>
                           )}
