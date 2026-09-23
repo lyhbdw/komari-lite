@@ -3,6 +3,7 @@ import { buildAgentInstallArgs } from "@/utils/agentInstallCommand";
 import React, { useEffect, useState } from "react";
 import { NodeDetailsProvider } from "@/contexts/NodeDetailsContext";
 import { useNodeDetails } from "@/contexts/useNodeDetails";
+import { useAccount } from "@/contexts/useAccount";
 import type { NodeDetail } from "@/contexts/node-details-context";
 import {
   Flex,
@@ -15,13 +16,18 @@ import {
   TextArea,
 } from "@radix-ui/themes";
 import {
+  Activity,
   CircleDollarSign,
   Copy,
   CornerRightUp,
   Download,
+  Folder,
+  Globe,
   MenuIcon,
   Pencil,
   Plus,
+  Search,
+  Server,
   Trash2Icon,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -87,6 +93,7 @@ const NodeDetailsPage = () => {
 
 const Layout = () => {
   const { nodeDetail, isLoading, error, refresh } = useNodeDetails();
+  const { account } = useAccount();
   const { settings } = useSettings();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedNodes, setSelectedNodes] = useState<string[]>([]);
@@ -105,18 +112,49 @@ const Layout = () => {
     return () => clearInterval(interval);
   }, [refresh]);
 
-  if (isLoading) return <Loading text="" />;
-  if (error) return <div>{error}</div>;
+  if (account && !account.logged_in) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[50vh] text-center p-6">
+        <div className="w-12 h-12 rounded-2xl bg-foreground text-background flex items-center justify-center font-bold text-xl mb-4 shadow-sm select-none">
+          K
+        </div>
+        <h2 className="text-lg font-semibold tracking-tight text-foreground">
+          请先登录管理后台
+        </h2>
+        <p className="text-xs text-muted-foreground mt-1 max-w-sm">
+          认证会话已失效或尚未登录，请在弹出的登录窗口中完成身份验证。
+        </p>
+      </div>
+    );
+  }
+
+  if (isLoading && (!nodeDetail || nodeDetail.length === 0)) return <Loading text="" />;
+  if (error && (!nodeDetail || nodeDetail.length === 0)) {
+    return (
+      <div className="p-6 rounded-xl border border-border bg-card text-center my-6 shadow-2xs">
+        <p className="text-sm font-medium text-foreground">{error}</p>
+        <button
+          onClick={() => refresh()}
+          className="mt-3 px-3.5 py-1.5 rounded-lg bg-foreground text-background text-xs font-medium cursor-pointer shadow-sm hover:opacity-90 transition-opacity"
+        >
+          重试连接
+        </button>
+      </div>
+    );
+  }
 
   const isEmpty = Array.isArray(nodeDetail) && nodeDetail.length === 0;
 
   return (
-    <Flex direction="column" gap="4" className="km-page-admin-index">
+    <div className="km-page-admin-index space-y-5">
       <Header
         searchTerm={searchTerm}
         setSearchTerm={setSearchTerm}
         selectedNodes={selectedNodes}
+        totalNodes={nodeDetail?.length || 0}
       />
+
+      {!isEmpty && <MetricsOverview nodes={nodeDetail || []} />}
 
       {isEmpty ? (
         <EmptyNodesGuide />
@@ -128,7 +166,89 @@ const Layout = () => {
           settings={settings}
         />
       )}
-    </Flex>
+    </div>
+  );
+};
+
+const MetricsOverview = ({ nodes }: { nodes: NodeDetail[] }) => {
+  const { t } = useTranslation();
+  const total = nodes.length;
+  const uniqueRegions = Array.from(
+    new Set(nodes.map((n) => n.region).filter(Boolean))
+  );
+  const uniqueGroups = Array.from(
+    new Set(nodes.map((n) => n.group).filter(Boolean))
+  );
+
+  return (
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      <div className="p-4 rounded-xl border border-border bg-card shadow-2xs hover:border-foreground/30 transition-all">
+        <div className="flex items-center justify-between text-muted-foreground mb-1.5">
+          <span className="text-xs font-medium uppercase tracking-wider">
+            {t("admin.overview.total_servers", "接入节点")}
+          </span>
+          <Server size={15} className="opacity-70" />
+        </div>
+        <div className="text-2xl font-bold font-mono tracking-tight text-foreground">
+          {total}
+        </div>
+        <div className="text-[11px] text-muted-foreground mt-1 flex items-center gap-1.5">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+          <span>
+            {total > 0
+              ? t("admin.overview.monitoring_active", "监控探针心跳正常")
+              : t("admin.overview.no_nodes", "等待节点接入")}
+          </span>
+        </div>
+      </div>
+
+      <div className="p-4 rounded-xl border border-border bg-card shadow-2xs hover:border-foreground/30 transition-all">
+        <div className="flex items-center justify-between text-muted-foreground mb-1.5">
+          <span className="text-xs font-medium uppercase tracking-wider">
+            {t("admin.overview.regions", "地区覆盖")}
+          </span>
+          <Globe size={15} className="opacity-70" />
+        </div>
+        <div className="text-2xl font-bold font-mono tracking-tight text-foreground">
+          {uniqueRegions.length || (total > 0 ? 1 : 0)}
+        </div>
+        <div className="text-[11px] text-muted-foreground mt-1 truncate">
+          {uniqueRegions.length > 0
+            ? uniqueRegions.map((r) => r.toUpperCase()).join(", ")
+            : t("common.global", "全球网络")}
+        </div>
+      </div>
+
+      <div className="p-4 rounded-xl border border-border bg-card shadow-2xs hover:border-foreground/30 transition-all">
+        <div className="flex items-center justify-between text-muted-foreground mb-1.5">
+          <span className="text-xs font-medium uppercase tracking-wider">
+            {t("admin.overview.groups", "分组数")}
+          </span>
+          <Folder size={15} className="opacity-70" />
+        </div>
+        <div className="text-2xl font-bold font-mono tracking-tight text-foreground">
+          {uniqueGroups.length || (total > 0 ? 1 : 0)}
+        </div>
+        <div className="text-[11px] text-muted-foreground mt-1">
+          {t("admin.overview.groups_desc", "节点逻辑业务编组")}
+        </div>
+      </div>
+
+      <div className="p-4 rounded-xl border border-border bg-card shadow-2xs hover:border-foreground/30 transition-all">
+        <div className="flex items-center justify-between text-muted-foreground mb-1.5">
+          <span className="text-xs font-medium uppercase tracking-wider">
+            {t("admin.overview.system", "引擎架构")}
+          </span>
+          <Activity size={15} className="opacity-70" />
+        </div>
+        <div className="text-2xl font-bold font-mono tracking-tight text-foreground">
+          Lite Core
+        </div>
+        <div className="text-[11px] text-muted-foreground mt-1 font-mono">
+          v1.1.0 · 高吞吐微核
+        </div>
+      </div>
+    </div>
   );
 };
 
@@ -171,10 +291,12 @@ const Header = ({
   searchTerm,
   setSearchTerm,
   selectedNodes,
+  totalNodes,
 }: {
   searchTerm: string;
   setSearchTerm: (term: string) => void;
   selectedNodes: string[];
+  totalNodes: number;
 }) => {
   const { t } = useTranslation();
   const { refresh } = useNodeDetails();
@@ -203,32 +325,45 @@ const Header = ({
     }
   };
   return (
-    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-      <div className="flex items-center gap-3">
-        <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-foreground">
-          {t("admin.nodeTable.nodeList")}
-        </h1>
-        {selectedNodes.length > 0 && (
-          <span className="px-2 py-0.5 text-xs font-mono font-medium rounded-full bg-foreground text-background">
-            {selectedNodes.length} selected
+    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-2 border-b border-border/40">
+      <div>
+        <div className="flex items-center gap-2.5">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
+            {t("admin.nodeTable.nodeList")}
+          </h1>
+          <span className="px-2 py-0.5 text-xs font-mono font-medium rounded-full bg-muted text-muted-foreground border border-border">
+            {totalNodes}
           </span>
-        )}
+          {selectedNodes.length > 0 && (
+            <span className="px-2 py-0.5 text-xs font-mono font-medium rounded-full bg-foreground text-background">
+              {selectedNodes.length} selected
+            </span>
+          )}
+        </div>
+        <p className="text-xs text-muted-foreground mt-1">
+          {t("admin.nodeTable.subtitle", "实时管理与监控所有已接入的主机探针与网络资产")}
+        </p>
       </div>
       <div className="flex items-center gap-2.5 w-full sm:w-auto">
-        <div className="relative flex-1 sm:w-64">
-          <TextField.Root
+        <div className="relative flex-1 sm:w-64 flex items-center">
+          <Search size={14} className="absolute left-3 text-muted-foreground pointer-events-none" />
+          <input
+            type="text"
             placeholder={t("admin.nodeTable.searchByName")}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full"
+            className="w-full h-9 pl-9 pr-3 text-xs rounded-lg border border-border bg-card text-foreground placeholder:text-muted-foreground/60 outline-none focus:border-foreground/50 focus:ring-1 focus:ring-foreground/20 transition-all shadow-2xs"
           />
         </div>
         <Dialog.Root open={dialogOpen} onOpenChange={setDialogOpen}>
           <Dialog.Trigger>
-            <Button onClick={() => setDialogOpen(true)} variant="solid" className="shrink-0 cursor-pointer shadow-2xs">
-              <Plus size={15} />
+            <button
+              onClick={() => setDialogOpen(true)}
+              className="h-9 px-3.5 rounded-lg bg-foreground text-background font-medium text-xs flex items-center gap-1.5 shadow-sm hover:opacity-90 active:scale-[0.98] transition-all cursor-pointer shrink-0"
+            >
+              <Plus size={14} strokeWidth={2.5} />
               <span>{t("admin.nodeTable.addNode")}</span>
-            </Button>
+            </button>
           </Dialog.Trigger>
           <Dialog.Content className="max-w-md">
             <Dialog.Title className="text-base font-semibold">{t("admin.nodeTable.addNode")}</Dialog.Title>
@@ -290,11 +425,11 @@ const SortableRow = ({
   }
   return (
     <TableRow ref={setNodeRef} style={style} className="hover:bg-muted/40 transition-colors">
-      <TableCell className="w-8">
+      <TableCell className="w-8 pl-3.5">
         <div
           {...attributes}
           {...listeners}
-          className={`cursor-grab p-1.5 rounded hover:bg-muted/80 text-muted-foreground/50 hover:text-foreground transition-colors ${
+          className={`cursor-grab p-1 rounded hover:bg-muted text-muted-foreground/40 hover:text-foreground transition-colors ${
             isMobile ? "touch-manipulation select-none" : ""
           }`}
           style={{
@@ -308,10 +443,10 @@ const SortableRow = ({
               : undefined
           }
         >
-          <MenuIcon size={15} />
+          <MenuIcon size={14} />
         </div>
       </TableCell>
-      <TableCell>
+      <TableCell className="w-8">
         <Checkbox
           checked={selectedNodes.includes(node.uuid)}
           onCheckedChange={(checked) => handleSelectNode(node.uuid, !!checked)}
@@ -320,71 +455,72 @@ const SortableRow = ({
       <TableCell>
         <DetailView node={node} />
       </TableCell>
-      <TableCell>
-        <Flex direction="column">
+      <TableCell className="min-w-[170px]">
+        <div className="flex flex-col gap-1">
           {node.ipv4 && (
-            <Text size="2" className="flex items-center gap-1">
-              {node.ipv4}
-              <IconButton variant="ghost" onClick={() => copy(node.ipv4)}>
-                <Copy size="16" />
-              </IconButton>
-            </Text>
+            <div className="flex items-center gap-1.5 group">
+              <span className="font-mono text-xs text-foreground/80 bg-muted/60 px-1.5 py-0.5 rounded border border-border/50 select-all">
+                {node.ipv4}
+              </span>
+              <button
+                type="button"
+                onClick={() => copy(node.ipv4)}
+                className="opacity-0 group-hover:opacity-100 p-0.5 text-muted-foreground hover:text-foreground transition-opacity cursor-pointer"
+                title={t("common.copy")}
+              >
+                <Copy size={12} />
+              </button>
+            </div>
           )}
           {node.ipv6 && (
-            <Text
-              size="2"
-              className="flex items-center gap-1"
-              title={node.ipv6}
-            >
-              {node.ipv6.length > 20
-                ? (() => {
-                    const segments = node.ipv6.split(":");
-                    return segments.length > 3
-                      ? `${segments.slice(0, 2).join(":")}:...${
-                          segments[segments.length - 1]
-                        }`
-                      : node.ipv6;
-                  })()
-                : node.ipv6}
-              <IconButton variant="ghost" onClick={() => copy(node.ipv6)}>
-                <Copy size="16" />
-              </IconButton>
-            </Text>
+            <div className="flex items-center gap-1.5 group">
+              <span
+                className="font-mono text-[11px] text-muted-foreground/80 bg-muted/30 px-1.5 py-0.5 rounded border border-border/30 select-all truncate max-w-[180px]"
+                title={node.ipv6}
+              >
+                {node.ipv6.length > 20
+                  ? (() => {
+                      const segments = node.ipv6.split(":");
+                      return segments.length > 3
+                        ? `${segments.slice(0, 2).join(":")}:...:${segments[segments.length - 1]}`
+                        : node.ipv6;
+                    })()
+                  : node.ipv6}
+              </span>
+              <button
+                type="button"
+                onClick={() => copy(node.ipv6)}
+                className="opacity-0 group-hover:opacity-100 p-0.5 text-muted-foreground hover:text-foreground transition-opacity cursor-pointer"
+                title={t("common.copy")}
+              >
+                <Copy size={12} />
+              </button>
+            </div>
           )}
-        </Flex>
-      </TableCell>
-      <TableCell>{node.version}</TableCell>
-      <TableCell>
-        <Text
-          size="2"
-          title={node.group}
-          style={{
-            maxWidth: "150px",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
-          }}
-        >
-          {node.group && node.group.length > 10
-            ? `${node.group.slice(0, 10)}...`
-            : node.group}
-        </Text>
+        </div>
       </TableCell>
       <TableCell>
-        <Text
-          size="2"
-          title={node.remark}
-          style={{
-            maxWidth: "150px",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
-          }}
-        >
-          {node.remark && node.remark.length > 10
-            ? `${node.remark.slice(0, 10)}...`
-            : node.remark}
-        </Text>
+        <span className="font-mono text-[11px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground border border-border/60">
+          v{node.version || "1.0.5"}
+        </span>
+      </TableCell>
+      <TableCell>
+        {node.group ? (
+          <span className="text-xs px-2 py-0.5 rounded-md bg-muted/50 text-foreground/80 font-medium border border-border/40">
+            {node.group}
+          </span>
+        ) : (
+          <span className="text-xs text-muted-foreground/40">-</span>
+        )}
+      </TableCell>
+      <TableCell>
+        {node.remark ? (
+          <span className="text-xs text-muted-foreground truncate max-w-[140px] block" title={node.remark}>
+            {node.remark}
+          </span>
+        ) : (
+          <span className="text-xs text-muted-foreground/40">-</span>
+        )}
       </TableCell>
       <TableCell>
         <PriceTags
@@ -395,7 +531,7 @@ const SortableRow = ({
           tags={node.tags || ""}
         />
       </TableCell>
-      <TableCell>
+      <TableCell className="pr-4 text-right">
         <ActionButtons
           node={node}
           settings={settings}
@@ -507,8 +643,8 @@ const NodeTable = ({
       >
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead className="w-8"></TableHead>
+            <TableRow className="bg-muted/40 border-b border-border/80">
+              <TableHead className="w-8 pl-3.5"></TableHead>
               <TableHead className="w-8">
                 <Checkbox
                   checked={
@@ -524,7 +660,7 @@ const NodeTable = ({
               <TableHead>{t("common.group")}</TableHead>
               <TableHead>{t("admin.nodeEdit.remark")}</TableHead>
               <TableHead>{t("admin.nodeTable.billing")}</TableHead>
-              <TableHead className="w-28 text-right"></TableHead>
+              <TableHead className="w-36 text-right pr-4">{t("common.actions", "操作")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -1071,9 +1207,19 @@ function DetailView({ node }: { node: NodeDetail }) {
   return (
     <Drawer direction={isMobile ? "bottom" : "right"}>
       <DrawerTrigger asChild>
-        <div className="h-8 flex items-center gap-2 hover:underline cursor-pointer font-medium text-sm text-foreground hover:text-primary transition-colors">
-          <Flag flag={node.region} size="6" />
-          {node.name.length > 25 ? node.name.slice(0, 25) + "..." : node.name}
+        <div className="flex items-center gap-2.5 py-1 hover:underline cursor-pointer group">
+          <div className="relative shrink-0 flex items-center justify-center">
+            <Flag flag={node.region} size="6" />
+            <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-card" />
+          </div>
+          <div className="flex flex-col min-w-0">
+            <span className="font-medium text-sm text-foreground group-hover:text-primary transition-colors truncate max-w-[200px]" title={node.name}>
+              {node.name}
+            </span>
+            <span className="text-[11px] text-muted-foreground/70 font-mono truncate max-w-[180px]">
+              {node.os || "Linux"} {node.arch ? `· ${node.arch}` : ""}
+            </span>
+          </div>
         </div>
       </DrawerTrigger>
       <DrawerContent>

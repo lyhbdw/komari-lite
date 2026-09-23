@@ -1,9 +1,6 @@
 import * as React from "react";
 import {
   Dialog,
-  Flex,
-  Text,
-  TextField,
   Button,
   IconButton,
 } from "@radix-ui/themes";
@@ -125,21 +122,20 @@ const LoginDialog = ({ trigger, autoOpen = false, showSettings = true, info, onL
         <Dialog.Trigger>
           {trigger ? trigger : <Button>{t("login.title")}</Button>}
         </Dialog.Trigger>
-        <Dialog.Content maxWidth="450px" className="km-login-dialog">
-          <Dialog.Title>{t("login.title")}</Dialog.Title>
-          <Dialog.Description size="2" mb="4">
-            <div className="flex justify-center flex-col gap-2">
-              <label>{t("login.desc")}</label>
-              {info && (
-                <label>
-                  {info}
-                </label>
-              )}
+        <Dialog.Content maxWidth="420px" className="km-login-dialog p-6 sm:p-7 rounded-2xl border border-border bg-card shadow-2xl">
+          <div className="flex flex-col items-center text-center mb-6">
+            <div className="w-10 h-10 rounded-xl bg-foreground text-background flex items-center justify-center font-bold text-lg mb-3 shadow-sm select-none">
+              K
             </div>
-
-          </Dialog.Description>
+            <Dialog.Title className="text-xl font-bold tracking-tight text-foreground m-0">
+              {t("login.title")}
+            </Dialog.Title>
+            <Dialog.Description size="2" className="text-xs text-muted-foreground mt-1.5 m-0">
+              {info || t("login.desc")}
+            </Dialog.Description>
+          </div>
           <form
-            className="km-login-form"
+            className="km-login-form space-y-4"
             onSubmit={(e) => {
               e.preventDefault();
               if (isFormValid && !isLoading) {
@@ -147,15 +143,15 @@ const LoginDialog = ({ trigger, autoOpen = false, showSettings = true, info, onL
               }
             }}
           >
-            <Flex direction="column" gap="3">
+            <div className="space-y-3.5">
               {passwordLoginEnabled && (
                 <>
-                  <label>
-                    <Text as="div" size="2" mb="1" weight="bold">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-foreground block">
                       {t("login.username")}
-                    </Text>
-                    <TextField.Root
-                      className="km-login-input"
+                    </label>
+                    <input
+                      className="w-full h-10 px-3.5 text-sm rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground/60 outline-none focus:border-foreground/60 focus:ring-1 focus:ring-foreground/20 transition-all"
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
                       id={`login-username-${fieldId}`}
@@ -165,13 +161,13 @@ const LoginDialog = ({ trigger, autoOpen = false, showSettings = true, info, onL
                       disabled={isLoading}
                       autoFocus
                     />
-                  </label>
-                  <label>
-                    <Text as="div" size="2" mb="1" weight="bold">
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-foreground block">
                       {t("login.password")}
-                    </Text>
-                    <TextField.Root
-                      className="km-login-input"
+                    </label>
+                    <input
+                      className="w-full h-10 px-3.5 text-sm rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground/60 outline-none focus:border-foreground/60 focus:ring-1 focus:ring-foreground/20 transition-all"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       id={`login-password-${fieldId}`}
@@ -181,39 +177,45 @@ const LoginDialog = ({ trigger, autoOpen = false, showSettings = true, info, onL
                       placeholder={t("login.password_placeholder")}
                       disabled={isLoading}
                     />
-                  </label>
-                  <label hidden={!require2FA}>
-                    <Text as="div" size="2" mb="1" weight="bold">
-                      {t("login.two_factor")}
-                    </Text>
-                    <TextField.Root
-                      className="km-login-input"
-                      value={twoFac}
-                      onChange={(e) => setTwoFac(e.target.value)}
-                      id={`login-2fa-code-${fieldId}`}
-                      name="2fa_code"
-                      type="text"
-                      autoComplete="one-time-code"
-                      inputMode="numeric"
-                      placeholder="000000"
-                      disabled={isLoading}
-                    />
-                  </label>
-                  {errorMsg && (
-                    <Text as="div" size="2" color="red" className="km-login-error">
-                      {errorMsg}
-                    </Text>
+                  </div>
+                  {require2FA && (
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium text-foreground block">
+                        {t("login.two_factor")}
+                      </label>
+                      <input
+                        className="w-full h-10 px-3.5 text-sm font-mono tracking-widest text-center rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground/60 outline-none focus:border-foreground/60 focus:ring-1 focus:ring-foreground/20 transition-all"
+                        value={twoFac}
+                        onChange={(e) => setTwoFac(e.target.value)}
+                        id={`login-2fa-code-${fieldId}`}
+                        name="2fa_code"
+                        type="text"
+                        autoComplete="one-time-code"
+                        inputMode="numeric"
+                        placeholder="000000"
+                        disabled={isLoading}
+                      />
+                    </div>
                   )}
-                  <Button
+                  {errorMsg && (
+                    <div className="p-2.5 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-medium text-center">
+                      {errorMsg}
+                    </div>
+                  )}
+                  <button
                     type="submit"
                     disabled={isLoading || !isFormValid}
-                    style={{ opacity: isLoading || !isFormValid ? 0.6 : 1 }}
+                    className={`w-full h-10 mt-2 rounded-lg font-medium text-sm transition-all flex items-center justify-center shadow-sm ${
+                      isLoading || !isFormValid
+                        ? "bg-muted text-muted-foreground cursor-not-allowed opacity-60"
+                        : "bg-foreground text-background hover:opacity-90 active:scale-[0.99] cursor-pointer"
+                    }`}
                   >
                     {isLoading ? "Logging in..." : t("login.title")}
-                  </Button>
+                  </button>
                 </>
               )}
-            </Flex>
+            </div>
           </form>
         </Dialog.Content>
       </Dialog.Root>

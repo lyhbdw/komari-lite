@@ -248,6 +248,7 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
             <LoginDialog
               autoOpen={true}
               showSettings={false}
+              trigger={<span className="hidden" />}
               onLoginSuccess={() => {
                 window.location.reload();
               }}
