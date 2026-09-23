@@ -108,23 +108,23 @@ func adminAddClient(ctx context.Context, req *rpc.JsonRpcRequest) (any, *rpc.Jso
 // UI 暴露的可编辑字段之外（如 token、uuid 之外的底层列）一律拒绝，防止
 // 任意 map 透传到 gorm Updates 造成 mass assignment。
 var adminEditableClientFields = map[string]bool{
-	"name": true,
-	"note": true,
-	"remark": true,
-	"public_remark": true,
-	"region": true,
-	"group": true,
-	"tags": true,
-	"hidden": true,
-	"weight": true,
-	"price": true,
-	"billing_cycle": true,
-	"auto_renewal": true,
-	"currency": true,
-	"traffic_limit": true,
+	"name":               true,
+	"note":               true,
+	"remark":             true,
+	"public_remark":      true,
+	"region":             true,
+	"group":              true,
+	"tags":               true,
+	"hidden":             true,
+	"weight":             true,
+	"price":              true,
+	"billing_cycle":      true,
+	"auto_renewal":       true,
+	"currency":           true,
+	"traffic_limit":      true,
 	"traffic_limit_type": true,
-	"expired_at": true,
-	"uuid": true, // 仅作为定位键，SaveClient 不会更新其值
+	"expired_at":         true,
+	"uuid":               true, // 仅作为定位键，SaveClient 不会更新其值
 }
 
 func adminEditClient(ctx context.Context, req *rpc.JsonRpcRequest) (any, *rpc.JsonRpcError) {

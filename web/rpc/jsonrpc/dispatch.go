@@ -54,4 +54,3 @@ func Dispatch(ctx context.Context, meta *rpc.ContextMeta, req *rpc.JsonRpcReques
 
 	return rpc.CallWithContext(rpc.NewContextWithMeta(ctx, meta), req.ID, req.Method, req.Params)
 }
-
