@@ -1,17 +1,13 @@
 import { createContext } from 'react';
 
-const allowedColors = [
-  "gray", "gold", "bronze", "brown", "yellow", "amber",
-  "orange", "tomato", "red", "ruby", "crimson", "pink",
-  "plum", "purple", "violet", "iris", "indigo", "blue",
-  "cyan", "teal", "jade", "green", "grass", "lime",
-  "mint", "sky",
-] as const;
+export type Colors =
+  | "gray" | "gold" | "bronze" | "brown" | "yellow" | "amber"
+  | "orange" | "tomato" | "red" | "ruby" | "crimson" | "pink"
+  | "plum" | "purple" | "violet" | "iris" | "indigo" | "blue"
+  | "cyan" | "teal" | "jade" | "green" | "grass" | "lime"
+  | "mint" | "sky";
 
-export type Colors = typeof allowedColors[number];
-
-const allowedAppearances = ["light", "dark", "system"] as const;
-export type Appearance = typeof allowedAppearances[number];
+export type Appearance = "light" | "dark" | "system";
 
 export const THEME_DEFAULTS = {
   appearance: "system" as Appearance,

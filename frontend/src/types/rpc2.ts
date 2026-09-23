@@ -71,20 +71,15 @@ export type JSONRPC2BatchResponse = JSONRPC2Response[];
 /**
  * 预定义的错误代码
  */
-const JSONRPC2ErrorCode = {
-  /** 解析错误 - 服务器收到无效的JSON */
-  PARSE_ERROR: -32700,
-  /** 无效请求 - 发送的JSON不是有效的请求对象 */
-  INVALID_REQUEST: -32600,
-  /** 方法未找到 - 所调用的方法不存在或不可用 */
-  METHOD_NOT_FOUND: -32601,
-  /** 无效参数 - 无效的方法参数 */
-  INVALID_PARAMS: -32602,
-  /** 内部错误 - JSON-RPC内部错误 */
-  INTERNAL_ERROR: -32603,
-} as const;
+export type JSONRPC2ErrorCodeType =
+  | -32700 // 解析错误 - 服务器收到无效的JSON
+  | -32600 // 无效请求 - 发送的JSON不是有效的请求对象
+  | -32601 // 方法未找到 - 所调用的方法不存在或不可用
+  | -32602 // 无效参数 - 无效的方法参数
+  | -32603; // 内部错误 - JSON-RPC内部错误
 
-export type JSONRPC2ErrorCodeType = typeof JSONRPC2ErrorCode[keyof typeof JSONRPC2ErrorCode];
+// JSONRPC2ErrorCode 是 JSONRPC2ErrorCodeType 的别名，保持既有导入名可用。
+export type JSONRPC2ErrorCode = JSONRPC2ErrorCodeType;
 
 /**
  * RPC 连接状态
