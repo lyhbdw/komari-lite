@@ -182,7 +182,8 @@ func backupOnVersionUpgrade() {
 
 	// 备份目录从实际 DB 路径推算（与 createUpgradeBackup 的 dataDir 一致），
 	// 避免硬编码 ./data/backup 与自定义 -database 路径不一致。
-	backupDir := filepath.Join(filepath.Dir(resolveDatabaseFile()), "backup")
+	dataDir := filepath.Dir(resolveDatabaseFile())
+	backupDir := filepath.Join(dataDir, "backup")
 	if err := os.MkdirAll(backupDir, 0755); err != nil {
 		logger.Errorf("dbcore", "[upgrade-backup] failed to create backup dir: %v", err)
 		return
@@ -193,9 +194,15 @@ func backupOnVersionUpgrade() {
 		logger.Errorf("dbcore", "[upgrade-backup] failed to backup ./data before upgrade (from %q to %q): %v", prevVersion, versionID, err)
 		return
 	}
-	logger.Infof("dbcore", "[upgrade-backup] ./data backed up to %s before upgrade (from %q to %q)", bakPath, prevVersion, versionID)
+	// 归档大小先记录后清理：zip 失败时上游只删 zip 与本次暂存目录，历史上
+	// 遗留的暂存副本不会被回收，会持续占用 dataDir 空间。
+	if info, err := os.Stat(bakPath); err == nil {
+		logger.Infof("dbcore", "[upgrade-backup] ./data backed up to %s before upgrade (from %q to %q), archive size %d bytes",
+			bakPath, prevVersion, versionID, info.Size())
+	}
 
 	pruneUpgradeBackups(backupDir)
+	pruneStaleStagingDirs(dataDir)
 
 	writeVersionMarker()
 }
@@ -246,6 +253,51 @@ func pruneUpgradeBackups(backupDir string) {
 			continue
 		}
 		logger.Infof("dbcore", "[upgrade-backup] pruned stale upgrade backup %s", old.name)
+	}
+}
+
+// maxStaleStagingDirs 是 dataDir 中允许保留的历史暂存目录份数。
+// 正常情况下 createUpgradeBackup 结束时会 defer 删除本次暂存目录，残留只会
+// 来自失败的运行；保留 1 份便于事后排查，超出即清理。
+const maxStaleStagingDirs = 1
+
+// pruneStaleStagingDirs 删除 dataDir 中超出保留份数的最旧
+// .upgrade-backup-* 暂存目录。这些目录属于上一次失败的备份残留，
+// 不会被 defer os.RemoveAll 回收，且会随每次备份被重新打包进 zip。
+// 只删除目录、只在备份成功后调用；任何失败只记日志，不影响启动。
+func pruneStaleStagingDirs(dataDir string) {
+	entries, err := os.ReadDir(dataDir)
+	if err != nil {
+		logger.Errorf("dbcore", "[upgrade-backup] failed to list data dir for staging cleanup: %v", err)
+		return
+	}
+	type stagingEntry struct {
+		name string
+		mod  time.Time
+	}
+	var staging []stagingEntry
+	for _, entry := range entries {
+		if !entry.IsDir() || !strings.HasPrefix(entry.Name(), upgradeStagingDirPrefix) {
+			continue
+		}
+		info, err := entry.Info()
+		if err != nil {
+			continue
+		}
+		staging = append(staging, stagingEntry{name: entry.Name(), mod: info.ModTime()})
+	}
+	if len(staging) <= maxStaleStagingDirs {
+		return
+	}
+	sort.Slice(staging, func(i, j int) bool {
+		return staging[i].mod.Before(staging[j].mod)
+	})
+	for _, old := range staging[:len(staging)-maxStaleStagingDirs] {
+		if err := os.RemoveAll(filepath.Join(dataDir, old.name)); err != nil {
+			logger.Errorf("dbcore", "[upgrade-backup] failed to remove stale staging dir %s: %v", old.name, err)
+			continue
+		}
+		logger.Infof("dbcore", "[upgrade-backup] pruned stale staging dir %s", old.name)
 	}
 }
 
@@ -302,6 +354,13 @@ func createUpgradeBackup(archivePath string) error {
 	return nil
 }
 
+// upgradeStagingDirPrefix 是 createUpgradeBackup 在 dataDir 下用
+// os.MkdirTemp(dataDir, upgradeStagingDirPrefix) 创建的暂存目录前缀。
+// 上一次备份失败时 defer os.RemoveAll 不会执行，暂存目录会留在 dataDir 里；
+// copyUpgradeData 必须排除所有这些残留，否则它们会被拷进新的暂存目录并
+// 打进 zip，使 zip 体积按历史残留量累加，最终超出容器可写空间而失败。
+const upgradeStagingDirPrefix = ".upgrade-backup-"
+
 func copyUpgradeData(srcDir, dstDir, mainDB, metricsDB, backupDir, stagingDir string) error {
 	mainDB, _ = filepath.Abs(mainDB)
 	metricsDB, _ = filepath.Abs(metricsDB)
@@ -317,6 +376,10 @@ func copyUpgradeData(srcDir, dstDir, mainDB, metricsDB, backupDir, stagingDir st
 				return filepath.SkipDir
 			}
 			return nil
+		}
+		// 历史上遗留的暂存目录副本不属于本次快照内容，跳过整个子树。
+		if info.IsDir() && strings.HasPrefix(info.Name(), upgradeStagingDirPrefix) {
+			return filepath.SkipDir
 		}
 		if absPath == mainDB || absPath == metricsDB ||
 			absPath == mainDB+"-wal" || absPath == mainDB+"-shm" ||
