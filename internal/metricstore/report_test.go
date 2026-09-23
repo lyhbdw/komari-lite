@@ -168,7 +168,7 @@ func TestReportBatchCounterRestoreFailureInitializesStateOnce(t *testing.T) {
 
 func TestWriteReportStoresMinuteMetricsAndResetAwareTraffic(t *testing.T) {
 	ctx := context.Background()
-	policy := defaultRollupPolicy()
+	policy := mustDefaultPolicy(t)
 	s := useReportTestStore(t, &policy)
 	base := time.Now().UTC().Truncate(time.Minute).Add(5 * time.Second)
 	now := base.Add(45 * time.Second)
@@ -579,7 +579,7 @@ func TestWriteReportRestoresTBScaleCountersFromStore(t *testing.T) {
 		oneTB = int64(1_000_000_000_000)
 	)
 	ctx := context.Background()
-	policy := defaultRollupPolicy()
+	policy := mustDefaultPolicy(t)
 	s := useReportTestStore(t, &policy)
 	base := time.Now().UTC().Truncate(time.Minute).Add(5 * time.Second)
 	now := base.Add(45 * time.Second)
@@ -764,3 +764,4 @@ func assertMetricAggregate(t *testing.T, s *metric.Store, metricName, entityID s
 		t.Fatalf("aggregate %s = %#v, want value=%v count=%d", metricName, points, want, wantCount)
 	}
 }
+

@@ -99,14 +99,6 @@ func buildMetricConfig(cfg *MetricStoreConfig, autoMigrate bool) (metric.Config,
 	return metric.SQLite(dsn, opts...), nil
 }
 
-func defaultRollupPolicy() metric.RollupPolicy {
-	return rollupPolicyFromValues(
-		defaultRollupMinuteRetentionMinutes,
-		defaultRollupFiveMinuteRetentionMinutes,
-		defaultRollupHourRetentionHours,
-	)
-}
-
 func rollupPolicyFromConfig(cfg *MetricStoreConfig) (metric.RollupPolicy, error) {
 	if cfg == nil {
 		return metric.RollupPolicy{}, fmt.Errorf("metric store config is nil")

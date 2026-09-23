@@ -13,7 +13,7 @@ import (
 )
 
 func TestDefaultRollupPolicy(t *testing.T) {
-	policy := defaultRollupPolicy()
+	policy := mustDefaultPolicy(t)
 	if err := policy.Validate(); err != nil {
 		t.Fatalf("default rollup policy should validate: %v", err)
 	}
@@ -166,7 +166,7 @@ func TestGetPingRecordsReadsRollupsAfterRawCompaction(t *testing.T) {
 	now := time.Now().UTC().Truncate(time.Second)
 	s, err := metric.Open(ctx, metric.SQLite(":memory:",
 		metric.WithMaxOpenConns(1),
-		metric.WithRollupPolicy(defaultRollupPolicy()),
+		metric.WithRollupPolicy(mustDefaultPolicy(t)),
 	))
 	if err != nil {
 		t.Fatalf("open metric store: %v", err)
@@ -464,7 +464,7 @@ func TestRetentionCleanupReportsDeleteFailure(t *testing.T) {
 	dsn := filepath.Join(t.TempDir(), "compact.db")
 	s, err := metric.Open(ctx, metric.SQLite(dsn,
 		metric.WithMaxOpenConns(1),
-		metric.WithRollupPolicy(defaultRollupPolicy()),
+		metric.WithRollupPolicy(mustDefaultPolicy(t)),
 	))
 	if err != nil {
 		t.Fatalf("open metric store: %v", err)
@@ -529,7 +529,7 @@ func TestGetRecordsByClientAndTimeReadsRollupsAfterRawCompaction(t *testing.T) {
 	ctx := context.Background()
 	s, err := metric.Open(ctx, metric.SQLite(":memory:",
 		metric.WithMaxOpenConns(1),
-		metric.WithRollupPolicy(defaultRollupPolicy()),
+		metric.WithRollupPolicy(mustDefaultPolicy(t)),
 	))
 	if err != nil {
 		t.Fatalf("open metric store: %v", err)
@@ -599,4 +599,13 @@ func TestGetRecordsByClientAndTimeReadsRollupsAfterRawCompaction(t *testing.T) {
 	if len(all) != 1 || all[0].Client != rec.Client || all[0].Cpu == 0 {
 		t.Fatalf("all-client records were not reconstructed from rollup: %#v", all)
 	}
+}
+
+func mustDefaultPolicy(t *testing.T) metric.RollupPolicy {
+	t.Helper()
+	policy, err := rollupPolicyFromConfig(&MetricStoreConfig{})
+	if err != nil {
+		t.Fatalf("default rollup policy: %v", err)
+	}
+	return policy
 }
