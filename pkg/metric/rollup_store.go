@@ -69,26 +69,6 @@ func (s *Store) Flush(ctx context.Context, now time.Time) (int, error) {
 	return written, nil
 }
 
-func (s *Store) CompactMetric(ctx context.Context, metricName string, now time.Time) (int, error) {
-	if err := s.ensureOpen(); err != nil {
-		return 0, err
-	}
-	s.retentionMu.RLock()
-	defer s.retentionMu.RUnlock()
-	if err := s.ensureOpen(); err != nil {
-		return 0, err
-	}
-	tx, err := s.db.BeginTx(ctx, nil)
-	if err != nil {
-		return 0, err
-	}
-	defer func() { _ = tx.Rollback() }()
-	if err := s.enforceMetricRetentionTx(ctx, metricName, now.UTC(), tx); err != nil {
-		return 0, err
-	}
-	return 0, tx.Commit()
-}
-
 // writeTierCascadeTx persists the durable minute tier. Coarser parents are
 // accumulated in memory and materialized only after their late-arrival grace.
 func (s *Store) writeTierCascadeTx(ctx context.Context, metricName string, policy RollupPolicy, minute map[rollupKey]*rollupBucket, tx *sql.Tx) (int, error) {
@@ -141,7 +121,6 @@ func (s *Store) deleteRollupBucketTx(ctx context.Context, metricName string, int
 	_, err := tx.ExecContext(ctx, query, key.bucket, interval.Milliseconds(), metricName, key.entityID, key.tagsHash, key.labelsHash)
 	return err
 }
-
 
 // mergeRollupBatchSize bounds how many buckets share one existing-row SELECT
 // and one multi-row UPSERT. Fifteen bound values per row keep a batch well
@@ -292,62 +271,6 @@ func (s *Store) scanRollupRows(ctx context.Context, q querier, metricName string
 	return s.scanRollupRowsBetweenWith(ctx, q, metricName, "", nil, interval, -1<<62, 1<<62, true)
 }
 
-func (s *Store) enforceMetricRetentionTx(ctx context.Context, metricName string, now time.Time, tx *sql.Tx) error {
-	var retentionDays int
-	err := tx.QueryRowContext(ctx, fmt.Sprintf("SELECT retention_days FROM %s WHERE name = %s", s.tables.definitions, s.dialect.placeholder(1)), metricName).Scan(&retentionDays)
-	if err == sql.ErrNoRows {
-		return nil
-	}
-	if err != nil {
-		return err
-	}
-	if retentionDays == 0 {
-		return s.deleteRollupsForMetricTx(ctx, metricName, tx)
-	}
-	metricRetention := time.Duration(retentionDays) * 24 * time.Hour
-	policy := s.cfg.RollupPolicy.withMetricRetention(metricRetention)
-	retained := make(map[time.Duration]time.Duration, len(policy.Tiers))
-	for _, tier := range policy.Tiers {
-		retained[tier.Interval] = tier.Retention
-	}
-	for _, tier := range s.cfg.RollupPolicy.Tiers {
-		retention, keep := retained[tier.Interval]
-		if !keep {
-			if err := s.deleteRollupTierTx(ctx, metricName, tier.Interval, tx); err != nil {
-				return err
-			}
-			continue
-		}
-		if err := s.deleteRollupsBeforeTx(ctx, metricName, tier.Interval, now.Add(-retention).UnixMilli(), tx); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (s *Store) deleteRollupTierTx(ctx context.Context, metricName string, interval time.Duration, tx *sql.Tx) error {
-	sqlText := fmt.Sprintf(`DELETE FROM %s WHERE resolution_id IN (SELECT id FROM %s WHERE resolution_milli = %s) AND series_id IN (SELECT id FROM %s WHERE metric_name = %s)`,
-		s.tables.rollups, s.tables.resolutions, s.dialect.placeholder(1), s.tables.series, s.dialect.placeholder(2))
-	_, err := tx.ExecContext(ctx, sqlText, interval.Milliseconds(), metricName)
-	return err
-}
-
-func (s *Store) deleteRollupsBeforeTx(ctx context.Context, metricName string, interval time.Duration, beforeMilli int64, tx *sql.Tx) error {
-	sqlText := fmt.Sprintf(`DELETE FROM %s WHERE resolution_id IN (SELECT id FROM %s WHERE resolution_milli = %s) AND series_id IN (SELECT id FROM %s WHERE metric_name = %s) AND bucket_milli < %s`,
-		s.tables.rollups, s.tables.resolutions, s.dialect.placeholder(1), s.tables.series, s.dialect.placeholder(2), s.dialect.placeholder(3))
-	// Keep a bucket that straddles the cutoff because it can contain samples
-	// still inside retention. At most one extra bucket per series is retained.
-	beforeMilli = bucketStartMillis(beforeMilli, interval.Milliseconds())
-	_, err := tx.ExecContext(ctx, sqlText, interval.Milliseconds(), metricName, beforeMilli)
-	return err
-}
-
-func (s *Store) deleteRollupsForMetricTx(ctx context.Context, metricName string, tx *sql.Tx) error {
-	sqlText := fmt.Sprintf("DELETE FROM %s WHERE series_id IN (SELECT id FROM %s WHERE metric_name = %s)", s.tables.rollups, s.tables.series, s.dialect.placeholder(1))
-	_, err := tx.ExecContext(ctx, sqlText, metricName)
-	return err
-}
-
 func sortRollupKeys(keys []rollupKey) {
 	sort.Slice(keys, func(i, j int) bool {
 		if keys[i].bucket != keys[j].bucket {
@@ -379,4 +302,11 @@ func normalizeBucketMillis(bucket int64) int64 {
 		return bucket / int64(time.Millisecond)
 	}
 	return bucket
+}
+
+// deleteRollupsForMetricTx drops every persisted rollup bucket of one metric.
+func (s *Store) deleteRollupsForMetricTx(ctx context.Context, metricName string, tx *sql.Tx) error {
+	sqlText := fmt.Sprintf("DELETE FROM %s WHERE series_id IN (SELECT id FROM %s WHERE metric_name = %s)", s.tables.rollups, s.tables.series, s.dialect.placeholder(1))
+	_, err := tx.ExecContext(ctx, sqlText, metricName)
+	return err
 }

@@ -927,8 +927,8 @@ func TestCompactRemovesRollupsFromRedundantTiers(t *testing.T) {
 		t.Fatalf("commit seed transaction: %v", err)
 	}
 
-	if _, err := s.CompactMetric(ctx, "daily", now); err != nil {
-		t.Fatalf("compact: %v", err)
+	if _, err := s.CleanupExpired(ctx, now); err != nil {
+		t.Fatalf("cleanup: %v", err)
 	}
 	for _, test := range []struct {
 		interval time.Duration
@@ -1199,8 +1199,8 @@ func TestZeroRetentionPurgesDataAndDisablesFurtherPersistence(t *testing.T) {
 	if err := s.Write(ctx, Point{MetricName: "disabled", EntityID: "node", Timestamp: now.Add(-time.Hour), Value: 1}); err != nil {
 		t.Fatalf("write initial point: %v", err)
 	}
-	if _, err := s.CompactMetric(ctx, "disabled", now); err != nil {
-		t.Fatalf("compact: %v", err)
+	if _, err := s.CleanupExpired(ctx, now); err != nil {
+		t.Fatalf("cleanup: %v", err)
 	}
 	rollups, err := s.Series(ctx, AggregateQuery{
 		Query:       Query{MetricName: "disabled", EntityID: "node", Start: now.Add(-2 * time.Hour), End: now},
@@ -1237,8 +1237,8 @@ func TestZeroRetentionPurgesDataAndDisablesFurtherPersistence(t *testing.T) {
 	if err != nil || len(raw) != 0 {
 		t.Fatalf("disabled metric persisted a new point: %#v, err=%v", raw, err)
 	}
-	if written, err := s.CompactMetric(ctx, "disabled", now); err != nil || written != 0 {
-		t.Fatalf("disabled metric compacted %d buckets, err=%v", written, err)
+	if _, err := s.CleanupExpired(ctx, now); err != nil {
+		t.Fatalf("disabled metric cleanup err=%v", err)
 	}
 }
 
