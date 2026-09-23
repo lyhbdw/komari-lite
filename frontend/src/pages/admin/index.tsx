@@ -23,6 +23,7 @@ import {
   Download,
   Folder,
   Globe,
+  GripVertical,
   MenuIcon,
   Pencil,
   Plus,
@@ -425,11 +426,11 @@ const SortableRow = ({
   }
   return (
     <TableRow ref={setNodeRef} style={style} className="hover:bg-muted/40 transition-colors h-14">
-      <TableCell className="w-8 pl-3.5">
+      <TableCell className="w-9 pl-3 pr-0 text-center">
         <div
           {...attributes}
           {...listeners}
-          className={`cursor-grab p-1 rounded hover:bg-muted text-muted-foreground/40 hover:text-foreground transition-colors ${
+          className={`cursor-grab p-1 rounded hover:bg-muted text-muted-foreground/40 hover:text-foreground transition-colors inline-flex items-center justify-center ${
             isMobile ? "touch-manipulation select-none" : ""
           }`}
           style={{
@@ -446,16 +447,16 @@ const SortableRow = ({
           <MenuIcon size={14} />
         </div>
       </TableCell>
-      <TableCell className="w-8">
+      <TableCell className="w-9 px-1 text-center">
         <Checkbox
           checked={selectedNodes.includes(node.uuid)}
           onCheckedChange={(checked) => handleSelectNode(node.uuid, !!checked)}
         />
       </TableCell>
-      <TableCell>
+      <TableCell className="min-w-[190px] px-3">
         <DetailView node={node} />
       </TableCell>
-      <TableCell className="min-w-[170px]">
+      <TableCell className="w-48 px-3">
         <div className="flex flex-col gap-1">
           {node.ipv4 && (
             <div className="flex items-center gap-1.5 group">
@@ -499,30 +500,30 @@ const SortableRow = ({
           )}
         </div>
       </TableCell>
-      <TableCell>
-        <span className="font-mono text-[11px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground border border-border/60">
+      <TableCell className="w-20 px-2 text-center">
+        <span className="inline-block font-mono text-[11px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground border border-border/60">
           v{node.version || "1.0.5"}
         </span>
       </TableCell>
-      <TableCell>
+      <TableCell className="w-20 px-2 text-center">
         {node.group ? (
-          <span className="text-xs px-2 py-0.5 rounded-md bg-muted/50 text-foreground/80 font-medium border border-border/40">
+          <span className="inline-block text-xs px-2 py-0.5 rounded-md bg-muted/50 text-foreground/80 font-medium border border-border/40">
             {node.group}
           </span>
         ) : (
-          <span className="text-xs text-muted-foreground/40">-</span>
+          <span className="text-xs text-muted-foreground/40 font-mono">-</span>
         )}
       </TableCell>
-      <TableCell>
+      <TableCell className="w-24 px-2 text-center">
         {node.remark ? (
-          <span className="text-xs text-muted-foreground truncate max-w-[140px] block" title={node.remark}>
+          <span className="inline-block text-xs text-muted-foreground truncate max-w-[80px]" title={node.remark}>
             {node.remark}
           </span>
         ) : (
-          <span className="text-xs text-muted-foreground/40">-</span>
+          <span className="text-xs text-muted-foreground/40 font-mono">-</span>
         )}
       </TableCell>
-      <TableCell>
+      <TableCell className="w-48 px-3">
         <PriceTags
           price={node.price}
           billing_cycle={node.billing_cycle}
@@ -531,7 +532,7 @@ const SortableRow = ({
           tags={node.tags || ""}
         />
       </TableCell>
-      <TableCell className="pr-4 text-right">
+      <TableCell className="w-32 px-2 text-center">
         <ActionButtons
           node={node}
           settings={settings}
@@ -644,8 +645,10 @@ const NodeTable = ({
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/40 border-b border-border/80 text-[11px]">
-              <TableHead className="w-8 pl-3.5"></TableHead>
-              <TableHead className="w-8">
+              <TableHead className="w-9 pl-3 pr-0 text-center" title={t("admin.nodeTable.dragToReorder", "长按拖拽重新排序")}>
+                <GripVertical size={13} className="text-muted-foreground/30 mx-auto" />
+              </TableHead>
+              <TableHead className="w-9 px-1 text-center">
                 <Checkbox
                   checked={
                     selectedNodes.length === localNodes.length &&
@@ -654,13 +657,15 @@ const NodeTable = ({
                   onCheckedChange={handleSelectAll}
                 />
               </TableHead>
-              <TableHead className="min-w-[200px]">{t("admin.nodeTable.name")}</TableHead>
-              <TableHead className="min-w-[160px]">{t("admin.nodeDetail.ipAddress")}</TableHead>
-              <TableHead className="w-20">{t("admin.nodeDetail.clientVersion")}</TableHead>
-              <TableHead className="w-24">{t("common.group")}</TableHead>
-              <TableHead className="w-24">{t("admin.nodeEdit.remark")}</TableHead>
-              <TableHead className="w-56">{t("admin.nodeTable.billing")}</TableHead>
-              <TableHead className="w-32 text-right pr-4">{t("common.actions", "操作")}</TableHead>
+              <TableHead className="min-w-[190px] px-3 text-left">
+                <span className="pl-[34px]">{t("admin.nodeTable.name")}</span>
+              </TableHead>
+              <TableHead className="w-48 px-3 text-left">{t("admin.nodeDetail.ipAddress")}</TableHead>
+              <TableHead className="w-20 px-2 text-center">{t("admin.nodeDetail.clientVersion", "版本")}</TableHead>
+              <TableHead className="w-20 px-2 text-center">{t("common.group")}</TableHead>
+              <TableHead className="w-24 px-2 text-center">{t("admin.nodeEdit.remark", "备注")}</TableHead>
+              <TableHead className="w-48 px-3 text-left">{t("admin.nodeTable.billing")}</TableHead>
+              <TableHead className="w-32 px-2 text-center">{t("common.actions", "操作")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -693,7 +698,7 @@ const ActionButtons = ({
   settings: any;
 }) => {
   return (
-    <div className="flex items-center justify-end gap-1.5">
+    <div className="flex items-center justify-center gap-1">
       <GenerateCommandButton
         settings={settings}
         nodeToken={node.token}
