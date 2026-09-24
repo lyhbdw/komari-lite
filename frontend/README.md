@@ -44,15 +44,4 @@ npm run build
 
 ## 主题相关
 
-Lite 版本不提供主题市场、上传、删除或在线更新。内置前端与后端统一发布；构建和嵌入步骤见仓库根目录 `README.md` 以及 `web/public/readme.md`。
-
-已有本地主题仍可从 `data/theme/<short>/` 发现、选择和配置。每个主题目录至少包含：
-
-```text
-data/theme/<short>/
-├── komari-theme.json
-└── dist/
-    └── index.html
-```
-
-`configuration.type` 仅使用 `managed`；`configuration.data` 为后台生成主题设置表单所需的配置项数组。
+固定使用内置 Emerald 主题，不提供主题管理和配置修改。内置前端与后端统一发布；构建和嵌入步骤见仓库根目录 `README.md` 以及 `web/public/readme.md`。

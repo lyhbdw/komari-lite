@@ -55,7 +55,6 @@ const (
 	NotificationTemplateKey   = "notification_template"
 	LoginNotificationKey      = "login_notification"
 	TrafficLimitPercentageKey = "traffic_limit_percentage"
-	ThemeMarketSourcesKey     = "theme_market_sources"
 
 	ExpireNotificationEnabledKey  = "expire_notification_enabled"
 	ExpireNotificationLeadDaysKey = "expire_notification_lead_days"

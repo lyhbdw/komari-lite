@@ -18,7 +18,7 @@ const (
 // Items returns the declared managed configuration items. An omitted type is
 // managed, matching the theme configuration default.
 func Items(configuration models.Configuration) []models.ManagedThemeConfigurationItem {
-	if configuration.Type != "" && !strings.EqualFold(configuration.Type, models.ThemeConfigurationManaged) {
+	if configuration.Type != "" && !strings.EqualFold(configuration.Type, "managed") {
 		return nil
 	}
 	raw, err := json.Marshal(configuration.Data)

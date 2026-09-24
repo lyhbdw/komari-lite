@@ -6,7 +6,6 @@ func TestRemoveRetiredSettings(t *testing.T) {
 	cfg := map[string]interface{}{
 		"low_resource_mode":                           true,
 		"theme":                                       "OtherTheme",
-		"theme_market_sources":                        "[]",
 		"metric_db_driver":                            "sqlite",
 		"metric_db_dsn":                               "./data/metrics.db",
 		"metric_table_prefix":                         "metric_",
@@ -20,13 +19,11 @@ func TestRemoveRetiredSettings(t *testing.T) {
 	}
 
 	removeRetiredLowResourceMode(cfg)
-	removeRetiredThemeSettings(cfg)
 	enforceLiteThemeSettings(cfg)
 	removeRetiredMetricStoreConfig(cfg)
 
 	for _, key := range []string{
 		"low_resource_mode",
-		"theme_market_sources",
 		"metric_db_driver",
 		"metric_db_dsn",
 		"metric_table_prefix",
