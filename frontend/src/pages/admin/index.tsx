@@ -1469,11 +1469,17 @@ function BillingButton({ node }: { node: NodeDetail }) {
       setSaving(true);
       const formData = new FormData(e.target as HTMLFormElement);
       const priceValue = (formData.get("price") as string) || "0";
+      const premiumValue = (formData.get("premium") as string) || "0";
 
       const price = parseFloat(priceValue);
+      const premium = premiumValue.trim() === "" ? 0 : parseFloat(premiumValue);
 
       if (isNaN(price) || (price < 0 && price !== -1)) {
         toast.error(t("admin.nodeTable.invalidPrice"));
+        return;
+      }
+      if (isNaN(premium) || premium < 0) {
+        toast.error(t("admin.nodeTable.invalidPremium"));
         return;
       }
       const billingCycleValue = parseInt(
@@ -1489,6 +1495,7 @@ function BillingButton({ node }: { node: NodeDetail }) {
         method: "POST",
         body: JSON.stringify({
           price,
+          premium,
           billing_cycle: billingCycleValue,
           expired_at: expiredAt,
           currency: currencyValue,
@@ -1528,6 +1535,14 @@ function BillingButton({ node }: { node: NodeDetail }) {
               </label>
             </label>
             <TextField.Root name="price" defaultValue={node.price} />
+
+            <label className="font-bold">
+              <label>{t("admin.nodeTable.premium")}</label>
+              <label className="text-muted-foreground text-sm ml-1 font-medium">
+                {t("admin.nodeTable.premiumTips")}
+              </label>
+            </label>
+            <TextField.Root name="premium" defaultValue={node.premium} />
 
             <label className="font-bold">
               <label>{t("admin.nodeTable.currency", "货币")}</label>

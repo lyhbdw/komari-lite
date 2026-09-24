@@ -2,6 +2,8 @@ package jsonrpc
 
 import (
 	"context"
+	"encoding/json"
+	"strconv"
 
 	"github.com/komari-monitor/komari/database/auditlog"
 	"github.com/komari-monitor/komari/database/clients"
@@ -104,6 +106,28 @@ func adminAddClient(ctx context.Context, req *rpc.JsonRpcRequest) (any, *rpc.Jso
 	return map[string]any{"uuid": uuid, "token": token}, nil
 }
 
+// toFloat 将 JSON 数字（float64/int）或数字字符串转换为 float64。
+func toFloat(value interface{}) (float64, bool) {
+	switch typed := value.(type) {
+	case float64:
+		return typed, true
+	case float32:
+		return float64(typed), true
+	case int:
+		return float64(typed), true
+	case int64:
+		return float64(typed), true
+	case json.Number:
+		f, err := typed.Float64()
+		return f, err == nil
+	case string:
+		f, err := strconv.ParseFloat(typed, 64)
+		return f, err == nil
+	default:
+		return 0, false
+	}
+}
+
 // adminEditableClientFields 是 admin:editClient 允许更新的字段白名单。
 // UI 暴露的可编辑字段之外（如 token、uuid 之外的底层列）一律拒绝，防止
 // 任意 map 透传到 gorm Updates 造成 mass assignment。
@@ -118,6 +142,7 @@ var adminEditableClientFields = map[string]bool{
 	"hidden":             true,
 	"weight":             true,
 	"price":              true,
+	"premium":            true,
 	"billing_cycle":      true,
 	"auto_renewal":       true,
 	"currency":           true,
@@ -135,6 +160,14 @@ func adminEditClient(ctx context.Context, req *rpc.JsonRpcRequest) (any, *rpc.Js
 	uuid, _ := update["uuid"].(string)
 	if uuid == "" {
 		return nil, rpc.MakeError(rpc.InvalidParams, "Invalid or missing UUID", nil)
+	}
+	// premium 必须为非负数（购入时多付的金额，不可能为负）
+	if raw, ok := update["premium"]; ok && raw != nil {
+		premium, valid := toFloat(raw)
+		if !valid || premium < 0 {
+			return nil, rpc.MakeError(rpc.InvalidParams, "premium must be a non-negative number", nil)
+		}
+		update["premium"] = premium
 	}
 	// 字段白名单：拒绝任何未在 UI 暴露的键。
 	filtered := make(map[string]interface{}, len(update))

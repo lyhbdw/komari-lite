@@ -103,6 +103,7 @@
       "installOptions": "安装选项",
       "interval": "采集间隔（秒）",
       "invalidPrice": "价格无效",
+      "invalidPremium": "溢价无效，必须为不小于 0 的数字",
       "name": "名称",
       "nameOptional": "名称 (可选)",
       "namePlaceholder": "名称",
@@ -110,6 +111,8 @@
       "nodeList": "节点列表",
       "price": "价格",
       "priceTips": "0不显示，-1表示免费",
+      "premium": "溢价",
+      "premiumTips": "购入时多付的金额（与价格同币种），计入价值统计；无则填 0",
       "searchByName": "查找服务器",
       "setToLongTerm": "设置为长期",
       "submit": "提交",
@@ -124,7 +127,19 @@
       "login": "登录通知",
       "login_description": "当有新的会话登录到Komari时，向您发送通知",
       "traffic": "流量用量",
-      "traffic_description": "Komari将会在服务器到达指定的流量使用百分比时发送通知，并以5%为梯度持续提醒。如果服务器没有设置流量阈值，不发送通知。设置为0禁用流量提醒。"
+      "traffic_description": "Komari将会在服务器到达指定的流量使用百分比时发送通知，并以5%为梯度持续提醒。如果服务器没有设置流量阈值，不发送通知。设置为0禁用流量提醒。",
+      "alert_title": "阈值告警",
+      "alert_enable": "是否启用阈值告警",
+      "alert_enable_description": "启用后，Komari将在服务器 CPU / 内存 / 磁盘使用率超过阈值时发送告警通知。",
+      "alert_cpu": "CPU 使用率阈值（%）",
+      "alert_cpu_description": "CPU 使用率超过该值时告警，设置为 0 禁用 CPU 告警。",
+      "alert_memory": "内存使用率阈值（%）",
+      "alert_memory_description": "内存使用率超过该值时告警，设置为 0 禁用内存告警。",
+      "alert_disk": "磁盘使用率阈值（%）",
+      "alert_disk_description": "磁盘使用率超过该值时告警，设置为 0 禁用磁盘告警。",
+      "alert_cooldown": "告警冷却时间（分钟）",
+      "alert_cooldown_description": "同一服务器同一指标在该时间内不会重复告警。",
+      "alert_range_error": "请输入 0-100 之间的数值"
     }
   },
   "chart": {
@@ -448,13 +463,14 @@
       "title": "负载通知"
     },
     "offline": {
-      "cooldown": "冷静期",
+      "cooldown": "冷却时间",
+      "cooldown_tip": "同一客户端的离线通知在该时间内不会重复发送，0 表示不冷却",
       "full_title": "离线通知设置",
       "grace_period": "宽限期",
       "grace_period_tip": "低于45秒的宽限期可能会无法及时触发在线通知",
       "last_notified": "最后通知",
       "never_triggered": "从未触发",
-      "tips": "为了避免频繁发送通知，我们设置了宽限期：</br> <b>宽限期</b>：客户端离线后，如果在这段时间内没有重新上线，就会发送离线通知",
+      "tips": "为了避免频繁发送通知，我们设置了宽限期：</br> <b>宽限期</b>：客户端离线后，如果在这段时间内没有重新上线，就会发送离线通知</br> <b>冷却时间</b>：同一客户端的离线通知在冷却时间内不会重复发送",
       "title": "离线通知"
     },
     "title": "通知"

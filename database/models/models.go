@@ -31,6 +31,7 @@ type Client struct {
 	Version          string     `json:"version,omitempty" gorm:"type:varchar(100)"`
 	Weight           int        `json:"weight" gorm:"type:int"`
 	Price            float64    `json:"price"`
+	Premium          float64    `json:"premium"` // 购入溢价/附加费用（与 price 同币种），计入价值统计
 	BillingCycle     int        `json:"billing_cycle"`
 	AutoRenewal      bool       `json:"auto_renewal" gorm:"default:false"` // 是否自动续费
 	Currency         string     `json:"currency" gorm:"type:varchar(20);default:'$'"`
