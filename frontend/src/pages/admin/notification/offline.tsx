@@ -54,13 +54,13 @@ const NotificationEditForm = ({
 }) => {
   const { t } = useTranslation();
   const [enabled, setEnabled] = React.useState(initialValues.enable);
-  // const [cooldown, setCooldown] = React.useState(initialValues.cooldown);
+  const [cooldown, setCooldown] = React.useState(initialValues.cooldown);
   const [grace, setGrace] = React.useState(initialValues.grace_period);
   return (
     <form
       onSubmit={(e) => {
         e.preventDefault();
-        onSubmit({ enable: enabled, cooldown: 3000, grace_period: grace });
+        onSubmit({ enable: enabled, cooldown, grace_period: grace });
       }}
       className="km-notification-offline-form flex flex-col gap-2"
     >
@@ -71,15 +71,18 @@ const NotificationEditForm = ({
         checked={enabled}
         onCheckedChange={setEnabled}
       />
-      {/* <label htmlFor="cooldown">{t("notification.offline.cooldown")}</label>
+      <label htmlFor="cooldown" className="flex items-center gap-2">
+        {t("notification.offline.cooldown")}
+        <Tips>{t("notification.offline.cooldown_tip")}</Tips>
+      </label>
       <TextField.Root
         type="number"
         min={0}
         value={cooldown}
-        onChange={e => setCooldown(Number(e.target.value))}
+        onChange={(e) => setCooldown(Number(e.target.value))}
         id="cooldown"
         name="cooldown"
-      /> */}
+      />
       <label htmlFor="grace_period" className="flex items-center gap-2">
         {t("notification.offline.grace_period")}<Tips>{t("notification.offline.grace_period_tip")}</Tips>
       </label>
@@ -284,7 +287,7 @@ const OfflineNotificationTable = ({
             </TableHead>
             <TableHead>{t("common.server")}</TableHead>
             <TableHead>{t("common.status")}</TableHead>
-            {/* <TableHead>{t("notification.offline.cooldown")}</TableHead> */}
+            <TableHead>{t("notification.offline.cooldown")}</TableHead>
             <TableHead>{t("notification.offline.grace_period")}</TableHead>
             <TableHead>{t("notification.offline.last_notified")}</TableHead>
             <TableHead>{t("common.action")}</TableHead>
@@ -323,11 +326,11 @@ const OfflineNotificationTable = ({
                     : t("common.disabled")}
                 </Badge>
               </TableCell>
-              {/* <TableCell>
+              <TableCell>
                 {offlineNotification.find((n) => n.client === node.uuid)
-                  ?.cooldown || 1800}{" "}
+                  ?.cooldown ?? 1800}{" "}
                 {t("nodeCard.time_second")}
-              </TableCell> */}
+              </TableCell>
               <TableCell>
                 {offlineNotification.find((n) => n.client === node.uuid)
                   ?.grace_period || 300}

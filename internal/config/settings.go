@@ -24,6 +24,15 @@ type Settings struct {
 	NotificationTemplate   string  `json:"notification_template" default:"{{emoji}}{{emoji}}{{emoji}}\nEvent: {{event}}\nClients: {{client}}\nMessage: {{message}}\nTime: {{time}}"`
 	LoginNotification      bool    `json:"login_notification" default:"true"`        // 登录通知
 	TrafficLimitPercentage float64 `json:"traffic_limit_percentage" default:"80.00"` // 流量限制百分比，默认80.00%
+	// 到期提醒
+	ExpireNotificationEnabled  bool `json:"expire_notification_enabled" default:"false"` // 到期提醒开关
+	ExpireNotificationLeadDays int  `json:"expire_notification_lead_days" default:"7"`   // 提前多少天开始提醒
+	// 阈值告警
+	AlertEnabled  bool    `json:"alert_enabled" default:"false"` // 阈值告警总开关
+	AlertCpu      float64 `json:"alert_cpu" default:"90"`        // CPU 使用率告警阈值（%），0 禁用
+	AlertMemory   float64 `json:"alert_memory" default:"90"`     // 内存使用率告警阈值（%），0 禁用
+	AlertDisk     float64 `json:"alert_disk" default:"90"`       // 磁盘使用率告警阈值（%），0 禁用
+	AlertCooldown int     `json:"alert_cooldown" default:"30"`   // 同一客户端同一指标告警冷却（分钟）
 }
 
 const (
@@ -47,4 +56,13 @@ const (
 	LoginNotificationKey      = "login_notification"
 	TrafficLimitPercentageKey = "traffic_limit_percentage"
 	ThemeMarketSourcesKey     = "theme_market_sources"
+
+	ExpireNotificationEnabledKey  = "expire_notification_enabled"
+	ExpireNotificationLeadDaysKey = "expire_notification_lead_days"
+
+	AlertEnabledKey  = "alert_enabled"
+	AlertCpuKey      = "alert_cpu"
+	AlertMemoryKey   = "alert_memory"
+	AlertDiskKey     = "alert_disk"
+	AlertCooldownKey = "alert_cooldown"
 )

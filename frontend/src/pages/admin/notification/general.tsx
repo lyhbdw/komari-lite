@@ -86,6 +86,71 @@ const Inner = () => {
           );
         }}
       />
+      <SettingCardLabel>{t("admin.notification.alert_title")}</SettingCardLabel>
+      <SettingCardSwitch
+        title={t("admin.notification.alert_enable")}
+        description={t("admin.notification.alert_enable_description")}
+        defaultChecked={settings.alert_enabled}
+        onChange={async (checked) => {
+          await updateSettingsWithToast({ alert_enabled: checked }, t);
+        }}
+      />
+      <SettingCardShortTextInput
+        title={t("admin.notification.alert_cpu")}
+        description={t("admin.notification.alert_cpu_description")}
+        defaultValue={settings.alert_cpu}
+        type="number"
+        OnSave={async (value) => {
+          const numValue = Number(value);
+          if (isNaN(numValue) || numValue < 0 || numValue > 100) {
+            toast.error(t("admin.notification.alert_range_error"));
+            return;
+          }
+          await updateSettingsWithToast({ alert_cpu: numValue }, t);
+        }}
+      />
+      <SettingCardShortTextInput
+        title={t("admin.notification.alert_memory")}
+        description={t("admin.notification.alert_memory_description")}
+        defaultValue={settings.alert_memory}
+        type="number"
+        OnSave={async (value) => {
+          const numValue = Number(value);
+          if (isNaN(numValue) || numValue < 0 || numValue > 100) {
+            toast.error(t("admin.notification.alert_range_error"));
+            return;
+          }
+          await updateSettingsWithToast({ alert_memory: numValue }, t);
+        }}
+      />
+      <SettingCardShortTextInput
+        title={t("admin.notification.alert_disk")}
+        description={t("admin.notification.alert_disk_description")}
+        defaultValue={settings.alert_disk}
+        type="number"
+        OnSave={async (value) => {
+          const numValue = Number(value);
+          if (isNaN(numValue) || numValue < 0 || numValue > 100) {
+            toast.error(t("admin.notification.alert_range_error"));
+            return;
+          }
+          await updateSettingsWithToast({ alert_disk: numValue }, t);
+        }}
+      />
+      <SettingCardShortTextInput
+        title={t("admin.notification.alert_cooldown")}
+        description={t("admin.notification.alert_cooldown_description")}
+        defaultValue={settings.alert_cooldown}
+        type="number"
+        OnSave={async (value) => {
+          const numValue = Number(value);
+          if (isNaN(numValue) || numValue < 0) {
+            toast.error("Please enter a valid non-negative number");
+            return;
+          }
+          await updateSettingsWithToast({ alert_cooldown: numValue }, t);
+        }}
+      />
     </>
   );
 };

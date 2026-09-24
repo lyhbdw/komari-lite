@@ -204,6 +204,8 @@ func (a *App) runCleanups(ctx context.Context) error {
 var (
 	cleanupGate atomic.Bool
 	trafficGate atomic.Bool
+	alertGate   atomic.Bool
+	expireGate  atomic.Bool
 )
 
 func registerScheduledWork() {
@@ -240,6 +242,24 @@ func registerScheduledWork() {
 		notifier.CheckTraffic()
 	}); err != nil {
 		logger.ErrorArgs("server", "Failed to add traffic notification task:", err)
+	}
+	if err := scheduler.AddFunc("notifier:alert", "@every 1m", func() {
+		if !alertGate.CompareAndSwap(false, true) {
+			return
+		}
+		defer alertGate.Store(false)
+		notifier.CheckAlert()
+	}); err != nil {
+		logger.ErrorArgs("server", "Failed to add threshold alert task:", err)
+	}
+	if err := scheduler.AddFunc("notifier:expire", "@every 1h", func() {
+		if !expireGate.CompareAndSwap(false, true) {
+			return
+		}
+		defer expireGate.Store(false)
+		notifier.CheckExpire()
+	}); err != nil {
+		logger.ErrorArgs("server", "Failed to add expire notification task:", err)
 	}
 }
 

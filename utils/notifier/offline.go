@@ -71,6 +71,13 @@ func OfflineNotification(clientID string, endedConnectionID int64) {
 	}
 
 	now := time.Now().UTC()
+
+	// 冷却时间：同一客户端离线通知在冷却期内不重复发送。
+	cooldown := time.Duration(notiConf.Cooldown) * time.Second
+	if cooldown > 0 && notiConf.LastNotified != nil && now.Sub(*notiConf.LastNotified) < cooldown {
+		return
+	}
+
 	state := getOrInitState(clientID)
 
 	state.mu.Lock()

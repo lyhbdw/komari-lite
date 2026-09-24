@@ -49,11 +49,14 @@ func adminEditOfflineNotification(_ context.Context, req *rpc.JsonRpcRequest) (a
 		if noti.GracePeriod <= 0 {
 			return nil, rpc.MakeError(rpc.InvalidParams, "GracePeriod must be a positive integer", nil)
 		}
+		if noti.Cooldown < 0 {
+			return nil, rpc.MakeError(rpc.InvalidParams, "Cooldown must be a non-negative integer", nil)
+		}
 	}
 	err := dbcore.GetDBInstance().Model(&models.OfflineNotification{}).
 		Clauses(clause.OnConflict{
 			Columns:   []clause.Column{{Name: "client"}},
-			DoUpdates: clause.AssignmentColumns([]string{"enable", "grace_period"}),
+			DoUpdates: clause.AssignmentColumns([]string{"enable", "grace_period", "cooldown"}),
 		}).
 		Select("*").Create(notifications).Error
 	if err != nil {
