@@ -1,7 +1,7 @@
 import React from "react";
 import defaultTheme from "../../komari-theme.json";
 
-export type ThemeField = {
+type ThemeField = {
   key?: string;
   default?: unknown;
 };

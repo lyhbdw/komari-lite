@@ -20,7 +20,7 @@ export interface JSONRPC2Request<T = any> {
 /**
  * JSON-RPC 2.0 响应对象（成功）
  */
-export interface JSONRPC2SuccessResponse<T = any> {
+interface JSONRPC2SuccessResponse<T = any> {
   /** JSON-RPC 版本，必须为 "2.0" */
   jsonrpc: "2.0";
   /** 调用结果 */
@@ -32,7 +32,7 @@ export interface JSONRPC2SuccessResponse<T = any> {
 /**
  * JSON-RPC 2.0 错误对象
  */
-export interface JSONRPC2Error {
+interface JSONRPC2Error {
   /** 错误代码 */
   code: number;
   /** 错误消息 */
@@ -44,7 +44,7 @@ export interface JSONRPC2Error {
 /**
  * JSON-RPC 2.0 响应对象（错误）
  */
-export interface JSONRPC2ErrorResponse {
+interface JSONRPC2ErrorResponse {
   /** JSON-RPC 版本，必须为 "2.0" */
   jsonrpc: "2.0";
   /** 错误信息 */
@@ -67,16 +67,6 @@ export type JSONRPC2BatchRequest = JSONRPC2Request[];
  * JSON-RPC 2.0 批量响应
  */
 export type JSONRPC2BatchResponse = JSONRPC2Response[];
-
-/**
- * 预定义的错误代码
- */
-export type JSONRPC2ErrorCodeType =
-  | -32700 // 解析错误 - 服务器收到无效的JSON
-  | -32600 // 无效请求 - 发送的JSON不是有效的请求对象
-  | -32601 // 方法未找到 - 所调用的方法不存在或不可用
-  | -32602 // 无效参数 - 无效的方法参数
-  | -32603; // 内部错误 - JSON-RPC内部错误
 
 /**
  * RPC 连接状态
