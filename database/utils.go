@@ -47,9 +47,7 @@ func GetPublicInfo() (map[string]interface{}, error) {
 	if !hasKey("description") {
 		cst.Description = "Komari Monitor, a simple server monitoring tool."
 	}
-	if !hasKey("theme") {
-		cst.Theme = public.DefaultTheme
-	}
+	cst.Theme = public.DefaultTheme
 
 	// Fallback defaults if we couldn't enumerate keys.
 	if allErr != nil {

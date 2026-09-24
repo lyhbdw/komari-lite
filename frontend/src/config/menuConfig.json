@@ -60,11 +60,6 @@
       ]
     },
     {
-      "labelKey": "theme.title",
-      "path": "/admin/themes",
-      "icon": "Palette"
-    },
-    {
       "labelKey": "account.title",
       "path": "/admin/account",
       "icon": "UserCircle"

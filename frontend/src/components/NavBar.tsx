@@ -1,6 +1,3 @@
-import ThemeSwitch from "./ThemeSwitch";
-import ColorSwitch from "./ColorSwitch";
-
 import LoginDialog from "./Login";
 import { IconButton } from "@radix-ui/themes";
 import { GitHubLogoIcon } from "@radix-ui/react-icons";
@@ -41,9 +38,6 @@ const NavBar = () => {
         >
           <GitHubLogoIcon />
         </IconButton>
-
-        <ThemeSwitch />
-        <ColorSwitch />
 
         <LoginDialog
           autoOpen={Boolean(publicInfo?.private_site)}

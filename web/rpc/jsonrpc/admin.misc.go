@@ -130,6 +130,8 @@ func adminEditSettings(ctx context.Context, req *rpc.JsonRpcRequest) (any, *rpc.
 		return nil, rpc.MakeError(rpc.InvalidParams, "Invalid or missing request body: "+err.Error(), nil)
 	}
 	removeRetiredLowResourceMode(cfg)
+	removeRetiredThemeSettings(cfg)
+	enforceLiteThemeSettings(cfg)
 	removeRetiredMetricStoreConfig(cfg)
 
 	if err := config.SetMany(cfg); err != nil {
@@ -158,6 +160,15 @@ func removeRetiredLowResourceMode(cfg map[string]interface{}) {
 	delete(cfg, "low_resource_mode")
 }
 
+func removeRetiredThemeSettings(cfg map[string]interface{}) {
+	delete(cfg, config.ThemeMarketSourcesKey)
+}
+
+func enforceLiteThemeSettings(cfg map[string]interface{}) {
+	if _, ok := cfg[config.ThemeKey]; ok {
+		cfg[config.ThemeKey] = "Emerald"
+	}
+}
 func removeRetiredMetricStoreConfig(cfg map[string]interface{}) {
 	for _, key := range []string{
 		"metric_db_driver",

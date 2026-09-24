@@ -160,6 +160,7 @@ func static(r *gin.RouterGroup, noRoute func(handlers ...gin.HandlerFunc), force
 			config.SitenameKey: "Komari Monitor",
 			config.ThemeKey:    DefaultTheme,
 		})
+		cfg[config.ThemeKey] = DefaultTheme
 		return cfg
 	}
 
@@ -293,6 +294,10 @@ func static(r *gin.RouterGroup, noRoute func(handlers ...gin.HandlerFunc), force
 	// 允许访问 /themes/MyTheme/theme.json 和 /themes/MyTheme/dist/assets/a.js
 	r.GET("/themes/:id/*path", func(c *gin.Context) {
 		themeID := c.Param("id")
+		if themeID != DefaultTheme && themeID != "__admin__" {
+			c.Status(http.StatusNotFound)
+			return
+		}
 		if forceDefaultTheme && themeID != "__admin__" && themeID != DefaultTheme {
 			c.Status(http.StatusNotFound)
 			return

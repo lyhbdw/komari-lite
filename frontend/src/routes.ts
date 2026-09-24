@@ -133,13 +133,11 @@ export const routes: RouteObject[] = [
       },
       {
         path: "themes",
-        element: React.createElement(lazy(() => import("./pages/admin/themes"))),
+        element: React.createElement(Navigate, { to: "/admin/servers", replace: true }),
       },
       {
         path: "themes/settings",
-        element: React.createElement(
-          lazy(() => import("./pages/admin/theme_settings")),
-        ),
+        element: React.createElement(Navigate, { to: "/admin/servers", replace: true }),
       },
     ],
   },

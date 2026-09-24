@@ -8,7 +8,6 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useLocation } from "react-router-dom";
 
-import ThemeSwitch from "../ThemeSwitch";
 import { useIsMobile } from "@/hooks/use-mobile";
 import menuConfig from "../../config/menuConfig.json";
 import type { MenuItem } from "../../types/menu";
@@ -282,8 +281,6 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
           </a>
 
           <div className="h-3.5 w-px bg-border/60 mx-1 hidden sm:block" />
-
-          <ThemeSwitch />
 
           <IconButton
             variant="ghost"
