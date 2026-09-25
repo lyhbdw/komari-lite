@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/komari-monitor/komari/pkg/rpc"
+	"github.com/Tumb1er1376/komari-monitor-lite/pkg/rpc"
 )
 
 func TestPublicAgentIdentityDoesNotExposeToken(t *testing.T) {

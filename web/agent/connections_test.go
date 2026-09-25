@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
-	v2 "github.com/komari-monitor/komari/protocol/v2"
-	"github.com/komari-monitor/komari/web/connection"
+	v2 "github.com/Tumb1er1376/komari-monitor-lite/protocol/v2"
+	"github.com/Tumb1er1376/komari-monitor-lite/web/connection"
 )
 
 func TestRecordReportKeepsLatestAndShortRecentWindow(t *testing.T) {

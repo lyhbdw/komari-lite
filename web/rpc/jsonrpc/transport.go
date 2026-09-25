@@ -11,9 +11,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
-	"github.com/komari-monitor/komari/database/accounts"
-	"github.com/komari-monitor/komari/pkg/rpc"
-	"github.com/komari-monitor/komari/web/api"
+	"github.com/Tumb1er1376/komari-monitor-lite/database/accounts"
+	"github.com/Tumb1er1376/komari-monitor-lite/pkg/rpc"
+	"github.com/Tumb1er1376/komari-monitor-lite/web/api"
 )
 
 const (

@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/komari-monitor/komari/pkg/rpc"
-	"github.com/komari-monitor/komari/utils"
+	"github.com/Tumb1er1376/komari-monitor-lite/pkg/rpc"
+	"github.com/Tumb1er1376/komari-monitor-lite/utils"
 )
 
 // admin.update.go

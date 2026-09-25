@@ -8,11 +8,11 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/komari-monitor/komari/database/accounts"
-	"github.com/komari-monitor/komari/database/clients"
-	"github.com/komari-monitor/komari/internal/config"
-	"github.com/komari-monitor/komari/pkg/rpc"
-	"github.com/komari-monitor/komari/utils/log"
+	"github.com/Tumb1er1376/komari-monitor-lite/database/accounts"
+	"github.com/Tumb1er1376/komari-monitor-lite/database/clients"
+	"github.com/Tumb1er1376/komari-monitor-lite/internal/config"
+	"github.com/Tumb1er1376/komari-monitor-lite/pkg/rpc"
+	"github.com/Tumb1er1376/komari-monitor-lite/utils/log"
 	"gorm.io/gorm"
 )
 

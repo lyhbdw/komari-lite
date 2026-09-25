@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/komari-monitor/komari/internal/config"
+	"github.com/Tumb1er1376/komari-monitor-lite/internal/config"
 )
 
 // cleanupFunc is a cleanup action run during shutdown.

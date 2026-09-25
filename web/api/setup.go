@@ -8,9 +8,9 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/komari-monitor/komari/database/accounts"
-	"github.com/komari-monitor/komari/database/dbcore"
-	"github.com/komari-monitor/komari/database/models"
+	"github.com/Tumb1er1376/komari-monitor-lite/database/accounts"
+	"github.com/Tumb1er1376/komari-monitor-lite/database/dbcore"
+	"github.com/Tumb1er1376/komari-monitor-lite/database/models"
 )
 
 const (

@@ -5,9 +5,9 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/komari-monitor/komari/database/accounts"
-	"github.com/komari-monitor/komari/utils"
-	"github.com/komari-monitor/komari/web/api"
+	"github.com/Tumb1er1376/komari-monitor-lite/database/accounts"
+	"github.com/Tumb1er1376/komari-monitor-lite/utils"
+	"github.com/Tumb1er1376/komari-monitor-lite/web/api"
 	"github.com/pquerna/otp/totp"
 )
 

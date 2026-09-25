@@ -12,10 +12,10 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/komari-monitor/komari/cmd/flags"
-	"github.com/komari-monitor/komari/database/dbcore"
-	"github.com/komari-monitor/komari/internal/metricstore"
-	"github.com/komari-monitor/komari/web/api"
+	"github.com/Tumb1er1376/komari-monitor-lite/cmd/flags"
+	"github.com/Tumb1er1376/komari-monitor-lite/database/dbcore"
+	"github.com/Tumb1er1376/komari-monitor-lite/internal/metricstore"
+	"github.com/Tumb1er1376/komari-monitor-lite/web/api"
 )
 
 // copyFile 复制单个文件到目标路径（会确保父目录存在）

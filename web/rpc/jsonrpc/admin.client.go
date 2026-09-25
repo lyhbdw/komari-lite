@@ -5,12 +5,12 @@ import (
 	"encoding/json"
 	"strconv"
 
-	"github.com/komari-monitor/komari/database/auditlog"
-	"github.com/komari-monitor/komari/database/clients"
-	"github.com/komari-monitor/komari/database/records"
-	"github.com/komari-monitor/komari/internal/metricstore"
-	"github.com/komari-monitor/komari/pkg/rpc"
-	agent_runtime "github.com/komari-monitor/komari/web/agent"
+	"github.com/Tumb1er1376/komari-monitor-lite/database/auditlog"
+	"github.com/Tumb1er1376/komari-monitor-lite/database/clients"
+	"github.com/Tumb1er1376/komari-monitor-lite/database/records"
+	"github.com/Tumb1er1376/komari-monitor-lite/internal/metricstore"
+	"github.com/Tumb1er1376/komari-monitor-lite/pkg/rpc"
+	agent_runtime "github.com/Tumb1er1376/komari-monitor-lite/web/agent"
 )
 
 // admin.client.go

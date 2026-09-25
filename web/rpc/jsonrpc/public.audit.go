@@ -10,9 +10,9 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/komari-monitor/komari/database/auditlog"
-	"github.com/komari-monitor/komari/internal/config"
-	"github.com/komari-monitor/komari/pkg/rpc"
+	"github.com/Tumb1er1376/komari-monitor-lite/database/auditlog"
+	"github.com/Tumb1er1376/komari-monitor-lite/internal/config"
+	"github.com/Tumb1er1376/komari-monitor-lite/pkg/rpc"
 )
 
 const (

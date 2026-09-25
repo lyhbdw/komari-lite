@@ -3,18 +3,18 @@ package messageSender
 import (
 	"encoding/json"
 	"fmt"
-	logger "github.com/komari-monitor/komari/utils/log"
+	logger "github.com/Tumb1er1376/komari-monitor-lite/utils/log"
 	"reflect"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/komari-monitor/komari/database"
-	"github.com/komari-monitor/komari/database/auditlog"
-	"github.com/komari-monitor/komari/database/clients"
-	"github.com/komari-monitor/komari/database/models"
-	"github.com/komari-monitor/komari/internal/config"
-	"github.com/komari-monitor/komari/utils/messageSender/factory"
+	"github.com/Tumb1er1376/komari-monitor-lite/database"
+	"github.com/Tumb1er1376/komari-monitor-lite/database/auditlog"
+	"github.com/Tumb1er1376/komari-monitor-lite/database/clients"
+	"github.com/Tumb1er1376/komari-monitor-lite/database/models"
+	"github.com/Tumb1er1376/komari-monitor-lite/internal/config"
+	"github.com/Tumb1er1376/komari-monitor-lite/utils/messageSender/factory"
 )
 
 var (

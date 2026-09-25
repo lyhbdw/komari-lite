@@ -6,11 +6,11 @@ import (
 	"sort"
 	"time"
 
-	"github.com/komari-monitor/komari/database/clients"
-	"github.com/komari-monitor/komari/database/models"
-	recordsdb "github.com/komari-monitor/komari/database/records"
-	"github.com/komari-monitor/komari/database/tasks"
-	"github.com/komari-monitor/komari/pkg/rpc"
+	"github.com/Tumb1er1376/komari-monitor-lite/database/clients"
+	"github.com/Tumb1er1376/komari-monitor-lite/database/models"
+	recordsdb "github.com/Tumb1er1376/komari-monitor-lite/database/records"
+	"github.com/Tumb1er1376/komari-monitor-lite/database/tasks"
+	"github.com/Tumb1er1376/komari-monitor-lite/pkg/rpc"
 )
 
 func init() {

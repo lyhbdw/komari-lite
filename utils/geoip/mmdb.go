@@ -2,7 +2,7 @@ package geoip // 与 geoip.go 保持相同的包名，表示它们是同一个�
 
 import (
 	"fmt"
-	logger "github.com/komari-monitor/komari/utils/log"
+	logger "github.com/Tumb1er1376/komari-monitor-lite/utils/log"
 	"io"
 	"net"
 	"net/http"
@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/komari-monitor/komari/database/auditlog"
+	"github.com/Tumb1er1376/komari-monitor-lite/database/auditlog"
 	"github.com/oschwald/maxminddb-golang"
 )
 

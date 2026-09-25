@@ -119,7 +119,7 @@ jobs:
           fi
           VERSION="${{ needs.prepare.outputs.version }}"
           VERSION_HASH="${{ github.sha }}" # Use commit SHA for hash
-          go build -trimpath -ldflags="-s -w -X github.com/komari-monitor/komari/utils.CurrentVersion=${VERSION} -X github.com/komari-monitor/komari/utils.VersionHash=${VERSION_HASH}" -o $BINARY_NAME
+          go build -trimpath -ldflags="-s -w -X github.com/Tumb1er1376/komari-monitor-lite/utils.CurrentVersion=${VERSION} -X github.com/Tumb1er1376/komari-monitor-lite/utils.VersionHash=${VERSION_HASH}" -o $BINARY_NAME
           sha256sum "$BINARY_NAME" > "$BINARY_NAME.sha256"
 
       - name: Upload binary as artifact

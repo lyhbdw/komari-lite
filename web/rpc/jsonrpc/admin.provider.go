@@ -5,12 +5,12 @@ import (
 	"encoding/json"
 	"strings"
 
-	"github.com/komari-monitor/komari/database"
-	"github.com/komari-monitor/komari/database/models"
-	"github.com/komari-monitor/komari/internal/config"
-	"github.com/komari-monitor/komari/pkg/rpc"
-	"github.com/komari-monitor/komari/utils/messageSender"
-	msfactory "github.com/komari-monitor/komari/utils/messageSender/factory"
+	"github.com/Tumb1er1376/komari-monitor-lite/database"
+	"github.com/Tumb1er1376/komari-monitor-lite/database/models"
+	"github.com/Tumb1er1376/komari-monitor-lite/internal/config"
+	"github.com/Tumb1er1376/komari-monitor-lite/pkg/rpc"
+	"github.com/Tumb1er1376/komari-monitor-lite/utils/messageSender"
+	msfactory "github.com/Tumb1er1376/komari-monitor-lite/utils/messageSender/factory"
 )
 
 func init() {

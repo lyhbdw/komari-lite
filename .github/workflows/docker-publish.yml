@@ -52,7 +52,7 @@ jobs:
           # retaining the upstream 1.5.0 API baseline.
           VERSION="1.0.0"
           VERSION_HASH="${{ github.sha }}"
-          LDFLAGS="-s -w -X github.com/komari-monitor/komari/utils.CurrentVersion=${VERSION} -X github.com/komari-monitor/komari/utils.VersionHash=${VERSION_HASH}"
+          LDFLAGS="-s -w -X github.com/Tumb1er1376/komari-monitor-lite/utils.CurrentVersion=${VERSION} -X github.com/Tumb1er1376/komari-monitor-lite/utils.VersionHash=${VERSION_HASH}"
 
           echo "Building for linux/amd64..."
           GOARCH=amd64 CC="zig cc -target x86_64-linux-musl" go build -tags sqlite_omit_load_extension -trimpath -ldflags="$LDFLAGS" -o komari-linux-amd64

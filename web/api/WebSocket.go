@@ -6,9 +6,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
-	"github.com/komari-monitor/komari/internal/config"
-	"github.com/komari-monitor/komari/web/connection"
-	"github.com/komari-monitor/komari/web/security"
+	"github.com/Tumb1er1376/komari-monitor-lite/internal/config"
+	"github.com/Tumb1er1376/komari-monitor-lite/web/connection"
+	"github.com/Tumb1er1376/komari-monitor-lite/web/security"
 )
 
 type WebSocketUpgradeOption func(*websocket.Upgrader)

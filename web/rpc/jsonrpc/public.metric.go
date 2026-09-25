@@ -10,12 +10,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/komari-monitor/komari/database/clients"
-	"github.com/komari-monitor/komari/database/models"
-	"github.com/komari-monitor/komari/database/tasks"
-	"github.com/komari-monitor/komari/internal/metricstore"
-	"github.com/komari-monitor/komari/pkg/metric"
-	"github.com/komari-monitor/komari/pkg/rpc"
+	"github.com/Tumb1er1376/komari-monitor-lite/database/clients"
+	"github.com/Tumb1er1376/komari-monitor-lite/database/models"
+	"github.com/Tumb1er1376/komari-monitor-lite/database/tasks"
+	"github.com/Tumb1er1376/komari-monitor-lite/internal/metricstore"
+	"github.com/Tumb1er1376/komari-monitor-lite/pkg/metric"
+	"github.com/Tumb1er1376/komari-monitor-lite/pkg/rpc"
 )
 
 const (

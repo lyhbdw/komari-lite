@@ -1,9 +1,9 @@
 package factory
 
 import (
-	logger "github.com/komari-monitor/komari/utils/log"
+	logger "github.com/Tumb1er1376/komari-monitor-lite/utils/log"
 
-	"github.com/komari-monitor/komari/utils/item"
+	"github.com/Tumb1er1376/komari-monitor-lite/utils/item"
 )
 
 var (

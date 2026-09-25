@@ -3,8 +3,8 @@ package server
 import (
 	"context"
 
-	"github.com/komari-monitor/komari/utils/geoip"
-	"github.com/komari-monitor/komari/utils/messageSender"
+	"github.com/Tumb1er1376/komari-monitor-lite/utils/geoip"
+	"github.com/Tumb1er1376/komari-monitor-lite/utils/messageSender"
 )
 
 // InitProviders initializes providers used by the monitoring application.

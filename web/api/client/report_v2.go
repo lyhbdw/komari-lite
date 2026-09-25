@@ -5,7 +5,7 @@ import (
 	"compress/gzip"
 	"encoding/json"
 	"fmt"
-	logger "github.com/komari-monitor/komari/utils/log"
+	logger "github.com/Tumb1er1376/komari-monitor-lite/utils/log"
 	"io"
 	"net/http"
 	"strings"
@@ -14,11 +14,11 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
-	v2 "github.com/komari-monitor/komari/protocol/v2"
-	"github.com/komari-monitor/komari/utils/notifier"
-	agent_runtime "github.com/komari-monitor/komari/web/agent"
-	"github.com/komari-monitor/komari/web/api"
-	"github.com/komari-monitor/komari/web/connection"
+	v2 "github.com/Tumb1er1376/komari-monitor-lite/protocol/v2"
+	"github.com/Tumb1er1376/komari-monitor-lite/utils/notifier"
+	agent_runtime "github.com/Tumb1er1376/komari-monitor-lite/web/agent"
+	"github.com/Tumb1er1376/komari-monitor-lite/web/api"
+	"github.com/Tumb1er1376/komari-monitor-lite/web/connection"
 )
 
 const maxAgentBodyBytes int64 = 4 << 20

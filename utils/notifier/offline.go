@@ -1,17 +1,17 @@
 package notifier
 
 import (
-	logger "github.com/komari-monitor/komari/utils/log"
+	logger "github.com/Tumb1er1376/komari-monitor-lite/utils/log"
 	"sync"
 	"time"
 
-	"github.com/komari-monitor/komari/database/clients"
-	"github.com/komari-monitor/komari/database/dbcore"
-	"github.com/komari-monitor/komari/database/models"
-	messageevent "github.com/komari-monitor/komari/database/models/messageEvent"
-	"github.com/komari-monitor/komari/internal/config"
-	"github.com/komari-monitor/komari/utils/messageSender"
-	"github.com/komari-monitor/komari/utils/renewal"
+	"github.com/Tumb1er1376/komari-monitor-lite/database/clients"
+	"github.com/Tumb1er1376/komari-monitor-lite/database/dbcore"
+	"github.com/Tumb1er1376/komari-monitor-lite/database/models"
+	messageevent "github.com/Tumb1er1376/komari-monitor-lite/database/models/messageEvent"
+	"github.com/Tumb1er1376/komari-monitor-lite/internal/config"
+	"github.com/Tumb1er1376/komari-monitor-lite/utils/messageSender"
+	"github.com/Tumb1er1376/komari-monitor-lite/utils/renewal"
 )
 
 // notificationState 保存单个客户端的通知状态。

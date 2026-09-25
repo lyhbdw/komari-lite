@@ -6,8 +6,8 @@ import (
 	"sort"
 	"time"
 
-	"github.com/komari-monitor/komari/database/models"
-	"github.com/komari-monitor/komari/pkg/metric"
+	"github.com/Tumb1er1376/komari-monitor-lite/database/models"
+	"github.com/Tumb1er1376/komari-monitor-lite/pkg/metric"
 )
 
 // WritePingRecord 将 ping 记录写入 metric store

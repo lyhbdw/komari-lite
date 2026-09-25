@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
-	"github.com/komari-monitor/komari/internal/config"
+	"github.com/Tumb1er1376/komari-monitor-lite/internal/config"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )

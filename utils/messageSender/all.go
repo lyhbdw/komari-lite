@@ -1,6 +1,6 @@
 package messageSender
 
 import (
-	_ "github.com/komari-monitor/komari/utils/messageSender/empty"
-	_ "github.com/komari-monitor/komari/utils/messageSender/telegram"
+	_ "github.com/Tumb1er1376/komari-monitor-lite/utils/messageSender/empty"
+	_ "github.com/Tumb1er1376/komari-monitor-lite/utils/messageSender/telegram"
 )

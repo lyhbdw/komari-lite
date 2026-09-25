@@ -12,7 +12,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/komari-monitor/komari/internal/sqlitetune"
+	"github.com/Tumb1er1376/komari-monitor-lite/internal/sqlitetune"
 )
 
 // Store is the main metric storage handle.
