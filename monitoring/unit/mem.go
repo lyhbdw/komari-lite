@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	pkg_flags "github.com/komari-monitor/komari-agent/cmd/flags"
+	pkg_flags "github.com/Tumb1er1376/komari-agent-lite/cmd/flags"
 	"github.com/shirou/gopsutil/v4/mem"
 )
 

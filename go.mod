@@ -1,4 +1,4 @@
-module github.com/komari-monitor/komari-agent
+module github.com/Tumb1er1376/komari-agent-lite
 
 go 1.24.0
 

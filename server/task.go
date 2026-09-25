@@ -12,9 +12,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/komari-monitor/komari-agent/dnsresolver"
-	v2 "github.com/komari-monitor/komari-agent/protocol/v2"
-	"github.com/komari-monitor/komari-agent/ws"
+	"github.com/Tumb1er1376/komari-agent-lite/dnsresolver"
+	v2 "github.com/Tumb1er1376/komari-agent-lite/protocol/v2"
+	"github.com/Tumb1er1376/komari-agent-lite/ws"
 	ping "github.com/prometheus-community/pro-bing"
 )
 

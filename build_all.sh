@@ -8,7 +8,7 @@ for GOARCH in amd64 arm64; do
   echo "Building for linux/$GOARCH..."
   GOOS=linux GOARCH="$GOARCH" CGO_ENABLED=0 \
     go build -trimpath \
-      -ldflags="-X github.com/komari-monitor/komari-agent/version.Current=${VERSION}" \
+      -ldflags="-X github.com/Tumb1er1376/komari-agent-lite/version.Current=${VERSION}" \
       -o "./build/komari-agent-linux-${GOARCH}"
 done
 
