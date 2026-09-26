@@ -107,13 +107,11 @@ const nodePremiumText = computed(() => {
   if (!data.value)
     return '-'
 
-  const premium = Number(data.value.premium)
-  if (!Number.isFinite(premium) || premium <= 0)
+  const premiumInfo = financeHelper.getNodePremiumInfo(data.value)
+  if (premiumInfo.amount <= 0)
     return appStore.lang === 'zh-CN' ? '无溢价' : 'None'
 
-  const currency = financeHelper.normalizeCurrency(data.value.currency)
-  const symbol = financeHelper.CURRENCY_SYMBOLS[currency] || '¥'
-  return `${symbol}${premium.toFixed(2)}`
+  return `${premiumInfo.symbol}${premiumInfo.amount.toFixed(2)}`
 })
 
 const monthlyAverageCostText = computed(() => {

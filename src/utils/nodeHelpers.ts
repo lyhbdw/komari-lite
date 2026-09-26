@@ -1,5 +1,5 @@
 import type { NodeData, TrafficLimitType } from '@/stores/nodes'
-import { CURRENCY_SYMBOLS, getNodePremium, normalizeCurrency } from '@/utils/financeHelper'
+import { getNodePremiumInfo } from '@/utils/financeHelper'
 import { formatDateTime } from '@/utils/helper'
 import { formatPriceWithCycle, getDaysUntilExpired, getExpireStatus, getExpireTextClass, parseTags } from '@/utils/tagHelper'
 
@@ -46,10 +46,11 @@ export function getPriceTags(node: NodeData, lang: 'zh-CN' | 'en-US'): PriceTagI
   const priceText = formatPriceWithCycle(node.price, node.billing_cycle, node.currency, lang)
   if (node.price !== 0)
     tags.push({ text: priceText })
-  const premium = getNodePremium(node)
-  if (premium > 0) {
-    const symbol = CURRENCY_SYMBOLS[normalizeCurrency(node.currency)] || '¥'
-    tags.push({ text: lang === 'zh-CN' ? `溢${symbol}${premium}` : `+${symbol}${premium}` })
+  const premiumInfo = getNodePremiumInfo(node)
+  if (premiumInfo.amount > 0) {
+    tags.push({
+      text: lang === 'zh-CN' ? `溢${premiumInfo.symbol}${premiumInfo.amount}` : `+${premiumInfo.symbol}${premiumInfo.amount}`,
+    })
   }
   if (status === 'long_term')
     tags.push({ text: lang === 'zh-CN' ? '长期' : 'Long-term' })
@@ -69,7 +70,7 @@ export function getRemainingTimeTagClass(node: NodeData): string {
 export function getCustomTags(node: NodeData): string[] {
   return parseTags(node.tags)
     .map(t => t.text)
-    .filter(t => !/^溢价\s*[0-9]+(?:\.[0-9]+)?\s*(?:r|元|cny)?$/i.test(t.trim()))
+    .filter(t => !/^溢价\s*[0-9]+(?:\.[0-9]+)?\s*(?:r|元|rmb|cny|\$|usd|€|eur|£|gbp)?$/i.test(t.trim()))
 }
 
 export function formatOfflineTime(node: NodeData): string {

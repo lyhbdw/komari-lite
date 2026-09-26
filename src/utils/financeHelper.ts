@@ -171,34 +171,88 @@ export function setStoredFinanceCurrency(currency: CurrencyCode): void {
   setLocalStorageItem('fin_currency', currency)
 }
 
-export function getNodePremium(node: NodeData): number {
-  const premium = Number(node.premium)
-  if (Number.isFinite(premium) && premium > 0)
-    return premium
+export interface NodePremiumInfo {
+  amount: number
+  currency: CurrencyCode
+  symbol: string
+}
 
-  // 兼容 fallback：若后台未填溢价但标签中写了“溢价100r”等格式，自动识别
+export function isFreeNode(node: NodeData): boolean {
+  const price = Number(node.price)
+  if (price === 0 || price === -1)
+    return true
+
+  const tags = String(node.tags || '')
+  return /白嫖|免费|free/i.test(tags)
+}
+
+export function getNodePremiumInfo(node: NodeData): NodePremiumInfo {
+  let tagAmount: number | null = null
+  let tagCurrency: CurrencyCode | null = null
+
   if (node.tags) {
-    const match = node.tags.match(/溢价\s*([0-9]+(?:\.[0-9]+)?)\s*(?:r|元|cny)?/i)
+    const match = node.tags.match(/溢价\s*([0-9]+(?:\.[0-9]+)?)\s*(r|元|rmb|cny|\$|usd|€|eur|£|gbp)?/i)
     if (match && match[1]) {
       const val = parseFloat(match[1])
-      if (Number.isFinite(val) && val > 0)
-        return val
+      if (Number.isFinite(val) && val > 0) {
+        tagAmount = val
+        const unit = (match[2] || '').toLowerCase()
+        if (['r', '元', 'rmb', 'cny'].includes(unit)) {
+          tagCurrency = 'CNY'
+        }
+        else if (['$', 'usd'].includes(unit)) {
+          tagCurrency = 'USD'
+        }
+        else if (['€', 'eur'].includes(unit)) {
+          tagCurrency = 'EUR'
+        }
+        else if (['£', 'gbp'].includes(unit)) {
+          tagCurrency = 'GBP'
+        }
+      }
     }
   }
 
-  return 0
+  const rawPremium = Number(node.premium)
+  const hasDbPremium = Number.isFinite(rawPremium) && rawPremium > 0
+  const amount = hasDbPremium ? rawPremium : (tagAmount || 0)
+
+  if (amount <= 0) {
+    return {
+      amount: 0,
+      currency: 'CNY',
+      symbol: CURRENCY_SYMBOLS.CNY,
+    }
+  }
+
+  // 币种确定策略：
+  // 1. 若标签显式指定了币种（如 溢价100r 或 溢价$10），以标签显式指定的币种为准；
+  // 2. 若标签未显式指定，且节点为人民币，使用 CNY；
+  // 3. 否则回退为节点本身的币种
+  const currency: CurrencyCode = tagCurrency || normalizeCurrency(node.currency) || 'CNY'
+  const symbol = CURRENCY_SYMBOLS[currency] || '¥'
+
+  return {
+    amount,
+    currency,
+    symbol,
+  }
+}
+
+export function getNodePremium(node: NodeData): number {
+  return getNodePremiumInfo(node).amount
 }
 
 export function getNodePremiumCNY(node: NodeData, exchangeRates: ExchangeRates): number {
-  const premium = getNodePremium(node)
-  if (premium <= 0)
+  const { amount, currency } = getNodePremiumInfo(node)
+  if (amount <= 0)
     return 0
 
-  const currency = normalizeCurrency(node.currency)
   if (currency === 'CNY')
-    return premium
+    return amount
 
-  return premium / (exchangeRates[currency] || 1)
+  const rate = exchangeRates[currency] || 1
+  return amount / rate
 }
 
 export function calculateTotalPremiumCNY(
@@ -207,7 +261,7 @@ export function calculateTotalPremiumCNY(
   excludeFreeTags = true,
 ): number {
   return nodes.reduce((sum, node) => {
-    if (excludeFreeTags && node.tags?.includes('白嫖中'))
+    if (excludeFreeTags && isFreeNode(node))
       return sum
 
     return sum + getNodePremiumCNY(node, exchangeRates)
@@ -221,7 +275,7 @@ export function calculateTotalRemainingValueCNY(
   now = new Date(),
 ): number {
   return nodes.reduce((sum, node) => {
-    if (excludeFreeTags && node.tags?.includes('白嫖中'))
+    if (excludeFreeTags && isFreeNode(node))
       return sum
 
     return sum + calculateRemainingValueCNY(node, exchangeRates, now)
@@ -234,7 +288,7 @@ export function calculateTotalValueCNY(
   excludeFreeTags = true,
 ): number {
   return nodes.reduce((sum, node) => {
-    if (excludeFreeTags && node.tags?.includes('白嫖中'))
+    if (excludeFreeTags && isFreeNode(node))
       return sum
 
     return sum + calculateValueCNY(node, exchangeRates)
@@ -245,6 +299,15 @@ export function calculateValueCNY(
   node: NodeData,
   exchangeRates: ExchangeRates,
 ): number {
+  // 节点的周期续费价格（不含一次性溢价）
+  return getPriceCNY(node, exchangeRates)
+}
+
+export function calculateTotalCostCNY(
+  node: NodeData,
+  exchangeRates: ExchangeRates,
+): number {
+  // 节点的总资产投入成本（周期续费价格 + 购入溢价）
   return getPriceCNY(node, exchangeRates) + getNodePremiumCNY(node, exchangeRates)
 }
 
@@ -254,7 +317,7 @@ export function calculateTotalMonthlyAverageCostCNY(
   excludeFreeTags = true,
 ): number {
   return nodes.reduce((sum, node) => {
-    if (excludeFreeTags && node.tags?.includes('白嫖中'))
+    if (excludeFreeTags && isFreeNode(node))
       return sum
 
     return sum + calculateMonthlyAverageCostCNY(node, exchangeRates)
@@ -284,26 +347,34 @@ export function calculateRemainingValueCNY(
   if (!node.expired_at)
     return 0
 
-  const totalCostCNY = getPriceCNY(node, exchangeRates) + getNodePremiumCNY(node, exchangeRates)
-  if (totalCostCNY <= 0)
-    return 0
-
   const expiredAt = new Date(node.expired_at).getTime()
   if (!Number.isFinite(expiredAt))
     return 0
 
   const diffMs = expiredAt - now.getTime()
+  // 机器已彻底过期停机：剩余价值归零
+  if (diffMs <= 0)
+    return 0
+
   const diffYears = diffMs / (MS_PER_DAY * 365)
+  const priceCNY = getPriceCNY(node, exchangeRates)
+  const premiumCNY = getNodePremiumCNY(node, exchangeRates)
 
-  if (diffYears > LONG_TERM_YEARS)
-    return totalCostCNY
+  // 1. 基础租期折算（租金按剩余天数折余）
+  let baseRemainingCNY = 0
+  if (diffYears > LONG_TERM_YEARS) {
+    baseRemainingCNY = priceCNY
+  }
+  else {
+    const billingCycle = Number(node.billing_cycle)
+    const billingCycleMs = billingCycle * MS_PER_DAY
+    if (billingCycleMs > 0 && priceCNY > 0) {
+      baseRemainingCNY = priceCNY * (diffMs / billingCycleMs)
+    }
+  }
 
-  const billingCycle = Number(node.billing_cycle)
-  const billingCycleMs = billingCycle * MS_PER_DAY
-  if (diffMs > 0 && billingCycleMs > 0)
-    return totalCostCNY * (diffMs / billingCycleMs)
-
-  return 0
+  // 2. 溢价部分：只要节点处于有效期内，溢价资产全额保值计入
+  return baseRemainingCNY + premiumCNY
 }
 
 export function formatFinanceAmount(amount: number, currency: CurrencyCode): {

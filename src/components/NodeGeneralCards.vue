@@ -142,14 +142,14 @@ const formattedMonthlyAverageCost = computed(() => {
 })
 const financeSummaryItems = computed(() => [
   {
-    label: '总价值',
+    label: '节点原价',
     icon: 'tabler:wallet',
     value: formattedTotalValue.value.value,
     symbol: formattedTotalValue.value.symbol,
     currency: formattedTotalValue.value.currency,
   },
   {
-    label: '总溢价',
+    label: '总溢价投入',
     icon: 'tabler:coins-plus',
     value: formattedTotalPremium.value.value,
     symbol: formattedTotalPremium.value.symbol,
