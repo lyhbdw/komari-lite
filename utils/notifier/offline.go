@@ -118,6 +118,7 @@ func OfflineNotification(clientID string, endedConnectionID int64) {
 				Clients: []models.Client{client},
 				Time:    time.Now().UTC(),
 				Emoji:   "🔴",
+				Message: "节点连接已断开",
 			}); err != nil {
 				logger.ErrorArgs("notifier", "Failed to send offline notification:", err)
 			}
@@ -191,6 +192,7 @@ func OnlineNotification(clientID string, connectionID int64) {
 			Clients: []models.Client{client},
 			Time:    time.Now().UTC(),
 			Emoji:   "🟢",
+			Message: "节点已恢复在线",
 		}); err != nil {
 			logger.ErrorArgs("notifier", "Failed to send online notification:", err)
 		}

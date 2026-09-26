@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"github.com/Tumb1er1376/komari-monitor-lite/utils/messageSender/factory"
 )
@@ -34,7 +35,7 @@ func (t *TelegramSender) Destroy() error {
 
 func (t *TelegramSender) SendTextMessage(message, title string) error {
 	fullMessage := message
-	if title != "" {
+	if title != "" && !strings.Contains(message, title) {
 		fullMessage = fmt.Sprintf("<b>%s</b>\n%s", title, message)
 	}
 

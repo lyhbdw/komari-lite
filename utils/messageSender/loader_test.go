@@ -36,6 +36,26 @@ func TestParseTemplateFormatsAnyTypedEventField(t *testing.T) {
 	}
 }
 
+func TestParseTemplateModernCardFormat(t *testing.T) {
+	originalLocal := time.Local
+	time.Local = time.FixedZone("UTC+8", 8*60*60)
+	t.Cleanup(func() { time.Local = originalLocal })
+
+	tpl := "{{emoji}} <b>Komari 监控告警 · {{event}}</b>\n━━━━━━━━━━━━━━━━━━\n<b>节点名称</b>：<code>{{client}}</code>\n<b>事件详情</b>：{{message}}\n<b>发生时间</b>：<code>{{time}}</code>"
+	msg := models.EventMessage{
+		Emoji:   "🔴",
+		Event:   "Offline",
+		Clients: []models.Client{{Name: "HK-BGP-01"}},
+		Message: "节点连接已断开",
+		Time:    time.Date(2026, 9, 27, 2, 40, 15, 0, time.UTC),
+	}
+	got := parseTemplate(tpl, msg)
+	want := "🔴 <b>Komari 监控告警 · Offline</b>\n━━━━━━━━━━━━━━━━━━\n<b>节点名称</b>：<code>HK-BGP-01</code>\n<b>事件详情</b>：节点连接已断开\n<b>发生时间</b>：<code>2026-09-27 10:40:15</code>"
+	if got != want {
+		t.Fatalf("parseTemplate result:\n%s\nwant:\n%s", got, want)
+	}
+}
+
 func Test(t *testing.T) {
 	senders := factory.GetAllMessageSenders()
 	if len(senders) == 0 {

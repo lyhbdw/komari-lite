@@ -21,7 +21,7 @@ type Settings struct {
 	// 通知
 	NotificationEnabled    bool    `json:"notification_enabled" default:"true"` // 通知总开关
 	NotificationMethod     string  `json:"notification_method" default:"none"`
-	NotificationTemplate   string  `json:"notification_template" default:"{{emoji}}{{emoji}}{{emoji}}\nEvent: {{event}}\nClients: {{client}}\nMessage: {{message}}\nTime: {{time}}"`
+	NotificationTemplate   string  `json:"notification_template" default:"{{emoji}} <b>Komari 监控告警 · {{event}}</b>\n━━━━━━━━━━━━━━━━━━\n<b>节点名称</b>：<code>{{client}}</code>\n<b>事件详情</b>：{{message}}\n<b>发生时间</b>：<code>{{time}}</code>"`
 	LoginNotification      bool    `json:"login_notification" default:"true"`        // 登录通知
 	TrafficLimitPercentage float64 `json:"traffic_limit_percentage" default:"80.00"` // 流量限制百分比，默认80.00%
 	// 到期提醒
