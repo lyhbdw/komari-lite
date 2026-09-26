@@ -20,6 +20,7 @@ export type NodeDetail = {
   weight: number;
   price: number;
   premium: number;
+  premium_currency?: string;
   remark: string | undefined;
   public_remark: string;
   group: string | undefined;

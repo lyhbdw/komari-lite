@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"strconv"
+	"strings"
 
 	"github.com/Tumb1er1376/komari-monitor-lite/database/auditlog"
 	"github.com/Tumb1er1376/komari-monitor-lite/database/clients"
@@ -143,6 +144,7 @@ var adminEditableClientFields = map[string]bool{
 	"weight":             true,
 	"price":              true,
 	"premium":            true,
+	"premium_currency":   true,
 	"billing_cycle":      true,
 	"auto_renewal":       true,
 	"currency":           true,
@@ -168,6 +170,15 @@ func adminEditClient(ctx context.Context, req *rpc.JsonRpcRequest) (any, *rpc.Js
 			return nil, rpc.MakeError(rpc.InvalidParams, "premium must be a non-negative number", nil)
 		}
 		update["premium"] = premium
+	}
+	if raw, ok := update["premium_currency"]; ok && raw != nil {
+		if str, ok := raw.(string); ok {
+			str = strings.TrimSpace(str)
+			if len(str) > 20 {
+				str = str[:20]
+			}
+			update["premium_currency"] = str
+		}
 	}
 	// 字段白名单：拒绝任何未在 UI 暴露的键。
 	filtered := make(map[string]interface{}, len(update))

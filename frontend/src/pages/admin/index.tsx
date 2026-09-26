@@ -1450,6 +1450,16 @@ function DetailView({ node }: { node: NodeDetail }) {
   );
 }
 
+const COMMON_CURRENCY_OPTIONS = [
+  { label: "¥ (人民币 CNY / r)", value: "¥" },
+  { label: "$ (美元 USD)", value: "$" },
+  { label: "€ (欧元 EUR)", value: "€" },
+  { label: "£ (英镑 GBP)", value: "£" },
+  { label: "HK$ (港币 HKD)", value: "HK$" },
+  { label: "JP¥ (日元 JPY)", value: "JP¥" },
+  { label: "SGD (新币 SGD)", value: "SGD" },
+];
+
 function BillingButton({ node }: { node: NodeDetail }) {
   const { t } = useTranslation();
   const { refresh } = useNodeDetails();
@@ -1462,6 +1472,9 @@ function BillingButton({ node }: { node: NodeDetail }) {
     node.auto_renewal || false
   );
   const [currency, setCurrency] = React.useState<string>(node.currency || "$");
+  const [premiumCurrency, setPremiumCurrency] = React.useState<string>(
+    node.premium_currency || "¥"
+  );
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1489,13 +1502,16 @@ function BillingButton({ node }: { node: NodeDetail }) {
       const expiredAt = expiredAtValue
         ? new Date(`${expiredAtValue}T00:00:00Z`).toISOString()
         : null;
-      const currencyValue = (formData.get("currency") as string) || "$";
+      const currencyValue = (formData.get("currency") as string) || currency || "$";
+      const premiumCurrencyValue =
+        (formData.get("premiumCurrency") as string) || premiumCurrency || "¥";
 
       await fetch(`/api/admin/client/${node.uuid}/edit`, {
         method: "POST",
         body: JSON.stringify({
           price,
           premium,
+          premium_currency: premiumCurrencyValue,
           billing_cycle: billingCycleValue,
           expired_at: expiredAt,
           currency: currencyValue,
@@ -1537,6 +1553,20 @@ function BillingButton({ node }: { node: NodeDetail }) {
             <TextField.Root name="price" defaultValue={node.price} />
 
             <label className="font-bold">
+              <label>{t("admin.nodeTable.currency", "价格货币")}</label>
+              <label className="text-muted-foreground text-sm ml-1 font-medium">
+                {t("admin.nodeTable.currencyTips")}
+              </label>
+            </label>
+            <SelectOrInput
+              options={COMMON_CURRENCY_OPTIONS}
+              type="text"
+              name="currency"
+              value={currency}
+              onChange={setCurrency}
+            />
+
+            <label className="font-bold">
               <label>{t("admin.nodeTable.premium")}</label>
               <label className="text-muted-foreground text-sm ml-1 font-medium">
                 {t("admin.nodeTable.premiumTips")}
@@ -1545,15 +1575,17 @@ function BillingButton({ node }: { node: NodeDetail }) {
             <TextField.Root name="premium" defaultValue={node.premium} />
 
             <label className="font-bold">
-              <label>{t("admin.nodeTable.currency", "货币")}</label>
+              <label>{t("admin.nodeTable.premiumCurrency", "溢价货币")}</label>
               <label className="text-muted-foreground text-sm ml-1 font-medium">
-                {t("admin.nodeTable.currencyTips")}
+                {t("admin.nodeTable.premiumCurrencyTips", "溢价独立结算币种（如 ¥、r、$、€ 等），默认为 ¥")}
               </label>
             </label>
-            <TextField.Root
-              name="currency"
-              defaultValue={currency}
-              onChange={(e) => setCurrency(e.target.value)}
+            <SelectOrInput
+              options={COMMON_CURRENCY_OPTIONS}
+              type="text"
+              name="premiumCurrency"
+              value={premiumCurrency}
+              onChange={setPremiumCurrency}
             />
 
             <label className="font-bold flex items-center gap-1">
