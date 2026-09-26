@@ -147,9 +147,6 @@ const financeSummaryItems = computed(() => [
     value: formattedBaseRemainingValue.value.value,
     symbol: formattedBaseRemainingValue.value.symbol,
     currency: formattedBaseRemainingValue.value.currency,
-    colorClass: 'text-emerald-600 dark:text-emerald-400 font-bold',
-    iconBgClass: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
-    borderHoverClass: 'hover:border-emerald-500/40',
   },
   {
     label: '总溢价投入',
@@ -157,9 +154,6 @@ const financeSummaryItems = computed(() => [
     value: formattedTotalPremium.value.value,
     symbol: formattedTotalPremium.value.symbol,
     currency: formattedTotalPremium.value.currency,
-    colorClass: 'text-emerald-600 dark:text-emerald-400 font-bold',
-    iconBgClass: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
-    borderHoverClass: 'hover:border-emerald-500/40',
   },
   {
     label: '月均支出',
@@ -167,9 +161,6 @@ const financeSummaryItems = computed(() => [
     value: formattedMonthlyAverageCost.value.value,
     symbol: formattedMonthlyAverageCost.value.symbol,
     currency: `${formattedMonthlyAverageCost.value.currency}/月`,
-    colorClass: 'text-emerald-600 dark:text-emerald-400 font-bold',
-    iconBgClass: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
-    borderHoverClass: 'hover:border-emerald-500/40',
   },
   {
     label: '剩余总价值',
@@ -177,9 +168,6 @@ const financeSummaryItems = computed(() => [
     value: formattedRemainingValue.value.value,
     symbol: formattedRemainingValue.value.symbol,
     currency: formattedRemainingValue.value.currency,
-    colorClass: 'text-emerald-600 dark:text-emerald-400 font-bold',
-    iconBgClass: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
-    borderHoverClass: 'hover:border-emerald-500/40',
   },
 ])
 const exchangeRateRows = computed(() => financeRateCurrencies.map((currency) => {
@@ -225,7 +213,7 @@ onMounted(async () => {
     <div :class="cardGridClass">
       <CardX
         hoverable
-        class="group h-full border border-border bg-card hover:border-emerald-500/40 hover:shadow-xs rounded-md transition-all shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
+        class="group h-full border border-border bg-card hover:border-foreground/35 hover:shadow-xs rounded-md transition-all shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
         :class="[
           showVisualPanel ? 'col-span-4 row-span-1 col-start-1 row-start-1' : 'col-span-1 row-start-1 col-start-1 min-h-18 md:min-h-24 md:row-start-1 md:col-start-1',
         ]"
@@ -236,7 +224,7 @@ onMounted(async () => {
             <span class="text-xs font-medium tracking-wider text-muted-foreground">内存用量</span>
             <Icon
               icon="tabler:cpu" :width="20" :height="20"
-              class="text-emerald-500/30 group-hover:text-emerald-500 transition-colors"
+              class="text-slate-500/20 group-hover:text-slate-500 transition-colors"
             />
           </div>
           <Transition v-bind="metricSwitchTransitionProps">
@@ -244,7 +232,7 @@ onMounted(async () => {
               :key="`memory-${summaryTransitionKey}`" class="flex items-baseline gap-1 min-w-0"
               :style="getMetricSwitchStyle(0)"
             >
-              <span class="text-md md:text-2xl font-bold leading-none tracking-tight font-mono tabular-nums text-emerald-600 dark:text-emerald-400">
+              <span class="text-md md:text-2xl font-bold leading-none tracking-tight font-mono tabular-nums">
                 {{ formattedMemoryUsed.value }}
               </span>
               <span class="text-[11px] md:text-xs font-medium text-muted-foreground truncate font-mono tabular-nums">
@@ -256,7 +244,7 @@ onMounted(async () => {
       </CardX>
       <CardX
         hoverable
-        class="group h-full border border-border bg-card hover:border-emerald-500/40 hover:shadow-xs rounded-md transition-all shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
+        class="group h-full border border-border bg-card hover:border-foreground/35 hover:shadow-xs rounded-md transition-all shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
         :class="[
           showVisualPanel ? 'col-span-4 row-span-1 col-start-1 row-start-2' : 'col-span-1 row-start-2 col-start-1 min-h-18 md:min-h-24 md:row-start-1 md:col-start-2',
         ]"
@@ -267,7 +255,7 @@ onMounted(async () => {
             <span class="text-xs font-medium tracking-wider text-muted-foreground">硬盘用量</span>
             <Icon
               icon="tabler:server-2" :width="20" :height="20"
-              class="text-emerald-500/30 group-hover:text-emerald-500 transition-colors"
+              class="text-slate-500/20 group-hover:text-slate-500 transition-colors"
             />
           </div>
           <Transition v-bind="metricSwitchTransitionProps">
@@ -275,7 +263,7 @@ onMounted(async () => {
               :key="`disk-${summaryTransitionKey}`" class="flex items-baseline gap-1 min-w-0"
               :style="getMetricSwitchStyle(1)"
             >
-              <span class="text-md md:text-2xl font-bold leading-none tracking-tight font-mono tabular-nums text-emerald-600 dark:text-emerald-400">
+              <span class="text-md md:text-2xl font-bold leading-none tracking-tight font-mono tabular-nums">
                 {{ formattedDiskUsed.value }}
               </span>
               <span class="text-[11px] md:text-xs font-medium text-muted-foreground truncate font-mono tabular-nums">
@@ -291,7 +279,7 @@ onMounted(async () => {
       >
         <CardX
           hoverable
-          class="group h-full border border-border bg-card hover:border-emerald-500/40 hover:shadow-xs rounded-md transition-all cursor-pointer shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
+          class="group h-full border border-border bg-card hover:border-foreground/35 hover:shadow-xs rounded-md transition-all cursor-pointer shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
           content-class="h-full !p-3" @click="openFinanceDialog = true"
         >
           <div class="flex h-full flex-col justify-between gap-1">
@@ -300,12 +288,12 @@ onMounted(async () => {
                 剩余总价值
                 <Icon
                   icon="tabler:arrow-up-right" :width="13" :height="13"
-                  class="text-muted-foreground/40 group-hover:text-emerald-500 transition-colors"
+                  class="text-muted-foreground/40 group-hover:text-foreground transition-colors"
                 />
               </span>
               <Icon
                 icon="tabler:wallet" :width="20" :height="20"
-                class="text-emerald-500/30 group-hover:text-emerald-500 transition-colors"
+                class="text-slate-500/20 group-hover:text-slate-500 transition-colors"
               />
             </div>
             <Transition v-bind="metricSwitchTransitionProps">
@@ -313,10 +301,10 @@ onMounted(async () => {
                 :key="`remaining-value-${summaryTransitionKey}`" class="flex items-baseline gap-1 min-w-0"
                 :style="getMetricSwitchStyle(2)"
               >
-                <span class="text-md md:text-2xl font-bold leading-none tracking-tight font-mono tabular-nums text-emerald-600 dark:text-emerald-400">
+                <span class="text-md md:text-2xl font-bold leading-none tracking-tight font-mono tabular-nums">
                   {{ formattedRemainingValue.symbol }}{{ formattedRemainingValue.value }}
                 </span>
-                <span class="block truncate text-[11px] md:text-xs font-medium text-emerald-600/70 dark:text-emerald-400/70">
+                <span class="block truncate text-[11px] md:text-xs font-medium text-muted-foreground">
                   {{ formattedRemainingValue.currency }}
                 </span>
               </div>
@@ -326,7 +314,7 @@ onMounted(async () => {
       </div>
       <CardX
         hoverable
-        class="group h-full border border-border bg-card hover:border-emerald-500/40 hover:shadow-xs rounded-md transition-all shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
+        class="group h-full border border-border bg-card hover:border-foreground/35 hover:shadow-xs rounded-md transition-all shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
         :class="[
           showVisualPanel ? 'col-span-4 row-span-1 col-start-5 row-start-2' : 'col-span-1 row-start-2 col-start-2 min-h-18 md:min-h-24 md:row-start-1 md:col-start-4',
         ]"
@@ -337,7 +325,7 @@ onMounted(async () => {
             <span class="text-xs font-medium tracking-wider text-muted-foreground">累计流量</span>
             <Icon
               icon="tabler:arrows-up-down" :width="20" :height="20"
-              class="text-emerald-500/30 group-hover:text-emerald-500 transition-colors"
+              class="text-slate-500/20 group-hover:text-slate-500 transition-colors"
             />
           </div>
           <DataTooltip
@@ -350,7 +338,7 @@ onMounted(async () => {
                 :key="`traffic-${summaryTransitionKey}`" class="flex items-baseline gap-1"
                 :style="getMetricSwitchStyle(3)"
               >
-                <span class="inline-block text-md md:text-2xl font-bold leading-none tracking-tight font-mono tabular-nums text-emerald-600 dark:text-emerald-400">
+                <span class="inline-block text-md md:text-2xl font-bold leading-none tracking-tight font-mono tabular-nums">
                   {{ totalTrafficTooltip.value }}
                 </span>
                 <span class="inline-block text-[11px] md:text-xs font-medium text-muted-foreground">
@@ -449,27 +437,27 @@ onMounted(async () => {
             <div
               v-for="(item, index) in financeSummaryItems"
               :key="item.label"
-              class="flex flex-col p-3 rounded-md border border-border/70 bg-card transition-all group"
-              :class="item.borderHoverClass"
+              class="flex flex-col p-3 rounded-md border border-border bg-card hover:border-foreground/35 hover:shadow-xs transition-all group"
             >
               <div class="flex items-center justify-between gap-1 mb-1.5">
                 <span class="text-[11px] font-medium text-muted-foreground flex items-center gap-1">
                   {{ item.label }}
                 </span>
-                <span class="p-1 rounded flex items-center justify-center shrink-0" :class="item.iconBgClass">
-                  <Icon :icon="item.icon" :width="13" :height="13" />
-                </span>
+                <Icon
+                  :icon="item.icon" :width="16" :height="16"
+                  class="text-slate-500/20 group-hover:text-slate-500 transition-colors"
+                />
               </div>
               <Transition v-bind="metricSwitchTransitionProps">
                 <div
                   :key="`remaining-modal-${summaryTransitionKey}-${exchangeRateBaseCurrency}`"
-                  class="flex items-baseline truncate mt-auto"
+                  class="flex items-baseline truncate mt-auto font-mono tabular-nums"
                   :style="getMetricSwitchStyle(index)"
                 >
-                  <span class="shrink-0 text-xs font-semibold mr-0.5 opacity-80" :class="item.colorClass">
+                  <span class="shrink-0 text-xs font-semibold text-muted-foreground mr-0.5">
                     {{ item.symbol }}
                   </span>
-                  <span class="text-base sm:text-lg font-bold tracking-tight tabular-nums" :class="item.colorClass">
+                  <span class="text-base sm:text-lg font-bold tracking-tight text-foreground">
                     {{ item.value }}
                   </span>
                 </div>
