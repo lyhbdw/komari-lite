@@ -29,7 +29,7 @@ const (
 	DataDir            = "./data"
 	ThemesDir          = "theme"
 	FaviconFile        = "favicon.ico"
-	DefaultTheme       = "Emerald"
+	DefaultTheme       = "Lite"
 	LanguageCookieName = "language"
 
 	// 主题内部结构定义
@@ -194,7 +194,7 @@ func static(r *gin.RouterGroup, noRoute func(handlers ...gin.HandlerFunc), force
 				return content, mime.TypeByExtension(filepath.Ext(localPath)), true
 			}
 		}
-		if themeID != DefaultTheme {
+		if themeID != DefaultTheme && themeID != "Emerald" {
 			return nil, "", false
 		}
 
@@ -294,11 +294,11 @@ func static(r *gin.RouterGroup, noRoute func(handlers ...gin.HandlerFunc), force
 	// 允许访问 /themes/MyTheme/theme.json 和 /themes/MyTheme/dist/assets/a.js
 	r.GET("/themes/:id/*path", func(c *gin.Context) {
 		themeID := c.Param("id")
-		if themeID != DefaultTheme && themeID != "__admin__" {
+		if themeID != DefaultTheme && themeID != "Emerald" && themeID != "__admin__" {
 			c.Status(http.StatusNotFound)
 			return
 		}
-		if forceDefaultTheme && themeID != "__admin__" && themeID != DefaultTheme {
+		if forceDefaultTheme && themeID != "__admin__" && themeID != DefaultTheme && themeID != "Emerald" {
 			c.Status(http.StatusNotFound)
 			return
 		}

@@ -41,7 +41,7 @@ func TestRemoveRetiredSettings(t *testing.T) {
 	if cfg["sitename"] != "Komari" {
 		t.Fatal("unrelated settings must be preserved")
 	}
-	if cfg["theme"] != "Emerald" {
-		t.Fatal("Lite theme must remain fixed to Emerald")
+	if cfg["theme"] != "Lite" {
+		t.Fatal("Lite theme must remain fixed to Lite")
 	}
 }

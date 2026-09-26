@@ -1,6 +1,6 @@
 package models
 
-// Theme represents the embedded Emerald theme manifest.
+// Theme represents the embedded Lite theme manifest.
 type Theme struct {
 	Name          any           `json:"name"`
 	Short         string        `json:"short"`

@@ -161,7 +161,7 @@ func removeRetiredLowResourceMode(cfg map[string]interface{}) {
 
 func enforceLiteThemeSettings(cfg map[string]interface{}) {
 	if _, ok := cfg[config.ThemeKey]; ok {
-		cfg[config.ThemeKey] = "Emerald"
+		cfg[config.ThemeKey] = "Lite"
 	}
 }
 func removeRetiredMetricStoreConfig(cfg map[string]interface{}) {
