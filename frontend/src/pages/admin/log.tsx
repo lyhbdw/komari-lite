@@ -125,27 +125,46 @@ const LogPage = () => {
                         {log.id}
                       </label>
                     </Dialog.Trigger>
-                    <Dialog.Content>
+                    <Dialog.Content className="max-w-lg">
                       <Dialog.Title>{t("log.title")}</Dialog.Title>
-                      <Flex direction="column" gap="1">
-                        <label className="font-bold">ID</label>
-                        <label className="text-sm">{log.id}</label>
-                        <label className="font-bold">IP</label>
-                        <label className="text-sm">{log.ip}</label>
-                        <label className="font-bold">UUID</label>
-                        <label className="text-sm">{log.uuid}</label>
-                        <label className="font-bold">Type</label>
-                        <label className="text-sm">{log.msg_type}</label>
-                        <label className="font-bold">Message</label>
-                        <label className="text-sm">{log.message}</label>
-                        <label className="font-bold">Time</label>
-                        <label className="text-sm">
-                          {new Date(log.time).toLocaleString()}
-                        </label>
-                      </Flex>
-                      <Flex justify={"end"}>
+                      <div className="flex flex-col gap-3 my-2 text-xs">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                          <div className="p-2 rounded-lg border border-border/50 bg-muted/20">
+                            <span className="text-[11px] font-medium text-muted-foreground block mb-0.5">ID</span>
+                            <span className="font-mono text-foreground font-medium">{log.id}</span>
+                          </div>
+                          <div className="p-2 rounded-lg border border-border/50 bg-muted/20">
+                            <span className="text-[11px] font-medium text-muted-foreground block mb-0.5">IP</span>
+                            <span className="font-mono text-foreground">{log.ip || "-"}</span>
+                          </div>
+                          <div className="p-2 rounded-lg border border-border/50 bg-muted/20">
+                            <span className="text-[11px] font-medium text-muted-foreground block mb-0.5">Type</span>
+                            <span className="text-foreground capitalize">{log.msg_type || "-"}</span>
+                          </div>
+                        </div>
+
+                        {log.uuid && (
+                          <div className="p-2 rounded-lg border border-border/50 bg-muted/20">
+                            <span className="text-[11px] font-medium text-muted-foreground block mb-0.5">UUID</span>
+                            <span className="font-mono text-foreground select-all break-all text-[11px]">{log.uuid}</span>
+                          </div>
+                        )}
+
+                        <div>
+                          <span className="text-[11px] font-medium text-muted-foreground block mb-1">Message</span>
+                          <div className="p-2.5 rounded-lg border border-border/70 bg-muted/30 font-mono text-[11px] leading-relaxed break-all select-all text-foreground max-h-48 overflow-y-auto">
+                            {log.message}
+                          </div>
+                        </div>
+
+                        <div className="text-[11px] text-muted-foreground pt-1 flex justify-between">
+                          <span>Time:</span>
+                          <span className="text-foreground font-mono">{new Date(log.time).toLocaleString()}</span>
+                        </div>
+                      </div>
+                      <Flex justify="end" mt="3">
                         <Dialog.Close>
-                          <Button variant="soft">{t("common.close")}</Button>
+                          <Button variant="soft" color="gray">{t("common.close")}</Button>
                         </Dialog.Close>
                       </Flex>
                     </Dialog.Content>

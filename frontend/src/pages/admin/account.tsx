@@ -310,31 +310,46 @@ const TwoFactorDisabled = () => {
             <Button variant="solid" className="w-full cursor-pointer">{t("account.enable_2fa")}</Button>
           </div>
         </Dialog.Trigger>
-        <Dialog.Content>
+        <Dialog.Content className="max-w-sm">
           <Dialog.Title>{t("account.enable_2fa")}</Dialog.Title>
-          <Flex direction="column" gap="2">
-            <label>{t("account.2fa_qr_code_hint")}</label>
-            <div className="flex justify-center">
+          <div className="flex flex-col gap-3 my-1">
+            <p className="text-xs text-muted-foreground text-center">
+              {t("account.2fa_qr_code_hint")}
+            </p>
+            <div className="flex justify-center p-3 bg-white rounded-lg border border-border shadow-2xs mx-auto">
               {isLoading ? (
-                <Skeleton width="200px" height="200px" />
+                <Skeleton width="180px" height="180px" />
               ) : (
-                <img src={qrcode!} alt="2FA QR Code" width={200} height={200} />
+                <img src={qrcode!} alt="2FA QR Code" width={180} height={180} className="rounded" />
               )}
             </div>
-            <label>{t("account.2fa_otp_input_prompt")}</label>
-            <form className="km-account-2fa-form flex flex-col gap-2" onSubmit={handleEnable2fa}>
-              <TextField.Root
-                type="number"
-                name="code"
-                placeholder="000000"
-                value={code}
-                onChange={(e) => setCode((e.target as HTMLInputElement).value)}
-              />
-              <Button disabled={saving} type="submit">
-                {t("account.enable_2fa")}
-              </Button>
+            <form className="km-account-2fa-form flex flex-col gap-3 mt-1" onSubmit={handleEnable2fa}>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground block mb-1">
+                  {t("account.2fa_otp_input_prompt")}
+                </label>
+                <TextField.Root
+                  type="number"
+                  name="code"
+                  placeholder="000000"
+                  className="text-center font-mono tracking-widest"
+                  value={code}
+                  onChange={(e) => setCode((e.target as HTMLInputElement).value)}
+                  autoFocus
+                />
+              </div>
+              <Flex gap="2" justify="end" mt="2">
+                <Dialog.Close>
+                  <Button variant="soft" color="gray" type="button" onClick={() => setIsOpen(false)}>
+                    {t("common.cancel")}
+                  </Button>
+                </Dialog.Close>
+                <Button disabled={saving || !code} type="submit">
+                  {t("account.enable_2fa")}
+                </Button>
+              </Flex>
             </form>
-          </Flex>
+          </div>
         </Dialog.Content>
       </Dialog.Root>
     </Flex>
@@ -386,28 +401,34 @@ const TwoFactorEnabled = () => {
               {t("account.disable_2fa")}
             </Button>
           </Dialog.Trigger>
-          <Dialog.Content>
+          <Dialog.Content className="max-w-sm">
             <Dialog.Title>{t("account.disable_2fa")}</Dialog.Title>
             <Dialog.Description>
               {t("account.disable_2fa_confirmation")}
             </Dialog.Description>
-            <Flex direction="column" gap="2" className="mt-4">
-              <label htmlFor="disable_2fa_code">
-                {t("account.2fa_otp_input_prompt")}
-              </label>
-              <TextField.Root
-                id="disable_2fa_code"
-                type="number"
-                placeholder="000000"
-                value={code}
-                onChange={(e) => setCode((e.target as HTMLInputElement).value)}
-              />
-            </Flex>
-            <Flex gap="2" justify="end" className="mt-4">
-              <Button variant="soft" onClick={() => setIsOpen(false)}>
-                {t("common.cancel")}
-              </Button>
-              <Button disabled={saving} color="red" onClick={disable2fa}>
+            <div className="flex flex-col gap-3 my-2">
+              <div>
+                <label htmlFor="disable_2fa_code" className="text-xs font-medium text-muted-foreground block mb-1">
+                  {t("account.2fa_otp_input_prompt")}
+                </label>
+                <TextField.Root
+                  id="disable_2fa_code"
+                  type="number"
+                  placeholder="000000"
+                  className="font-mono text-center tracking-widest"
+                  value={code}
+                  onChange={(e) => setCode((e.target as HTMLInputElement).value)}
+                  autoFocus
+                />
+              </div>
+            </div>
+            <Flex gap="2" justify="end" mt="4">
+              <Dialog.Close>
+                <Button variant="soft" color="gray" type="button" onClick={() => setIsOpen(false)}>
+                  {t("common.cancel")}
+                </Button>
+              </Dialog.Close>
+              <Button disabled={saving || !code} color="red" onClick={disable2fa}>
                 {t("common.confirm")}
               </Button>
             </Flex>

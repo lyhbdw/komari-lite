@@ -122,15 +122,13 @@ export default function Sessions() {
             <Dialog.Description>
               {t("sessions.delete_all_desc")}
             </Dialog.Description>
-            <Flex gap="2" justify={"end"} mt="4">
-              <Dialog.Trigger>
-                <Button variant="soft">{t("common.cancel")}</Button>
-              </Dialog.Trigger>
-              <Dialog.Trigger>
-                <Button color="red" onClick={deleteAllSessions}>
-                  {t("common.delete")}
-                </Button>
-              </Dialog.Trigger>
+            <Flex gap="2" justify="end" mt="4">
+              <Dialog.Close>
+                <Button variant="soft" color="gray">{t("common.cancel")}</Button>
+              </Dialog.Close>
+              <Button color="red" onClick={deleteAllSessions}>
+                {t("common.delete")}
+              </Button>
             </Flex>
           </Dialog.Content>
         </Dialog.Root>
@@ -165,66 +163,97 @@ export default function Sessions() {
                           )}
                         </label>
                       </Dialog.Trigger>
-                      <Dialog.Content>
+                      <Dialog.Content className="max-w-lg">
                         <Dialog.Title>
                           {t("sessions.active_sessions")}
                         </Dialog.Title>
-                        <Flex direction="column" gap="1">
-                          <label className="text-base font-bold">
-                            {t("sessions.session_id")}
-                          </label>
-                          <label className="text-sm">{s.id}</label>
-                          <label className="text-base font-bold">
-                            IP / {t("sessions.latest_ip")}
-                          </label>
-                          <label className="text-sm">
-                            {s.ip} / {s.latest_ip}
-                          </label>
-                          <label className="text-base font-bold">
-                            User Agent
-                          </label>
-                          <label className="text-sm">{s.user_agent}</label>
-                          <label className="text-sm text-muted-foreground font-bold">
-                            {UserAgentHelper.format(s.user_agent, t)}
-                          </label>
-                          <label className="text-base font-bold">
-                            {t("sessions.last_user_agent")}
-                          </label>
-                          <label className="text-sm">
-                            {s.latest_user_agent}
-                          </label>
-                          <label className="text-sm text-muted-foreground font-bold">
-                            {UserAgentHelper.format(s.latest_user_agent, t)}
-                          </label>
+                        <div className="flex flex-col gap-3 my-2 text-xs">
+                          <div className="p-2.5 rounded-lg border border-border/70 bg-muted/30">
+                            <span className="text-[11px] font-medium text-muted-foreground block mb-0.5">
+                              {t("sessions.session_id")}
+                            </span>
+                            <span className="font-mono text-foreground select-all break-all text-xs">
+                              {s.id}
+                            </span>
+                          </div>
 
-                          <label className="text-base font-bold">
-                            {t("sessions.login_method")}
-                          </label>
-                          <label className="text-sm">{s.login_method}</label>
-                          <label className="text-base font-bold">
-                            {t("sessions.latest_online")}
-                          </label>
-                          <label className="text-sm">
-                            {new Date(s.latest_online).toLocaleString()}
-                            {" "}({formatDuration((Date.now() - new Date(s.latest_online).getTime()),t)})
-                          </label>
-                          <label className="text-base font-bold">
-                            {t("sessions.created_at")}
-                          </label>
-                          <label className="text-sm">
-                            {new Date(s.created_at).toLocaleString()}
-                          </label>
-                          <label className="text-base font-bold">
-                            {t("sessions.expires_at")}
-                          </label>
-                          <label className="text-sm">
-                            {new Date(s.expires).toLocaleString()}
-                          </label>
-                          <Flex justify={"end"}>
-                            <Dialog.Trigger>
-                              <Button variant="soft">{t("common.close")}</Button>
-                            </Dialog.Trigger>
-                          </Flex>
+                          <div className="grid grid-cols-2 gap-2.5">
+                            <div className="p-2 rounded-lg border border-border/50 bg-muted/20">
+                              <span className="text-[11px] font-medium text-muted-foreground block mb-0.5">
+                                IP / {t("sessions.latest_ip")}
+                              </span>
+                              <span className="font-mono text-foreground text-xs">
+                                {s.ip} / {s.latest_ip}
+                              </span>
+                            </div>
+                            <div className="p-2 rounded-lg border border-border/50 bg-muted/20">
+                              <span className="text-[11px] font-medium text-muted-foreground block mb-0.5">
+                                {t("sessions.login_method")}
+                              </span>
+                              <span className="text-foreground text-xs capitalize">
+                                {s.login_method}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="p-2.5 rounded-lg border border-border/50 bg-muted/20">
+                            <span className="text-[11px] font-medium text-muted-foreground block mb-1">
+                              User Agent
+                            </span>
+                            <div className="font-medium text-foreground text-xs mb-1">
+                              {UserAgentHelper.format(s.user_agent, t)}
+                            </div>
+                            <div className="text-[11px] text-muted-foreground font-mono break-all leading-tight">
+                              {s.user_agent}
+                            </div>
+                            {s.latest_user_agent !== s.user_agent && (
+                              <div className="mt-2 pt-2 border-t border-border/40">
+                                <span className="text-[11px] font-medium text-muted-foreground block mb-1">
+                                  {t("sessions.last_user_agent")}
+                                </span>
+                                <div className="font-medium text-foreground text-xs mb-1">
+                                  {UserAgentHelper.format(s.latest_user_agent, t)}
+                                </div>
+                                <div className="text-[11px] text-muted-foreground font-mono break-all leading-tight">
+                                  {s.latest_user_agent}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-2.5 text-[11px]">
+                            <div>
+                              <span className="text-muted-foreground block">
+                                {t("sessions.created_at")}
+                              </span>
+                              <span className="text-foreground mt-0.5 block">
+                                {new Date(s.created_at).toLocaleString()}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground block">
+                                {t("sessions.expires_at")}
+                              </span>
+                              <span className="text-foreground mt-0.5 block">
+                                {new Date(s.expires).toLocaleString()}
+                              </span>
+                            </div>
+                            <div className="col-span-2 pt-1.5 border-t border-border/40">
+                              <span className="text-muted-foreground block">
+                                {t("sessions.latest_online")}
+                              </span>
+                              <span className="text-foreground mt-0.5 block">
+                                {new Date(s.latest_online).toLocaleString()}{" "}
+                                ({formatDuration(Date.now() - new Date(s.latest_online).getTime(), t)})
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <Flex justify="end" mt="3">
+                          <Dialog.Close>
+                            <Button variant="soft" color="gray">{t("common.close")}</Button>
+                          </Dialog.Close>
                         </Flex>
                       </Dialog.Content>
                     </Dialog.Root>
@@ -234,7 +263,8 @@ export default function Sessions() {
                   <TableCell>{s.latest_ip}</TableCell>
                   <TableCell>{new Date(s.expires).toLocaleString()}</TableCell>
                   <TableCell>
-                    {new Date(s.latest_online).toLocaleString()}{" "}({formatDuration((Date.now() - new Date(s.latest_online).getTime()),t)})
+                    {new Date(s.latest_online).toLocaleString()}{" "}
+                    ({formatDuration((Date.now() - new Date(s.latest_online).getTime()), t)})
                   </TableCell>
                   <TableCell>
                     <Dialog.Root>
@@ -252,20 +282,18 @@ export default function Sessions() {
                         <Dialog.Description>
                           {t("sessions.delete_one_desc")}
                         </Dialog.Description>
-                        <Flex gap="2" justify={"end"}>
-                          <Dialog.Trigger>
-                            <Button variant="soft">
+                        <Flex gap="2" justify="end" mt="4">
+                          <Dialog.Close>
+                            <Button variant="soft" color="gray">
                               {t("common.cancel")}
                             </Button>
-                          </Dialog.Trigger>
-                          <Dialog.Trigger>
-                            <Button
-                              color="red"
-                              onClick={() => deleteSession(s.id)}
-                            >
-                              {t("common.delete")}
-                            </Button>
-                          </Dialog.Trigger>
+                          </Dialog.Close>
+                          <Button
+                            color="red"
+                            onClick={() => deleteSession(s.id)}
+                          >
+                            {t("common.delete")}
+                          </Button>
                         </Flex>
                       </Dialog.Content>
                     </Dialog.Root>

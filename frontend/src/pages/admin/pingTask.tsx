@@ -142,67 +142,99 @@ const AddButton: React.FC = () => {
       </Dialog.Trigger>
       <Dialog.Content>
         <Dialog.Title>{t("common.add")}</Dialog.Title>
-        <form onSubmit={handleSubmit}>
-          <Flex direction="column" justify="end" gap="2" className="font-bold">
-            <label htmlFor="ping_name">{t("common.name")}</label>
-            <TextField.Root id="ping_name" name="ping_name" />
-            <label htmlFor="type">{t("common.type")}</label>
-            <Select.Root
-              value={selectedType}
-              onValueChange={(value) =>
-                setSelectedType(value as "icmp" | "tcp" | "http")
-              }
-            >
-              <Select.Trigger id="type" name="type" />
-              <Select.Content>
-                <Select.Item value="icmp">ICMP</Select.Item>
-                <Select.Item value="tcp">TCP</Select.Item>
-                <Select.Item value="http">HTTP</Select.Item>
-              </Select.Content>
-            </Select.Root>
-            <label htmlFor="ping_target">{t("ping.target")}</label>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-3 mt-1">
+          <div>
+            <label htmlFor="ping_name" className="text-xs font-medium text-muted-foreground block mb-1">
+              {t("common.name")}
+            </label>
+            <TextField.Root id="ping_name" name="ping_name" required autoFocus />
+          </div>
+
+          <div className="grid grid-cols-2 gap-2.5">
+            <div>
+              <label htmlFor="type" className="text-xs font-medium text-muted-foreground block mb-1">
+                {t("common.type")}
+              </label>
+              <Select.Root
+                value={selectedType}
+                onValueChange={(value) =>
+                  setSelectedType(value as "icmp" | "tcp" | "http")
+                }
+              >
+                <Select.Trigger id="type" name="type" className="w-full" />
+                <Select.Content>
+                  <Select.Item value="icmp">ICMP</Select.Item>
+                  <Select.Item value="tcp">TCP</Select.Item>
+                  <Select.Item value="http">HTTP</Select.Item>
+                </Select.Content>
+              </Select.Root>
+            </div>
+            <div>
+              <label htmlFor="interval" className="text-xs font-medium text-muted-foreground block mb-1">
+                {t("ping.interval")} ({t("time.second")})
+              </label>
+              <TextField.Root
+                id="interval"
+                name="interval"
+                defaultValue={60}
+                type="number"
+                placeholder="60"
+                min="1"
+                required
+              />
+            </div>
+          </div>
+
+          <div>
+            <label htmlFor="ping_target" className="text-xs font-medium text-muted-foreground block mb-1">
+              {t("ping.target")}
+            </label>
             <TextField.Root
               id="ping_target"
               name="ping_target"
               placeholder="1.1.1.1 | 1.1.1.1:80 | https://1.1.1.1"
+              required
             />
-            <label htmlFor="ping_server">{t("common.server")}</label>
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center justify-start gap-2">
-                <NodeSelectorDialog value={selected} onChange={setSelected} />
-                <label className="text-md font-normal">
+          </div>
+
+          <div className="p-2.5 rounded-lg border border-border/60 bg-muted/20 space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-medium text-foreground">
+                {t("common.server")}
+              </label>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">
                   {t("common.selected", { count: selected.length })}
-                </label>
+                </span>
+                <NodeSelectorDialog value={selected} onChange={setSelected} />
               </div>
-              <label className="flex min-h-10 items-center gap-2 text-sm font-normal">
-                <Checkbox
-                  checked={defaultOn}
-                  onCheckedChange={(checked) => setDefaultOn(!!checked)}
-                />
-                <span>{t("ping.default_on")}</span>
-              </label>
-              <label className="text-sm font-normal text-gray-500">
-                {t("ping.default_on_description")}
-              </label>
             </div>
-            <label htmlFor="interval">
-              {t("ping.interval")} ({t("time.second")})
-            </label>
-            <TextField.Root
-              id="interval"
-              name="interval"
-              defaultValue={60}
-              type="number"
-              placeholder="60"
-            />
-            <div className="flex justify-end gap-2">
-              <Dialog.Close>
-                <Button variant="soft">{t("common.close")}</Button>
-              </Dialog.Close>
-              <Button disabled={saving} type="submit">
-                {t("common.add")}
+            <div className="pt-2 border-t border-border/40 flex items-start gap-2">
+              <Checkbox
+                id="ping_default_on"
+                checked={defaultOn}
+                onCheckedChange={(checked) => setDefaultOn(!!checked)}
+              />
+              <div className="flex flex-col">
+                <label htmlFor="ping_default_on" className="text-xs font-medium text-foreground cursor-pointer">
+                  {t("ping.default_on")}
+                </label>
+                <span className="text-[11px] text-muted-foreground">
+                  {t("ping.default_on_description")}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <Flex justify="end" gap="2" mt="2">
+            <Dialog.Close>
+              <Button variant="soft" color="gray" type="button">
+                {t("common.cancel", "取消")}
               </Button>
-            </div>
+            </Dialog.Close>
+            <Button disabled={saving} type="submit">
+              {t("common.add")}
+            </Button>
           </Flex>
         </form>
       </Dialog.Content>

@@ -474,40 +474,23 @@ body, * {
   border: 1px solid var(--border) !important;
   border-radius: 0.5rem !important; /* 8px sleek corners */
   color: var(--foreground) !important;
-  padding: 1.5rem !important;
+  padding: 1.25rem 1.5rem !important;
   max-width: 480px;
 }
 
 .rt-DialogTitle {
-  font-size: 1rem !important;
+  font-size: 0.9375rem !important; /* 15px */
   font-weight: 600 !important;
   letter-spacing: -0.015em !important;
-  margin-bottom: 1rem !important;
+  margin-bottom: 0.75rem !important;
   color: var(--foreground) !important;
 }
 
 .rt-DialogDescription {
-  font-size: 0.875rem !important;
+  font-size: 0.8125rem !important; /* 13px */
   color: var(--muted-foreground) !important;
-  margin-bottom: 1.25rem !important;
+  margin-bottom: 1rem !important;
   line-height: 1.5 !important;
-}
-
-/* Subtle clean form field labels inside dialogs */
-.rt-DialogContent label {
-  font-size: 0.8125rem !important;
-  font-weight: 500 !important;
-  color: var(--muted-foreground) !important;
-}
-
-.rt-DialogContent label[for] {
-  cursor: pointer;
-}
-
-/* Action button area inside dialogs */
-.rt-DialogContent .rt-Flex:has(button):last-child {
-  margin-top: 1.5rem !important;
-  padding-top: 0.75rem !important;
 }
 
 :root:not(.dark) .rt-DialogContent,

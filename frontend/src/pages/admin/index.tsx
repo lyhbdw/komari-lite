@@ -15,6 +15,7 @@ import {
   IconButton,
   TextArea,
   Select,
+  Switch,
 } from "@radix-ui/themes";
 import {
   Activity,
@@ -74,12 +75,6 @@ import PriceTags from "@/components/PriceTags";
 import Loading from "@/components/loading";
 import Tips from "@/components/ui/tips";
 
-import {
-  SettingCardCollapse,
-  SettingCardSelect,
-  SettingCardShortTextInput,
-  SettingCardSwitch,
-} from "@/components/admin/SettingCard";
 import { useSettings } from "@/lib/api";
 import { SelectOrInput } from "@/components/ui/select-or-input";
 
@@ -368,8 +363,11 @@ const Header = ({
             </button>
           </Dialog.Trigger>
           <Dialog.Content className="max-w-md">
-            <Dialog.Title className="text-base font-semibold">{t("admin.nodeTable.addNode")}</Dialog.Title>
-            <div className="mt-3">
+            <Dialog.Title>{t("admin.nodeTable.addNode")}</Dialog.Title>
+            <div className="mt-2">
+              <label className="text-xs font-medium text-muted-foreground block mb-1.5">
+                {t("admin.nodeTable.nameOptional")}
+              </label>
               <TextField.Root
                 ref={inputRef}
                 placeholder={t("admin.nodeTable.nameOptional")}
@@ -744,13 +742,13 @@ function DeleteButton({ node }: { node: NodeDetail }) {
       </Dialog.Trigger>
       <Dialog.Content>
         <Dialog.Title>{t("common.delete")}</Dialog.Title>
-        <Dialog.Description>
+        <Dialog.Description className="text-xs text-muted-foreground mt-1">
           {t("common.confirm_delete")}
         </Dialog.Description>
         <Flex justify="end" gap="2" mt="4">
-          <Dialog.Trigger>
-            <Button variant="soft">{t("common.cancel")}</Button>
-          </Dialog.Trigger>
+          <Dialog.Close>
+            <Button variant="soft" color="gray">{t("common.cancel")}</Button>
+          </Dialog.Close>
           <Button disabled={deleting} color="red" onClick={handleDelete}>
             {t("common.confirm_delete")}
           </Button>
@@ -818,185 +816,133 @@ function GenerateCommandButton({
           <Download size="18" />
         </IconButton>
       </Dialog.Trigger>
-      <Dialog.Content>
+      <Dialog.Content className="max-w-lg">
         <Dialog.Title>
           {t("admin.nodeTable.installCommand", "一键部署指令")}
         </Dialog.Title>
-        <div className="flex flex-col gap-4">
-
-          <Flex direction="column" gap="2">
-            <label className="text-base font-bold">
+        <div className="flex flex-col gap-3.5 my-1">
+          <div>
+            <span className="text-xs font-medium text-muted-foreground block mb-2">
               {t("admin.nodeTable.installOptions", "安装选项")}
-            </label>
-            <Flex direction="column" gap="2">
-
-
-              <Flex gap="2" align="center">
-                <Checkbox
-                  checked={enableIncludeNics}
-                  onCheckedChange={(checked) => {
-                    setEnableIncludeNics(Boolean(checked));
-                    if (!checked) {
-                      setInstallOptions((prev) => ({
-                        ...prev,
-                        includeNics: "",
-                      }));
-                    }
-                  }}
-                />
-                <label
-                  className="text-sm font-bold cursor-pointer"
-                  onClick={() => {
-                    setEnableIncludeNics(!enableIncludeNics);
-                    if (enableIncludeNics) {
-                      setInstallOptions((prev) => ({
-                        ...prev,
-                        includeNics: "",
-                      }));
-                    }
-                  }}
-                >
-                  {t("admin.nodeTable.includeNics", "只监测特定网卡")}
+            </span>
+            <div className="space-y-2.5 rounded-lg border border-border/70 bg-muted/20 p-3">
+              <div className="flex flex-col gap-1.5">
+                <label className="flex items-center gap-2 cursor-pointer select-none text-xs font-medium text-foreground">
+                  <Checkbox
+                    checked={enableIncludeNics}
+                    onCheckedChange={(checked) => {
+                      setEnableIncludeNics(Boolean(checked));
+                      if (!checked) {
+                        setInstallOptions((prev) => ({
+                          ...prev,
+                          includeNics: "",
+                        }));
+                      }
+                    }}
+                  />
+                  <span>{t("admin.nodeTable.includeNics", "只监测特定网卡")}</span>
                 </label>
-              </Flex>
-              {enableIncludeNics && (
-                <TextField.Root
-                  // placeholder={t(
-                  //   "admin.nodeTable.includeNics_placeholder",
-                  //   "多个网卡使用逗号隔开"
-                  // )}
-                  placeholder="eth0,eth1"
-                  value={installOptions.includeNics}
-                  onChange={(e) =>
-                    setInstallOptions((prev) => ({
-                      ...prev,
-                      includeNics: e.target.value,
-                    }))
-                  }
-                />
-              )}
-              <Flex gap="2" align="center">
-                <Checkbox
-                  checked={enableExcludeNics}
-                  onCheckedChange={(checked) => {
-                    setEnableExcludeNics(Boolean(checked));
-                    if (!checked) {
-                      setInstallOptions((prev) => ({
-                        ...prev,
-                        excludeNics: "",
-                      }));
-                    }
-                  }}
-                />
-                <label
-                  className="text-sm font-bold cursor-pointer"
-                  onClick={() => {
-                    setEnableExcludeNics(!enableExcludeNics);
-                    if (enableExcludeNics) {
-                      setInstallOptions((prev) => ({
-                        ...prev,
-                        excludeNics: "",
-                      }));
-                    }
-                  }}
-                >
-                  {t("admin.nodeTable.excludeNics", "排除特定网卡")}
-                </label>
-              </Flex>
-              {enableExcludeNics && (
-                <TextField.Root
-                  // placeholder={t(
-                  //   "admin.nodeTable.excludeNics_placeholder",
-                  //   "多个网卡使用逗号隔开"
-                  // )}
-                  placeholder="lo"
-                  value={installOptions.excludeNics}
-                  onChange={(e) =>
-                    setInstallOptions((prev) => ({
-                      ...prev,
-                      excludeNics: e.target.value,
-                    }))
-                  }
-                />
-              )}
+                {enableIncludeNics && (
+                  <div className="pl-6">
+                    <TextField.Root
+                      placeholder="eth0,eth1"
+                      value={installOptions.includeNics}
+                      onChange={(e) =>
+                        setInstallOptions((prev) => ({
+                          ...prev,
+                          includeNics: e.target.value,
+                        }))
+                      }
+                    />
+                  </div>
+                )}
+              </div>
 
-              <Flex gap="2" align="center">
-                <Checkbox
-                  checked={enableInterval}
-                  onCheckedChange={(checked) => {
-                    const enabled = Boolean(checked);
-                    setEnableInterval(enabled);
-                    if (!enabled) {
-                      setInstallOptions((prev) => ({
-                        ...prev,
-                        interval: "",
-                      }));
-                    } else {
-                      setInstallOptions((prev) => ({
-                        ...prev,
-                        interval: prev.interval?.trim() ? prev.interval : "1",
-                      }));
-                    }
-                  }}
-                />
-                <label
-                  className="text-sm font-bold cursor-pointer"
-                  onClick={() => {
-                    const willEnable = !enableInterval;
-                    setEnableInterval(willEnable);
-                    if (!willEnable) {
-                      setInstallOptions((prev) => ({
-                        ...prev,
-                        interval: "",
-                      }));
-                    } else {
-                      setInstallOptions((prev) => ({
-                        ...prev,
-                        interval: prev.interval?.trim() ? prev.interval : "1",
-                      }));
-                    }
-                  }}
-                >
-                  {t("admin.nodeTable.interval", "采集间隔(秒)")}
+              <div className="flex flex-col gap-1.5">
+                <label className="flex items-center gap-2 cursor-pointer select-none text-xs font-medium text-foreground">
+                  <Checkbox
+                    checked={enableExcludeNics}
+                    onCheckedChange={(checked) => {
+                      setEnableExcludeNics(Boolean(checked));
+                      if (!checked) {
+                        setInstallOptions((prev) => ({
+                          ...prev,
+                          excludeNics: "",
+                        }));
+                      }
+                    }}
+                  />
+                  <span>{t("admin.nodeTable.excludeNics", "排除特定网卡")}</span>
                 </label>
-              </Flex>
-              {enableInterval && (
-                <TextField.Root
-                  placeholder="1"
-                  type="number"
-                  min="1"
-                  step="0.1"
-                  value={installOptions.interval}
-                  onChange={(e) =>
-                    setInstallOptions((prev) => ({
-                      ...prev,
-                      interval: e.target.value,
-                    }))
-                  }
-                />
-              )}
+                {enableExcludeNics && (
+                  <div className="pl-6">
+                    <TextField.Root
+                      placeholder="lo"
+                      value={installOptions.excludeNics}
+                      onChange={(e) =>
+                        setInstallOptions((prev) => ({
+                          ...prev,
+                          excludeNics: e.target.value,
+                        }))
+                      }
+                    />
+                  </div>
+                )}
+              </div>
 
-            </Flex>
-          </Flex>
-          <Flex direction="column" gap="2">
-            <label className="text-base font-bold">
-              {t("admin.nodeTable.generatedCommand", "生成的指令")}
-            </label>
-            <div className="relative">
-              <TextArea
-                disabled
-                className="w-full"
-                style={{ minHeight: "80px" }}
-                value={generateCommand()}
-              />
+              <div className="flex flex-col gap-1.5">
+                <label className="flex items-center gap-2 cursor-pointer select-none text-xs font-medium text-foreground">
+                  <Checkbox
+                    checked={enableInterval}
+                    onCheckedChange={(checked) => {
+                      const enabled = Boolean(checked);
+                      setEnableInterval(enabled);
+                      setInstallOptions((prev) => ({
+                        ...prev,
+                        interval: !enabled ? "" : prev.interval?.trim() ? prev.interval : "1",
+                      }));
+                    }}
+                  />
+                  <span>{t("admin.nodeTable.interval", "采集间隔(秒)")}</span>
+                </label>
+                {enableInterval && (
+                  <div className="pl-6">
+                    <TextField.Root
+                      placeholder="1"
+                      type="number"
+                      min="1"
+                      step="0.1"
+                      value={installOptions.interval}
+                      onChange={(e) =>
+                        setInstallOptions((prev) => ({
+                          ...prev,
+                          interval: e.target.value,
+                        }))
+                      }
+                    />
+                  </div>
+                )}
+              </div>
             </div>
-          </Flex>
-          <Flex justify="center">
-            <Button
-              style={{ width: "100%" }}
-              onClick={() => copyToClipboard(generateCommand())}
-            >
-              <Copy size={16} />
+          </div>
+
+          <div>
+            <span className="text-xs font-medium text-muted-foreground block mb-1.5">
+              {t("admin.nodeTable.generatedCommand", "生成的指令")}
+            </span>
+            <div className="rounded-lg border border-border/70 bg-muted/40 p-3 font-mono text-[11px] leading-relaxed break-all select-all text-foreground max-h-36 overflow-y-auto">
+              {generateCommand()}
+            </div>
+          </div>
+
+          <Flex justify="end" gap="2" mt="2">
+            <Dialog.Close>
+              <Button variant="soft" color="gray" type="button">
+                {t("common.close", "关闭")}
+              </Button>
+            </Dialog.Close>
+            <Button onClick={() => copyToClipboard(generateCommand())}>
+              <Copy size={14} />
               {t("common.copy")}
             </Button>
           </Flex>
@@ -1064,11 +1010,11 @@ function EditButton({ node }: { node: NodeDetail }) {
           <Pencil size="18" />
         </IconButton>
       </Dialog.Trigger>
-      <Dialog.Content>
+      <Dialog.Content className="max-w-md">
         <Dialog.Title>{t("admin.nodeEdit.editInfo", "编辑信息")}</Dialog.Title>
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-3 my-1">
           <div>
-            <label className="block mb-1 text-sm font-medium text-muted-foreground">
+            <label className="block mb-1 text-xs font-medium text-muted-foreground">
               {t("admin.nodeEdit.name", "名称")}
             </label>
             <TextField.Root
@@ -1078,7 +1024,7 @@ function EditButton({ node }: { node: NodeDetail }) {
             />
           </div>
           <div>
-            <label className="block mb-1 text-sm font-medium text-muted-foreground">
+            <label className="block mb-1 text-xs font-medium text-muted-foreground">
               {t("admin.nodeEdit.token", "Token 令牌")}
             </label>
             <TextField.Root
@@ -1087,34 +1033,36 @@ function EditButton({ node }: { node: NodeDetail }) {
               readOnly
             />
           </div>
-          <div>
-            <label className="mb-1 text-sm font-medium text-muted-foreground flex items-center">
-              {t("common.tags")}
-              <label className="text-muted-foreground ml-1 text-xs self-end">
-                {t("common.tagsDescription")}
+          <div className="grid grid-cols-2 gap-2.5">
+            <div>
+              <div className="flex items-center gap-1 mb-1">
+                <label className="text-xs font-medium text-muted-foreground">
+                  {t("common.tags")}
+                </label>
+                <Tips>
+                  <span
+                    dangerouslySetInnerHTML={{ __html: t("common.tagsTips") }}
+                  />
+                </Tips>
+              </div>
+              <TextField.Root defaultValue={node.tags} ref={tagsRef} placeholder="tag1,tag2" />
+            </div>
+            <div>
+              <label className="block mb-1 text-xs font-medium text-muted-foreground">
+                {t("common.group")}
               </label>
-              <Tips>
-                <span
-                  dangerouslySetInnerHTML={{ __html: t("common.tagsTips") }}
-                />
-              </Tips>
-            </label>
-            <TextField.Root defaultValue={node.tags} ref={tagsRef} />
+              <TextField.Root defaultValue={node.group} ref={groupRef} placeholder="default" />
+            </div>
           </div>
           <div>
-            <label className="block mb-1 text-sm font-medium text-muted-foreground">
-              {t("common.group")}
-            </label>
-            <TextField.Root defaultValue={node.group} ref={groupRef} />
-          </div>
-          <div>
-            <label className="block mb-1 text-sm font-medium text-muted-foreground">
+            <label className="block mb-1 text-xs font-medium text-muted-foreground">
               {t("admin.nodeEdit.remark", "私有备注")}
             </label>
             <TextArea
               defaultValue={node.remark}
               ref={privateRemarkRef}
               resize={"vertical"}
+              style={{ minHeight: "60px" }}
               placeholder={t(
                 "admin.nodeEdit.remarkPlaceholder",
                 "请输入私有备注"
@@ -1122,12 +1070,13 @@ function EditButton({ node }: { node: NodeDetail }) {
             />
           </div>
           <div>
-            <label className="block mb-1 text-sm font-medium text-muted-foreground">
+            <label className="block mb-1 text-xs font-medium text-muted-foreground">
               {t("admin.nodeEdit.publicRemark", "公开备注")}
             </label>
             <TextArea
               defaultValue={node.public_remark}
               resize={"vertical"}
+              style={{ minHeight: "60px" }}
               placeholder={t(
                 "admin.nodeEdit.publicRemarkPlaceholder",
                 "请输入公开备注"
@@ -1135,64 +1084,70 @@ function EditButton({ node }: { node: NodeDetail }) {
               ref={publicRemarkRef}
             />
           </div>
-          <div>
-            <SettingCardSwitch
-              title={t("admin.nodeEdit.hidden")}
-              description={t("admin.nodeEdit.hidden_description")}
-              defaultChecked={hidden}
-              onChange={setHidden}
-            />
+
+          <div className="pt-2 border-t border-border/60">
+            <div className="flex items-center justify-between py-1">
+              <div className="flex flex-col">
+                <span className="text-xs font-medium text-foreground">
+                  {t("admin.nodeEdit.hidden")}
+                </span>
+                <span className="text-[11px] text-muted-foreground">
+                  {t("admin.nodeEdit.hidden_description")}
+                </span>
+              </div>
+              <Switch checked={hidden} onCheckedChange={setHidden} />
+            </div>
           </div>
-          <SettingCardCollapse title={t("admin.nodeEdit.trafficLimit")}>
-            <SettingCardSelect
-              bordless
-              title={t("admin.nodeEdit.trafficLimitType")}
-              defaultValue={node.traffic_limit_type || "max"}
-              options={[
-                {
-                  label: t("admin.nodeEdit.trafficLimitType_sum"),
-                  value: "sum",
-                },
-                {
-                  label: t("admin.nodeEdit.trafficLimitType_max"),
-                  value: "max",
-                },
-                {
-                  label: t("admin.nodeEdit.trafficLimitType_min"),
-                  value: "min",
-                },
-                {
-                  label: t("admin.nodeEdit.trafficLimitType_up"),
-                  value: "up",
-                },
-                {
-                  label: t("admin.nodeEdit.trafficLimitType_down"),
-                  value: "down",
-                },
-              ]}
-              OnSave={(value) => {
-                setTrafficLimitType(value);
-              }}
-            />
-            <SettingCardShortTextInput
-              bordless
-              title={t("admin.nodeEdit.trafficLimit")}
-              description={t("admin.nodeEdit.trafficLimit_description")}
-              defaultValue={formatBytes(traffic_limit || 0)}
-              showSaveButton={false}
-              onChange={(e) => {
-                setTrafficLimit(stringToBytes(e.currentTarget.value));
-              }}
-              onBlur={(e) => {
-                e.currentTarget.value = formatBytes(traffic_limit);
-              }}
-            ></SettingCardShortTextInput>
-          </SettingCardCollapse>
+
+          <div className="pt-2 border-t border-border/60 space-y-2">
+            <div className="text-xs font-medium text-foreground">
+              {t("admin.nodeEdit.trafficLimit")}
+            </div>
+            <div className="grid grid-cols-2 gap-2.5">
+              <div>
+                <label className="block mb-1 text-[11px] font-medium text-muted-foreground">
+                  {t("admin.nodeEdit.trafficLimitType")}
+                </label>
+                <Select.Root
+                  value={traffic_limit_type}
+                  onValueChange={setTrafficLimitType}
+                >
+                  <Select.Trigger className="w-full" />
+                  <Select.Content>
+                    <Select.Item value="sum">{t("admin.nodeEdit.trafficLimitType_sum")}</Select.Item>
+                    <Select.Item value="max">{t("admin.nodeEdit.trafficLimitType_max")}</Select.Item>
+                    <Select.Item value="min">{t("admin.nodeEdit.trafficLimitType_min")}</Select.Item>
+                    <Select.Item value="up">{t("admin.nodeEdit.trafficLimitType_up")}</Select.Item>
+                    <Select.Item value="down">{t("admin.nodeEdit.trafficLimitType_down")}</Select.Item>
+                  </Select.Content>
+                </Select.Root>
+              </div>
+              <div>
+                <label className="block mb-1 text-[11px] font-medium text-muted-foreground">
+                  {t("admin.nodeEdit.trafficLimit")}
+                </label>
+                <TextField.Root
+                  defaultValue={formatBytes(traffic_limit || 0)}
+                  placeholder="1 TB"
+                  onChange={(e) => {
+                    setTrafficLimit(stringToBytes(e.currentTarget.value));
+                  }}
+                  onBlur={(e) => {
+                    e.currentTarget.value = formatBytes(traffic_limit);
+                  }}
+                />
+              </div>
+            </div>
+          </div>
         </div>
-        <Flex gap="2" justify={"end"} className="mt-4">
+        <Flex gap="2" justify="end" mt="4">
+          <Dialog.Close>
+            <Button variant="soft" color="gray" type="button">
+              {t("common.cancel")}
+            </Button>
+          </Dialog.Close>
           <Button
             type="submit"
-            className="w-full"
             disabled={saving}
             onClick={save}
           >
@@ -1555,120 +1510,153 @@ function BillingButton({ node }: { node: NodeDetail }) {
           <CircleDollarSign size="18" />
         </IconButton>
       </Dialog.Trigger>
-      <Dialog.Content>
+      <Dialog.Content className="max-w-md">
         <Dialog.Title>{t("admin.nodeTable.billing", "账单")}</Dialog.Title>
-        <form onSubmit={handleSave}>
-          <Flex direction="column" gap="2">
-            <label className="font-bold">
-              <label>{t("admin.nodeTable.price")}</label>
-              <label className="text-muted-foreground text-sm ml-1 font-medium">
-                {t("admin.nodeTable.priceTips")}
-              </label>
-            </label>
-            <TextField.Root name="price" defaultValue={node.price} />
+        <form onSubmit={handleSave} className="flex flex-col gap-3 my-1">
+          <div className="grid grid-cols-2 gap-2.5">
+            <div>
+              <div className="flex items-center gap-1 mb-1">
+                <label className="text-xs font-medium text-muted-foreground">
+                  {t("admin.nodeTable.price")}
+                </label>
+                <Tips><span>{t("admin.nodeTable.priceTips")}</span></Tips>
+              </div>
+              <TextField.Root name="price" defaultValue={node.price} placeholder="0.00" />
+            </div>
 
-            <label className="font-bold">
-              <label>{t("admin.nodeTable.currency", "价格货币")}</label>
-              <label className="text-muted-foreground text-sm ml-1 font-medium">
-                {t("admin.nodeTable.currencyTips")}
-              </label>
-            </label>
-            <Select.Root value={currency} onValueChange={setCurrency}>
-              <Select.Trigger className="w-full" />
-              <Select.Content>
-                {getCurrencySelectOptions(currency).map((c) => (
-                  <Select.Item key={c.value} value={c.value}>
-                    {c.label}
-                  </Select.Item>
-                ))}
-              </Select.Content>
-            </Select.Root>
+            <div>
+              <div className="flex items-center gap-1 mb-1">
+                <label className="text-xs font-medium text-muted-foreground">
+                  {t("admin.nodeTable.currency", "价格货币")}
+                </label>
+                <Tips><span>{t("admin.nodeTable.currencyTips")}</span></Tips>
+              </div>
+              <Select.Root value={currency} onValueChange={setCurrency}>
+                <Select.Trigger className="w-full" />
+                <Select.Content>
+                  {getCurrencySelectOptions(currency).map((c) => (
+                    <Select.Item key={c.value} value={c.value}>
+                      {c.label}
+                    </Select.Item>
+                  ))}
+                </Select.Content>
+              </Select.Root>
+            </div>
+          </div>
 
-            <label className="font-bold">
-              <label>{t("admin.nodeTable.premium")}</label>
-              <label className="text-muted-foreground text-sm ml-1 font-medium">
-                {t("admin.nodeTable.premiumTips")}
-              </label>
-            </label>
-            <TextField.Root name="premium" defaultValue={node.premium} />
+          <div className="grid grid-cols-2 gap-2.5">
+            <div>
+              <div className="flex items-center gap-1 mb-1">
+                <label className="text-xs font-medium text-muted-foreground">
+                  {t("admin.nodeTable.premium")}
+                </label>
+                <Tips><span>{t("admin.nodeTable.premiumTips")}</span></Tips>
+              </div>
+              <TextField.Root name="premium" defaultValue={node.premium} placeholder="0.00" />
+            </div>
 
-            <label className="font-bold">
-              <label>{t("admin.nodeTable.premiumCurrency", "溢价货币")}</label>
-              <label className="text-muted-foreground text-sm ml-1 font-medium">
-                {t("admin.nodeTable.premiumCurrencyTips", "溢价独立结算币种，默认为 ¥")}
-              </label>
-            </label>
-            <Select.Root value={premiumCurrency} onValueChange={setPremiumCurrency}>
-              <Select.Trigger className="w-full" />
-              <Select.Content>
-                {getCurrencySelectOptions(premiumCurrency).map((c) => (
-                  <Select.Item key={c.value} value={c.value}>
-                    {c.label}
-                  </Select.Item>
-                ))}
-              </Select.Content>
-            </Select.Root>
+            <div>
+              <div className="flex items-center gap-1 mb-1">
+                <label className="text-xs font-medium text-muted-foreground">
+                  {t("admin.nodeTable.premiumCurrency", "溢价货币")}
+                </label>
+                <Tips><span>{t("admin.nodeTable.premiumCurrencyTips", "溢价独立结算币种，默认为 ¥")}</span></Tips>
+              </div>
+              <Select.Root value={premiumCurrency} onValueChange={setPremiumCurrency}>
+                <Select.Trigger className="w-full" />
+                <Select.Content>
+                  {getCurrencySelectOptions(premiumCurrency).map((c) => (
+                    <Select.Item key={c.value} value={c.value}>
+                      {c.label}
+                    </Select.Item>
+                  ))}
+                </Select.Content>
+              </Select.Root>
+            </div>
+          </div>
 
-            <label className="font-bold flex items-center gap-1">
-              {t("admin.nodeTable.billingCycle")} <Tips><span dangerouslySetInnerHTML={{ __html: t("admin.nodeTable.billingCycleTips") }}></span></Tips>
-            </label>
-            <SelectOrInput
-            options={[
-              { label: t("common.monthly"), value: "30" },
-              { label: t("common.quarterly"), value: "92" },
-              { label: t("common.semi_annual"), value: "184" },
-              { label: t("common.annual"), value: "365" },
-              { label: t("common.biennial"), value: "730" },
-              { label: t("common.triennial"), value: "1095" },
-              { label: t("common.quinquennial"), value: "1825" },
-              { label: t("common.once"), value: "-1" },
-            ]}
-            type="number"
-            name="billingCycle"
-            value={billingCycle === "0" ? "" : billingCycle}
-            onChange={setBillingCycle}
-          />
+          <div className="grid grid-cols-2 gap-2.5">
+            <div>
+              <div className="flex items-center gap-1 mb-1">
+                <label className="text-xs font-medium text-muted-foreground">
+                  {t("admin.nodeTable.billingCycle")}
+                </label>
+                <Tips><span dangerouslySetInnerHTML={{ __html: t("admin.nodeTable.billingCycleTips") }}></span></Tips>
+              </div>
+              <SelectOrInput
+                options={[
+                  { label: t("common.monthly"), value: "30" },
+                  { label: t("common.quarterly"), value: "92" },
+                  { label: t("common.semi_annual"), value: "184" },
+                  { label: t("common.annual"), value: "365" },
+                  { label: t("common.biennial"), value: "730" },
+                  { label: t("common.triennial"), value: "1095" },
+                  { label: t("common.quinquennial"), value: "1825" },
+                  { label: t("common.once"), value: "-1" },
+                ]}
+                type="number"
+                name="billingCycle"
+                value={billingCycle === "0" ? "" : billingCycle}
+                onChange={setBillingCycle}
+              />
+            </div>
 
-            <Flex gap="2" align="center">
-              <label className="font-bold">
+            <div>
+              <label className="block mb-1 text-xs font-medium text-muted-foreground">
                 {t("admin.nodeTable.expiredAt")}
               </label>
-            </Flex>
-            <TextField.Root
-              name="expiredAt"
-              defaultValue={
-                node.expired_at
-                  ? new Date(node.expired_at).toISOString().slice(0, 10)
-                  : "0001-01-01"
-              }
-              type="date"
-            >
-              <TextField.Slot side="right">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={() => {
-                    const dateInput = document.querySelector(
-                      'input[name="expiredAt"]'
-                    ) as HTMLInputElement;
-                    if (dateInput) {
-                      const futureDate = new Date();
-                      futureDate.setFullYear(futureDate.getFullYear() + 200);
-                      dateInput.value = futureDate.toISOString().slice(0, 10);
-                    }
-                  }}
-                >
-                  {t("admin.nodeTable.setToLongTerm", "设置为长期")}
-                </Button>
-              </TextField.Slot>
-            </TextField.Root>
-            <Flex gap="2" align="center"></Flex>
-            <SettingCardSwitch
-              title={t("admin.nodeTable.autoRenewal")}
-              description={t("admin.nodeTable.autoRenewalDescription")}
-              defaultChecked={node.auto_renewal || false}
-              onChange={setAutoRenewal}
-            />
+              <TextField.Root
+                name="expiredAt"
+                defaultValue={
+                  node.expired_at
+                    ? new Date(node.expired_at).toISOString().slice(0, 10)
+                    : "0001-01-01"
+                }
+                type="date"
+              >
+                <TextField.Slot side="right">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="1"
+                    onClick={() => {
+                      const dateInput = document.querySelector(
+                        'input[name="expiredAt"]'
+                      ) as HTMLInputElement;
+                      if (dateInput) {
+                        const futureDate = new Date();
+                        futureDate.setFullYear(futureDate.getFullYear() + 200);
+                        dateInput.value = futureDate.toISOString().slice(0, 10);
+                      }
+                    }}
+                  >
+                    {t("admin.nodeTable.setToLongTerm", "长期")}
+                  </Button>
+                </TextField.Slot>
+              </TextField.Root>
+            </div>
+          </div>
+
+          <div className="pt-2 border-t border-border/60">
+            <div className="flex items-center justify-between py-1">
+              <div className="flex flex-col">
+                <span className="text-xs font-medium text-foreground">
+                  {t("admin.nodeTable.autoRenewal")}
+                </span>
+                <span className="text-[11px] text-muted-foreground">
+                  {t("admin.nodeTable.autoRenewalDescription")}
+                </span>
+              </div>
+              <Switch checked={autoRenewal} onCheckedChange={setAutoRenewal} />
+            </div>
+          </div>
+
+          <Flex justify="end" gap="2" mt="4">
+            <Dialog.Close>
+              <Button variant="soft" color="gray" type="button">
+                {t("common.cancel")}
+              </Button>
+            </Dialog.Close>
             <Button type="submit" disabled={saving}>
               {t("common.save")}
             </Button>

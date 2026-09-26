@@ -354,71 +354,103 @@ const Row = ({
           </Dialog.Trigger>
           <Dialog.Content className="km-pingtask-task-form">
             <Dialog.Title>{t("common.edit")}</Dialog.Title>
-            <form onSubmit={handleEdit} className="flex flex-col gap-2">
-              <label>{t("common.name")}</label>
-              <TextField.Root
-                value={form.name}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, name: e.target.value }))
-                }
-                required
-              />
-              <label>{t("common.type")}</label>
-              <Select.Root
-                value={form.type}
-                onValueChange={(v) =>
-                  setForm((f) => ({ ...f, type: v as any }))
-                }
-              >
-                <Select.Trigger />
-                <Select.Content>
-                  <Select.Item value="icmp">ICMP</Select.Item>
-                  <Select.Item value="tcp">TCP</Select.Item>
-                  <Select.Item value="http">HTTP</Select.Item>
-                </Select.Content>
-              </Select.Root>
-              <label>{t("ping.target")}</label>
-              <TextField.Root
-                value={form.target}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, target: e.target.value }))
-                }
-                required
-              />
-              <label>{t("common.server")}</label>
-              <Flex direction="column" gap="2">
-                <NodeSelectorDialog
-                  value={form.clients}
-                  onChange={(v) => setForm((f) => ({ ...f, clients: v }))}
-                />
-                <label className="text-sm font-normal text-gray-500">
-                  {t("common.selected", { count: form.clients.length })}
+            <form onSubmit={handleEdit} className="flex flex-col gap-3 mt-1">
+              <div>
+                <label className="text-xs font-medium text-muted-foreground block mb-1">
+                  {t("common.name")}
                 </label>
-                <label className="flex min-h-10 items-center gap-2 text-sm font-normal">
+                <TextField.Root
+                  value={form.name}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, name: e.target.value }))
+                  }
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground block mb-1">
+                    {t("common.type")}
+                  </label>
+                  <Select.Root
+                    value={form.type}
+                    onValueChange={(v) =>
+                      setForm((f) => ({ ...f, type: v as any }))
+                    }
+                  >
+                    <Select.Trigger className="w-full" />
+                    <Select.Content>
+                      <Select.Item value="icmp">ICMP</Select.Item>
+                      <Select.Item value="tcp">TCP</Select.Item>
+                      <Select.Item value="http">HTTP</Select.Item>
+                    </Select.Content>
+                  </Select.Root>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground block mb-1">
+                    {t("ping.interval")} ({t("time.second")})
+                  </label>
+                  <TextField.Root
+                    type="number"
+                    min="1"
+                    value={form.interval}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, interval: Number(e.target.value) }))
+                    }
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-medium text-muted-foreground block mb-1">
+                  {t("ping.target")}
+                </label>
+                <TextField.Root
+                  value={form.target}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, target: e.target.value }))
+                  }
+                  required
+                />
+              </div>
+
+              <div className="p-2.5 rounded-lg border border-border/60 bg-muted/20 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-medium text-foreground">
+                    {t("common.server")}
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">
+                      {t("common.selected", { count: form.clients.length })}
+                    </span>
+                    <NodeSelectorDialog
+                      value={form.clients}
+                      onChange={(v) => setForm((f) => ({ ...f, clients: v }))}
+                    />
+                  </div>
+                </div>
+                <div className="pt-2 border-t border-border/40 flex items-start gap-2">
                   <Checkbox
+                    id="edit_ping_default_on"
                     checked={form.default_on}
                     onCheckedChange={(checked) =>
                       setForm((f) => ({ ...f, default_on: !!checked }))
                     }
                   />
-                  <span>{t("ping.default_on")}</span>
-                </label>
-                <label className="text-sm font-normal text-gray-500">
-                  {t("ping.default_on_description")}
-                </label>
-              </Flex>
-              <label>
-                {t("ping.interval")} ({t("time.second")})
-              </label>
-              <TextField.Root
-                type="number"
-                value={form.interval}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, interval: Number(e.target.value) }))
-                }
-                required
-              />
-              <Flex gap="2" justify="end" className="mt-4">
+                  <div className="flex flex-col">
+                    <label htmlFor="edit_ping_default_on" className="text-xs font-medium text-foreground cursor-pointer">
+                      {t("ping.default_on")}
+                    </label>
+                    <span className="text-[11px] text-muted-foreground">
+                      {t("ping.default_on_description")}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <Flex gap="2" justify="end" mt="2">
                 <Dialog.Close>
                   <Button
                     variant="soft"
@@ -450,7 +482,10 @@ const Row = ({
           </Dialog.Trigger>
           <Dialog.Content>
             <Dialog.Title>{t("common.delete")}</Dialog.Title>
-            <Flex gap="2" justify="end" className="mt-4">
+            <Dialog.Description className="text-xs text-muted-foreground mt-1">
+              {t("common.confirm_delete")}
+            </Dialog.Description>
+            <Flex gap="2" justify="end" mt="4">
               <Dialog.Close>
                 <Button
                   variant="soft"
