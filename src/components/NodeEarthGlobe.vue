@@ -509,10 +509,10 @@ function formatRate(bytesPerSec: number): string {
           class="size-4 block absolute -bottom-2 -left-2 z-1"
         >
         <div class="relative z-2 bg-card/95 dark:bg-card/90 border border-border/80 shadow-xs rounded py-0.5 px-1.5 text-xs zoom-80 items-start justify-center text-nowrap backdrop-blur-md">
-          <div class="text-emerald-700 dark:text-emerald-400 font-medium flex flex-row items-center gap-0.5">
+          <div class="text-emerald-700 dark:text-emerald-400 font-mono font-medium flex flex-row items-center gap-0.5">
             <Icon icon="tabler:chevron-up" width="12" height="12" /> {{ formatRate(rateFor(cluster.code).up) }}
           </div>
-          <div class="text-sky-700 dark:text-sky-400 font-medium flex flex-row items-center gap-0.5">
+          <div class="text-sky-700 dark:text-sky-400 font-mono font-medium flex flex-row items-center gap-0.5">
             <Icon icon="tabler:chevron-down" width="12" height="12" /> {{ formatRate(rateFor(cluster.code).down) }}
           </div>
         </div>

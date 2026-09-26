@@ -208,17 +208,15 @@ function getNodeItemTransitionStyle(index: number): Record<string, string> {
                   <Icon icon="tabler:table" :width="14" :height="14" />
                 </button>
               </div>
-              <div class="relative z-1 w-8 h-8">
-                <div class="absolute top-0 right-0">
-                  <Input
-                    v-model="searchText" placeholder="搜索节点名称、地区、系统"
-                    class="h-8 w-8 rounded-md border border-border/60 bg-muted/80 dark:bg-muted/60 shadow-none transition-all placeholder:text-transparent focus:!w-60 focus:!pl-7.5 focus:placeholder:!text-muted-foreground focus:!bg-card focus:!ring-1 focus:!ring-foreground/20"
-                  />
-                  <Icon
-                    icon="tabler:search" :width="14" :height="14"
-                    class="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-muted-foreground"
-                  />
-                </div>
+              <div class="relative z-1">
+                <Input
+                  v-model="searchText" placeholder="搜索节点、地区、系统..."
+                  class="h-8 w-36 sm:w-48 pl-7.5 pr-2.5 rounded-md border border-border/60 bg-muted/80 dark:bg-muted/60 shadow-none text-xs transition-all placeholder:text-muted-foreground/70 focus:w-56 sm:focus:w-60 focus:bg-card focus:border-border focus:ring-1 focus:ring-foreground/20"
+                />
+                <Icon
+                  icon="tabler:search" :width="14" :height="14"
+                  class="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-muted-foreground"
+                />
               </div>
             </div>
           </div>

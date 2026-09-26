@@ -65,14 +65,22 @@ function openPingDialog() {
   >
     <template #header>
       <div class="flex gap-2 min-w-0 items-center">
-        <div class="size-2 rounded-full relative" :class="[props.node.online ? 'bg-emerald-600' : 'bg-red-600']">
+        <div class="size-2 rounded-full relative shrink-0" :class="[props.node.online ? 'bg-emerald-600' : 'bg-red-600']">
           <div
             class="animate-ping absolute inset-0 rounded-full opacity-50"
             :class="[props.node.online ? 'bg-emerald-600' : 'bg-red-600']"
           />
         </div>
-        <div class="text-md font-bold flex-1 min-w-0 truncate">
+        <div class="text-md font-bold flex-1 min-w-0 truncate" :title="props.node.name">
           {{ props.node.name }}
+        </div>
+        <div v-if="customTags.length > 0" class="flex shrink-0 gap-1 items-center">
+          <Badge
+            v-for="(tag, index) in customTags" :key="index" variant="outline"
+            class="!text-[10px] rounded font-medium text-foreground/85 dark:text-muted-foreground border-border/80 bg-muted/40 px-1.5 py-0.2"
+          >
+            {{ tag }}
+          </Badge>
         </div>
       </div>
     </template>
@@ -99,7 +107,7 @@ function openPingDialog() {
               <span class="font-mono tabular-nums">{{ (props.node.cpu ?? 0).toFixed(1) }}%</span>
             </div>
             <ProgressThin :percentage="props.node.cpu ?? 0" :status="cpuStatus" :height="4" />
-            <div class="text-[11px] text-foreground/75 dark:text-muted-foreground truncate font-mono tabular-nums tracking-tight">
+            <div class="text-[11px] text-foreground/85 dark:text-muted-foreground truncate font-mono font-medium tabular-nums tracking-normal">
               {{ props.node.load.toFixed(2) ?? 0 }}, {{ props.node.load5.toFixed(2) ?? 0 }}, {{
                 props.node.load15.toFixed(2) ?? 0 }}
             </div>
@@ -304,14 +312,6 @@ function openPingDialog() {
               </div>
             </div>
           </div>
-        </div>
-        <div v-if="customTags.length > 0" class="flex shrink-0 flex-wrap gap-1 items-center">
-          <Badge
-            v-for="(tag, index) in customTags" :key="index" variant="outline"
-            class="!text-[11px] rounded font-medium text-foreground/85 dark:text-muted-foreground border-border/80 bg-muted/40 px-1.5 py-0.5"
-          >
-            {{ tag }}
-          </Badge>
         </div>
       </div>
     </template>

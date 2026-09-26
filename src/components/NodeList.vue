@@ -42,13 +42,12 @@ const { formatBytes, formatBytesPerSecond, formatUptime } = useNodeFormatters()
 const columns: ColumnConfig[] = [
   { key: 'status', label: '状态', width: '40px', sortable: true },
   { key: 'os', label: '系统', width: '40px', sortable: true },
-  { key: 'name', label: '节点', width: 'minmax(160px, 1fr)', sortable: true },
-  { key: 'tags', label: '标签', width: 'minmax(180px, 1fr)', sortable: false },
+  { key: 'name', label: '节点', width: 'minmax(220px, 1fr)', sortable: true },
   { key: 'cpu', label: 'CPU', width: '100px', sortable: true },
   { key: 'mem', label: '内存', width: '100px', sortable: true },
   { key: 'disk', label: '硬盘', width: '100px', sortable: true },
   { key: 'traffic', label: '流量', width: '100px', sortable: true },
-  { key: 'rate', label: '速率', width: '80px', sortable: true },
+  { key: 'rate', label: '速率', width: '90px', sortable: true },
   { key: 'networks', label: '三网', width: '136px', sortable: false },
 ]
 
@@ -152,10 +151,18 @@ function getRowTransitionStyle(index: number): Record<string, string> {
       >
         <div
           v-for="col in columns" :key="col.key"
-          :class="[col.sortable ? 'cursor-pointer hover:text-foreground transition-colors' : '', ['status', 'os'].includes(col.key) ? 'text-center' : 'text-left']"
+          :class="[
+            col.sortable ? 'cursor-pointer hover:text-foreground transition-colors' : '',
+            ['status', 'os'].includes(col.key) ? 'text-center' : ['cpu', 'mem', 'disk', 'traffic', 'rate'].includes(col.key) ? 'text-right' : 'text-left'
+          ]"
           @click="handleSort(col)"
         >
-          <span class="text-xs font-semibold text-foreground/80 dark:text-muted-foreground flex items-center gap-1" :class="[['status', 'os'].includes(col.key) ? 'justify-center' : '']">
+          <span
+            class="text-xs font-semibold text-foreground/80 dark:text-muted-foreground flex items-center gap-1"
+            :class="[
+              ['status', 'os'].includes(col.key) ? 'justify-center' : ['cpu', 'mem', 'disk', 'traffic', 'rate'].includes(col.key) ? 'justify-end' : ''
+            ]"
+          >
             {{ col.label }}
             <span v-if="col.sortable && sortKey === col.key" class="text-foreground text-[10px] font-bold">
               {{ sortDir === 1 ? '▲' : '▼' }}
@@ -174,7 +181,7 @@ function getRowTransitionStyle(index: number): Record<string, string> {
         <div
           v-for="(node, index) in sortedNodes"
           :key="getRowTransitionKey(node)"
-          class="relative flex min-h-[3.25rem] py-2 cursor-pointer flex-col justify-center rounded-md px-2 border border-border/70 transition-all bg-card hover:bg-muted/60 dark:hover:bg-muted/30 hover:border-foreground/30 hover:shadow-xs"
+          class="relative flex min-h-[3.25rem] py-2 cursor-pointer flex-col justify-center rounded-md px-2 border border-border/70 transition-all bg-card hover:bg-muted/80 dark:hover:bg-muted/40 hover:border-foreground/35 hover:shadow-xs"
           :class="[!node.online && '!border-destructive/30']"
           :style="getRowTransitionStyle(index)"
           @click="handleClick(node)"
@@ -192,13 +199,21 @@ function getRowTransitionStyle(index: number): Record<string, string> {
               </div>
 
               <!-- 节点名称 -->
-              <div v-else-if="col.key === 'name'" class="space-y-0.5" :class="[!node.online && 'blur-sm opacity-30']">
-                <div class="flex gap-1 items-center text-xs font-semibold">
+              <div v-if="col.key === 'name'" class="flex flex-col gap-0.5 min-w-0 pr-2">
+                <div class="flex flex-row items-center gap-1.5 min-w-0">
                   <img
                     v-if="hasRegion(node.region)" :src="getFlagSrc(node.region)"
-                    :alt="getRegionDisplayName(node.region)" class="size-5 rounded-sm"
+                    :alt="getRegionDisplayName(node.region)" class="size-4 shrink-0 rounded-xs"
                   >
-                  <span class="truncate">{{ node.name }}</span>
+                  <span class="truncate font-medium text-foreground/90" :title="node.name">{{ node.name }}</span>
+                  <template v-if="getCustomTags(node).length > 0">
+                    <Badge
+                      v-for="(tag, tagIndex) in getCustomTags(node)" :key="tagIndex" variant="outline"
+                      class="!text-[10px] rounded font-medium text-foreground/80 dark:text-muted-foreground border-border/80 bg-muted/40 px-1 py-0 shrink-0"
+                    >
+                      {{ tag }}
+                    </Badge>
+                  </template>
                 </div>
                 <div class="flex flex-row text-[11px] text-muted-foreground font-mono">
                   <DataTooltip
@@ -226,18 +241,6 @@ function getRowTransitionStyle(index: number): Record<string, string> {
                 </div>
               </div>
 
-              <!-- 标签 -->
-              <div v-else-if="col.key === 'tags'">
-                <div class="flex flex-wrap gap-1 items-center">
-                  <Badge
-                    v-for="(tag, tagIndex) in getCustomTags(node)" :key="tagIndex" variant="outline"
-                    class="!text-[11px] rounded font-medium text-foreground/85 dark:text-muted-foreground border-border/80 bg-muted/40 px-1.5 py-0.5"
-                  >
-                    {{ tag }}
-                  </Badge>
-                </div>
-              </div>
-
               <!-- 三网 -->
               <div v-else-if="col.key === 'networks'" class="flex flex-col gap-0.5">
                 <NodePingListCell
@@ -259,9 +262,9 @@ function getRowTransitionStyle(index: number): Record<string, string> {
               </div>
 
               <!-- CPU -->
-              <div v-else-if="col.key === 'cpu'" class="group">
+              <div v-else-if="col.key === 'cpu'" class="group text-right">
                 <div class="space-y-1">
-                  <div class="text-[10px] text-muted-foreground truncate font-mono tabular-nums">
+                  <div class="text-[10px] text-muted-foreground truncate font-mono tabular-nums text-right">
                     <span class="inline group-hover:hidden">
                       {{ (node.cpu ?? 0).toFixed(1) }}%
                     </span>
@@ -275,10 +278,10 @@ function getRowTransitionStyle(index: number): Record<string, string> {
               </div>
 
               <!-- 内存 -->
-              <div v-else-if="col.key === 'mem'" class="group">
+              <div v-else-if="col.key === 'mem'" class="group text-right">
                 <DataTooltip placement="top" class="block" :content-class="[!node.swap && '!hidden']">
                   <div class="space-y-1">
-                    <div class="text-[10px] text-muted-foreground truncate font-mono tabular-nums">
+                    <div class="text-[10px] text-muted-foreground truncate font-mono tabular-nums text-right">
                       <span class="inline group-hover:hidden">
                         {{ ((node.ram ?? 0) / (node.mem_total || 1) * 100).toFixed(1) }}%
                       </span>
@@ -301,9 +304,9 @@ function getRowTransitionStyle(index: number): Record<string, string> {
               </div>
 
               <!-- 硬盘 -->
-              <div v-else-if="col.key === 'disk'" class="group">
+              <div v-else-if="col.key === 'disk'" class="group text-right">
                 <div class="space-y-1">
-                  <div class="text-[10px] text-muted-foreground truncate font-mono tabular-nums">
+                  <div class="text-[10px] text-muted-foreground truncate font-mono tabular-nums text-right">
                     <span class="inline group-hover:hidden">
                       {{ ((node.disk ?? 0) / (node.disk_total || 1) * 100).toFixed(1) }}%
                     </span>
@@ -319,10 +322,10 @@ function getRowTransitionStyle(index: number): Record<string, string> {
               </div>
 
               <!-- 流量 -->
-              <div v-else-if="col.key === 'traffic'" class="group">
+              <div v-else-if="col.key === 'traffic'" class="group text-right">
                 <DataTooltip placement="top" class="flex items-center gap-2" content-class="mb-1.5">
                   <div class="space-y-1 w-full">
-                    <div class="text-[10px] text-muted-foreground truncate font-mono tabular-nums">
+                    <div class="text-[10px] text-muted-foreground truncate font-mono tabular-nums text-right">
                       <span class="inline group-hover:hidden">
                         {{ getTrafficUsedPercentage(node).toFixed(1) }}%
                       </span>
@@ -352,13 +355,13 @@ function getRowTransitionStyle(index: number): Record<string, string> {
               </div>
 
               <!-- 速率 -->
-              <div v-else-if="col.key === 'rate'">
-                <div class="text-[10px] flex flex-col font-mono tabular-nums">
-                  <span class="text-foreground/90 flex flex-row gap-1 items-center">
+              <div v-else-if="col.key === 'rate'" class="text-right">
+                <div class="text-[10px] flex flex-col items-end font-mono tabular-nums">
+                  <span class="text-foreground/90 flex flex-row gap-1 items-center justify-end">
                     <Icon icon="tabler:chevron-up" width="12" height="12" class="text-emerald-500" />
                     {{ formatBytesPerSecond(node.net_out ?? 0) }}
                   </span>
-                  <span class="text-muted-foreground flex flex-row gap-1 items-center">
+                  <span class="text-muted-foreground flex flex-row gap-1 items-center justify-end">
                     <Icon icon="tabler:chevron-down" width="12" height="12" class="text-sky-500" />
                     {{ formatBytesPerSecond(node.net_in ?? 0) }}
                   </span>
