@@ -873,7 +873,7 @@ onMounted(() => {
         <TabsList :class="pickSurfaceClass('w-max h-8 bg-background/60 rounded-md', 'w-max h-8 bg-background/50 backdrop-blur-xl rounded-md')">
           <TabsTrigger
             v-for="view in availableViews" :key="view.label" :value="view.label"
-            class="h-6.5 flex-none shrink-0 text-xs border-none data-[state=active]:text-emerald-600 shadow-none rounded-sm"
+            class="h-6.5 flex-none shrink-0 text-xs border-none data-[state=active]:text-foreground data-[state=active]:bg-background/80 shadow-none rounded-sm font-medium"
           >
             {{ view.label }}
           </TabsTrigger>
@@ -883,14 +883,14 @@ onMounted(() => {
       <div class="flex gap-2 items-center">
         <Button
           variant="ghost" size="xs" class="h-7 rounded-sm border-none bg-background/60 hover:bg-background"
-          :class="[selectedTaskIds.length === tasks.length && 'bg-background !text-emerald-600']"
+          :class="[selectedTaskIds.length === tasks.length && 'bg-background !text-foreground font-medium']"
           @click="showAllTasks"
         >
           全选
         </Button>
         <Button
           variant="ghost" size="xs" class="h-7 rounded-sm border-none bg-background/60 hover:bg-background"
-          :class="[!selectedTaskIds.length && 'bg-background !text-emerald-600']"
+          :class="[!selectedTaskIds.length && 'bg-background !text-foreground font-medium']"
           @click="hideAllTasks"
         >
           全不选
@@ -915,7 +915,7 @@ onMounted(() => {
         >
           <div
             v-for="task in latestValues" :key="task.id"
-            class="flex cursor-pointer select-none items-center gap-3 rounded-md p-2 transition-all bg-background/60 hover:bg-background hover:shadow-[0_0_0_1px] hover:shadow-emerald-600/10"
+            class="flex cursor-pointer select-none items-center gap-3 rounded-md p-2 transition-all bg-card border border-border/70 hover:border-foreground/30"
             :class="[
               !selectedTaskIds.includes(task.id) && 'opacity-30',
             ]"
@@ -997,14 +997,14 @@ onMounted(() => {
           <!-- 延迟可视化开关 -->
           <Button
             variant="ghost" size="xs" class="h-7 rounded-sm border-none bg-background/60 hover:bg-background"
-            :class="[showDelay && 'bg-background !text-emerald-600']" @click="showDelay = !showDelay"
+            :class="[showDelay && 'bg-background !text-foreground font-medium']" @click="showDelay = !showDelay"
           >
             延迟
           </Button>
           <!-- 丢包可视化开关 -->
           <Button
             variant="ghost" size="xs" class="h-7 rounded-sm border-none bg-background/60 hover:bg-background"
-            :class="[showLoss && 'bg-background !text-emerald-600']" @click="showLoss = !showLoss"
+            :class="[showLoss && 'bg-background !text-foreground font-medium']" @click="showLoss = !showLoss"
           >
             丢包
           </Button>
@@ -1012,7 +1012,7 @@ onMounted(() => {
           <div class="flex gap-2 items-center">
             <Button
               variant="ghost" size="xs" class="h-7 rounded-sm border-none bg-background/60 hover:bg-background"
-              :class="[cutPeak && 'bg-background !text-emerald-600']" @click="cutPeak = !cutPeak"
+              :class="[cutPeak && 'bg-background !text-foreground font-medium']" @click="cutPeak = !cutPeak"
             >
               平滑峰值
             </Button>

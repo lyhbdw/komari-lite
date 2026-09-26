@@ -59,8 +59,8 @@ function openPingDialog() {
 <template>
   <CardX
     hoverable
-    class="node-card h-full w-full cursor-pointer border-none shadow-[0_0_0_1px] shadow-transparent transition-all duration-200 rounded-md bg-background/60 hover:bg-background hover:shadow-emerald-600/10 hover:shadow-[0_0_20px,0_0_0_1px] hover:-translate-y-0.5 hover:z-1"
-    :class="[pickSurfaceClass('', 'backdrop-blur-sm'), !props.node.online && 'shadow-[0_0_0_1px] !shadow-red-600/20']"
+    class="node-card h-full w-full cursor-pointer border border-border/80 transition-all duration-150 rounded-md bg-card hover:border-foreground/30 hover:shadow-xs hover:z-1"
+    :class="[!props.node.online && '!border-destructive/40']"
     @click="emit('click')"
   >
     <template #header>

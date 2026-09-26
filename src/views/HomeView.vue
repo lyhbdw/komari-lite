@@ -181,7 +181,7 @@ function getNodeItemTransitionStyle(index: number): Record<string, string> {
               <TabsList :class="pickSurfaceClass('w-max h-8 bg-background/60 rounded-md', 'w-max h-8 bg-background/50 backdrop-blur-xl rounded-md')">
                 <TabsTrigger
                   v-for="g in groups" :key="g.name" :value="g.name"
-                  class="h-6.5 flex-none shrink-0 text-xs border-none data-[state=active]:text-emerald-600 shadow-none rounded-sm"
+                  class="h-6.5 flex-none shrink-0 text-xs border-none data-[state=active]:text-foreground data-[state=active]:bg-background/80 shadow-none rounded-sm font-medium"
                 >
                   {{ g.tab }}
                 </TabsTrigger>
@@ -190,16 +190,16 @@ function getNodeItemTransitionStyle(index: number): Record<string, string> {
             <div class="ml-auto search flex gap-2 items-center pointer-events-auto">
               <Button
                 variant="outline" size="icon" aria-label="卡片视图"
-                class="h-8 w-8 border-none shadow-none rounded-md"
-                :class="[pickSurfaceClass('bg-background hover:bg-background/95', 'bg-background/50 hover:bg-background/60 backdrop-blur-xs'), appStore.nodeViewMode === 'card' ? '!text-emerald-600 !bg-background' : '']"
+                class="h-8 w-8 border-none shadow-none rounded-md transition-colors"
+                :class="[pickSurfaceClass('bg-background hover:bg-background/95', 'bg-background/50 hover:bg-background/60 backdrop-blur-xs'), appStore.nodeViewMode === 'card' ? '!text-foreground !bg-background border border-border/60' : 'text-muted-foreground']"
                 @click="appStore.nodeViewMode = 'card'"
               >
                 <Icon icon="tabler:layout-grid" :width="14" :height="14" />
               </Button>
               <Button
                 variant="outline" size="icon" aria-label="列表视图"
-                class="h-8 w-8 border-none shadow-none rounded-md"
-                :class="[pickSurfaceClass('bg-background hover:bg-background/95', 'bg-background/50 hover:bg-background/60 backdrop-blur-xs'), appStore.nodeViewMode === 'list' ? '!text-emerald-600 !bg-background' : '']"
+                class="h-8 w-8 border-none shadow-none rounded-md transition-colors"
+                :class="[pickSurfaceClass('bg-background hover:bg-background/95', 'bg-background/50 hover:bg-background/60 backdrop-blur-xs'), appStore.nodeViewMode === 'list' ? '!text-foreground !bg-background border border-border/60' : 'text-muted-foreground']"
                 @click="appStore.nodeViewMode = 'list'"
               >
                 <Icon icon="tabler:table" :width="14" :height="14" />
@@ -208,7 +208,7 @@ function getNodeItemTransitionStyle(index: number): Record<string, string> {
                 <div class="absolute top-0 right-0 ">
                   <Input
                     v-model="searchText" placeholder="搜索节点名称、地区、系统"
-                    class="h-8 w-8 rounded-md border-none shadow-none transition-all placeholder:text-transparent focus:!w-60 focus:!pl-7.5 focus:placeholder:!text-muted-foreground focus:!ring-emerald-500/10"
+                    class="h-8 w-8 rounded-md border-none shadow-none transition-all placeholder:text-transparent focus:!w-60 focus:!pl-7.5 focus:placeholder:!text-muted-foreground focus:!ring-foreground/10"
                     :class="pickSurfaceClass('bg-background hover:!bg-background/95 focus:!bg-background', 'bg-background/50 hover:!bg-background/60 focus:!bg-background/80 backdrop-blur-xs')"
                   />
                   <Icon
@@ -255,17 +255,17 @@ function getNodeItemTransitionStyle(index: number): Record<string, string> {
     <Dialog v-model:open="pingDialogOpen">
       <DialogContent
         v-if="selectedPingNode"
-        class="max-w-6xl gap-0 overflow-hidden border-emerald-600/10 p-0 shadow-[0_0_2rem] shadow-emerald-800/10 transition-all"
-        :class="pickSurfaceClass('bg-background', 'bg-background/60')"
+        class="max-w-6xl gap-0 overflow-hidden border-border/80 p-0 shadow-2xl transition-all"
+        :class="pickSurfaceClass('bg-background', 'bg-background/90 backdrop-blur-xl')"
       >
         <DialogHeader class="flex h-13 flex-row items-center px-4">
           <DialogTitle class="truncate">
             {{ selectedPingNode.name }} 延迟 / 丢包
           </DialogTitle>
-          <div class="absolute inset-0 mx-0 max-w-none overflow-hidden bg-slate-50 dark:bg-slate-900/50 -z-9 zoom-90">
+          <div class="absolute inset-0 mx-0 max-w-none overflow-hidden bg-muted/10 -z-9 zoom-90">
             <div class="absolute top-0 left-1/2 -ml-152 h-100 w-325 dark:mask-[linear-gradient(white,transparent)]">
               <div
-                class="absolute inset-0 bg-linear-to-r from-emerald-500 to-lime-300 mask-[radial-gradient(farthest-side_at_top,white,transparent)] opacity-40 dark:from-emerald-500/30 dark:to-lime-300/30 dark:opacity-100"
+                class="absolute inset-0 bg-linear-to-r from-foreground/10 to-transparent mask-[radial-gradient(farthest-side_at_top,white,transparent)] opacity-40 dark:opacity-80"
               >
                 <svg
                   aria-hidden="true"

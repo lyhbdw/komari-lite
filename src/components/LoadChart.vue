@@ -855,7 +855,7 @@ onMounted(() => {
       <TabsList :class="pickSurfaceClass('h-8 bg-background/60 pointer-events-auto rounded-md', 'h-8 bg-background/50 backdrop-blur-xl pointer-events-auto rounded-md')">
         <TabsTrigger
           v-for="view in availableViews" :key="view.label" :value="view.label"
-          class="h-6.5 text-xs border-none data-[state=active]:text-emerald-600 shadow-none rounded-sm"
+          class="h-6.5 text-xs border-none data-[state=active]:text-foreground data-[state=active]:bg-background/80 shadow-none rounded-sm font-medium"
         >
           {{ view.label }}
         </TabsTrigger>

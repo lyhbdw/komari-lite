@@ -399,14 +399,14 @@ onMounted(async () => {
       </CardX>
     </div>
 
-    <!-- 剩余价值与汇率详情模态弹窗 (使用专业 Dialog，彻底解决原绝对定位遮挡问题) -->
+    <!-- 剩余价值与汇率详情模态弹窗 (Vercel 极简无彩色设计) -->
     <Dialog v-model:open="openFinanceDialog">
-      <DialogContent class="sm:max-w-md border-border/60 bg-background/95 backdrop-blur-xl shadow-2xl p-0 overflow-hidden gap-0 rounded-2xl">
-        <DialogHeader class="p-5 pb-4 border-b border-border/40 bg-muted/20 text-left">
+      <DialogContent class="sm:max-w-md border-border/80 bg-background/95 backdrop-blur-md shadow-2xl p-0 overflow-hidden gap-0 rounded-md">
+        <DialogHeader class="p-5 pb-4 border-b border-border/60 bg-muted/20 text-left">
           <div class="flex items-center justify-between pr-6">
             <div class="flex items-center gap-2.5">
-              <div class="p-2 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                <Icon icon="tabler:cash-banknote" :width="20" :height="20" />
+              <div class="p-2 rounded-md bg-muted text-foreground border border-border/60">
+                <Icon icon="tabler:cash-banknote" :width="18" :height="18" />
               </div>
               <div>
                 <DialogTitle class="text-base font-semibold tracking-tight text-foreground">
@@ -420,13 +420,13 @@ onMounted(async () => {
           </div>
         </DialogHeader>
 
-        <div class="p-5 space-y-5">
+        <div class="p-5 space-y-4">
           <!-- 核心财务统计指标卡片 -->
           <div class="grid grid-cols-3 gap-2.5">
             <div
               v-for="(item, index) in financeSummaryItems"
               :key="item.label"
-              class="flex flex-col p-3 rounded-xl border border-border/50 bg-card/60 transition-all hover:bg-card hover:border-emerald-500/30 group"
+              class="flex flex-col p-3 rounded-md border border-border/70 bg-card transition-colors hover:border-foreground/30 group"
             >
               <span class="text-[11px] font-medium text-muted-foreground flex items-center gap-1 mb-1">
                 {{ item.label }}
@@ -437,7 +437,7 @@ onMounted(async () => {
                   class="flex items-baseline truncate mt-auto"
                   :style="getMetricSwitchStyle(index)"
                 >
-                  <span class="shrink-0 text-xs font-semibold text-emerald-600 dark:text-emerald-400 mr-0.5">
+                  <span class="shrink-0 text-xs font-semibold text-muted-foreground mr-0.5">
                     {{ item.symbol }}
                   </span>
                   <span class="text-base sm:text-lg font-bold tracking-tight text-foreground tabular-nums">
@@ -449,17 +449,17 @@ onMounted(async () => {
           </div>
 
           <!-- 实时汇率区域 -->
-          <div class="rounded-xl border border-border/50 bg-card/40 p-4 space-y-3">
+          <div class="rounded-md border border-border/70 bg-card p-4 space-y-3">
             <div class="flex items-center justify-between">
               <div class="flex items-center gap-1.5 text-xs font-semibold tracking-tight text-foreground">
-                <Icon icon="tabler:chart-arrows" :width="15" :height="15" class="text-emerald-500" />
+                <Icon icon="tabler:chart-arrows" :width="15" :height="15" class="text-muted-foreground" />
                 <span>实时汇率参考</span>
               </div>
               <div class="flex items-center gap-1.5">
                 <span class="text-[11px] text-muted-foreground hidden sm:inline">基准货币</span>
                 <select
                   :value="exchangeRateBaseCurrency"
-                  class="rounded-lg border border-border/80 bg-background/80 px-2 py-1 text-xs font-medium text-foreground outline-none transition-colors hover:border-emerald-500/50 focus:border-emerald-500 cursor-pointer shadow-xs"
+                  class="rounded-md border border-border bg-background px-2 py-1 text-xs font-medium text-foreground outline-none transition-colors hover:border-foreground/40 focus:border-foreground cursor-pointer shadow-2xs"
                   aria-label="切换汇率基准币种"
                   @change.stop="setExchangeRateBaseCurrency"
                 >
@@ -474,10 +474,10 @@ onMounted(async () => {
               <div
                 v-for="(row, index) in exchangeRateRows"
                 :key="row.currency"
-                class="flex items-center justify-between px-3 py-2 rounded-lg bg-background/60 border border-border/30 text-xs"
+                class="flex items-center justify-between px-3 py-2 rounded-md bg-muted/30 border border-border/50 text-xs"
               >
-                <span class="font-medium text-muted-foreground flex items-center gap-1">
-                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-500/40" />
+                <span class="font-medium text-muted-foreground flex items-center gap-1.5">
+                  <span class="w-1.5 h-1.5 rounded-full bg-foreground/40" />
                   {{ row.currency }}
                 </span>
                 <Transition v-bind="metricSwitchTransitionProps">
@@ -494,14 +494,14 @@ onMounted(async () => {
           </div>
         </div>
 
-        <div class="px-5 py-3 border-t border-border/40 bg-muted/20 flex items-center justify-between text-[11px] text-muted-foreground">
+        <div class="px-5 py-3 border-t border-border/60 bg-muted/20 flex items-center justify-between text-[11px] text-muted-foreground">
           <span class="flex items-center gap-1">
             <Icon icon="tabler:info-circle" :width="13" :height="13" class="text-muted-foreground/70" />
             汇率数据定时刷新，实际以各运营商结算为准
           </span>
           <button
             type="button"
-            class="px-3 py-1 rounded-lg text-xs font-medium bg-foreground/5 hover:bg-foreground/10 text-foreground transition-colors cursor-pointer"
+            class="px-3.5 py-1.5 rounded-md text-xs font-medium bg-foreground text-background hover:bg-foreground/90 transition-colors cursor-pointer"
             @click="openFinanceDialog = false"
           >
             关闭

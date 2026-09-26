@@ -136,11 +136,11 @@ onUnmounted(() => {
     <Transition name="fade">
       <div
         v-if="showDefaultBackground"
-        class="absolute inset-0 mx-0 max-w-none overflow-hidden bg-slate-50 dark:bg-slate-900/50"
+        class="absolute inset-0 mx-0 max-w-none overflow-hidden bg-background"
       >
         <div class="absolute top-0 left-1/2 -ml-152 h-100 w-325 dark:mask-[linear-gradient(white,transparent)]">
           <div
-            class="absolute inset-0 bg-linear-to-r from-emerald-500 to-lime-300 mask-[radial-gradient(farthest-side_at_top,white,transparent)] opacity-40 dark:from-emerald-500/30 dark:to-lime-300/30 dark:opacity-100"
+            class="absolute inset-0 bg-linear-to-r from-foreground/10 to-transparent mask-[radial-gradient(farthest-side_at_top,white,transparent)] opacity-40 dark:opacity-60"
           >
             <svg
               aria-hidden="true"

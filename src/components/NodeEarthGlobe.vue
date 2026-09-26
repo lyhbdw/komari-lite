@@ -275,19 +275,19 @@ const themeColors = computed(() => {
     return {
       dark: 1,
       mapBrightness: 4,
-      baseColor: [0.32, 0.33, 0.4] as [number, number, number],
-      markerColor: [0.4, 0.7, 1.0] as [number, number, number],
-      glowColor: [0.2, 0.25, 0.45] as [number, number, number],
-      arcColor: [0.45, 0.75, 1.0] as [number, number, number],
+      baseColor: [0.15, 0.15, 0.15] as [number, number, number],
+      markerColor: [0.95, 0.95, 0.95] as [number, number, number],
+      glowColor: [0.1, 0.1, 0.1] as [number, number, number],
+      arcColor: [0.75, 0.75, 0.75] as [number, number, number],
     }
   }
   return {
     dark: 0,
     mapBrightness: 6,
-    baseColor: [1, 1, 1] as [number, number, number],
-    markerColor: [0.21, 0.51, 0.93] as [number, number, number],
-    glowColor: [1, 1, 1] as [number, number, number],
-    arcColor: [0.21, 0.51, 0.93] as [number, number, number],
+    baseColor: [0.95, 0.95, 0.95] as [number, number, number],
+    markerColor: [0.15, 0.15, 0.15] as [number, number, number],
+    glowColor: [0.9, 0.9, 0.9] as [number, number, number],
+    arcColor: [0.35, 0.35, 0.35] as [number, number, number],
   }
 })
 
