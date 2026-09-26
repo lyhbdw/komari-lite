@@ -96,9 +96,16 @@ const Layout = () => {
   const [selectedNodes, setSelectedNodes] = useState<string[]>([]);
   const filteredNodes = Array.isArray(nodeDetail)
     ? nodeDetail
-        .filter((node) =>
-          node.name.toLowerCase().includes(searchTerm.toLowerCase())
-        )
+        .filter((node) => {
+          const lower = searchTerm.toLowerCase();
+          if (lower === "online" || lower === "在线") return !!node.online;
+          if (lower === "offline" || lower === "离线") return !node.online;
+          return (
+            node.name.toLowerCase().includes(lower) ||
+            (node.ipv4 && node.ipv4.includes(searchTerm)) ||
+            (node.group && node.group.toLowerCase().includes(lower))
+          );
+        })
         .sort((a, b) => a.weight - b.weight)
     : [];
 
@@ -170,6 +177,7 @@ const Layout = () => {
 const MetricsOverview = ({ nodes }: { nodes: NodeDetail[] }) => {
   const { t } = useTranslation();
   const total = nodes.length;
+  const onlineCount = nodes.filter((n) => n.online).length;
   const uniqueRegions = Array.from(
     new Set(nodes.map((n) => n.region).filter(Boolean))
   );
@@ -190,10 +198,14 @@ const MetricsOverview = ({ nodes }: { nodes: NodeDetail[] }) => {
           {total}
         </div>
         <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground mt-1">
-          <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+          <span
+            className={`inline-block w-1.5 h-1.5 rounded-full ${
+              onlineCount > 0 ? "bg-emerald-500 animate-pulse" : "bg-rose-500"
+            }`}
+          />
           <span>
             {total > 0
-              ? t("admin.overview.all_reported", "探针状态正常")
+              ? `${onlineCount} 在线 · ${total - onlineCount} 离线`
               : t("admin.overview.no_nodes", "等待节点接入")}
           </span>
         </div>
@@ -1171,7 +1183,12 @@ function DetailView({ node }: { node: NodeDetail }) {
         <div className="flex items-center gap-2.5 py-1 hover:underline cursor-pointer group">
           <div className="relative shrink-0 flex items-center justify-center">
             <Flag flag={node.region} size="6" />
-            <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-card" />
+            <span
+              className={`absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full ring-2 ring-card ${
+                node.online ? "bg-emerald-500" : "bg-rose-500"
+              }`}
+              title={node.online ? t("nodeCard.online", "在线") : t("nodeCard.offline", "离线")}
+            />
           </div>
           <div className="flex flex-col min-w-0">
             <span className="font-medium text-sm text-foreground group-hover:text-primary transition-colors truncate max-w-[200px]" title={node.name}>
@@ -1185,7 +1202,18 @@ function DetailView({ node }: { node: NodeDetail }) {
       </DrawerTrigger>
       <DrawerContent>
         <DrawerHeader className="gap-1">
-          <DrawerTitle>{node.name}</DrawerTitle>
+          <div className="flex items-center gap-2">
+            <DrawerTitle>{node.name}</DrawerTitle>
+            <span
+              className={`px-2 py-0.5 text-xs font-medium rounded-full ${
+                node.online
+                  ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                  : "bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20"
+              }`}
+            >
+              {node.online ? t("nodeCard.online", "在线") : t("nodeCard.offline", "离线")}
+            </span>
+          </div>
           <DrawerDescription>
             {t("admin.nodeDetail.machineDetail", "机器详细信息")}
           </DrawerDescription>

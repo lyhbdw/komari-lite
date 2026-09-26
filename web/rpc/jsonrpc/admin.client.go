@@ -8,6 +8,7 @@ import (
 
 	"github.com/Tumb1er1376/komari-monitor-lite/database/auditlog"
 	"github.com/Tumb1er1376/komari-monitor-lite/database/clients"
+	"github.com/Tumb1er1376/komari-monitor-lite/database/models"
 	"github.com/Tumb1er1376/komari-monitor-lite/database/records"
 	"github.com/Tumb1er1376/komari-monitor-lite/internal/metricstore"
 	"github.com/Tumb1er1376/komari-monitor-lite/pkg/rpc"
@@ -215,6 +216,12 @@ func adminRemoveClient(ctx context.Context, req *rpc.JsonRpcRequest) (any, *rpc.
 	return nil, nil
 }
 
+// AdminClientItem 为管理端节点列表与详情附带实时在线状态。
+type AdminClientItem struct {
+	models.Client
+	Online bool `json:"online"`
+}
+
 func adminGetClient(_ context.Context, req *rpc.JsonRpcRequest) (any, *rpc.JsonRpcError) {
 	var params struct {
 		UUID string `json:"uuid"`
@@ -227,7 +234,18 @@ func adminGetClient(_ context.Context, req *rpc.JsonRpcRequest) (any, *rpc.JsonR
 	if err != nil {
 		return nil, rpc.MakeError(rpc.InternalError, err.Error(), nil)
 	}
-	return result, nil
+	onlineUUIDs := agent_runtime.GetAllOnlineUUIDs()
+	isOnline := false
+	for _, u := range onlineUUIDs {
+		if u == params.UUID {
+			isOnline = true
+			break
+		}
+	}
+	return AdminClientItem{
+		Client: result,
+		Online: isOnline,
+	}, nil
 }
 
 func adminListClients(_ context.Context, _ *rpc.JsonRpcRequest) (any, *rpc.JsonRpcError) {
@@ -235,7 +253,19 @@ func adminListClients(_ context.Context, _ *rpc.JsonRpcRequest) (any, *rpc.JsonR
 	if err != nil {
 		return nil, rpc.MakeError(rpc.InternalError, err.Error(), nil)
 	}
-	return cls, nil
+	onlineUUIDs := agent_runtime.GetAllOnlineUUIDs()
+	onlineSet := make(map[string]bool, len(onlineUUIDs))
+	for _, u := range onlineUUIDs {
+		onlineSet[u] = true
+	}
+	result := make([]AdminClientItem, len(cls))
+	for i, c := range cls {
+		result[i] = AdminClientItem{
+			Client: c,
+			Online: onlineSet[c.UUID],
+		}
+	}
+	return result, nil
 }
 
 func adminGetClientToken(_ context.Context, req *rpc.JsonRpcRequest) (any, *rpc.JsonRpcError) {

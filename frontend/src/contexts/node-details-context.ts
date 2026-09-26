@@ -28,6 +28,7 @@ export type NodeDetail = {
   expired_at: string;
   created_at: string;
   updated_at: string;
+  online?: boolean;
   [key: string]: any;
 };
 
