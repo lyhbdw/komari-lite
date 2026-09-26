@@ -62,38 +62,46 @@ const NotificationEditForm = ({
         e.preventDefault();
         onSubmit({ enable: enabled, cooldown, grace_period: grace });
       }}
-      className="km-notification-offline-form flex flex-col gap-2"
+      className="km-notification-offline-form flex flex-col gap-3 py-1"
     >
-      <label htmlFor="status">{t("common.status")}</label>
-      <Switch
-        id="status"
-        name="status"
-        checked={enabled}
-        onCheckedChange={setEnabled}
-      />
-      <label htmlFor="cooldown" className="flex items-center gap-2">
-        {t("notification.offline.cooldown")}
-        <Tips>{t("notification.offline.cooldown_tip")}</Tips>
-      </label>
-      <TextField.Root
-        type="number"
-        min={0}
-        value={cooldown}
-        onChange={(e) => setCooldown(Number(e.target.value))}
-        id="cooldown"
-        name="cooldown"
-      />
-      <label htmlFor="grace_period" className="flex items-center gap-2">
-        {t("notification.offline.grace_period")}<Tips>{t("notification.offline.grace_period_tip")}</Tips>
-      </label>
-      <TextField.Root
-        type="number"
-        min={0}
-        value={grace}
-        onChange={(e) => setGrace(Number(e.target.value))}
-        id="grace_period"
-        name="grace_period"
-      />
+      <Flex align="center" justify="between" className="py-1">
+        <label htmlFor="status" className="text-sm font-medium cursor-pointer">
+          {t("common.status")}
+        </label>
+        <Switch
+          id="status"
+          name="status"
+          checked={enabled}
+          onCheckedChange={setEnabled}
+        />
+      </Flex>
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor="cooldown" className="text-sm font-medium flex items-center gap-1.5">
+          {t("notification.offline.cooldown")}
+          <Tips>{t("notification.offline.cooldown_tip")}</Tips>
+        </label>
+        <TextField.Root
+          type="number"
+          min={0}
+          value={cooldown}
+          onChange={(e) => setCooldown(Number(e.target.value))}
+          id="cooldown"
+          name="cooldown"
+        />
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor="grace_period" className="text-sm font-medium flex items-center gap-1.5">
+          {t("notification.offline.grace_period")}<Tips>{t("notification.offline.grace_period_tip")}</Tips>
+        </label>
+        <TextField.Root
+          type="number"
+          min={0}
+          value={grace}
+          onChange={(e) => setGrace(Number(e.target.value))}
+          id="grace_period"
+          name="grace_period"
+        />
+      </div>
       <Flex gap="2" justify="end" className="mt-4">
         {onCancel && (
           <Dialog.Close>
