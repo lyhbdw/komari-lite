@@ -35,19 +35,32 @@ backup_dir="$1"
 assume_yes=false
 [[ "${2:-}" == "--yes" ]] && assume_yes=true
 
-[[ -d "$backup_dir" ]] || die "backup directory does not exist: $backup_dir"
+# Resolve relative paths against the backup root for convenience. Accepts
+# either a plain snapshot directory or a compressed <stamp>.tar.zst archive
+# (which is unpacked to a temp dir first).
+if [[ ! "$backup_dir" = /* ]]; then
+  if [[ -f "${KOMARI_BACKUP_DIR}/${backup_dir}.tar.zst" && ! -d "${KOMARI_BACKUP_DIR}/${backup_dir}" ]]; then
+    backup_dir="${KOMARI_BACKUP_DIR}/${backup_dir}.tar.zst"
+  else
+    backup_dir="${KOMARI_BACKUP_DIR}/${backup_dir}"
+  fi
+fi
+[[ -d "$backup_dir" || -f "$backup_dir" ]] || die "backup does not exist: $backup_dir"
+if [[ "$backup_dir" == *.tar.zst ]]; then
+  [[ -f "$backup_dir" ]] || die "archive does not exist: $backup_dir"
+  unpack_dir="$(mktemp -d "${KOMARI_BACKUP_DIR}/.restore-XXXXXX")"
+  trap 'rm -rf -- "$unpack_dir"' EXIT
+  log "unpacking $backup_dir"
+  tar --zstd -xf "$backup_dir" -C "$unpack_dir"
+  backup_dir="$unpack_dir"
+fi
+
 [[ -f "$backup_dir/komari.db" ]] || die "komari.db not found in $backup_dir"
 [[ -f "$backup_dir/metrics.db" ]] || die "metrics.db not found in $backup_dir"
 [[ -f "$backup_dir/SHA256SUMS" ]] || die "SHA256SUMS not found in $backup_dir"
 command -v sqlite3 >/dev/null 2>&1 || die "sqlite3 is required"
 command -v docker >/dev/null 2>&1 || die "docker is required"
 [[ -d "$KOMARI_DATA_DIR" ]] || die "data directory does not exist: $KOMARI_DATA_DIR"
-
-# Resolve relative paths against the backup root for convenience.
-if [[ ! "$backup_dir" = /* ]]; then
-  backup_dir="${KOMARI_BACKUP_DIR}/${backup_dir}"
-  [[ -d "$backup_dir" ]] || die "backup directory does not exist: $backup_dir"
-fi
 
 # 1. Integrity gate.
 log "verifying SHA256SUMS in $backup_dir"

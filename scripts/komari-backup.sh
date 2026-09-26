@@ -95,4 +95,29 @@ if (( ${#foreign_dirs[@]} > 0 )); then
     rm -rf -- "$foreign"
   done
 fi
+# Compress snapshots beyond the newest one into single-file zstd archives.
+# metrics.db is high-entropy float data: measured ratio is ~56%, not 5:1.
+# The newest snapshot stays a plain directory so the common restore path
+# needs no unpacking; older ones become <stamp>.tar.zst next to it.
+mapfile -t all_snapshots < <(find "$KOMARI_BACKUP_DIR" -mindepth 1 -maxdepth 1 -type d -regextype posix-extended -regex '.*/[0-9]{8}T[0-9]{6}Z' -printf '%p\n' | sort -r)
+if (( ${#all_snapshots[@]} > 1 )); then
+  for old_snapshot in "${all_snapshots[@]:1}"; do
+    archive="${KOMARI_BACKUP_DIR}/$(basename "$old_snapshot").tar.zst"
+    [[ -f "$archive" ]] && continue
+    printf 'compressing snapshot: %s\n' "$old_snapshot"
+    tar -C "$old_snapshot" --zstd -cf "${archive}.tmp" .
+    mv -- "${archive}.tmp" "$archive"
+    rm -rf -- "$old_snapshot"
+  done
+fi
+
+# Rotate compressed archives so total snapshots (1 dir + archives) stay at
+# RETENTION_COUNT.
+mapfile -t old_archives < <(find "$KOMARI_BACKUP_DIR" -mindepth 1 -maxdepth 1 -type f -regextype posix-extended -regex '.*/[0-9]{8}T[0-9]{6}Z\.tar\.zst' -printf '%p\n' | sort -r)
+if (( ${#old_archives[@]} > RETENTION_COUNT - 1 )); then
+  for old_archive in "${old_archives[@]:RETENTION_COUNT-1}"; do
+    rm -f -- "$old_archive"
+  done
+fi
+
 printf '%s\n' "$target_dir"
