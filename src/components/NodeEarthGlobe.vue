@@ -502,17 +502,17 @@ function formatRate(bytesPerSec: number): string {
     <template v-for="cluster in regionClusters" :key="cluster.code">
       <div
         :ref="bindClusterOverlayRef(cluster.code)"
-        class="absolute -top-7.5 left-0 pointer-events-none rounded backdrop-blur transition-[opacity,filter] duration-500"
+        class="absolute -top-7.5 left-0 pointer-events-none rounded transition-[opacity,filter] duration-500"
       >
         <img
           :src="`/assets/flags/${cluster.code}.svg`" :alt="cluster.code"
           class="size-4 block absolute -bottom-2 -left-2 z-1"
         >
-        <div class="relative z-2 bg-background/60 rounded py-0.5 px-1 text-xs zoom-80 items-start justify-center text-nowrap">
-          <div class="text-green-600 flex flex-row items-center gap-0.5">
+        <div class="relative z-2 bg-card/95 dark:bg-card/90 border border-border/80 shadow-xs rounded py-0.5 px-1.5 text-xs zoom-80 items-start justify-center text-nowrap backdrop-blur-md">
+          <div class="text-emerald-700 dark:text-emerald-400 font-medium flex flex-row items-center gap-0.5">
             <Icon icon="tabler:chevron-up" width="12" height="12" /> {{ formatRate(rateFor(cluster.code).up) }}
           </div>
-          <div class="text-blue-600 flex flex-row items-center gap-0.5">
+          <div class="text-sky-700 dark:text-sky-400 font-medium flex flex-row items-center gap-0.5">
             <Icon icon="tabler:chevron-down" width="12" height="12" /> {{ formatRate(rateFor(cluster.code).down) }}
           </div>
         </div>
@@ -521,7 +521,7 @@ function formatRate(bytesPerSec: number): string {
 
     <div
       v-if="totalServers > 0"
-      class="absolute top-6 md:top-12 left-0 text-[10px] text-muted-foreground pointer-events-none flex gap-2 items-center backdrop-blur-lg bg-background/60 rounded px-2 py-0.5"
+      class="absolute top-6 md:top-12 left-0 text-[10px] text-muted-foreground font-medium pointer-events-none flex gap-2 items-center backdrop-blur-md bg-card/90 border border-border/70 rounded px-2 py-0.5 shadow-xs"
     >
       <div v-if="onlineServers > 0" class="flex items-center gap-1">
         <span class="inline-block size-1.5 rounded-full bg-green-600 animate-pulse" />

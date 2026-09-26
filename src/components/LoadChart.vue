@@ -60,14 +60,14 @@ const chartColors = {
 
 // 图表主题相关颜色
 const chartThemeColors = computed(() => ({
-  text: isDark.value ? 'rgba(255, 255, 255, 0.85)' : 'rgba(0, 0, 0, 0.85)',
-  textSecondary: isDark.value ? 'rgba(255, 255, 255, 0.55)' : 'rgba(0, 0, 0, 0.55)',
-  textTertiary: isDark.value ? 'rgba(255, 255, 255, 0.35)' : 'rgba(0, 0, 0, 0.35)',
-  borderColor: isDark.value ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
-  splitLineColor: isDark.value ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.06)',
-  tooltipBg: isDark.value ? 'rgba(40, 40, 40, 0.95)' : 'rgba(255, 255, 255, 0.8)',
-  tooltipShadow: isDark.value ? 'rgba(0, 0, 0, 0.4)' : 'rgba(0, 0, 0, 0.06)',
-  crosshairColor: isDark.value ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.1)',
+  text: isDark.value ? 'rgba(255, 255, 255, 0.90)' : 'rgba(0, 0, 0, 0.90)',
+  textSecondary: isDark.value ? 'rgba(255, 255, 255, 0.65)' : 'rgba(0, 0, 0, 0.68)',
+  textTertiary: isDark.value ? 'rgba(255, 255, 255, 0.45)' : 'rgba(0, 0, 0, 0.45)',
+  borderColor: isDark.value ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
+  splitLineColor: isDark.value ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)',
+  tooltipBg: isDark.value ? 'rgba(20, 20, 20, 0.96)' : 'rgba(255, 255, 255, 0.96)',
+  tooltipShadow: isDark.value ? 'rgba(0, 0, 0, 0.5)' : 'rgba(0, 0, 0, 0.1)',
+  crosshairColor: isDark.value ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.15)',
 }))
 
 // 通用 Tooltip 配置
@@ -852,10 +852,10 @@ onMounted(() => {
   <div class="flex flex-col gap-4">
     <!-- 时间选择器 -->
     <Tabs v-model="selectedView" class="w-full items-center">
-      <TabsList :class="pickSurfaceClass('h-8 bg-background/60 pointer-events-auto rounded-md', 'h-8 bg-background/50 backdrop-blur-xl pointer-events-auto rounded-md')">
+      <TabsList class="h-8 p-0.5 bg-muted/80 dark:bg-muted/60 border border-border/60 pointer-events-auto rounded-md">
         <TabsTrigger
           v-for="view in availableViews" :key="view.label" :value="view.label"
-          class="h-6.5 text-xs border-none data-[state=active]:text-foreground data-[state=active]:bg-background/80 shadow-none rounded-sm font-medium"
+          class="h-7 px-3 text-xs rounded-[5px] text-muted-foreground transition-all data-[state=active]:text-foreground data-[state=active]:bg-card data-[state=active]:shadow-xs data-[state=active]:font-semibold cursor-pointer"
         >
           {{ view.label }}
         </TabsTrigger>

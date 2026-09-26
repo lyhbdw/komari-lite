@@ -177,43 +177,46 @@ function getNodeItemTransitionStyle(index: number): Record<string, string> {
       <div class="nodes">
         <Tabs v-model="appStore.nodeSelectedGroup" class="w-full flex-col gap-4">
           <div class="flex gap-2 items-start flex-nowrap">
-            <div class="overflow-x-auto rounded-sm md:pointer-events-auto">
-              <TabsList :class="pickSurfaceClass('w-max h-8 bg-background/60 rounded-md', 'w-max h-8 bg-background/50 backdrop-blur-xl rounded-md')">
+            <div class="overflow-x-auto rounded-md md:pointer-events-auto">
+              <TabsList class="w-max h-8 p-0.5 bg-muted/80 dark:bg-muted/60 border border-border/60 rounded-md">
                 <TabsTrigger
                   v-for="g in groups" :key="g.name" :value="g.name"
-                  class="h-6.5 flex-none shrink-0 text-xs border-none data-[state=active]:text-foreground data-[state=active]:bg-background/80 shadow-none rounded-sm font-medium"
+                  class="h-7 px-3 text-xs rounded-[5px] text-muted-foreground transition-all data-[state=active]:text-foreground data-[state=active]:bg-card data-[state=active]:shadow-xs data-[state=active]:font-semibold cursor-pointer"
                 >
                   {{ g.tab }}
                 </TabsTrigger>
               </TabsList>
             </div>
             <div class="ml-auto search flex gap-2 items-center pointer-events-auto">
-              <Button
-                variant="outline" size="icon" aria-label="卡片视图"
-                class="h-8 w-8 border-none shadow-none rounded-md transition-colors"
-                :class="[pickSurfaceClass('bg-background hover:bg-background/95', 'bg-background/50 hover:bg-background/60 backdrop-blur-xs'), appStore.nodeViewMode === 'card' ? '!text-foreground !bg-background border border-border/60' : 'text-muted-foreground']"
-                @click="appStore.nodeViewMode = 'card'"
-              >
-                <Icon icon="tabler:layout-grid" :width="14" :height="14" />
-              </Button>
-              <Button
-                variant="outline" size="icon" aria-label="列表视图"
-                class="h-8 w-8 border-none shadow-none rounded-md transition-colors"
-                :class="[pickSurfaceClass('bg-background hover:bg-background/95', 'bg-background/50 hover:bg-background/60 backdrop-blur-xs'), appStore.nodeViewMode === 'list' ? '!text-foreground !bg-background border border-border/60' : 'text-muted-foreground']"
-                @click="appStore.nodeViewMode = 'list'"
-              >
-                <Icon icon="tabler:table" :width="14" :height="14" />
-              </Button>
+              <div class="flex items-center p-0.5 bg-muted/80 dark:bg-muted/60 border border-border/60 rounded-md h-8">
+                <button
+                  type="button"
+                  aria-label="卡片视图"
+                  class="h-7 w-7 flex items-center justify-center rounded-[5px] transition-all cursor-pointer"
+                  :class="appStore.nodeViewMode === 'card' ? 'bg-card text-foreground shadow-xs font-semibold' : 'text-muted-foreground hover:text-foreground'"
+                  @click="appStore.nodeViewMode = 'card'"
+                >
+                  <Icon icon="tabler:layout-grid" :width="14" :height="14" />
+                </button>
+                <button
+                  type="button"
+                  aria-label="列表视图"
+                  class="h-7 w-7 flex items-center justify-center rounded-[5px] transition-all cursor-pointer"
+                  :class="appStore.nodeViewMode === 'list' ? 'bg-card text-foreground shadow-xs font-semibold' : 'text-muted-foreground hover:text-foreground'"
+                  @click="appStore.nodeViewMode = 'list'"
+                >
+                  <Icon icon="tabler:table" :width="14" :height="14" />
+                </button>
+              </div>
               <div class="relative z-1 w-8 h-8">
-                <div class="absolute top-0 right-0 ">
+                <div class="absolute top-0 right-0">
                   <Input
                     v-model="searchText" placeholder="搜索节点名称、地区、系统"
-                    class="h-8 w-8 rounded-md border-none shadow-none transition-all placeholder:text-transparent focus:!w-60 focus:!pl-7.5 focus:placeholder:!text-muted-foreground focus:!ring-foreground/10"
-                    :class="pickSurfaceClass('bg-background hover:!bg-background/95 focus:!bg-background', 'bg-background/50 hover:!bg-background/60 focus:!bg-background/80 backdrop-blur-xs')"
+                    class="h-8 w-8 rounded-md border border-border/60 bg-muted/80 dark:bg-muted/60 shadow-none transition-all placeholder:text-transparent focus:!w-60 focus:!pl-7.5 focus:placeholder:!text-muted-foreground focus:!bg-card focus:!ring-1 focus:!ring-foreground/20"
                   />
                   <Icon
                     icon="tabler:search" :width="14" :height="14"
-                    class="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none"
+                    class="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-muted-foreground"
                   />
                 </div>
               </div>

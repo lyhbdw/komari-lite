@@ -41,9 +41,9 @@ export function getPingToneClass(value: number): string {
   if (value <= 120)
     return 'text-emerald-700/90 dark:text-emerald-400/90 font-medium'
   if (value <= 180)
-    return 'text-amber-700 dark:text-amber-400 font-medium'
+    return 'text-amber-800 dark:text-amber-400 font-medium'
   if (value <= 240)
-    return 'text-orange-700 dark:text-orange-400 font-medium'
+    return 'text-orange-800 dark:text-orange-400 font-medium'
   return 'text-rose-700 dark:text-rose-400 font-medium'
 }
 

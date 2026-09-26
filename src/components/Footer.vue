@@ -32,8 +32,8 @@ const showFiling = computed(() => showIcp.value || showPolice.value)
 
 <template>
   <VisitorInfoCard v-if="appStore.visitorInfoCardEnabled" />
-  <footer class="w-full sm:flex-row sm:gap-4 max-w-[1280px] mx-auto p-4">
-    <div class="flex flex-row items-center justify-between  text-xs text-muted-foreground">
+  <footer class="w-full sm:flex-row sm:gap-4 max-w-[1280px] mx-auto p-4 border-t border-border/40 mt-6">
+    <div class="flex flex-row items-center justify-between text-xs text-muted-foreground font-medium">
       <div class="flex gap-1 items-center">
         Powered by
         <DataTooltip
@@ -45,7 +45,7 @@ const showFiling = computed(() => showIcp.value || showPolice.value)
             href="https://github.com/Tumb1er1376/komari-monitor-lite" target="_blank" rel="noopener noreferrer"
             class="transition-opacity hover:opacity-80"
           >
-            <span class="font-medium text-foreground">Komari Lite</span>
+            <span class="font-semibold text-foreground/90 hover:text-foreground">Komari Lite</span>
           </a>
         </DataTooltip>
       </div>
@@ -60,7 +60,7 @@ const showFiling = computed(() => showIcp.value || showPolice.value)
             href="https://github.com/Tumb1er1376/komari-theme-lite" target="_blank" rel="noopener noreferrer"
             class="transition-opacity hover:opacity-80"
           >
-            <span class="font-medium text-foreground">Komari Lite Theme</span>
+            <span class="font-semibold text-foreground/90 hover:text-foreground">Komari Lite Theme</span>
           </a>
         </DataTooltip>
       </div>

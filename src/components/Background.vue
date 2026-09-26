@@ -138,13 +138,13 @@ onUnmounted(() => {
         v-if="showDefaultBackground"
         class="absolute inset-0 mx-0 max-w-none overflow-hidden bg-background"
       >
-        <div class="absolute top-0 left-1/2 -ml-152 h-100 w-325 dark:mask-[linear-gradient(white,transparent)]">
+        <div class="absolute top-0 left-1/2 -ml-152 h-110 w-325 mask-[radial-gradient(farthest-side_at_top,white,transparent)]">
           <div
-            class="absolute inset-0 bg-linear-to-r from-foreground/10 to-transparent mask-[radial-gradient(farthest-side_at_top,white,transparent)] opacity-40 dark:opacity-60"
+            class="absolute inset-0 bg-linear-to-r from-foreground/[0.06] to-transparent opacity-90 dark:opacity-80"
           >
             <svg
               aria-hidden="true"
-              class="absolute inset-x-0 inset-y-[-50%] h-[200%] w-full skew-y-[-18deg] fill-black/40 stroke-black/50 mix-blend-overlay dark:fill-white/2.5 dark:stroke-white/5"
+              class="absolute inset-x-0 inset-y-[-50%] h-[200%] w-full skew-y-[-18deg] stroke-foreground/10 fill-foreground/[0.015] dark:stroke-white/12 dark:fill-white/[0.025]"
             >
               <defs>
                 <pattern id="_S_1_" width="72" height="56" patternUnits="userSpaceOnUse" x="-12" y="4">
@@ -155,10 +155,10 @@ onUnmounted(() => {
                 x="-12" y="4"
                 class="overflow-visible"
               >
-                <rect stroke-width="0" width="73" height="57" x="288" y="168" />
-                <rect stroke-width="0" width="73" height="57" x="144" y="56" />
-                <rect stroke-width="0" width="73" height="57" x="504" y="168" />
-                <rect stroke-width="0" width="73" height="57" x="720" y="336" />
+                <rect stroke-width="0" width="73" height="57" x="288" y="168" class="fill-foreground/[0.04] dark:fill-white/[0.05]" />
+                <rect stroke-width="0" width="73" height="57" x="144" y="56" class="fill-foreground/[0.04] dark:fill-white/[0.05]" />
+                <rect stroke-width="0" width="73" height="57" x="504" y="168" class="fill-foreground/[0.04] dark:fill-white/[0.05]" />
+                <rect stroke-width="0" width="73" height="57" x="720" y="336" class="fill-foreground/[0.04] dark:fill-white/[0.05]" />
               </svg>
             </svg>
           </div>

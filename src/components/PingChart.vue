@@ -31,14 +31,14 @@ const rpc = getSharedRpc()
 
 // 图表主题相关颜色
 const chartThemeColors = computed(() => ({
-  text: isDark.value ? 'rgba(255, 255, 255, 0.85)' : 'rgba(0, 0, 0, 0.85)',
-  textSecondary: isDark.value ? 'rgba(255, 255, 255, 0.55)' : 'rgba(0, 0, 0, 0.55)',
-  textTertiary: isDark.value ? 'rgba(255, 255, 255, 0.35)' : 'rgba(0, 0, 0, 0.35)',
-  borderColor: isDark.value ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.06)',
-  splitLineColor: isDark.value ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.06)',
-  tooltipBg: isDark.value ? 'rgba(40, 40, 40, 0.95)' : 'rgba(255, 255, 255, 0.8)',
-  tooltipShadow: isDark.value ? 'rgba(0, 0, 0, 0.4)' : 'rgba(0, 0, 0, 0.06)',
-  crosshairColor: isDark.value ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.1)',
+  text: isDark.value ? 'rgba(255, 255, 255, 0.90)' : 'rgba(0, 0, 0, 0.90)',
+  textSecondary: isDark.value ? 'rgba(255, 255, 255, 0.65)' : 'rgba(0, 0, 0, 0.68)',
+  textTertiary: isDark.value ? 'rgba(255, 255, 255, 0.45)' : 'rgba(0, 0, 0, 0.45)',
+  borderColor: isDark.value ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
+  splitLineColor: isDark.value ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)',
+  tooltipBg: isDark.value ? 'rgba(20, 20, 20, 0.96)' : 'rgba(255, 255, 255, 0.96)',
+  tooltipShadow: isDark.value ? 'rgba(0, 0, 0, 0.5)' : 'rgba(0, 0, 0, 0.1)',
+  crosshairColor: isDark.value ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.15)',
 }))
 
 // 优化后的图表配色方案（多任务时使用）
@@ -870,10 +870,10 @@ onMounted(() => {
     <!-- 时间选择器 -->
     <Tabs v-model="selectedView" class="w-full items-center">
       <div class="min-w-0 flex-1 overflow-x-auto pointer-events-auto">
-        <TabsList :class="pickSurfaceClass('w-max h-8 bg-background/60 rounded-md', 'w-max h-8 bg-background/50 backdrop-blur-xl rounded-md')">
+        <TabsList class="w-max h-8 p-0.5 bg-muted/80 dark:bg-muted/60 border border-border/60 rounded-md">
           <TabsTrigger
             v-for="view in availableViews" :key="view.label" :value="view.label"
-            class="h-6.5 flex-none shrink-0 text-xs border-none data-[state=active]:text-foreground data-[state=active]:bg-background/80 shadow-none rounded-sm font-medium"
+            class="h-7 px-3 text-xs rounded-[5px] text-muted-foreground transition-all data-[state=active]:text-foreground data-[state=active]:bg-card data-[state=active]:shadow-xs data-[state=active]:font-semibold cursor-pointer"
           >
             {{ view.label }}
           </TabsTrigger>
@@ -995,37 +995,43 @@ onMounted(() => {
         </div>
 
         <div class="flex flex-wrap gap-2 items-center py-2">
-          <!-- 延迟可视化开关 -->
-          <Button
-            variant="ghost" size="xs" class="h-7 rounded-sm border-none bg-background/60 hover:bg-background"
-            :class="[showDelay && 'bg-background !text-foreground font-medium']" @click="showDelay = !showDelay"
-          >
-            延迟
-          </Button>
-          <!-- 丢包可视化开关 -->
-          <Button
-            variant="ghost" size="xs" class="h-7 rounded-sm border-none bg-background/60 hover:bg-background"
-            :class="[showLoss && 'bg-background !text-foreground font-medium']" @click="showLoss = !showLoss"
-          >
-            丢包
-          </Button>
-          <!-- 平滑峰值开关 -->
-          <div class="flex gap-2 items-center">
-            <Button
-              variant="ghost" size="xs" class="h-7 rounded-sm border-none bg-background/60 hover:bg-background"
-              :class="[cutPeak && 'bg-background !text-foreground font-medium']" @click="cutPeak = !cutPeak"
+          <!-- 可视化指标开关组合 -->
+          <div class="flex items-center p-0.5 bg-muted/80 dark:bg-muted/60 border border-border/60 rounded-md h-8 gap-0.5">
+            <button
+              type="button"
+              class="h-7 px-3 text-xs rounded-[5px] transition-all cursor-pointer select-none"
+              :class="showDelay ? 'bg-card text-foreground shadow-xs font-semibold' : 'text-muted-foreground hover:text-foreground'"
+              @click="showDelay = !showDelay"
             >
-              平滑峰值
-            </Button>
-            <DataTooltip
-              content="使用 EWMA 算法平滑数据并过滤突变值"
-              placement="top"
-              :content-class="pickSurfaceClass('whitespace-nowrap text-[11px]', 'whitespace-nowrap text-[11px] backdrop-blur-xl')"
+              延迟
+            </button>
+            <button
+              type="button"
+              class="h-7 px-3 text-xs rounded-[5px] transition-all cursor-pointer select-none"
+              :class="showLoss ? 'bg-card text-foreground shadow-xs font-semibold' : 'text-muted-foreground hover:text-foreground'"
+              @click="showLoss = !showLoss"
             >
-              <Button variant="ghost" size="icon-xs" class="text-slate-500">
-                <Icon icon="carbon:information" :width="14" :height="14" />
-              </Button>
-            </DataTooltip>
+              丢包
+            </button>
+            <div class="flex items-center gap-0.5 pl-0.5">
+              <button
+                type="button"
+                class="h-7 px-3 text-xs rounded-[5px] transition-all cursor-pointer select-none"
+                :class="cutPeak ? 'bg-card text-foreground shadow-xs font-semibold' : 'text-muted-foreground hover:text-foreground'"
+                @click="cutPeak = !cutPeak"
+              >
+                平滑峰值
+              </button>
+              <DataTooltip
+                content="使用 EWMA 算法平滑数据并过滤突变值"
+                placement="top"
+                :content-class="pickSurfaceClass('whitespace-nowrap text-[11px]', 'whitespace-nowrap text-[11px] backdrop-blur-xl')"
+              >
+                <div class="p-1 text-muted-foreground hover:text-foreground cursor-help transition-colors">
+                  <Icon icon="carbon:information" :width="14" :height="14" />
+                </div>
+              </DataTooltip>
+            </div>
           </div>
         </div>
 
