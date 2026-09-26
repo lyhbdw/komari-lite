@@ -122,7 +122,7 @@ const LoginDialog = ({ trigger, autoOpen = false, showSettings = true, info, onL
         <Dialog.Trigger>
           {trigger ? trigger : <Button>{t("login.title")}</Button>}
         </Dialog.Trigger>
-        <Dialog.Content maxWidth="420px" className="km-login-dialog p-6 sm:p-7 rounded-2xl border border-border bg-card shadow-2xl">
+        <Dialog.Content maxWidth="420px" className="km-login-dialog p-6 sm:p-7 rounded-2xl border border-border !bg-card shadow-2xl z-50">
           <div className="flex flex-col items-center text-center mb-6">
             <div className="w-10 h-10 rounded-xl bg-foreground text-background flex items-center justify-center font-bold text-lg mb-3 shadow-sm select-none">
               K
