@@ -14,6 +14,8 @@ import { formatDateTime, getStatus, getStatusTextClass } from '@/utils/helper'
 import { getCustomTags, getDiskPercentage, getMemPercentage, getPriceTags, getRemainingTimeTagClass, getTrafficUsed, getTrafficUsedPercentage, hasRegion, showTrafficProgress } from '@/utils/nodeHelpers'
 import { getOSImage, getOSName } from '@/utils/osImageHelper'
 import { getFlagSrc, getRegionDisplayName } from '@/utils/regionHelper'
+import * as financeHelper from '@/utils/financeHelper'
+import { sharedExchangeRates, sharedFinanceCurrency } from '@/utils/financeHelper'
 
 const props = defineProps<{ node: NodeData }>()
 
@@ -59,6 +61,58 @@ const trafficUsed = computed(() => getTrafficUsed(props.node))
 const priceTags = computed(() => getPriceTags(props.node, appStore.lang))
 const remainingTimeTagClass = computed(() => getRemainingTimeTagClass(props.node))
 const customTags = computed(() => getCustomTags(props.node))
+
+const monthlyCostInfo = computed(() => {
+  const node = props.node
+  const price = Number(node.price)
+  const billingCycle = Number(node.billing_cycle)
+  const isZh = appStore.lang === 'zh-CN'
+  const unitSuffix = isZh ? '/月' : '/mo'
+
+  if (price === 0 || price === -1) {
+    return {
+      text: isZh ? '免费' : 'Free',
+      tooltip: isZh ? '免费节点' : 'Free node',
+      isFree: true,
+    }
+  }
+
+  if (!Number.isFinite(price) || price <= 0 || !Number.isFinite(billingCycle) || billingCycle <= 0) {
+    return {
+      text: '-',
+      tooltip: isZh ? '未设置价格或计费周期' : 'No pricing or billing cycle set',
+      isFree: false,
+    }
+  }
+
+  const rawCurrency = financeHelper.normalizeCurrency(node.currency)
+  const rawMonthlyAmount = (price / billingCycle) * 30
+  const rawFormatted = financeHelper.formatFinanceAmount(rawMonthlyAmount, rawCurrency)
+
+  const baseCurrency = sharedFinanceCurrency.value
+  const monthlyCostCNY = financeHelper.calculateMonthlyAverageCostCNY(node, sharedExchangeRates.value)
+  const baseRate = sharedExchangeRates.value[baseCurrency] || 1
+  const baseMonthlyAmount = monthlyCostCNY * baseRate
+  const baseFormatted = financeHelper.formatFinanceAmount(baseMonthlyAmount, baseCurrency)
+
+  if (rawCurrency === baseCurrency) {
+    return {
+      text: `${baseFormatted.symbol}${baseFormatted.value} ${unitSuffix}`,
+      tooltip: isZh
+        ? `计费周期: ${billingCycle}天 · 周期原价: ${node.price} ${node.currency}`
+        : `Billing: ${billingCycle}d · Price: ${node.price} ${node.currency}`,
+      isFree: false,
+    }
+  }
+
+  return {
+    text: `${baseFormatted.symbol}${baseFormatted.value} ${unitSuffix}`,
+    tooltip: isZh
+      ? `原币约: ${rawFormatted.symbol}${rawFormatted.value} ${unitSuffix} (周期: ${billingCycle}天 · 原价: ${node.price} ${node.currency})`
+      : `Original: ${rawFormatted.symbol}${rawFormatted.value} ${unitSuffix} (Cycle: ${billingCycle}d · Price: ${node.price} ${node.currency})`,
+    isFree: false,
+  }
+})
 
 function openPingDialog() {
   emit('pingClick', props.node)
@@ -312,7 +366,7 @@ function openPingDialog() {
                 >
                   <DataTooltip
                     v-for="bar in lossRenderBars" :key="bar.key" placement="top" :content="bar.tooltip"
-                    class="h-full w-full" content-class="whitespace-pre-wrap w-max px-1.5 !leading-[1.2] text-[11px]"
+                    class="h-full w-full" content-class="whitespace-pre-wrap w-max px-1.5 !leading-[1.2] text-[11px] font-mono tabular-nums"
                   >
                     <span
                       class="block h-full w-full rounded-[1px] transition-transform duration-150 group-hover/data-tooltip:scale-y-200"
@@ -321,6 +375,29 @@ function openPingDialog() {
                   </DataTooltip>
                 </div>
               </div>
+            </div>
+
+            <!-- 月均费用（最底部） -->
+            <div class="pt-2 mt-1 border-t border-border/50 flex items-center justify-between text-[11px] leading-none select-none">
+              <span class="text-muted-foreground flex items-center gap-1 font-medium">
+                <Icon icon="tabler:receipt-2" :width="13" :height="13" class="text-slate-500/40" />
+                <span>{{ appStore.lang === 'zh-CN' ? '月均费用' : 'Monthly Cost' }}</span>
+              </span>
+              <DataTooltip v-if="monthlyCostInfo.tooltip" placement="top" :content="monthlyCostInfo.tooltip">
+                <span
+                  class="font-mono font-bold tabular-nums"
+                  :class="[monthlyCostInfo.isFree ? 'text-muted-foreground font-normal' : 'text-foreground']"
+                >
+                  {{ monthlyCostInfo.text }}
+                </span>
+              </DataTooltip>
+              <span
+                v-else
+                class="font-mono font-bold tabular-nums"
+                :class="[monthlyCostInfo.isFree ? 'text-muted-foreground font-normal' : 'text-foreground']"
+              >
+                {{ monthlyCostInfo.text }}
+              </span>
             </div>
           </div>
         </div>

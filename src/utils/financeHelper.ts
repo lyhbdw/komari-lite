@@ -1,3 +1,4 @@
+import { ref } from 'vue'
 import type { NodeData } from '@/stores/nodes'
 
 const FINANCE_CURRENCY_CONFIG = {
@@ -94,6 +95,11 @@ export const CURRENCY_SYMBOLS = Object.fromEntries(
   Object.entries(FINANCE_CURRENCY_CONFIG).map(([currency, config]) => [currency, config.symbol]),
 ) as Record<CurrencyCode, string>
 
+export const sharedExchangeRates = ref<ExchangeRates>(
+  readCachedExchangeRates()?.rates || DEFAULT_EXCHANGE_RATES,
+)
+export const sharedFinanceCurrency = ref<CurrencyCode>(getStoredFinanceCurrency())
+
 const EXCHANGE_RATE_APIS = [
   {
     url: 'https://api.frankfurter.app/latest?from=CNY',
@@ -169,6 +175,7 @@ export function getStoredFinanceCurrency(): CurrencyCode {
 
 export function setStoredFinanceCurrency(currency: CurrencyCode): void {
   setLocalStorageItem('fin_currency', currency)
+  sharedFinanceCurrency.value = currency
 }
 
 export interface NodePremiumInfo {
@@ -447,6 +454,7 @@ export async function getDailyExchangeRates(): Promise<{
   const cached = readCachedExchangeRates()
 
   if (cached && cached.date === today) {
+    sharedExchangeRates.value = cached.rates
     return {
       rates: cached.rates,
       source: 'cache',
@@ -456,6 +464,7 @@ export async function getDailyExchangeRates(): Promise<{
   const fetchedRates = await fetchExchangeRates()
   if (fetchedRates) {
     writeCachedExchangeRates(fetchedRates, today)
+    sharedExchangeRates.value = fetchedRates
     return {
       rates: fetchedRates,
       source: 'network',
@@ -463,12 +472,14 @@ export async function getDailyExchangeRates(): Promise<{
   }
 
   if (cached) {
+    sharedExchangeRates.value = cached.rates
     return {
       rates: cached.rates,
       source: 'stale-cache',
     }
   }
 
+  sharedExchangeRates.value = DEFAULT_EXCHANGE_RATES
   return {
     rates: DEFAULT_EXCHANGE_RATES,
     source: 'default',
