@@ -92,15 +92,12 @@ function splitMetricValue(value: string): { value: string, unit?: string } {
   return { value }
 }
 
-const nodePriceText = computed(() => {
+const baseRemainingValueText = computed(() => {
   if (!data.value)
     return '-'
 
-  const priceCNY = financeHelper.calculateValueCNY(data.value, exchangeRates.value)
-  if (priceCNY <= 0)
-    return formatFinanceMetricValue(0, financeBaseCurrency.value)
-
-  return `${formatFinanceMetricValue(priceCNY, financeBaseCurrency.value)} / ${getBillingCycleText(data.value.billing_cycle, appStore.lang)}`
+  const baseRemainingCNY = financeHelper.calculateBaseRemainingValueCNY(data.value, exchangeRates.value)
+  return formatFinanceMetricValue(baseRemainingCNY, financeBaseCurrency.value)
 })
 
 const nodePremiumText = computed(() => {
@@ -132,7 +129,7 @@ const remainingTimeText = computed(() => {
   return getExpireText(data.value.expired_at, appStore.lang)
 })
 
-const remainingValueText = computed(() => {
+const totalRemainingValueText = computed(() => {
   if (!data.value)
     return '-'
 
@@ -151,18 +148,18 @@ const metricCards = computed<MetricCard[]>(() => {
   if (!data.value)
     return []
 
-  const nodePrice = splitMetricValue(nodePriceText.value)
+  const baseRemaining = splitMetricValue(baseRemainingValueText.value)
   const nodePremium = splitMetricValue(nodePremiumText.value)
   const monthlyAverageCost = splitMetricValue(monthlyAverageCostText.value)
   const remainingTime = splitMetricValue(remainingTimeText.value)
-  const remainingValue = splitMetricValue(remainingValueText.value)
+  const totalRemaining = splitMetricValue(totalRemainingValueText.value)
 
   return [
     {
-      label: '节点价格',
-      value: nodePrice.value,
-      unit: nodePrice.unit,
-      icon: 'tabler:cash',
+      label: '剩余价值',
+      value: baseRemaining.value,
+      unit: baseRemaining.unit,
+      icon: 'tabler:coins',
     },
     {
       label: '购入溢价',
@@ -184,10 +181,10 @@ const metricCards = computed<MetricCard[]>(() => {
       valueClass: remainingTimeValueClass.value,
     },
     {
-      label: '剩余价值',
-      value: remainingValue.value,
-      unit: remainingValue.unit,
-      icon: 'tabler:coins',
+      label: '剩余总价值',
+      value: totalRemaining.value,
+      unit: totalRemaining.unit,
+      icon: 'tabler:wallet',
     },
   ]
 })

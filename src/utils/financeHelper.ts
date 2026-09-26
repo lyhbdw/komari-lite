@@ -348,7 +348,7 @@ export function calculateMonthlyAverageCostCNY(
   return priceCNY / billingCycle * MONTH_DAYS
 }
 
-export function calculateRemainingValueCNY(
+export function calculateBaseRemainingValueCNY(
   node: NodeData,
   exchangeRates: ExchangeRates,
   now = new Date(),
@@ -367,22 +367,56 @@ export function calculateRemainingValueCNY(
 
   const diffYears = diffMs / (MS_PER_DAY * 365)
   const priceCNY = getPriceCNY(node, exchangeRates)
+
+  // 基础租期折算（租金按剩余天数折余）
+  if (diffYears > LONG_TERM_YEARS) {
+    return priceCNY
+  }
+
+  const billingCycle = Number(node.billing_cycle)
+  const billingCycleMs = billingCycle * MS_PER_DAY
+  if (billingCycleMs > 0 && priceCNY > 0) {
+    return priceCNY * (diffMs / billingCycleMs)
+  }
+
+  return 0
+}
+
+export function calculateTotalBaseRemainingValueCNY(
+  nodes: NodeData[],
+  exchangeRates: ExchangeRates,
+  excludeFreeTags = true,
+  now = new Date(),
+): number {
+  return nodes.reduce((sum, node) => {
+    if (excludeFreeTags && isFreeNode(node))
+      return sum
+
+    return sum + calculateBaseRemainingValueCNY(node, exchangeRates, now)
+  }, 0)
+}
+
+export function calculateRemainingValueCNY(
+  node: NodeData,
+  exchangeRates: ExchangeRates,
+  now = new Date(),
+): number {
+  if (!node.expired_at)
+    return 0
+
+  const expiredAt = new Date(node.expired_at).getTime()
+  if (!Number.isFinite(expiredAt))
+    return 0
+
+  const diffMs = expiredAt - now.getTime()
+  // 机器已彻底过期停机：剩余总价值归零
+  if (diffMs <= 0)
+    return 0
+
+  const baseRemainingCNY = calculateBaseRemainingValueCNY(node, exchangeRates, now)
   const premiumCNY = getNodePremiumCNY(node, exchangeRates)
 
-  // 1. 基础租期折算（租金按剩余天数折余）
-  let baseRemainingCNY = 0
-  if (diffYears > LONG_TERM_YEARS) {
-    baseRemainingCNY = priceCNY
-  }
-  else {
-    const billingCycle = Number(node.billing_cycle)
-    const billingCycleMs = billingCycle * MS_PER_DAY
-    if (billingCycleMs > 0 && priceCNY > 0) {
-      baseRemainingCNY = priceCNY * (diffMs / billingCycleMs)
-    }
-  }
-
-  // 2. 溢价部分：只要节点处于有效期内，溢价资产全额保值计入
+  // 剩余总价值 = 基础租期折余 + 溢价全额保值
   return baseRemainingCNY + premiumCNY
 }
 

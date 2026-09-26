@@ -113,14 +113,14 @@ const remainingValue = computed(() => {
 const formattedRemainingValue = computed(() => {
   return financeHelper.formatFinanceAmount(remainingValue.value, exchangeRateBaseCurrency.value)
 })
-const totalValueCNY = computed(() => {
-  return financeHelper.calculateTotalValueCNY(summaryNodes.value, exchangeRates.value, excludeFreeNodes.value)
+const baseRemainingValueCNY = computed(() => {
+  return financeHelper.calculateTotalBaseRemainingValueCNY(summaryNodes.value, exchangeRates.value, excludeFreeNodes.value)
 })
-const totalValue = computed(() => {
-  return totalValueCNY.value * targetExchangeRate.value
+const baseRemainingValue = computed(() => {
+  return baseRemainingValueCNY.value * targetExchangeRate.value
 })
-const formattedTotalValue = computed(() => {
-  return financeHelper.formatFinanceAmount(totalValue.value, exchangeRateBaseCurrency.value)
+const formattedBaseRemainingValue = computed(() => {
+  return financeHelper.formatFinanceAmount(baseRemainingValue.value, exchangeRateBaseCurrency.value)
 })
 const totalPremiumCNY = computed(() => {
   return financeHelper.calculateTotalPremiumCNY(summaryNodes.value, exchangeRates.value, excludeFreeNodes.value)
@@ -142,11 +142,11 @@ const formattedMonthlyAverageCost = computed(() => {
 })
 const financeSummaryItems = computed(() => [
   {
-    label: '节点原价',
-    icon: 'tabler:wallet',
-    value: formattedTotalValue.value.value,
-    symbol: formattedTotalValue.value.symbol,
-    currency: formattedTotalValue.value.currency,
+    label: '剩余价值',
+    icon: 'tabler:coins',
+    value: formattedBaseRemainingValue.value.value,
+    symbol: formattedBaseRemainingValue.value.symbol,
+    currency: formattedBaseRemainingValue.value.currency,
   },
   {
     label: '总溢价投入',
@@ -163,8 +163,8 @@ const financeSummaryItems = computed(() => [
     currency: `${formattedMonthlyAverageCost.value.currency}/月`,
   },
   {
-    label: '剩余价值',
-    icon: 'tabler:coins',
+    label: '剩余总价值',
+    icon: 'tabler:wallet',
     value: formattedRemainingValue.value.value,
     symbol: formattedRemainingValue.value.symbol,
     currency: formattedRemainingValue.value.currency,
@@ -284,7 +284,7 @@ onMounted(async () => {
           <div class="flex h-full flex-col justify-between gap-1">
             <div class="flex items-start justify-between">
               <span class="text-xs font-medium tracking-wider text-muted-foreground flex items-center gap-1">
-                剩余价值
+                剩余总价值
                 <Icon
                   icon="tabler:arrow-up-right" :width="13" :height="13"
                   class="text-muted-foreground/40 group-hover:text-foreground transition-colors"
@@ -423,7 +423,7 @@ onMounted(async () => {
                   资产与汇率详情
                 </DialogTitle>
                 <DialogDescription class="text-xs text-muted-foreground mt-0.5">
-                  所有节点的剩余价值汇总及今日实时汇率
+                  所有节点的剩余价值与溢价汇总及今日实时汇率
                 </DialogDescription>
               </div>
             </div>
