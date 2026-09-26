@@ -6,6 +6,13 @@ import { computed, defineAsyncComponent, onMounted, ref } from 'vue'
 import NodeEarthGlobe from '@/components/NodeEarthGlobe.vue'
 import { CardX } from '@/components/ui/card-x'
 import { DataTooltip } from '@/components/ui/data-tooltip'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { useBackgroundSurface } from '@/composables/useBackgroundSurface'
 import { useAppStore } from '@/stores/app'
 import { useNodesStore } from '@/stores/nodes'
@@ -35,7 +42,7 @@ const metricSwitchTransitionProps = computed(() => ({
     : { name: 'metric-switch', mode: 'out-in' as const }),
 }))
 
-const openFinanceCard = ref(false)
+const openFinanceDialog = ref(false)
 
 function getMetricSwitchStyle(index: number): Record<string, string> {
   return {
@@ -257,13 +264,19 @@ onMounted(async () => {
       >
         <CardX
           hoverable
-          class="group h-full border-none rounded-md transition-all"
+          class="group h-full border-none rounded-md transition-all cursor-pointer"
           :class="pickSurfaceClass('bg-background/60 hover:bg-background', 'bg-background/50 hover:bg-background backdrop-blur-xs')"
-          content-class="h-full !p-3" @click="openFinanceCard = !openFinanceCard"
+          content-class="h-full !p-3" @click="openFinanceDialog = true"
         >
           <div class="flex h-full flex-col justify-between gap-1">
             <div class="flex items-start justify-between">
-              <span class="text-xs font-medium tracking-wider text-muted-foreground">剩余价值</span>
+              <span class="text-xs font-medium tracking-wider text-muted-foreground flex items-center gap-1">
+                剩余价值
+                <Icon
+                  icon="tabler:arrow-up-right" :width="13" :height="13"
+                  class="text-muted-foreground/40 group-hover:text-foreground transition-colors"
+                />
+              </span>
               <Icon
                 icon="tabler:cash" :width="20" :height="20"
                 class="text-slate-500/20 group-hover:text-slate-500 transition-colors"
@@ -282,72 +295,6 @@ onMounted(async () => {
                 </span>
               </div>
             </Transition>
-          </div>
-        </CardX>
-        <CardX
-          hoverable
-          class="absolute top-0 left-1/2 z-20 h-42 w-[260%] max-w-88 -translate-x-[50%] -translate-y-[25%] rounded-md border-none shadow-[0_0_20px,0_0_0_1px] shadow-emerald-600/10 transition-all"
-          :class="[
-            pickSurfaceClass('bg-background', 'bg-background/50 backdrop-blur-lg'),
-            openFinanceCard ? 'opacity-100 scale-100  -translate-y-[5%]' : 'opacity-0 pointer-events-none scale-50',
-          ]"
-          content-class="h-full !p-4" @click="openFinanceCard = false"
-        >
-          <div class="flex h-full min-w-0 flex-col overflow-hidden">
-            <div class="shrink-0 grid grid-cols-3 gap-1.5">
-              <div v-for="(item, index) in financeSummaryItems" :key="item.label" class="min-w-0">
-                <div class="flex mb-1.5 items-center text-xs font-medium text-muted-foreground">
-                  {{ item.label }}
-                </div>
-                <Transition v-bind="metricSwitchTransitionProps">
-                  <div
-                    :key="`remaining-value-${summaryTransitionKey}-${exchangeRateBaseCurrency}`" class="flex min-w-0 items-baseline truncate"
-                    :style="getMetricSwitchStyle(index)"
-                  >
-                    <span class="shrink-0 text-xs mr-0.5 font-semibold leading-none text-muted-foreground">
-                      {{ item.symbol }}
-                    </span>
-                    <span class=" text-sm md:text-lg font-bold leading-none tracking-tight">
-                      {{ item.value }}
-                    </span>
-                  </div>
-                </Transition>
-              </div>
-            </div>
-            <div class="flex-1 my-1.5" />
-            <div class="shrink-0 flex flex-col flex-1">
-              <div class="flex mb-1 items-center justify-between gap-2">
-                <div class="flex items-center gap-1 text-xs font-medium tracking-wider text-muted-foreground">
-                  今日汇率
-                </div>
-                <select
-                  :value="exchangeRateBaseCurrency"
-                  class="shrink-0 rounded-sm border border-border/70 bg-background/70 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground outline-none transition-colors hover:text-foreground focus:text-foreground"
-                  aria-label="切换汇率基准币种" @click.stop @change.stop="setExchangeRateBaseCurrency"
-                >
-                  <option v-for="currency in financeRateCurrencies" :key="currency" :value="currency">
-                    {{ currency }}
-                  </option>
-                </select>
-              </div>
-              <div class="h-15 grid grid-cols-2 gap-y-1 gap-x-4 overflow-auto">
-                <div
-                  v-for="(row, index) in exchangeRateRows" :key="row.currency"
-                  class="text-[11px] flex items-center "
-                >
-                  <Transition v-bind="metricSwitchTransitionProps">
-                    <div :key="`remaining-value-${exchangeRateBaseCurrency}`" class="flex-1 flex justify-between" :style="getMetricSwitchStyle(index)">
-                      <span class="text-muted-foreground">
-                        {{ row.currency }}
-                      </span>
-                      <span>
-                        {{ row.targetSymbol }}{{ row.rate }}
-                      </span>
-                    </div>
-                  </Transition>
-                </div>
-              </div>
-            </div>
           </div>
         </CardX>
       </div>
@@ -451,6 +398,117 @@ onMounted(async () => {
         </div>
       </CardX>
     </div>
+
+    <!-- 剩余价值与汇率详情模态弹窗 (使用专业 Dialog，彻底解决原绝对定位遮挡问题) -->
+    <Dialog v-model:open="openFinanceDialog">
+      <DialogContent class="sm:max-w-md border-border/60 bg-background/95 backdrop-blur-xl shadow-2xl p-0 overflow-hidden gap-0 rounded-2xl">
+        <DialogHeader class="p-5 pb-4 border-b border-border/40 bg-muted/20 text-left">
+          <div class="flex items-center justify-between pr-6">
+            <div class="flex items-center gap-2.5">
+              <div class="p-2 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                <Icon icon="tabler:cash-banknote" :width="20" :height="20" />
+              </div>
+              <div>
+                <DialogTitle class="text-base font-semibold tracking-tight text-foreground">
+                  资产与汇率详情
+                </DialogTitle>
+                <DialogDescription class="text-xs text-muted-foreground mt-0.5">
+                  所有节点的剩余价值汇总及今日实时汇率
+                </DialogDescription>
+              </div>
+            </div>
+          </div>
+        </DialogHeader>
+
+        <div class="p-5 space-y-5">
+          <!-- 核心财务统计指标卡片 -->
+          <div class="grid grid-cols-3 gap-2.5">
+            <div
+              v-for="(item, index) in financeSummaryItems"
+              :key="item.label"
+              class="flex flex-col p-3 rounded-xl border border-border/50 bg-card/60 transition-all hover:bg-card hover:border-emerald-500/30 group"
+            >
+              <span class="text-[11px] font-medium text-muted-foreground flex items-center gap-1 mb-1">
+                {{ item.label }}
+              </span>
+              <Transition v-bind="metricSwitchTransitionProps">
+                <div
+                  :key="`remaining-modal-${summaryTransitionKey}-${exchangeRateBaseCurrency}`"
+                  class="flex items-baseline truncate mt-auto"
+                  :style="getMetricSwitchStyle(index)"
+                >
+                  <span class="shrink-0 text-xs font-semibold text-emerald-600 dark:text-emerald-400 mr-0.5">
+                    {{ item.symbol }}
+                  </span>
+                  <span class="text-base sm:text-lg font-bold tracking-tight text-foreground tabular-nums">
+                    {{ item.value }}
+                  </span>
+                </div>
+              </Transition>
+            </div>
+          </div>
+
+          <!-- 实时汇率区域 -->
+          <div class="rounded-xl border border-border/50 bg-card/40 p-4 space-y-3">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-1.5 text-xs font-semibold tracking-tight text-foreground">
+                <Icon icon="tabler:chart-arrows" :width="15" :height="15" class="text-emerald-500" />
+                <span>实时汇率参考</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <span class="text-[11px] text-muted-foreground hidden sm:inline">基准货币</span>
+                <select
+                  :value="exchangeRateBaseCurrency"
+                  class="rounded-lg border border-border/80 bg-background/80 px-2 py-1 text-xs font-medium text-foreground outline-none transition-colors hover:border-emerald-500/50 focus:border-emerald-500 cursor-pointer shadow-xs"
+                  aria-label="切换汇率基准币种"
+                  @change.stop="setExchangeRateBaseCurrency"
+                >
+                  <option v-for="currency in financeRateCurrencies" :key="currency" :value="currency">
+                    {{ currency }}
+                  </option>
+                </select>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-0.5">
+              <div
+                v-for="(row, index) in exchangeRateRows"
+                :key="row.currency"
+                class="flex items-center justify-between px-3 py-2 rounded-lg bg-background/60 border border-border/30 text-xs"
+              >
+                <span class="font-medium text-muted-foreground flex items-center gap-1">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-500/40" />
+                  {{ row.currency }}
+                </span>
+                <Transition v-bind="metricSwitchTransitionProps">
+                  <span
+                    :key="`modal-rate-${exchangeRateBaseCurrency}-${row.currency}`"
+                    class="font-mono font-medium text-foreground"
+                    :style="getMetricSwitchStyle(index)"
+                  >
+                    {{ row.targetSymbol }}{{ row.rate }}
+                  </span>
+                </Transition>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="px-5 py-3 border-t border-border/40 bg-muted/20 flex items-center justify-between text-[11px] text-muted-foreground">
+          <span class="flex items-center gap-1">
+            <Icon icon="tabler:info-circle" :width="13" :height="13" class="text-muted-foreground/70" />
+            汇率数据定时刷新，实际以各运营商结算为准
+          </span>
+          <button
+            type="button"
+            class="px-3 py-1 rounded-lg text-xs font-medium bg-foreground/5 hover:bg-foreground/10 text-foreground transition-colors cursor-pointer"
+            @click="openFinanceDialog = false"
+          >
+            关闭
+          </button>
+        </div>
+      </DialogContent>
+    </Dialog>
   </div>
 </template>
 

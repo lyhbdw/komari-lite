@@ -41,7 +41,7 @@ function komariThemeZip(): Plugin {
     apply: 'build',
     closeBundle: async () => {
       const commitHash = getCommitHash()
-      const zipFileName = `komari-theme-emerald-build-${commitHash}.zip`
+      const zipFileName = `komari-theme-lite-build-${commitHash}.zip`
       const distDir = resolve(__dirname, 'dist')
       const themeJsonPath = resolve(__dirname, 'komari-theme.json')
       const previewPath = resolve(__dirname, 'docs/preview.png')

@@ -15,7 +15,7 @@ const WORLD_GEO_JSON_URLS = [
   'https://gcore.jsdelivr.net/gh/apache/echarts-www@master/asset/map/json/world.json',
   'https://raw.githubusercontent.com/apache/echarts-www/master/asset/map/json/world.json',
 ]
-const WORLD_MAP_CACHE_KEY_PREFIX = 'komari-theme-emerald:world-map'
+const WORLD_MAP_CACHE_KEY_PREFIX = 'komari-theme-lite:world-map'
 const WORLD_MAP_CACHE_KEY = `${WORLD_MAP_CACHE_KEY_PREFIX}` // :${__BUILD_GIT_HASH__}
 
 const ECHARTS_WORLD_NAME_TO_CODE: Record<string, string> = {
