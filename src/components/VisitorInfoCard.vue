@@ -400,10 +400,10 @@ onMounted(async () => {
 <template>
   <div class="pointer-events-none fixed inset-x-0 bottom-2.5 z-30 flex justify-center">
     <div
-      class="pointer-events-auto cursor-default p-1.5 px-3 shadow-[-1px_-1px_0_background,0_0_16px_rgba(0,0,0,0.05)] transition-[border-radius,transform,background-color,box-shadow] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] bg-background/30 backdrop-blur-sm"
+      class="pointer-events-auto cursor-default p-1.5 px-3 border border-border/80 shadow-md transition-[border-radius,transform,background-color,box-shadow] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] bg-card/95 backdrop-blur-md"
       :class="[
         expand
-          ? 'rounded-lg -translate-y-1 bg-background/38 shadow-[-1px_-1px_0_background,0_10px_28px_rgba(0,0,0,0.08)]'
+          ? 'rounded-lg -translate-y-1 bg-card shadow-lg'
           : 'rounded-xl',
       ]"
       @click="expand = !expand"
