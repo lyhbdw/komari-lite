@@ -460,23 +460,64 @@ body, * {
   box-shadow: none !important;
 }
 
-/* --- Dialog and Popover Content --- */
+/* --- Dialog and Popover Content (Minimalist Vercel / Radix Refinement) --- */
+.rt-DialogOverlay {
+  background-color: rgba(0, 0, 0, 0.45) !important;
+  backdrop-filter: blur(4px) !important;
+  -webkit-backdrop-filter: blur(4px) !important;
+  animation: fadeIn 0.15s ease-out !important;
+}
+
 .rt-DialogContent,
 .rt-PopoverContent {
   background-color: var(--card) !important;
   border: 1px solid var(--border) !important;
-  border-radius: 0.75rem !important;
+  border-radius: 0.5rem !important; /* 8px sleek corners */
   color: var(--foreground) !important;
+  padding: 1.5rem !important;
+  max-width: 480px;
+}
+
+.rt-DialogTitle {
+  font-size: 1rem !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.015em !important;
+  margin-bottom: 1rem !important;
+  color: var(--foreground) !important;
+}
+
+.rt-DialogDescription {
+  font-size: 0.875rem !important;
+  color: var(--muted-foreground) !important;
+  margin-bottom: 1.25rem !important;
+  line-height: 1.5 !important;
+}
+
+/* Subtle clean form field labels inside dialogs */
+.rt-DialogContent label {
+  font-size: 0.8125rem !important;
+  font-weight: 500 !important;
+  color: var(--muted-foreground) !important;
+}
+
+.rt-DialogContent label[for] {
+  cursor: pointer;
+}
+
+/* Action button area inside dialogs */
+.rt-DialogContent .rt-Flex:has(button):last-child {
+  margin-top: 1.5rem !important;
+  padding-top: 0.75rem !important;
 }
 
 :root:not(.dark) .rt-DialogContent,
 :root:not(.dark) .rt-PopoverContent {
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04) !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 0 0 1px rgba(0, 0, 0, 0.04) !important;
 }
 
 .dark .rt-DialogContent,
 .dark .rt-PopoverContent {
-  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.8) !important;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08), 0 20px 30px -10px rgba(0, 0, 0, 0.8) !important;
 }
 
 /* --- Cards --- */
