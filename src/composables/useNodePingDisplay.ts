@@ -19,8 +19,9 @@ export interface NodePingBar {
   tooltip: string
 }
 
-interface NodePingNetworkDisplay {
+export interface NodePingNetworkDisplay {
   name: string
+  shortName: string
   latency: string
   toneClass: string
 }
@@ -37,14 +38,14 @@ export function getPingToneClass(value: number): string {
   if (!value)
     return 'text-muted-foreground'
   if (value <= 60)
-    return 'text-emerald-700 dark:text-emerald-400 font-medium'
+    return 'text-emerald-600 dark:text-emerald-400 font-medium'
   if (value <= 120)
-    return 'text-emerald-700/90 dark:text-emerald-400/90 font-medium'
+    return 'text-emerald-600/90 dark:text-emerald-400/90 font-medium'
   if (value <= 180)
-    return 'text-amber-800 dark:text-amber-400 font-medium'
+    return 'text-amber-600 dark:text-amber-400 font-medium'
   if (value <= 240)
-    return 'text-orange-800 dark:text-orange-400 font-medium'
-  return 'text-rose-700 dark:text-rose-400 font-medium'
+    return 'text-orange-600 dark:text-orange-400 font-medium'
+  return 'text-rose-600 dark:text-rose-400 font-medium'
 }
 
 function getLatencyToneClass(latency: number): string {
@@ -71,9 +72,20 @@ function getLossToneClass(loss: number): string {
   return 'bg-rose-500/80'
 }
 
+function getNetworkShortName(name: string): string {
+  if (name.includes('电信') || name.toUpperCase().includes('CT'))
+    return '电'
+  if (name.includes('联通') || name.toUpperCase().includes('CU'))
+    return '联'
+  if (name.includes('移动') || name.toUpperCase().includes('CM'))
+    return '移'
+  return name.slice(0, 2)
+}
+
 function toNetworkDisplay(stat: NodePingPerTaskStat): NodePingNetworkDisplay {
   return {
     name: stat.name,
+    shortName: getNetworkShortName(stat.name),
     latency: stat.avgLatency >= 0 ? `${Math.round(stat.avgLatency)}ms` : '--',
     toneClass: stat.avgLatency >= 0 ? getPingToneClass(stat.avgLatency) : 'text-rose-500',
   }

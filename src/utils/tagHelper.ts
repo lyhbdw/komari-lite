@@ -205,12 +205,12 @@ export function getExpireTextClass(expiredAt: string | number | undefined): stri
   const status = getExpireStatus(expiredAt)
 
   if (status === 'expired' || status === 'critical')
-    return 'text-destructive'
+    return 'text-rose-600 dark:text-rose-400 font-bold'
   if (status === 'warning')
-    return 'text-yellow-600 dark:text-yellow-400'
+    return 'text-amber-600 dark:text-amber-400 font-medium'
   if (status === 'long_term')
     return 'text-muted-foreground'
-  return '' // text-emerald-600 dark:text-emerald-400
+  return 'text-emerald-600 dark:text-emerald-400 font-medium'
 }
 
 /**

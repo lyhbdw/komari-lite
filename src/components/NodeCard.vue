@@ -38,6 +38,12 @@ const diskPercentage = computed(() => getDiskPercentage(props.node))
 const diskStatus = computed(() => getStatus(diskPercentage.value))
 const diskTextClass = computed(() => getStatusTextClass(diskPercentage.value))
 
+const isHighLoad = computed(() => {
+  const cpu = props.node.cpu ?? 0
+  const mem = memPercentage.value
+  return cpu >= 85 || mem >= 85
+})
+
 const {
   latencyRenderBars,
   lossRenderBars,
@@ -62,8 +68,10 @@ function openPingDialog() {
 <template>
   <CardX
     hoverable
-    class="node-card h-full w-full cursor-pointer border border-border transition-all duration-150 rounded-md bg-card hover:border-foreground/35 hover:shadow-xs hover:z-1 shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
-    :class="[!props.node.online && '!border-destructive/40']"
+    class="node-card h-full w-full cursor-pointer border transition-all duration-150 rounded-md bg-card hover:border-foreground/35 hover:shadow-xs hover:z-1 shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
+    :class="[
+      !props.node.online ? '!border-destructive/40' : isHighLoad ? 'border-amber-500/50 bg-amber-500/[0.02] dark:border-amber-500/40' : 'border-border',
+    ]"
     @click="emit('click')"
   >
     <template #header>
@@ -243,13 +251,13 @@ function openPingDialog() {
                 三网
               </span>
               <div class="border-t-2 border-dotted border-gray-500/10 mx-2 flex-1" />
-              <div v-if="topPingNetworks.length > 0" class="flex flex-row">
+              <div v-if="topPingNetworks.length > 0" class="flex flex-row items-center gap-1.5">
                 <DataTooltip
-                  v-for="(net, index) in topPingNetworks" :key="net.name" placement="top"
+                  v-for="net in topPingNetworks" :key="net.name" placement="top"
                   :content="`${net.name}\n${net.latency}`" content-class="whitespace-pre-wrap w-max px-1.5 !leading-[1.2] text-[11px]"
                 >
-                  <div class="truncate">
-                    <span v-if="index" class="mx-1">·</span>
+                  <div class="truncate flex items-center gap-0.5">
+                    <span class="text-[10px] text-muted-foreground/75 font-normal">{{ net.shortName }}</span>
                     <span :class="net.toneClass">{{ net.latency }}</span>
                   </div>
                 </DataTooltip>

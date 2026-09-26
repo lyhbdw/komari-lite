@@ -16,14 +16,14 @@ const {
 
 <template>
   <div class="flex flex-col">
-    <div v-if="topPingNetworks.length > 0" class="flex flex-row">
+    <div v-if="topPingNetworks.length > 0" class="flex flex-row items-center gap-1.5">
       <DataTooltip
-        v-for="(net, index) in topPingNetworks" :key="net.name" placement="top"
+        v-for="net in topPingNetworks" :key="net.name" placement="top"
         :content="`${net.name}\n${net.latency}`"
         content-class="whitespace-pre-wrap w-max px-1.5 !leading-[1.2] text-[11px]"
       >
-        <div class="truncate text-[10px] font-mono tabular-nums">
-          <span v-if="index" class="mx-1">·</span>
+        <div class="truncate text-[10px] font-mono tabular-nums flex items-center gap-0.5">
+          <span class="text-[9px] text-muted-foreground/75 font-normal">{{ net.shortName }}</span>
           <span :class="net.toneClass">{{ net.latency }}</span>
         </div>
       </DataTooltip>

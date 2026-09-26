@@ -147,8 +147,8 @@ const financeSummaryItems = computed(() => [
     value: formattedBaseRemainingValue.value.value,
     symbol: formattedBaseRemainingValue.value.symbol,
     currency: formattedBaseRemainingValue.value.currency,
-    colorClass: 'text-emerald-600 dark:text-emerald-400',
-    iconBgClass: 'bg-emerald-500/10 text-emerald-500',
+    colorClass: 'text-emerald-600 dark:text-emerald-400 font-bold',
+    iconBgClass: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
     borderHoverClass: 'hover:border-emerald-500/40',
   },
   {
@@ -157,9 +157,9 @@ const financeSummaryItems = computed(() => [
     value: formattedTotalPremium.value.value,
     symbol: formattedTotalPremium.value.symbol,
     currency: formattedTotalPremium.value.currency,
-    colorClass: 'text-indigo-600 dark:text-indigo-400',
-    iconBgClass: 'bg-indigo-500/10 text-indigo-500',
-    borderHoverClass: 'hover:border-indigo-500/40',
+    colorClass: 'text-emerald-600 dark:text-emerald-400 font-bold',
+    iconBgClass: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
+    borderHoverClass: 'hover:border-emerald-500/40',
   },
   {
     label: '月均支出',
@@ -167,9 +167,9 @@ const financeSummaryItems = computed(() => [
     value: formattedMonthlyAverageCost.value.value,
     symbol: formattedMonthlyAverageCost.value.symbol,
     currency: `${formattedMonthlyAverageCost.value.currency}/月`,
-    colorClass: 'text-sky-600 dark:text-sky-400',
-    iconBgClass: 'bg-sky-500/10 text-sky-500',
-    borderHoverClass: 'hover:border-sky-500/40',
+    colorClass: 'text-emerald-600 dark:text-emerald-400 font-bold',
+    iconBgClass: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
+    borderHoverClass: 'hover:border-emerald-500/40',
   },
   {
     label: '剩余总价值',
@@ -177,9 +177,9 @@ const financeSummaryItems = computed(() => [
     value: formattedRemainingValue.value.value,
     symbol: formattedRemainingValue.value.symbol,
     currency: formattedRemainingValue.value.currency,
-    colorClass: 'text-amber-600 dark:text-amber-400 font-extrabold',
-    iconBgClass: 'bg-amber-500/10 text-amber-500',
-    borderHoverClass: 'hover:border-amber-500/40',
+    colorClass: 'text-emerald-600 dark:text-emerald-400 font-bold',
+    iconBgClass: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
+    borderHoverClass: 'hover:border-emerald-500/40',
   },
 ])
 const exchangeRateRows = computed(() => financeRateCurrencies.map((currency) => {
@@ -225,7 +225,7 @@ onMounted(async () => {
     <div :class="cardGridClass">
       <CardX
         hoverable
-        class="group h-full border border-border bg-card hover:border-foreground/35 hover:shadow-xs rounded-md transition-all shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
+        class="group h-full border border-border bg-card hover:border-emerald-500/40 hover:shadow-xs rounded-md transition-all shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
         :class="[
           showVisualPanel ? 'col-span-4 row-span-1 col-start-1 row-start-1' : 'col-span-1 row-start-1 col-start-1 min-h-18 md:min-h-24 md:row-start-1 md:col-start-1',
         ]"
@@ -235,8 +235,8 @@ onMounted(async () => {
           <div class="flex items-start justify-between">
             <span class="text-xs font-medium tracking-wider text-muted-foreground">内存用量</span>
             <Icon
-              icon="tabler:cash" :width="20" :height="20"
-              class="text-slate-500/20 group-hover:text-slate-500 transition-colors"
+              icon="tabler:cpu" :width="20" :height="20"
+              class="text-emerald-500/30 group-hover:text-emerald-500 transition-colors"
             />
           </div>
           <Transition v-bind="metricSwitchTransitionProps">
@@ -244,7 +244,7 @@ onMounted(async () => {
               :key="`memory-${summaryTransitionKey}`" class="flex items-baseline gap-1 min-w-0"
               :style="getMetricSwitchStyle(0)"
             >
-              <span class="text-md md:text-2xl font-bold leading-none tracking-tight font-mono tabular-nums">
+              <span class="text-md md:text-2xl font-bold leading-none tracking-tight font-mono tabular-nums text-emerald-600 dark:text-emerald-400">
                 {{ formattedMemoryUsed.value }}
               </span>
               <span class="text-[11px] md:text-xs font-medium text-muted-foreground truncate font-mono tabular-nums">
@@ -256,7 +256,7 @@ onMounted(async () => {
       </CardX>
       <CardX
         hoverable
-        class="group h-full border border-border bg-card hover:border-foreground/35 hover:shadow-xs rounded-md transition-all shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
+        class="group h-full border border-border bg-card hover:border-emerald-500/40 hover:shadow-xs rounded-md transition-all shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
         :class="[
           showVisualPanel ? 'col-span-4 row-span-1 col-start-1 row-start-2' : 'col-span-1 row-start-2 col-start-1 min-h-18 md:min-h-24 md:row-start-1 md:col-start-2',
         ]"
@@ -267,7 +267,7 @@ onMounted(async () => {
             <span class="text-xs font-medium tracking-wider text-muted-foreground">硬盘用量</span>
             <Icon
               icon="tabler:server-2" :width="20" :height="20"
-              class="text-slate-500/20 group-hover:text-slate-500 transition-colors"
+              class="text-emerald-500/30 group-hover:text-emerald-500 transition-colors"
             />
           </div>
           <Transition v-bind="metricSwitchTransitionProps">
@@ -275,8 +275,9 @@ onMounted(async () => {
               :key="`disk-${summaryTransitionKey}`" class="flex items-baseline gap-1 min-w-0"
               :style="getMetricSwitchStyle(1)"
             >
-              <span class="text-md md:text-2xl font-bold leading-none tracking-tight font-mono tabular-nums">{{ formattedDiskUsed.value
-              }}</span>
+              <span class="text-md md:text-2xl font-bold leading-none tracking-tight font-mono tabular-nums text-emerald-600 dark:text-emerald-400">
+                {{ formattedDiskUsed.value }}
+              </span>
               <span class="text-[11px] md:text-xs font-medium text-muted-foreground truncate font-mono tabular-nums">
                 {{ formattedDiskUsed.unit }} / {{ formattedDiskTotal.value }} {{ formattedDiskTotal.unit }}
               </span>
@@ -325,7 +326,7 @@ onMounted(async () => {
       </div>
       <CardX
         hoverable
-        class="group h-full border border-border bg-card hover:border-foreground/35 hover:shadow-xs rounded-md transition-all shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
+        class="group h-full border border-border bg-card hover:border-emerald-500/40 hover:shadow-xs rounded-md transition-all shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
         :class="[
           showVisualPanel ? 'col-span-4 row-span-1 col-start-5 row-start-2' : 'col-span-1 row-start-2 col-start-2 min-h-18 md:min-h-24 md:row-start-1 md:col-start-4',
         ]"
@@ -335,8 +336,8 @@ onMounted(async () => {
           <div class="flex items-start justify-between">
             <span class="text-xs font-medium tracking-wider text-muted-foreground">累计流量</span>
             <Icon
-              icon="tabler:download" :width="20" :height="20"
-              class="text-slate-500/20 group-hover:text-slate-500 transition-colors"
+              icon="tabler:arrows-up-down" :width="20" :height="20"
+              class="text-emerald-500/30 group-hover:text-emerald-500 transition-colors"
             />
           </div>
           <DataTooltip
@@ -349,7 +350,7 @@ onMounted(async () => {
                 :key="`traffic-${summaryTransitionKey}`" class="flex items-baseline gap-1"
                 :style="getMetricSwitchStyle(3)"
               >
-                <span class="inline-block text-md md:text-2xl font-bold leading-none tracking-tight font-mono tabular-nums">
+                <span class="inline-block text-md md:text-2xl font-bold leading-none tracking-tight font-mono tabular-nums text-emerald-600 dark:text-emerald-400">
                   {{ totalTrafficTooltip.value }}
                 </span>
                 <span class="inline-block text-[11px] md:text-xs font-medium text-muted-foreground">
