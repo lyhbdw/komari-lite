@@ -99,7 +99,7 @@ function openPingDialog() {
               <span class="font-mono tabular-nums">{{ (props.node.cpu ?? 0).toFixed(1) }}%</span>
             </div>
             <ProgressThin :percentage="props.node.cpu ?? 0" :status="cpuStatus" :height="4" />
-            <div class="text-[11px] text-muted-foreground truncate font-mono tabular-nums">
+            <div class="text-[11px] text-foreground/75 dark:text-muted-foreground truncate font-mono tabular-nums tracking-tight">
               {{ props.node.load.toFixed(2) ?? 0 }}, {{ props.node.load5.toFixed(2) ?? 0 }}, {{
                 props.node.load15.toFixed(2) ?? 0 }}
             </div>
@@ -308,7 +308,7 @@ function openPingDialog() {
         <div v-if="customTags.length > 0" class="flex shrink-0 flex-wrap gap-1 items-center">
           <Badge
             v-for="(tag, index) in customTags" :key="index" variant="outline"
-            class="!text-[11px] rounded text-muted-foreground border-muted-foreground/10 px-1.5"
+            class="!text-[11px] rounded font-medium text-foreground/85 dark:text-muted-foreground border-border/80 bg-muted/40 px-1.5 py-0.5"
           >
             {{ tag }}
           </Badge>

@@ -146,8 +146,8 @@ function getRowTransitionStyle(index: number): Record<string, string> {
     <div class="min-w-fit w-full flex flex-col gap-1">
       <!-- 表头 -->
       <div
-        class="grid gap-2 rounded-md px-2 py-2 border border-border/40 select-none"
-        :class="pickSurfaceClass('bg-muted/40', 'bg-muted/20')"
+        class="grid gap-2 rounded-md px-2 py-2 border border-border/60 select-none"
+        :class="pickSurfaceClass('bg-muted/60', 'bg-muted/30')"
         :style="gridStyle"
       >
         <div
@@ -155,7 +155,7 @@ function getRowTransitionStyle(index: number): Record<string, string> {
           :class="[col.sortable ? 'cursor-pointer hover:text-foreground transition-colors' : '', ['status', 'os'].includes(col.key) ? 'text-center' : 'text-left']"
           @click="handleSort(col)"
         >
-          <span class="text-xs font-medium text-muted-foreground flex items-center gap-1" :class="[['status', 'os'].includes(col.key) ? 'justify-center' : '']">
+          <span class="text-xs font-semibold text-foreground/80 dark:text-muted-foreground flex items-center gap-1" :class="[['status', 'os'].includes(col.key) ? 'justify-center' : '']">
             {{ col.label }}
             <span v-if="col.sortable && sortKey === col.key" class="text-foreground text-[10px] font-bold">
               {{ sortDir === 1 ? '▲' : '▼' }}
@@ -174,7 +174,7 @@ function getRowTransitionStyle(index: number): Record<string, string> {
         <div
           v-for="(node, index) in sortedNodes"
           :key="getRowTransitionKey(node)"
-          class="relative flex min-h-[3.25rem] py-2 cursor-pointer flex-col justify-center rounded-md px-2 border border-border/70 transition-all bg-card hover:border-foreground/30 hover:shadow-xs"
+          class="relative flex min-h-[3.25rem] py-2 cursor-pointer flex-col justify-center rounded-md px-2 border border-border/70 transition-all bg-card hover:bg-muted/60 dark:hover:bg-muted/30 hover:border-foreground/30 hover:shadow-xs"
           :class="[!node.online && '!border-destructive/30']"
           :style="getRowTransitionStyle(index)"
           @click="handleClick(node)"
@@ -200,7 +200,7 @@ function getRowTransitionStyle(index: number): Record<string, string> {
                   >
                   <span class="truncate">{{ node.name }}</span>
                 </div>
-                <div class="flex flex-row text-[11px] text-muted-foreground/70">
+                <div class="flex flex-row text-[11px] text-muted-foreground font-mono">
                   <DataTooltip
                     v-if="node.online" :content="formatUptime(node.uptime ?? 0)" class="shrink-0" placement="right"
                     content-class="whitespace-pre-wrap left-0 ml-0 w-max"
@@ -231,7 +231,7 @@ function getRowTransitionStyle(index: number): Record<string, string> {
                 <div class="flex flex-wrap gap-1 items-center">
                   <Badge
                     v-for="(tag, tagIndex) in getCustomTags(node)" :key="tagIndex" variant="outline"
-                    class="!text-[11px] rounded text-muted-foreground border-muted-foreground/10 px-1.5"
+                    class="!text-[11px] rounded font-medium text-foreground/85 dark:text-muted-foreground border-border/80 bg-muted/40 px-1.5 py-0.5"
                   >
                     {{ tag }}
                   </Badge>
