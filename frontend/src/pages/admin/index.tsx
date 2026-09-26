@@ -14,6 +14,7 @@ import {
   Dialog,
   IconButton,
   TextArea,
+  Select,
 } from "@radix-ui/themes";
 import {
   Activity,
@@ -1450,15 +1451,30 @@ function DetailView({ node }: { node: NodeDetail }) {
   );
 }
 
-const COMMON_CURRENCY_OPTIONS = [
-  { label: "¥ (人民币 CNY / r)", value: "¥" },
-  { label: "$ (美元 USD)", value: "$" },
-  { label: "€ (欧元 EUR)", value: "€" },
-  { label: "£ (英镑 GBP)", value: "£" },
-  { label: "HK$ (港币 HKD)", value: "HK$" },
-  { label: "JP¥ (日元 JPY)", value: "JP¥" },
-  { label: "SGD (新币 SGD)", value: "SGD" },
+const CURRENCY_SELECT_OPTIONS = [
+  { label: "¥ 人民币 (CNY / RMB)", value: "¥" },
+  { label: "$ 美元 (USD)", value: "$" },
+  { label: "€ 欧元 (EUR)", value: "€" },
+  { label: "£ 英镑 (GBP)", value: "£" },
+  { label: "HK$ 港币 (HKD)", value: "HK$" },
+  { label: "JP¥ 日元 (JPY)", value: "JP¥" },
+  { label: "₩ 韩元 (KRW)", value: "₩" },
+  { label: "S$ 新加坡元 (SGD)", value: "S$" },
+  { label: "A$ 澳大利亚元 (AUD)", value: "A$" },
+  { label: "C$ 加拿大元 (CAD)", value: "C$" },
+  { label: "CHF 瑞士法郎 (CHF)", value: "CHF" },
+  { label: "RM 马来西亚林吉特 (MYR)", value: "RM" },
+  { label: "฿ 泰铢 (THB)", value: "฿" },
+  { label: "₽ 俄罗斯卢布 (RUB)", value: "₽" },
+  { label: "NT$ 新台币 (TWD)", value: "NT$" },
 ];
+
+const getCurrencySelectOptions = (val: string) => {
+  if (val && !CURRENCY_SELECT_OPTIONS.some((o) => o.value === val)) {
+    return [{ label: `${val} (自定义)`, value: val }, ...CURRENCY_SELECT_OPTIONS];
+  }
+  return CURRENCY_SELECT_OPTIONS;
+};
 
 function BillingButton({ node }: { node: NodeDetail }) {
   const { t } = useTranslation();
@@ -1502,9 +1518,8 @@ function BillingButton({ node }: { node: NodeDetail }) {
       const expiredAt = expiredAtValue
         ? new Date(`${expiredAtValue}T00:00:00Z`).toISOString()
         : null;
-      const currencyValue = (formData.get("currency") as string) || currency || "$";
-      const premiumCurrencyValue =
-        (formData.get("premiumCurrency") as string) || premiumCurrency || "¥";
+      const currencyValue = currency || "$";
+      const premiumCurrencyValue = premiumCurrency || "¥";
 
       await fetch(`/api/admin/client/${node.uuid}/edit`, {
         method: "POST",
@@ -1558,13 +1573,16 @@ function BillingButton({ node }: { node: NodeDetail }) {
                 {t("admin.nodeTable.currencyTips")}
               </label>
             </label>
-            <SelectOrInput
-              options={COMMON_CURRENCY_OPTIONS}
-              type="text"
-              name="currency"
-              value={currency}
-              onChange={setCurrency}
-            />
+            <Select.Root value={currency} onValueChange={setCurrency}>
+              <Select.Trigger className="w-full" />
+              <Select.Content>
+                {getCurrencySelectOptions(currency).map((c) => (
+                  <Select.Item key={c.value} value={c.value}>
+                    {c.label}
+                  </Select.Item>
+                ))}
+              </Select.Content>
+            </Select.Root>
 
             <label className="font-bold">
               <label>{t("admin.nodeTable.premium")}</label>
@@ -1577,16 +1595,19 @@ function BillingButton({ node }: { node: NodeDetail }) {
             <label className="font-bold">
               <label>{t("admin.nodeTable.premiumCurrency", "溢价货币")}</label>
               <label className="text-muted-foreground text-sm ml-1 font-medium">
-                {t("admin.nodeTable.premiumCurrencyTips", "溢价独立结算币种（如 ¥、r、$、€ 等），默认为 ¥")}
+                {t("admin.nodeTable.premiumCurrencyTips", "溢价独立结算币种，默认为 ¥")}
               </label>
             </label>
-            <SelectOrInput
-              options={COMMON_CURRENCY_OPTIONS}
-              type="text"
-              name="premiumCurrency"
-              value={premiumCurrency}
-              onChange={setPremiumCurrency}
-            />
+            <Select.Root value={premiumCurrency} onValueChange={setPremiumCurrency}>
+              <Select.Trigger className="w-full" />
+              <Select.Content>
+                {getCurrencySelectOptions(premiumCurrency).map((c) => (
+                  <Select.Item key={c.value} value={c.value}>
+                    {c.label}
+                  </Select.Item>
+                ))}
+              </Select.Content>
+            </Select.Root>
 
             <label className="font-bold flex items-center gap-1">
               {t("admin.nodeTable.billingCycle")} <Tips><span dangerouslySetInnerHTML={{ __html: t("admin.nodeTable.billingCycleTips") }}></span></Tips>
