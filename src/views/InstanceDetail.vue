@@ -103,6 +103,19 @@ const nodePriceText = computed(() => {
   return `${formatFinanceMetricValue(priceCNY, financeBaseCurrency.value)} / ${getBillingCycleText(data.value.billing_cycle, appStore.lang)}`
 })
 
+const nodePremiumText = computed(() => {
+  if (!data.value)
+    return '-'
+
+  const premium = Number(data.value.premium)
+  if (!Number.isFinite(premium) || premium <= 0)
+    return appStore.lang === 'zh-CN' ? '无溢价' : 'None'
+
+  const currency = financeHelper.normalizeCurrency(data.value.currency)
+  const symbol = financeHelper.CURRENCY_SYMBOLS[currency] || '¥'
+  return `${symbol}${premium.toFixed(2)}`
+})
+
 const monthlyAverageCostText = computed(() => {
   if (!data.value)
     return '-'
@@ -141,6 +154,7 @@ const metricCards = computed<MetricCard[]>(() => {
     return []
 
   const nodePrice = splitMetricValue(nodePriceText.value)
+  const nodePremium = splitMetricValue(nodePremiumText.value)
   const monthlyAverageCost = splitMetricValue(monthlyAverageCostText.value)
   const remainingTime = splitMetricValue(remainingTimeText.value)
   const remainingValue = splitMetricValue(remainingValueText.value)
@@ -151,6 +165,12 @@ const metricCards = computed<MetricCard[]>(() => {
       value: nodePrice.value,
       unit: nodePrice.unit,
       icon: 'tabler:cash',
+    },
+    {
+      label: '购入溢价',
+      value: nodePremium.value,
+      unit: nodePremium.unit,
+      icon: 'tabler:coins-plus',
     },
     {
       label: '月均支出',
@@ -256,11 +276,10 @@ const trafficProgressStyle = computed(() => ({
         </Badge>
       </div>
 
-      <div class="px-4 grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div class="px-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         <CardX
           v-for="item in metricCards" :key="item.label" hoverable size="small"
-          class="group h-full border-none transition-all rounded-md"
-          :class="pickSurfaceClass('bg-background/60 hover:bg-background', 'bg-background/50 hover:bg-background backdrop-blur-xs')"
+          class="group h-full border border-border/80 bg-card hover:border-foreground/30 transition-all rounded-md"
           content-class="h-full !p-3"
         >
           <div class="flex h-full min-h-10 md:min-h-18 flex-col justify-between gap-3">
@@ -273,7 +292,7 @@ const trafficProgressStyle = computed(() => ({
             </div>
             <div class="min-w-0 space-y-1">
               <div
-                class="flex min-w-0 items-baseline gap-1 truncate font-semibold leading-none"
+                class="flex min-w-0 items-baseline gap-1 truncate font-semibold leading-none font-mono tabular-nums"
                 :class="item.valueClass"
               >
                 <span class="truncate text-base sm:text-2xl">{{ item.value }}</span>

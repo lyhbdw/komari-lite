@@ -171,6 +171,36 @@ export function setStoredFinanceCurrency(currency: CurrencyCode): void {
   setLocalStorageItem('fin_currency', currency)
 }
 
+export function getNodePremium(node: NodeData): number {
+  const premium = Number(node.premium)
+  return Number.isFinite(premium) && premium > 0 ? premium : 0
+}
+
+export function getNodePremiumCNY(node: NodeData, exchangeRates: ExchangeRates): number {
+  const premium = getNodePremium(node)
+  if (premium <= 0)
+    return 0
+
+  const currency = normalizeCurrency(node.currency)
+  if (currency === 'CNY')
+    return premium
+
+  return premium / (exchangeRates[currency] || 1)
+}
+
+export function calculateTotalPremiumCNY(
+  nodes: NodeData[],
+  exchangeRates: ExchangeRates,
+  excludeFreeTags = true,
+): number {
+  return nodes.reduce((sum, node) => {
+    if (excludeFreeTags && node.tags?.includes('白嫖中'))
+      return sum
+
+    return sum + getNodePremiumCNY(node, exchangeRates)
+  }, 0)
+}
+
 export function calculateTotalRemainingValueCNY(
   nodes: NodeData[],
   exchangeRates: ExchangeRates,
@@ -194,7 +224,7 @@ export function calculateTotalValueCNY(
     if (excludeFreeTags && node.tags?.includes('白嫖中'))
       return sum
 
-    return sum + getPriceCNY(node, exchangeRates)
+    return sum + calculateValueCNY(node, exchangeRates)
   }, 0)
 }
 
@@ -202,7 +232,7 @@ export function calculateValueCNY(
   node: NodeData,
   exchangeRates: ExchangeRates,
 ): number {
-  return getPriceCNY(node, exchangeRates)
+  return getPriceCNY(node, exchangeRates) + getNodePremiumCNY(node, exchangeRates)
 }
 
 export function calculateTotalMonthlyAverageCostCNY(
@@ -241,8 +271,8 @@ export function calculateRemainingValueCNY(
   if (!node.expired_at)
     return 0
 
-  const priceCNY = getPriceCNY(node, exchangeRates)
-  if (priceCNY <= 0)
+  const totalCostCNY = getPriceCNY(node, exchangeRates) + getNodePremiumCNY(node, exchangeRates)
+  if (totalCostCNY <= 0)
     return 0
 
   const expiredAt = new Date(node.expired_at).getTime()
@@ -253,12 +283,12 @@ export function calculateRemainingValueCNY(
   const diffYears = diffMs / (MS_PER_DAY * 365)
 
   if (diffYears > LONG_TERM_YEARS)
-    return priceCNY
+    return totalCostCNY
 
   const billingCycle = Number(node.billing_cycle)
   const billingCycleMs = billingCycle * MS_PER_DAY
   if (diffMs > 0 && billingCycleMs > 0)
-    return priceCNY * (diffMs / billingCycleMs)
+    return totalCostCNY * (diffMs / billingCycleMs)
 
   return 0
 }

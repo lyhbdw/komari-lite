@@ -125,6 +125,7 @@ export interface Client {
   version?: string
   weight: number
   price: number
+  premium?: number
   billing_cycle: number
   auto_renewal: boolean
   currency: string

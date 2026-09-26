@@ -1,4 +1,5 @@
 import type { NodeData, TrafficLimitType } from '@/stores/nodes'
+import { CURRENCY_SYMBOLS, normalizeCurrency } from '@/utils/financeHelper'
 import { formatDateTime } from '@/utils/helper'
 import { formatPriceWithCycle, getDaysUntilExpired, getExpireStatus, getExpireTextClass, parseTags } from '@/utils/tagHelper'
 
@@ -45,6 +46,11 @@ export function getPriceTags(node: NodeData, lang: 'zh-CN' | 'en-US'): PriceTagI
   const priceText = formatPriceWithCycle(node.price, node.billing_cycle, node.currency, lang)
   if (node.price !== 0)
     tags.push({ text: priceText })
+  const premium = Number(node.premium)
+  if (Number.isFinite(premium) && premium > 0) {
+    const symbol = CURRENCY_SYMBOLS[normalizeCurrency(node.currency)] || '¥'
+    tags.push({ text: lang === 'zh-CN' ? `溢${symbol}${premium}` : `+${symbol}${premium}` })
+  }
   if (status === 'long_term')
     tags.push({ text: lang === 'zh-CN' ? '长期' : 'Long-term' })
   else if (lang === 'zh-CN')

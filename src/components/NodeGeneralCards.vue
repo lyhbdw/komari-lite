@@ -122,6 +122,15 @@ const totalValue = computed(() => {
 const formattedTotalValue = computed(() => {
   return financeHelper.formatFinanceAmount(totalValue.value, exchangeRateBaseCurrency.value)
 })
+const totalPremiumCNY = computed(() => {
+  return financeHelper.calculateTotalPremiumCNY(summaryNodes.value, exchangeRates.value, excludeFreeNodes.value)
+})
+const totalPremium = computed(() => {
+  return totalPremiumCNY.value * targetExchangeRate.value
+})
+const formattedTotalPremium = computed(() => {
+  return financeHelper.formatFinanceAmount(totalPremium.value, exchangeRateBaseCurrency.value)
+})
 const monthlyAverageCostCNY = computed(() => {
   return financeHelper.calculateTotalMonthlyAverageCostCNY(summaryNodes.value, exchangeRates.value, excludeFreeNodes.value)
 })
@@ -138,6 +147,13 @@ const financeSummaryItems = computed(() => [
     value: formattedTotalValue.value.value,
     symbol: formattedTotalValue.value.symbol,
     currency: formattedTotalValue.value.currency,
+  },
+  {
+    label: '总溢价',
+    icon: 'tabler:coins-plus',
+    value: formattedTotalPremium.value.value,
+    symbol: formattedTotalPremium.value.symbol,
+    currency: formattedTotalPremium.value.currency,
   },
   {
     label: '月均支出',
@@ -395,8 +411,8 @@ onMounted(async () => {
 
     <!-- 剩余价值与汇率详情模态弹窗 (Vercel 极简无彩色设计) -->
     <Dialog v-model:open="openFinanceDialog">
-      <DialogContent class="sm:max-w-md border-border/80 bg-background/95 backdrop-blur-md shadow-2xl p-0 overflow-hidden gap-0 rounded-md">
-        <DialogHeader class="p-5 pb-4 border-b border-border/60 bg-muted/20 text-left">
+      <DialogContent class="sm:max-w-xl border-border/80 bg-background/95 backdrop-blur-md shadow-2xl p-0 overflow-hidden">
+        <DialogHeader class="p-5 border-b border-border/70 bg-card/60">
           <div class="flex items-center justify-between pr-6">
             <div class="flex items-center gap-2.5">
               <div class="p-2 rounded-md bg-muted text-foreground border border-border/60">
@@ -416,7 +432,7 @@ onMounted(async () => {
 
         <div class="p-5 space-y-4">
           <!-- 核心财务统计指标卡片 -->
-          <div class="grid grid-cols-3 gap-2.5">
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
             <div
               v-for="(item, index) in financeSummaryItems"
               :key="item.label"
