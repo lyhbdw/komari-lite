@@ -10,7 +10,7 @@ import { ProgressThin } from '@/components/ui/progress-thin'
 import { useBackgroundSurface } from '@/composables/useBackgroundSurface'
 import { useNodeFormatters } from '@/composables/useNodeFormatters'
 import { useAppStore } from '@/stores/app'
-import { formatDateTime, getStatus } from '@/utils/helper'
+import { formatDateTime, getStatus, getStatusTextClass } from '@/utils/helper'
 import { formatOfflineTime, getCustomTags, getPriceTags, getRemainingTimeTagClass, getTrafficUsed, getTrafficUsedPercentage, hasRegion, showTrafficProgress } from '@/utils/nodeHelpers'
 import { getOSImage, getOSName } from '@/utils/osImageHelper'
 import { getFlagSrc, getRegionDisplayName } from '@/utils/regionHelper'
@@ -265,7 +265,7 @@ function getRowTransitionStyle(index: number): Record<string, string> {
               <div v-else-if="col.key === 'cpu'" class="group text-right">
                 <div class="space-y-1">
                   <div class="text-[10px] text-muted-foreground truncate font-mono tabular-nums text-right">
-                    <span class="inline group-hover:hidden">
+                    <span class="inline group-hover:hidden font-medium" :class="getStatusTextClass(node.cpu ?? 0)">
                       {{ (node.cpu ?? 0).toFixed(1) }}%
                     </span>
                     <span class="hidden group-hover:inline">
@@ -282,7 +282,7 @@ function getRowTransitionStyle(index: number): Record<string, string> {
                 <DataTooltip placement="top" class="block" :content-class="[!node.swap && '!hidden']">
                   <div class="space-y-1">
                     <div class="text-[10px] text-muted-foreground truncate font-mono tabular-nums text-right">
-                      <span class="inline group-hover:hidden">
+                      <span class="inline group-hover:hidden font-medium" :class="getStatusTextClass((node.ram ?? 0) / (node.mem_total || 1) * 100)">
                         {{ ((node.ram ?? 0) / (node.mem_total || 1) * 100).toFixed(1) }}%
                       </span>
                       <span class="hidden group-hover:inline">
@@ -307,7 +307,7 @@ function getRowTransitionStyle(index: number): Record<string, string> {
               <div v-else-if="col.key === 'disk'" class="group text-right">
                 <div class="space-y-1">
                   <div class="text-[10px] text-muted-foreground truncate font-mono tabular-nums text-right">
-                    <span class="inline group-hover:hidden">
+                    <span class="inline group-hover:hidden font-medium" :class="getStatusTextClass((node.disk ?? 0) / (node.disk_total || 1) * 100)">
                       {{ ((node.disk ?? 0) / (node.disk_total || 1) * 100).toFixed(1) }}%
                     </span>
                     <span class="hidden group-hover:inline">
@@ -357,12 +357,12 @@ function getRowTransitionStyle(index: number): Record<string, string> {
               <!-- 速率 -->
               <div v-else-if="col.key === 'rate'" class="text-right">
                 <div class="text-[10px] flex flex-col items-end font-mono tabular-nums">
-                  <span class="text-foreground/90 flex flex-row gap-1 items-center justify-end">
-                    <Icon icon="tabler:chevron-up" width="12" height="12" class="text-emerald-500" />
+                  <span class="text-emerald-600 dark:text-emerald-400 font-medium flex flex-row gap-0.5 items-center justify-end">
+                    <Icon icon="tabler:chevron-up" width="12" height="12" class="text-emerald-500 shrink-0" />
                     {{ formatBytesPerSecond(node.net_out ?? 0) }}
                   </span>
-                  <span class="text-muted-foreground flex flex-row gap-1 items-center justify-end">
-                    <Icon icon="tabler:chevron-down" width="12" height="12" class="text-sky-500" />
+                  <span class="text-sky-600 dark:text-sky-400 font-medium flex flex-row gap-0.5 items-center justify-end">
+                    <Icon icon="tabler:chevron-down" width="12" height="12" class="text-sky-500 shrink-0" />
                     {{ formatBytesPerSecond(node.net_in ?? 0) }}
                   </span>
                 </div>

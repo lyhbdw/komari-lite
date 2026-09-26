@@ -53,6 +53,8 @@ interface MetricCard {
   unit?: string
   icon: string
   valueClass?: string
+  iconClass?: string
+  cardBorderHoverClass?: string
 }
 
 const EXPIRES_IN_SUFFIX_REGEX = /^(\d+)\s*(天|days?)$/i
@@ -160,18 +162,27 @@ const metricCards = computed<MetricCard[]>(() => {
       value: baseRemaining.value,
       unit: baseRemaining.unit,
       icon: 'tabler:coins',
+      valueClass: 'text-emerald-600 dark:text-emerald-400',
+      iconClass: 'text-emerald-500/30 group-hover:text-emerald-500',
+      cardBorderHoverClass: 'hover:border-emerald-500/40',
     },
     {
       label: '购入溢价',
       value: nodePremium.value,
       unit: nodePremium.unit,
       icon: 'tabler:coins-plus',
+      valueClass: 'text-indigo-600 dark:text-indigo-400',
+      iconClass: 'text-indigo-500/30 group-hover:text-indigo-500',
+      cardBorderHoverClass: 'hover:border-indigo-500/40',
     },
     {
       label: '月均支出',
       value: monthlyAverageCost.value,
       unit: monthlyAverageCost.unit,
       icon: 'tabler:receipt-2',
+      valueClass: 'text-sky-600 dark:text-sky-400',
+      iconClass: 'text-sky-500/30 group-hover:text-sky-500',
+      cardBorderHoverClass: 'hover:border-sky-500/40',
     },
     {
       label: '剩余时间',
@@ -179,12 +190,17 @@ const metricCards = computed<MetricCard[]>(() => {
       unit: remainingTime.unit,
       icon: 'tabler:calendar-dollar',
       valueClass: remainingTimeValueClass.value,
+      iconClass: 'text-slate-500/25 group-hover:text-slate-500',
+      cardBorderHoverClass: 'hover:border-foreground/30',
     },
     {
       label: '剩余总价值',
       value: totalRemaining.value,
       unit: totalRemaining.unit,
       icon: 'tabler:wallet',
+      valueClass: 'text-amber-600 dark:text-amber-400 font-extrabold',
+      iconClass: 'text-amber-500/30 group-hover:text-amber-500',
+      cardBorderHoverClass: 'hover:border-amber-500/40',
     },
   ]
 })
@@ -274,7 +290,8 @@ const trafficProgressStyle = computed(() => ({
       <div class="px-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         <CardX
           v-for="item in metricCards" :key="item.label" hoverable size="small"
-          class="group h-full border border-border/80 bg-card hover:border-foreground/30 transition-all rounded-md"
+          class="group h-full border border-border/80 bg-card transition-all rounded-md"
+          :class="item.cardBorderHoverClass || 'hover:border-foreground/30'"
           content-class="h-full !p-3"
         >
           <div class="flex h-full min-h-10 md:min-h-18 flex-col justify-between gap-3">
@@ -282,7 +299,8 @@ const trafficProgressStyle = computed(() => ({
               <span class="text-xs font-medium tracking-wider text-muted-foreground">{{ item.label }}</span>
               <Icon
                 :icon="item.icon" :width="20" :height="20"
-                class="text-slate-500/25 transition-colors group-hover:text-slate-500"
+                class="transition-colors"
+                :class="item.iconClass || 'text-slate-500/25 group-hover:text-slate-500'"
               />
             </div>
             <div class="min-w-0 space-y-1">

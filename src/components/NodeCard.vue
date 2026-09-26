@@ -10,7 +10,7 @@ import { useBackgroundSurface } from '@/composables/useBackgroundSurface'
 import { useNodeFormatters } from '@/composables/useNodeFormatters'
 import { useNodePingDisplay } from '@/composables/useNodePingDisplay'
 import { useAppStore } from '@/stores/app'
-import { formatDateTime, getStatus } from '@/utils/helper'
+import { formatDateTime, getStatus, getStatusTextClass } from '@/utils/helper'
 import { getCustomTags, getDiskPercentage, getMemPercentage, getPriceTags, getRemainingTimeTagClass, getTrafficUsed, getTrafficUsedPercentage, hasRegion, showTrafficProgress } from '@/utils/nodeHelpers'
 import { getOSImage, getOSName } from '@/utils/osImageHelper'
 import { getFlagSrc, getRegionDisplayName } from '@/utils/regionHelper'
@@ -30,10 +30,13 @@ const offlineTime = computed(() => formatDateTime(props.node.time))
 const expiredDate = computed(() => formatDateTime(props.node.expired_at, 'YYYY-MM-DD'))
 
 const cpuStatus = computed(() => getStatus(props.node.cpu ?? 0))
+const cpuTextClass = computed(() => getStatusTextClass(props.node.cpu ?? 0))
 const memPercentage = computed(() => getMemPercentage(props.node))
 const memStatus = computed(() => getStatus(memPercentage.value))
+const memTextClass = computed(() => getStatusTextClass(memPercentage.value))
 const diskPercentage = computed(() => getDiskPercentage(props.node))
 const diskStatus = computed(() => getStatus(diskPercentage.value))
+const diskTextClass = computed(() => getStatusTextClass(diskPercentage.value))
 
 const {
   latencyRenderBars,
@@ -104,7 +107,7 @@ function openPingDialog() {
               <span class="text-muted-foreground">
                 CPU
               </span>
-              <span class="font-mono tabular-nums">{{ (props.node.cpu ?? 0).toFixed(1) }}%</span>
+              <span class="font-mono tabular-nums" :class="cpuTextClass">{{ (props.node.cpu ?? 0).toFixed(1) }}%</span>
             </div>
             <ProgressThin :percentage="props.node.cpu ?? 0" :status="cpuStatus" :height="4" />
             <div class="text-[11px] text-foreground/85 dark:text-muted-foreground truncate font-mono font-medium tabular-nums tracking-normal">
@@ -119,7 +122,7 @@ function openPingDialog() {
               <span class="text-muted-foreground">
                 内存
               </span>
-              <span class="font-mono tabular-nums">{{ memPercentage.toFixed(1) }}%</span>
+              <span class="font-mono tabular-nums" :class="memTextClass">{{ memPercentage.toFixed(1) }}%</span>
             </div>
             <ProgressThin :percentage="memPercentage" :status="memStatus" :height="4" />
             <DataTooltip placement="top" class="block" :content-class="[!props.node.swap && '!hidden']">
@@ -141,7 +144,7 @@ function openPingDialog() {
               <span class="text-muted-foreground">
                 硬盘
               </span>
-              <span class="font-mono tabular-nums">{{ diskPercentage.toFixed(1) }}%</span>
+              <span class="font-mono tabular-nums" :class="diskTextClass">{{ diskPercentage.toFixed(1) }}%</span>
             </div>
             <ProgressThin :percentage="diskPercentage" :status="diskStatus" :height="4" />
             <div class="text-[11px] text-muted-foreground truncate font-mono tabular-nums">
@@ -199,13 +202,13 @@ function openPingDialog() {
                 速率
               </span>
               <div class="border-t-2 border-dotted border-gray-500/10 mx-2 flex-1" />
-              <div class="truncate flex flex-row gap-1 font-mono tabular-nums">
-                <div class="text-foreground/90 flex flex-row items-center gap-1">
-                  <Icon icon="tabler:chevron-up" width="12" height="12" class="text-emerald-500" />
+              <div class="truncate flex flex-row gap-1.5 font-mono tabular-nums">
+                <div class="text-emerald-600 dark:text-emerald-400 font-medium flex flex-row items-center gap-0.5">
+                  <Icon icon="tabler:chevron-up" width="12" height="12" class="text-emerald-500 shrink-0" />
                   {{ formatBytesPerSecond(props.node.net_out ?? 0) }}
                 </div>
-                <div class="text-muted-foreground flex flex-row items-center gap-1">
-                  <Icon icon="tabler:chevron-down" width="12" height="12" class="text-sky-500" />
+                <div class="text-sky-600 dark:text-sky-400 font-medium flex flex-row items-center gap-0.5">
+                  <Icon icon="tabler:chevron-down" width="12" height="12" class="text-sky-500 shrink-0" />
                   {{ formatBytesPerSecond(props.node.net_in ?? 0) }}
                 </div>
               </div>

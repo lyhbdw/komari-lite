@@ -272,6 +272,19 @@ export function getStatus(percentage: number): 'success' | 'warning' | 'error' {
 }
 
 /**
+ * 根据占用百分比返回文本颜色类
+ * @param percentage 百分比
+ * @returns 样式类
+ */
+export function getStatusTextClass(percentage: number): string {
+  if (percentage >= STATUS_THRESHOLDS.warning)
+    return 'text-rose-600 dark:text-rose-400 font-bold'
+  if (percentage >= STATUS_THRESHOLDS.success)
+    return 'text-amber-600 dark:text-amber-400 font-semibold'
+  return 'text-foreground/90 font-medium'
+}
+
+/**
  * 格式化时间戳为可读日期时间
  * @param timestamp 时间戳字符串或 Date 对象
  * @returns 格式化后的字符串，如 "2024-01-15 14:30:00"
