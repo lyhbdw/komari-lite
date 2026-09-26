@@ -226,10 +226,19 @@ export function getNodePremiumInfo(node: NodeData): NodePremiumInfo {
   }
 
   // 币种确定策略：
-  // 1. 若标签显式指定了币种（如 溢价100r 或 溢价$10），以标签显式指定的币种为准；
-  // 2. 若标签未显式指定，且节点为人民币，使用 CNY；
-  // 3. 否则回退为节点本身的币种
-  const currency: CurrencyCode = tagCurrency || normalizeCurrency(node.currency) || 'CNY'
+  // 1. 若后台节点显式配置了 premium_currency，优先以后台独立配置为准；
+  // 2. 若标签显式指定了币种（如 溢价100r 或 溢价$10），以标签显式指定的币种为准；
+  // 3. 否则若节点有货币则回退至节点货币，最终兜底为 CNY
+  let currency: CurrencyCode = 'CNY'
+  if (node.premium_currency && node.premium_currency.trim() !== '') {
+    currency = normalizeCurrency(node.premium_currency)
+  }
+  else if (tagCurrency) {
+    currency = tagCurrency
+  }
+  else if (node.currency) {
+    currency = normalizeCurrency(node.currency)
+  }
   const symbol = CURRENCY_SYMBOLS[currency] || '¥'
 
   return {
