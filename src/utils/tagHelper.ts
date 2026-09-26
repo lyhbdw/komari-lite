@@ -210,7 +210,7 @@ export function getExpireTextClass(expiredAt: string | number | undefined): stri
     return 'text-amber-600 dark:text-amber-400 font-medium'
   if (status === 'long_term')
     return 'text-muted-foreground'
-  return 'text-emerald-600 dark:text-emerald-400 font-medium'
+  return 'text-foreground'
 }
 
 /**

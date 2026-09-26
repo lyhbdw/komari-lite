@@ -733,8 +733,8 @@ const pingChartOption = computed(() => {
             lineStyle: {
               color,
               width: 1,
-              type: 'solid' as const,
-              opacity: 0.55,
+              type: 'dashed' as const,
+              opacity: 0.5,
             },
             data: lossMarkerIndexes.map(index => ({
               xAxis: index,
@@ -867,36 +867,43 @@ onMounted(() => {
 
 <template>
   <div class="flex flex-col gap-4">
-    <!-- 时间选择器 -->
-    <Tabs v-model="selectedView" class="w-full items-center">
-      <div class="min-w-0 flex-1 overflow-x-auto pointer-events-auto">
-        <TabsList class="w-max h-8 p-0.5 bg-muted/80 dark:bg-muted/60 border border-border/60 rounded-md">
-          <TabsTrigger
-            v-for="view in availableViews" :key="view.label" :value="view.label"
-            class="h-7 px-3 text-xs rounded-[5px] text-muted-foreground transition-all data-[state=active]:text-foreground data-[state=active]:bg-card data-[state=active]:shadow-xs data-[state=active]:font-semibold cursor-pointer"
+    <!-- 模块标题与时间选择器 -->
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-2">
+        <Icon icon="tabler:network" :width="18" :height="18" class="text-muted-foreground" />
+        <span class="text-base font-bold">三网质量与延迟监控</span>
+      </div>
+      <div class="flex items-center gap-3">
+        <Tabs v-model="selectedView" class="items-center">
+          <div class="min-w-0 flex-1 overflow-x-auto pointer-events-auto">
+            <TabsList class="w-max h-8 p-0.5 bg-muted/80 dark:bg-muted/60 border border-border/60 rounded-md">
+              <TabsTrigger
+                v-for="view in availableViews" :key="view.label" :value="view.label"
+                class="h-7 px-3 text-xs rounded-[5px] text-muted-foreground transition-all data-[state=active]:text-foreground data-[state=active]:bg-card data-[state=active]:shadow-xs data-[state=active]:font-semibold cursor-pointer"
+              >
+                {{ view.label }}
+              </TabsTrigger>
+            </TabsList>
+          </div>
+        </Tabs>
+        <div class="flex gap-1.5 items-center">
+          <Button
+            variant="ghost" size="xs" class="h-7 px-2.5 rounded-sm border-none bg-background/60 hover:bg-background"
+            :class="[selectedTaskIds.length === tasks.length && 'bg-background !text-foreground font-medium']"
+            @click="showAllTasks"
           >
-            {{ view.label }}
-          </TabsTrigger>
-        </TabsList>
+            全选
+          </Button>
+          <Button
+            variant="ghost" size="xs" class="h-7 px-2.5 rounded-sm border-none bg-background/60 hover:bg-background"
+            :class="[!selectedTaskIds.length && 'bg-background !text-foreground font-medium']"
+            @click="hideAllTasks"
+          >
+            全不选
+          </Button>
+        </div>
       </div>
-      <div class="md:flex-1" />
-      <div class="flex gap-2 items-center">
-        <Button
-          variant="ghost" size="xs" class="h-7 rounded-sm border-none bg-background/60 hover:bg-background"
-          :class="[selectedTaskIds.length === tasks.length && 'bg-background !text-foreground font-medium']"
-          @click="showAllTasks"
-        >
-          全选
-        </Button>
-        <Button
-          variant="ghost" size="xs" class="h-7 rounded-sm border-none bg-background/60 hover:bg-background"
-          :class="[!selectedTaskIds.length && 'bg-background !text-foreground font-medium']"
-          @click="hideAllTasks"
-        >
-          全不选
-        </Button>
-      </div>
-    </Tabs>
+    </div>
 
     <!-- 内容区域 -->
     <Spinner :show="loading" class="min-h-[280px]" content-class="flex flex-col gap-4">
@@ -979,15 +986,15 @@ onMounted(() => {
                   </template>
                 </DataTooltip>
               </div>
-              <div class="text-xs mt-1 flex gap-1.5 items-center text-muted-foreground">
+              <div class="text-xs mt-1 flex gap-1.5 items-center text-muted-foreground font-mono tabular-nums">
                 <span class="font-medium" title="平均延迟">
                   {{ task.avg !== undefined ? `${Math.round(task.avg)}ms` : '-' }}
                 </span>
-                <span class="opacity-60">·</span>
-                <span title="丢包率">{{ task.loss.toFixed(2) }}%</span>
+                <span class="opacity-40">·</span>
+                <span title="丢包率">丢包 {{ task.loss.toFixed(1) }}%</span>
                 <template v-if="task.p99_p50_ratio !== undefined">
-                  <span class="opacity-60">·</span>
-                  <span title="波动率">{{ task.p99_p50_ratio.toFixed(2) }}</span>
+                  <span class="opacity-40">·</span>
+                  <span title="波动率">波动 {{ task.p99_p50_ratio.toFixed(2) }}</span>
                 </template>
               </div>
             </div>

@@ -400,7 +400,16 @@ const cpuChartOption = computed(() => ({
       return html
     },
   },
-  grid: chartMargin,
+  legend: {
+    data: ['CPU', '负载'],
+    bottom: 4,
+    itemWidth: 12,
+    itemHeight: 12,
+    itemGap: 20,
+    icon: 'roundRect',
+    textStyle: { fontSize: 11, color: chartThemeColors.value.textSecondary },
+  },
+  grid: chartMarginWithLegend,
   xAxis: baseXAxisConfig.value,
   yAxis: [
     {
@@ -495,7 +504,16 @@ const memoryChartOption = computed(() => ({
       return html
     },
   },
-  grid: chartMargin,
+  legend: {
+    data: ['RAM', 'Swap'],
+    bottom: 4,
+    itemWidth: 12,
+    itemHeight: 12,
+    itemGap: 20,
+    icon: 'roundRect',
+    textStyle: { fontSize: 11, color: chartThemeColors.value.textSecondary },
+  },
+  grid: chartMarginWithLegend,
   xAxis: baseXAxisConfig.value,
   yAxis: {
     ...baseYAxisConfig.value,
@@ -503,7 +521,7 @@ const memoryChartOption = computed(() => ({
     nameTextStyle: { color: chartThemeColors.value.textSecondary, padding: [0, 40, 0, 0] },
     axisLabel: {
       ...baseYAxisConfig.value.axisLabel,
-      formatter: (val: number) => formatBytes(val),
+      formatter: (val: number) => formatBytes(val, 0),
     },
   },
   series: [
@@ -570,7 +588,16 @@ const diskChartOption = computed(() => ({
       return html
     },
   },
-  grid: chartMargin,
+  legend: {
+    data: ['磁盘已用'],
+    bottom: 4,
+    itemWidth: 12,
+    itemHeight: 12,
+    itemGap: 20,
+    icon: 'roundRect',
+    textStyle: { fontSize: 11, color: chartThemeColors.value.textSecondary },
+  },
+  grid: chartMarginWithLegend,
   xAxis: baseXAxisConfig.value,
   yAxis: {
     ...baseYAxisConfig.value,
@@ -578,7 +605,7 @@ const diskChartOption = computed(() => ({
     nameTextStyle: { color: chartThemeColors.value.textSecondary, padding: [0, 40, 0, 0] },
     axisLabel: {
       ...baseYAxisConfig.value.axisLabel,
-      formatter: (val: number) => formatBytes(val),
+      formatter: (val: number) => formatBytes(val, 0),
     },
   },
   series: [
@@ -652,7 +679,7 @@ const networkChartOption = computed(() => ({
     nameTextStyle: { color: chartThemeColors.value.textSecondary, padding: [0, 40, 0, 0] },
     axisLabel: {
       ...baseYAxisConfig.value.axisLabel,
-      formatter: (val: number) => `${formatBytes(val)}/s`,
+      formatter: (val: number) => `${formatBytes(val, 0)}/s`,
     },
   },
   series: [
@@ -774,7 +801,16 @@ const processChartOption = computed(() => ({
       return html
     },
   },
-  grid: chartMargin,
+  legend: {
+    data: ['进程数'],
+    bottom: 4,
+    itemWidth: 12,
+    itemHeight: 12,
+    itemGap: 20,
+    icon: 'roundRect',
+    textStyle: { fontSize: 11, color: chartThemeColors.value.textSecondary },
+  },
+  grid: chartMarginWithLegend,
   xAxis: baseXAxisConfig.value,
   yAxis: {
     ...baseYAxisConfig.value,

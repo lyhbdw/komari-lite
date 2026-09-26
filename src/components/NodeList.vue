@@ -158,13 +158,14 @@ function getRowTransitionStyle(index: number): Record<string, string> {
           @click="handleSort(col)"
         >
           <span
-            class="text-xs font-semibold text-foreground/80 dark:text-muted-foreground flex items-center gap-1"
+            class="text-xs font-semibold text-foreground/90 dark:text-foreground/80 flex items-center gap-1 tracking-wide"
             :class="[
-              ['status', 'os'].includes(col.key) ? 'justify-center' : ['cpu', 'mem', 'disk', 'traffic', 'rate'].includes(col.key) ? 'justify-end' : ''
+              ['status', 'os'].includes(col.key) ? 'justify-center' : ['cpu', 'mem', 'disk', 'traffic', 'rate'].includes(col.key) ? 'justify-end' : '',
+              col.sortable && sortKey === col.key ? 'text-foreground font-bold' : ''
             ]"
           >
             {{ col.label }}
-            <span v-if="col.sortable && sortKey === col.key" class="text-foreground text-[10px] font-bold">
+            <span v-if="col.sortable && sortKey === col.key" class="text-primary text-[10px] font-bold">
               {{ sortDir === 1 ? '▲' : '▼' }}
             </span>
           </span>
@@ -181,8 +182,11 @@ function getRowTransitionStyle(index: number): Record<string, string> {
         <div
           v-for="(node, index) in sortedNodes"
           :key="getRowTransitionKey(node)"
-          class="relative flex min-h-[3.25rem] py-2 cursor-pointer flex-col justify-center rounded-md px-2 border border-border/70 transition-all bg-card hover:bg-muted/80 dark:hover:bg-muted/40 hover:border-foreground/35 hover:shadow-xs"
-          :class="[!node.online && '!border-destructive/30']"
+          class="relative flex min-h-[3.25rem] py-2 cursor-pointer flex-col justify-center rounded-md px-2 border border-border/70 transition-all hover:bg-muted/80 dark:hover:bg-muted/40 hover:border-foreground/35 hover:shadow-xs"
+          :class="[
+            !node.online && '!border-destructive/30',
+            index % 2 === 1 ? 'bg-muted/25 dark:bg-muted/15' : 'bg-card',
+          ]"
           :style="getRowTransitionStyle(index)"
           @click="handleClick(node)"
         >

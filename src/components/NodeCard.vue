@@ -82,7 +82,7 @@ function openPingDialog() {
             :class="[props.node.online ? 'bg-emerald-600' : 'bg-red-600']"
           />
         </div>
-        <div class="text-md font-bold flex-1 min-w-0 truncate" :title="props.node.name">
+        <div class="text-sm font-bold flex-1 min-w-0 line-clamp-2 leading-snug break-words" :title="props.node.name">
           {{ props.node.name }}
         </div>
         <div v-if="customTags.length > 0" class="flex shrink-0 gap-1 items-center">

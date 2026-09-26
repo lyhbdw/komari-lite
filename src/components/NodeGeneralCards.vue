@@ -150,7 +150,7 @@ const financeSummaryItems = computed(() => [
   },
   {
     label: '总溢价投入',
-    icon: 'tabler:coins-plus',
+    icon: 'tabler:cash-plus',
     value: formattedTotalPremium.value.value,
     symbol: formattedTotalPremium.value.symbol,
     currency: formattedTotalPremium.value.currency,

@@ -28,8 +28,8 @@ const {
         </div>
       </DataTooltip>
     </div>
-    <div v-else class="truncate">
-      N/A
+    <div v-else class="truncate text-[10px] font-mono text-muted-foreground/40 py-0.5">
+      -
     </div>
     <div class="flex flex-col gap-[1px] w-full pr-4">
       <div class="relative items-center gap-1">

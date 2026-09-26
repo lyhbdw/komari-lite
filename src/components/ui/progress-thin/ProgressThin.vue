@@ -35,7 +35,7 @@ const statusClass = computed(() => {
 
 <template>
   <div
-    :class="cn('relative w-full overflow-hidden rounded-full bg-zinc-200/80 dark:bg-muted', props.class)"
+    :class="cn('relative w-full overflow-hidden rounded-full bg-slate-200/90 dark:bg-zinc-800', props.class)"
     :style="heightStyle"
   >
     <div

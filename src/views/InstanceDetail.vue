@@ -94,49 +94,16 @@ function splitMetricValue(value: string): { value: string, unit?: string } {
   return { value }
 }
 
-const baseRemainingValueText = computed(() => {
-  if (!data.value)
-    return '-'
-
-  const baseRemainingCNY = financeHelper.calculateBaseRemainingValueCNY(data.value, exchangeRates.value)
-  return formatFinanceMetricValue(baseRemainingCNY, financeBaseCurrency.value)
-})
-
-const nodePremiumText = computed(() => {
-  if (!data.value)
-    return '-'
-
-  const premiumInfo = financeHelper.getNodePremiumInfo(data.value)
-  if (premiumInfo.amount <= 0)
-    return appStore.lang === 'zh-CN' ? '无溢价' : 'None'
-
-  return `${premiumInfo.symbol}${premiumInfo.amount.toFixed(2)}`
-})
-
-const monthlyAverageCostText = computed(() => {
-  if (!data.value)
-    return '-'
-
-  if (Number(data.value.billing_cycle) <= 0)
-    return appStore.lang === 'zh-CN' ? '不适用' : 'N/A'
-
-  const monthlyAverageCost = financeHelper.calculateMonthlyAverageCostCNY(data.value, exchangeRates.value)
-  return `${formatFinanceMetricValue(monthlyAverageCost, financeBaseCurrency.value)} / 月`
-})
+function formatFinanceAmountObject(amountCNY: number, currency: CurrencyCode) {
+  const targetRate = exchangeRates.value[currency] || 1
+  return financeHelper.formatFinanceAmount(amountCNY * targetRate, currency)
+}
 
 const remainingTimeText = computed(() => {
   if (!data.value?.expired_at)
     return '-'
 
   return getExpireText(data.value.expired_at, appStore.lang)
-})
-
-const totalRemainingValueText = computed(() => {
-  if (!data.value)
-    return '-'
-
-  const remainingValueCNY = financeHelper.calculateRemainingValueCNY(data.value, exchangeRates.value)
-  return formatFinanceMetricValue(remainingValueCNY, financeBaseCurrency.value)
 })
 
 const remainingTimeValueClass = computed(() => {
@@ -150,17 +117,27 @@ const metricCards = computed<MetricCard[]>(() => {
   if (!data.value)
     return []
 
-  const baseRemaining = splitMetricValue(baseRemainingValueText.value)
-  const nodePremium = splitMetricValue(nodePremiumText.value)
-  const monthlyAverageCost = splitMetricValue(monthlyAverageCostText.value)
-  const remainingTime = splitMetricValue(remainingTimeText.value)
-  const totalRemaining = splitMetricValue(totalRemainingValueText.value)
+  const baseRemainingCNY = financeHelper.calculateBaseRemainingValueCNY(data.value, exchangeRates.value)
+  const baseItem = formatFinanceAmountObject(baseRemainingCNY, financeBaseCurrency.value)
+
+  const premiumCNY = financeHelper.getNodePremiumCNY(data.value, exchangeRates.value)
+  const hasPremium = premiumCNY > 0
+  const premiumItem = hasPremium ? formatFinanceAmountObject(premiumCNY, financeBaseCurrency.value) : null
+
+  const isCycleValid = Number(data.value.billing_cycle) > 0
+  const monthlyCostCNY = isCycleValid ? financeHelper.calculateMonthlyAverageCostCNY(data.value, exchangeRates.value) : 0
+  const monthlyItem = isCycleValid ? formatFinanceAmountObject(monthlyCostCNY, financeBaseCurrency.value) : null
+
+  const remainingTimeSplit = splitMetricValue(remainingTimeText.value)
+
+  const totalRemainingCNY = financeHelper.calculateRemainingValueCNY(data.value, exchangeRates.value)
+  const totalItem = formatFinanceAmountObject(totalRemainingCNY, financeBaseCurrency.value)
 
   return [
     {
       label: '剩余价值',
-      value: baseRemaining.value,
-      unit: baseRemaining.unit,
+      value: `${baseItem.symbol}${baseItem.value}`,
+      unit: baseItem.currency,
       icon: 'tabler:coins',
       valueClass: 'text-foreground',
       iconClass: 'text-slate-500/25 group-hover:text-slate-500',
@@ -168,17 +145,17 @@ const metricCards = computed<MetricCard[]>(() => {
     },
     {
       label: '购入溢价',
-      value: nodePremium.value,
-      unit: nodePremium.unit,
-      icon: 'tabler:coins-plus',
+      value: premiumItem ? `${premiumItem.symbol}${premiumItem.value}` : (appStore.lang === 'zh-CN' ? '无溢价' : 'None'),
+      unit: premiumItem ? premiumItem.currency : undefined,
+      icon: 'tabler:cash-plus',
       valueClass: 'text-foreground',
       iconClass: 'text-slate-500/25 group-hover:text-slate-500',
       cardBorderHoverClass: 'hover:border-foreground/30',
     },
     {
       label: '月均支出',
-      value: monthlyAverageCost.value,
-      unit: monthlyAverageCost.unit,
+      value: monthlyItem ? `${monthlyItem.symbol}${monthlyItem.value}` : (appStore.lang === 'zh-CN' ? '不适用' : 'N/A'),
+      unit: monthlyItem ? `${monthlyItem.currency} / 月` : undefined,
       icon: 'tabler:receipt-2',
       valueClass: 'text-foreground',
       iconClass: 'text-slate-500/25 group-hover:text-slate-500',
@@ -186,8 +163,8 @@ const metricCards = computed<MetricCard[]>(() => {
     },
     {
       label: '剩余时间',
-      value: remainingTime.value,
-      unit: remainingTime.unit,
+      value: remainingTimeSplit.value,
+      unit: remainingTimeSplit.unit,
       icon: 'tabler:calendar-dollar',
       valueClass: remainingTimeValueClass.value,
       iconClass: 'text-slate-500/25 group-hover:text-slate-500',
@@ -195,8 +172,8 @@ const metricCards = computed<MetricCard[]>(() => {
     },
     {
       label: '剩余总价值',
-      value: totalRemaining.value,
-      unit: totalRemaining.unit,
+      value: `${totalItem.symbol}${totalItem.value}`,
+      unit: totalItem.currency,
       icon: 'tabler:wallet',
       valueClass: 'text-foreground',
       iconClass: 'text-slate-500/25 group-hover:text-slate-500',
@@ -402,8 +379,17 @@ const trafficProgressStyle = computed(() => ({
                   <Icon icon="icon-park-outline:transfer-data" :width="14" :height="14" />
                   <span class="text-xs sm:text-sm">总流量</span>
                   <div class="flex-1" />
-                  <span class="hidden sm:block text-[11px] font-medium text-foreground/70">{{
-                    formatBytes(data?.net_total_up ?? 0) }} / {{ formatBytes(data?.net_total_down ?? 0) }}</span>
+                  <div class="hidden sm:flex items-center gap-1.5 text-[11px] font-mono tabular-nums text-muted-foreground">
+                    <span class="flex items-center gap-0.5">
+                      <Icon icon="tabler:chevron-up" width="11" height="11" class="text-emerald-500" />
+                      {{ formatBytes(data?.net_total_up ?? 0) }}
+                    </span>
+                    <span class="opacity-40">/</span>
+                    <span class="flex items-center gap-0.5">
+                      <Icon icon="tabler:chevron-down" width="11" height="11" class="text-sky-500" />
+                      {{ formatBytes(data?.net_total_down ?? 0) }}
+                    </span>
+                  </div>
                 </div>
                 <span class="text-xs sm:text-sm break-all">
                   {{ trafficUsageText }}
