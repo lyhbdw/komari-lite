@@ -96,10 +96,10 @@ function openPingDialog() {
               <span class="text-muted-foreground">
                 CPU
               </span>
-              <span>{{ (props.node.cpu ?? 0).toFixed(1) }}%</span>
+              <span class="font-mono tabular-nums">{{ (props.node.cpu ?? 0).toFixed(1) }}%</span>
             </div>
             <ProgressThin :percentage="props.node.cpu ?? 0" :status="cpuStatus" :height="4" />
-            <div class="text-[11px] text-muted-foreground truncate">
+            <div class="text-[11px] text-muted-foreground truncate font-mono tabular-nums">
               {{ props.node.load.toFixed(2) ?? 0 }}, {{ props.node.load5.toFixed(2) ?? 0 }}, {{
                 props.node.load15.toFixed(2) ?? 0 }}
             </div>
@@ -111,15 +111,15 @@ function openPingDialog() {
               <span class="text-muted-foreground">
                 内存
               </span>
-              <span>{{ memPercentage.toFixed(1) }}%</span>
+              <span class="font-mono tabular-nums">{{ memPercentage.toFixed(1) }}%</span>
             </div>
             <ProgressThin :percentage="memPercentage" :status="memStatus" :height="4" />
             <DataTooltip placement="top" class="block" :content-class="[!props.node.swap && '!hidden']">
-              <div class="text-[11px] text-muted-foreground truncate">
+              <div class="text-[11px] text-muted-foreground truncate font-mono tabular-nums">
                 {{ formatBytes(props.node.ram ?? 0) }} / {{ formatBytes(props.node.mem_total ?? 0) }}
               </div>
               <template #content>
-                <div class="flex items-center justify-between gap-3 whitespace-nowrap">
+                <div class="flex items-center justify-between gap-3 whitespace-nowrap font-mono tabular-nums">
                   <span class="text-background/70">Swap</span>
                   <span>{{ formatBytes(props.node.swap ?? 0) }}</span>
                 </div>
@@ -133,10 +133,10 @@ function openPingDialog() {
               <span class="text-muted-foreground">
                 硬盘
               </span>
-              <span>{{ diskPercentage.toFixed(1) }}%</span>
+              <span class="font-mono tabular-nums">{{ diskPercentage.toFixed(1) }}%</span>
             </div>
             <ProgressThin :percentage="diskPercentage" :status="diskStatus" :height="4" />
-            <div class="text-[11px] text-muted-foreground truncate">
+            <div class="text-[11px] text-muted-foreground truncate font-mono tabular-nums">
               {{ formatBytes(props.node.disk ?? 0) }} / {{ formatBytes(props.node.disk_total ?? 0) }}
             </div>
           </div>
@@ -147,11 +147,11 @@ function openPingDialog() {
               <span class="text-muted-foreground">
                 流量
               </span>
-              <span>{{ trafficUsedPercentage.toFixed(1) }}%</span>
+              <span class="font-mono tabular-nums">{{ trafficUsedPercentage.toFixed(1) }}%</span>
             </div>
             <ProgressThin :percentage="trafficUsedPercentage" status="success" :height="4" />
             <DataTooltip placement="top" class="block">
-              <div class="whitespace-pre-wrap text-[11px] text-muted-foreground truncate">
+              <div class="whitespace-pre-wrap text-[11px] text-muted-foreground truncate font-mono tabular-nums">
                 {{ formatBytes(trafficUsed) }} /
                 <template v-if="showTrafficProgress(props.node)">
                   {{ formatBytes(props.node.traffic_limit) }}
@@ -161,7 +161,7 @@ function openPingDialog() {
                 </template>
               </div>
               <template #content>
-                <div class="flex items-center justify-between gap-3 whitespace-nowrap">
+                <div class="flex items-center justify-between gap-3 whitespace-nowrap font-mono tabular-nums">
                   <div class="text-[11px] flex flex-col">
                     <div class="flex flex-row items-center gap-1">
                       <Icon icon="tabler:chevron-up" width="12" height="12" />
@@ -183,7 +183,7 @@ function openPingDialog() {
             class="absolute inset-0 z-10 flex flex-col items-center justify-center space-y-1"
           >
             <span class="text-sm text-red-600">离线</span>
-            <div>{{ offlineTime }}</div>
+            <div class="font-mono tabular-nums">{{ offlineTime }}</div>
           </div>
           <div class="flex flex-col gap-y-2" :class="[!props.node.online && 'blur-xs opacity-60 pointer-events-none']">
             <div class="flex items-center">
@@ -191,13 +191,13 @@ function openPingDialog() {
                 速率
               </span>
               <div class="border-t-2 border-dotted border-gray-500/10 mx-2 flex-1" />
-              <div class="truncate flex flex-row gap-1">
-                <div class="text-green-600 flex flex-row items-center gap-1">
-                  <Icon icon="tabler:chevron-up" width="12" height="12" />
+              <div class="truncate flex flex-row gap-1 font-mono tabular-nums">
+                <div class="text-foreground/90 flex flex-row items-center gap-1">
+                  <Icon icon="tabler:chevron-up" width="12" height="12" class="text-emerald-500" />
                   {{ formatBytesPerSecond(props.node.net_out ?? 0) }}
                 </div>
-                <div class="text-blue-600 flex flex-row items-center gap-1">
-                  <Icon icon="tabler:chevron-down" width="12" height="12" />
+                <div class="text-muted-foreground flex flex-row items-center gap-1">
+                  <Icon icon="tabler:chevron-down" width="12" height="12" class="text-sky-500" />
                   {{ formatBytesPerSecond(props.node.net_in ?? 0) }}
                 </div>
               </div>

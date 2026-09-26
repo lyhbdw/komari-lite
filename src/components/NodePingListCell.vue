@@ -22,7 +22,7 @@ const {
         :content="`${net.name}\n${net.latency}`"
         content-class="whitespace-pre-wrap w-max px-1.5 !leading-[1.2] text-[11px]"
       >
-        <div class="truncate text-[10px]">
+        <div class="truncate text-[10px] font-mono tabular-nums">
           <span v-if="index" class="mx-1">·</span>
           <span :class="net.toneClass">{{ net.latency }}</span>
         </div>

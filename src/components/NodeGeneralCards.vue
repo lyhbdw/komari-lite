@@ -197,9 +197,8 @@ onMounted(async () => {
     <div :class="cardGridClass">
       <CardX
         hoverable
-        class="group h-full border-none rounded-md transition-all"
+        class="group h-full border border-border/80 bg-card hover:border-foreground/30 hover:shadow-xs rounded-md transition-all"
         :class="[
-          pickSurfaceClass('bg-background/60 hover:bg-background', 'bg-background/50 hover:bg-background backdrop-blur-xs'),
           showVisualPanel ? 'col-span-4 row-span-1 col-start-1 row-start-1' : 'col-span-1 row-start-1 col-start-1 min-h-18 md:min-h-24 md:row-start-1 md:col-start-1',
         ]"
         content-class="h-full !p-3"
@@ -217,10 +216,10 @@ onMounted(async () => {
               :key="`memory-${summaryTransitionKey}`" class="flex items-baseline gap-1 min-w-0"
               :style="getMetricSwitchStyle(0)"
             >
-              <span class="text-md md:text-2xl font-bold leading-none tracking-tight">
+              <span class="text-md md:text-2xl font-bold leading-none tracking-tight font-mono tabular-nums">
                 {{ formattedMemoryUsed.value }}
               </span>
-              <span class="text-[11px] md:text-xs font-medium text-muted-foreground truncate">
+              <span class="text-[11px] md:text-xs font-medium text-muted-foreground truncate font-mono tabular-nums">
                 {{ formattedMemoryUsed.unit }} / {{ formattedMemoryTotal.value }} {{ formattedMemoryTotal.unit }}
               </span>
             </div>
@@ -229,9 +228,8 @@ onMounted(async () => {
       </CardX>
       <CardX
         hoverable
-        class="group h-full border-none rounded-md transition-all"
+        class="group h-full border border-border/80 bg-card hover:border-foreground/30 hover:shadow-xs rounded-md transition-all"
         :class="[
-          pickSurfaceClass('bg-background/60 hover:bg-background', 'bg-background/50 hover:bg-background backdrop-blur-xs'),
           showVisualPanel ? 'col-span-4 row-span-1 col-start-1 row-start-2' : 'col-span-1 row-start-2 col-start-1 min-h-18 md:min-h-24 md:row-start-1 md:col-start-2',
         ]"
         content-class="h-full !p-3"
@@ -249,9 +247,9 @@ onMounted(async () => {
               :key="`disk-${summaryTransitionKey}`" class="flex items-baseline gap-1 min-w-0"
               :style="getMetricSwitchStyle(1)"
             >
-              <span class="text-md md:text-2xl font-bold leading-none tracking-tight">{{ formattedDiskUsed.value
+              <span class="text-md md:text-2xl font-bold leading-none tracking-tight font-mono tabular-nums">{{ formattedDiskUsed.value
               }}</span>
-              <span class="text-[11px] md:text-xs font-medium text-muted-foreground truncate">
+              <span class="text-[11px] md:text-xs font-medium text-muted-foreground truncate font-mono tabular-nums">
                 {{ formattedDiskUsed.unit }} / {{ formattedDiskTotal.value }} {{ formattedDiskTotal.unit }}
               </span>
             </div>
@@ -264,8 +262,7 @@ onMounted(async () => {
       >
         <CardX
           hoverable
-          class="group h-full border-none rounded-md transition-all cursor-pointer"
-          :class="pickSurfaceClass('bg-background/60 hover:bg-background', 'bg-background/50 hover:bg-background backdrop-blur-xs')"
+          class="group h-full border border-border/80 bg-card hover:border-foreground/30 hover:shadow-xs rounded-md transition-all cursor-pointer"
           content-class="h-full !p-3" @click="openFinanceDialog = true"
         >
           <div class="flex h-full flex-col justify-between gap-1">
@@ -287,7 +284,7 @@ onMounted(async () => {
                 :key="`remaining-value-${summaryTransitionKey}`" class="flex items-baseline gap-1 min-w-0"
                 :style="getMetricSwitchStyle(2)"
               >
-                <span class="text-md md:text-2xl font-bold leading-none tracking-tight">
+                <span class="text-md md:text-2xl font-bold leading-none tracking-tight font-mono tabular-nums">
                   {{ formattedRemainingValue.symbol }}{{ formattedRemainingValue.value }}
                 </span>
                 <span class="block truncate text-[11px] md:text-xs font-medium text-muted-foreground">
@@ -300,9 +297,8 @@ onMounted(async () => {
       </div>
       <CardX
         hoverable
-        class="group h-full border-none rounded-md transition-all"
+        class="group h-full border border-border/80 bg-card hover:border-foreground/30 hover:shadow-xs rounded-md transition-all"
         :class="[
-          pickSurfaceClass('bg-background/60 hover:bg-background', 'bg-background/50 hover:bg-background backdrop-blur-xs'),
           showVisualPanel ? 'col-span-4 row-span-1 col-start-5 row-start-2' : 'col-span-1 row-start-2 col-start-2 min-h-18 md:min-h-24 md:row-start-1 md:col-start-4',
         ]"
         content-class="h-full !p-3"
@@ -325,7 +321,7 @@ onMounted(async () => {
                 :key="`traffic-${summaryTransitionKey}`" class="flex items-baseline gap-1"
                 :style="getMetricSwitchStyle(3)"
               >
-                <span class="inline-block text-md md:text-2xl font-bold leading-none tracking-tight">
+                <span class="inline-block text-md md:text-2xl font-bold leading-none tracking-tight font-mono tabular-nums">
                   {{ totalTrafficTooltip.value }}
                 </span>
                 <span class="inline-block text-[11px] md:text-xs font-medium text-muted-foreground">
@@ -339,9 +335,8 @@ onMounted(async () => {
 
       <CardX
         hoverable
-        class="group h-full border-none rounded-md transition-all"
+        class="group h-full border border-border/80 bg-card hover:border-foreground/30 hover:shadow-xs rounded-md transition-all"
         :class="[
-          pickSurfaceClass('bg-background/60 hover:bg-background', 'bg-background/50 hover:bg-background backdrop-blur-xs'),
           showVisualPanel ? 'col-span-4 row-span-1 col-start-9 row-start-1' : 'col-span-1 row-start-1 col-start-3 min-h-18 md:min-h-24 md:row-start-1 md:col-start-5',
         ]"
         content-class="h-full !p-3"
@@ -359,7 +354,7 @@ onMounted(async () => {
               :key="`speed-up-${summaryTransitionKey}`" class="flex items-baseline gap-1"
               :style="getMetricSwitchStyle(4)"
             >
-              <span class="text-md md:text-2xl font-bold leading-none tracking-tight">{{ formattedSpeedUp.value
+              <span class="text-md md:text-2xl font-bold leading-none tracking-tight font-mono tabular-nums">{{ formattedSpeedUp.value
               }}</span>
               <span class="text-[11px] md:text-xs font-medium text-muted-foreground">{{ formattedSpeedUp.unit }}</span>
             </div>
@@ -368,9 +363,8 @@ onMounted(async () => {
       </CardX>
       <CardX
         hoverable
-        class="group h-full border-none rounded-md transition-all"
+        class="group h-full border border-border/80 bg-card hover:border-foreground/30 hover:shadow-xs rounded-md transition-all"
         :class="[
-          pickSurfaceClass('bg-background/60 hover:bg-background', 'bg-background/50 hover:bg-background backdrop-blur-xs'),
           showVisualPanel ? 'col-span-4 row-span-1 col-start-9 row-start-2' : 'col-span-1 row-start-2 col-start-3 min-h-18 md:min-h-24 md:row-start-1 md:col-start-6',
         ]"
         content-class="h-full !p-3"
@@ -388,7 +382,7 @@ onMounted(async () => {
               :key="`speed-down-${summaryTransitionKey}`" class="flex items-baseline gap-1"
               :style="getMetricSwitchStyle(5)"
             >
-              <span class="text-md md:text-2xl font-bold leading-none tracking-tight">
+              <span class="text-md md:text-2xl font-bold leading-none tracking-tight font-mono tabular-nums">
                 {{ formattedSpeedDown.value }}
               </span>
               <span class="text-[11px] md:text-xs font-medium text-muted-foreground">{{ formattedSpeedDown.unit

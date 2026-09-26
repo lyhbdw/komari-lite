@@ -899,13 +899,14 @@ onMounted(() => {
     </Tabs>
 
     <!-- 内容区域 -->
-    <Spinner :show="loading" content-class="flex flex-col gap-4">
+    <Spinner :show="loading" class="min-h-[280px]" content-class="flex flex-col gap-4">
       <div v-if="error" class="text-red-500 py-8 text-center">
         {{ error }}
       </div>
       <div v-else-if="tasks.length === 0 && !loading" class="py-8">
         <Empty description="暂无延迟数据" />
       </div>
+      <div v-else-if="tasks.length === 0 && loading" class="h-64 w-full" />
 
       <template v-else>
         <!-- 最新值统计卡片（可点击切换选中状态） -->

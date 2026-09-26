@@ -39,35 +39,35 @@ export function getPingToneClass(value: number): string {
   if (value <= 60)
     return 'text-emerald-600 dark:text-emerald-400'
   if (value <= 120)
-    return 'text-green-600 dark:text-green-400'
+    return 'text-emerald-600/80 dark:text-emerald-400/80'
   if (value <= 180)
-    return 'text-lime-600 dark:text-lime-400'
-  if (value <= 240)
     return 'text-amber-600 dark:text-amber-400'
+  if (value <= 240)
+    return 'text-orange-600 dark:text-orange-400'
   return 'text-rose-600 dark:text-rose-400'
 }
 
 function getLatencyToneClass(latency: number): string {
   if (latency <= 60)
-    return 'bg-emerald-600/90'
+    return 'bg-emerald-500/80'
   if (latency <= 120)
-    return 'bg-green-500/80'
+    return 'bg-emerald-600/70'
   if (latency <= 180)
-    return 'bg-lime-400/80'
+    return 'bg-amber-400/80'
   if (latency <= 240)
-    return 'bg-yellow-400/80'
+    return 'bg-orange-400/80'
   return 'bg-rose-500/80'
 }
 
 function getLossToneClass(loss: number): string {
   if (loss <= 1)
-    return 'bg-emerald-600/90'
+    return 'bg-emerald-500/80'
   if (loss <= 3)
-    return 'bg-green-500/80'
+    return 'bg-emerald-600/70'
   if (loss <= 6)
-    return 'bg-lime-400/80'
+    return 'bg-amber-400/80'
   if (loss <= 9)
-    return 'bg-yellow-400/80'
+    return 'bg-orange-400/80'
   return 'bg-rose-500/80'
 }
 

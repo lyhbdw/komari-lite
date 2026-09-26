@@ -863,26 +863,26 @@ onMounted(() => {
     </Tabs>
 
     <!-- 内容区域 -->
-    <Spinner :show="loading">
+    <Spinner :show="loading" class="min-h-[320px]">
       <div v-if="error" class="text-red-500 py-8 text-center">
         {{ error }}
       </div>
       <div v-else-if="remoteData.length === 0 && !loading" class="py-8">
         <Empty description="暂无负载数据" />
       </div>
+      <div v-else-if="remoteData.length === 0 && loading" class="h-64 w-full" />
 
       <!-- 图表网格 -->
       <div v-else class="gap-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
         <!-- CPU 卡片 -->
         <CardX
           size="small"
-          class="border-none transition-all rounded-md"
-          :class="pickSurfaceClass('bg-background/60 hover:bg-background', 'bg-background/50 hover:bg-background backdrop-blur-xs')"
+          class="border border-border/80 rounded-md bg-card hover:border-foreground/30 transition-all"
         >
           <template #header>
             <div class="flex items-center justify-between">
               <span class="text-base font-bold">CPU</span>
-              <div v-if="latestStatus?.cpu != null" class="text-xs flex gap-0.5 items-baseline">
+              <div v-if="latestStatus?.cpu != null" class="text-xs flex gap-0.5 items-baseline font-mono tabular-nums">
                 <span>{{ latestStatus.cpu.toFixed(1) }}</span>
                 <span>%</span>
               </div>
@@ -897,13 +897,12 @@ onMounted(() => {
         <!-- 内存卡片 -->
         <CardX
           size="small"
-          class="border-none transition-all rounded-md"
-          :class="pickSurfaceClass('bg-background/60 hover:bg-background', 'bg-background/50 hover:bg-background backdrop-blur-xs')"
+          class="border border-border/80 rounded-md bg-card hover:border-foreground/30 transition-all"
         >
           <template #header>
             <div class="flex items-center justify-between">
               <span class="text-base font-bold">内存</span>
-              <div class="text-xs flex gap-1 items-baseline">
+              <div class="text-xs flex gap-1 items-baseline font-mono tabular-nums">
                 <template v-if="latestStatus?.ram != null">
                   <span>{{ formatBytesSplit(latestStatus.ram).value }}</span>
                   <span>{{ formatBytesSplit(latestStatus.ram).unit }}</span>
@@ -927,13 +926,12 @@ onMounted(() => {
         <!-- 磁盘卡片 -->
         <CardX
           size="small"
-          class="border-none transition-all rounded-md"
-          :class="pickSurfaceClass('bg-background/60 hover:bg-background', 'bg-background/50 hover:bg-background backdrop-blur-xs')"
+          class="border border-border/80 rounded-md bg-card hover:border-foreground/30 transition-all"
         >
           <template #header>
             <div class="flex items-center justify-between">
               <span class="text-base font-bold">磁盘</span>
-              <div class="text-xs flex gap-1 items-baseline">
+              <div class="text-xs flex gap-1 items-baseline font-mono tabular-nums">
                 <template v-if="latestStatus?.disk != null">
                   <span>{{ formatBytesSplit(latestStatus.disk).value }}</span>
                   <span>{{ formatBytesSplit(latestStatus.disk).unit }}</span>
@@ -956,15 +954,14 @@ onMounted(() => {
         <!-- 网络卡片 -->
         <CardX
           size="small"
-          class="border-none transition-all rounded-md"
-          :class="pickSurfaceClass('bg-background/60 hover:bg-background', 'bg-background/50 hover:bg-background backdrop-blur-xs')"
+          class="border border-border/80 rounded-md bg-card hover:border-foreground/30 transition-all"
         >
           <template #header>
             <div class="flex items-center justify-between">
               <span class="text-base font-bold">网络</span>
-              <div class="text-xs flex gap-2 items-baseline">
+              <div class="text-xs flex gap-2 items-baseline font-mono tabular-nums">
                 <span class="flex flex-row items-center justify-center gap-0.5">
-                  <Icon icon="tabler:chevron-up" width="12" height="12" />
+                  <Icon icon="tabler:chevron-up" width="12" height="12" class="text-emerald-500" />
                   <template v-if="latestStatus?.net_out != null">
                     {{ formatBytesSplit(latestStatus.net_out).value }}
                     {{ formatBytesSplit(latestStatus.net_out).unit }}/s
@@ -972,7 +969,7 @@ onMounted(() => {
                   <template v-else>-</template>
                 </span>
                 <span class="flex flex-row items-center justify-center gap-0.5">
-                  <Icon icon="tabler:chevron-down" width="12" height="12" />
+                  <Icon icon="tabler:chevron-down" width="12" height="12" class="text-sky-500" />
                   <template v-if="latestStatus?.net_in != null">
                     {{ formatBytesSplit(latestStatus.net_in).value }}
                     {{ formatBytesSplit(latestStatus.net_in).unit }}/s
@@ -990,13 +987,12 @@ onMounted(() => {
         <!-- 连接数卡片 -->
         <CardX
           size="small"
-          class="border-none transition-all rounded-md"
-          :class="pickSurfaceClass('bg-background/60 hover:bg-background', 'bg-background/50 hover:bg-background backdrop-blur-xs')"
+          class="border border-border/80 rounded-md bg-card hover:border-foreground/30 transition-all"
         >
           <template #header>
             <div class="flex items-center justify-between">
               <span class="text-base font-bold">连接</span>
-              <div class="text-xs flex gap-1 items-baseline">
+              <div class="text-xs flex gap-1 items-baseline font-mono tabular-nums">
                 <span>TCP: {{ latestStatus?.connections ?? '-' }}</span>
                 <span>·</span>
                 <span>UDP: {{ latestStatus?.connections_udp ?? '-' }}</span>
@@ -1011,13 +1007,12 @@ onMounted(() => {
         <!-- 进程卡片 -->
         <CardX
           size="small"
-          class="border-none transition-all rounded-md"
-          :class="pickSurfaceClass('bg-background/60 hover:bg-background', 'bg-background/50 hover:bg-background backdrop-blur-xs')"
+          class="border border-border/80 rounded-md bg-card hover:border-foreground/30 transition-all"
         >
           <template #header>
             <div class="flex items-center justify-between">
               <span class="text-base font-bold">进程</span>
-              <span class="text-xs">
+              <span class="text-xs font-mono tabular-nums">
                 {{ latestStatus?.process ?? '-' }}
               </span>
             </div>
