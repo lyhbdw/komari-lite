@@ -173,7 +173,20 @@ export function setStoredFinanceCurrency(currency: CurrencyCode): void {
 
 export function getNodePremium(node: NodeData): number {
   const premium = Number(node.premium)
-  return Number.isFinite(premium) && premium > 0 ? premium : 0
+  if (Number.isFinite(premium) && premium > 0)
+    return premium
+
+  // 兼容 fallback：若后台未填溢价但标签中写了“溢价100r”等格式，自动识别
+  if (node.tags) {
+    const match = node.tags.match(/溢价\s*([0-9]+(?:\.[0-9]+)?)\s*(?:r|元|cny)?/i)
+    if (match && match[1]) {
+      const val = parseFloat(match[1])
+      if (Number.isFinite(val) && val > 0)
+        return val
+    }
+  }
+
+  return 0
 }
 
 export function getNodePremiumCNY(node: NodeData, exchangeRates: ExchangeRates): number {
