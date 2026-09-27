@@ -22,13 +22,16 @@ func OpenTestDB(t *testing.T) *gorm.DB {
 }
 
 // SwapInstance replaces the global DB instance for the duration of the test
-// and restores the previous value on cleanup. It also resets the sync.Once
-// so a later GetDBInstance re-initializes normally.
+// and restores the previous value on cleanup.
 func SwapInstance(t *testing.T, db *gorm.DB) {
 	t.Helper()
 	prev := instance
+	prevErr := initErr
+	once.Do(func() {})
 	instance = db
+	initErr = nil
 	t.Cleanup(func() {
 		instance = prev
+		initErr = prevErr
 	})
 }

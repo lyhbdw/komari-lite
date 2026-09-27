@@ -21,6 +21,19 @@ func TestParseTemplateFormatsEventTimeInLocalTimezone(t *testing.T) {
 	}
 }
 
+func TestParseTemplateFormatsEventTimeInBeijingTimeWhenLocalIsUTC(t *testing.T) {
+	originalLocal := time.Local
+	time.Local = time.UTC
+	t.Cleanup(func() { time.Local = originalLocal })
+
+	eventTime := time.Date(2026, 9, 27, 5, 35, 27, 0, time.UTC)
+	got := parseTemplate("{{time}}", models.EventMessage{Time: eventTime})
+	want := "2026-09-27 13:35:27"
+	if got != want {
+		t.Fatalf("formatted event time = %q, want %q", got, want)
+	}
+}
+
 func TestParseTemplateFormatsAnyTypedEventField(t *testing.T) {
 	for _, tc := range []struct {
 		event any

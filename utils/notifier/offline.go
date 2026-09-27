@@ -124,10 +124,13 @@ func OfflineNotification(clientID string, endedConnectionID int64) {
 			}
 		}()
 
-		// 更新数据库中的最后通知时间
+		// 更新数据库中的最后通知时间与已告警离线状态
 		db := dbcore.GetDBInstance()
-		if err := db.Model(&models.OfflineNotification{}).Where("client = ?", clientID).Update("last_notified", now.UTC()).Error; err != nil {
-			logger.Errorf("notifier", "Failed to update last_notified for client %s: %v", clientID, err)
+		if err := db.Model(&models.OfflineNotification{}).Where("client = ?", clientID).Updates(map[string]any{
+			"last_notified":    now.UTC(),
+			"notified_offline": true,
+		}).Error; err != nil {
+			logger.Errorf("notifier", "Failed to update last_notified/notified_offline for client %s: %v", clientID, err)
 		}
 	}(now, endedConnectionID)
 }
@@ -179,13 +182,25 @@ func OnlineNotification(clientID string, connectionID int64) {
 	}
 	// 上线时检测续费
 	renewal.CheckAndAutoRenewal(client)
-	shouldNotify := updateOnlineState(clientID, connectionID)
+	updateOnlineState(clientID, connectionID)
 	_, enabled := getNotificationConfig(clientID)
-	if !enabled || !shouldNotify {
+	if !enabled {
 		return
 	}
 
-	// 规则4：客户端离线足够久已通知（或未待离线），现在重新上线，发送上线通知。
+	// 规则4：只有此前触发并发送过离线告警的节点，恢复上线时才发送恢复通知。
+	// 通过原子更新 notified_offline 字段（true -> false）：
+	// 1. 服务端重启/升级后，离线节点的恢复通知依然能正确触发，不因内存状态丢失而漏发；
+	// 2. 正常重启时所有在线节点不会被误触发上线通知；
+	// 3. 高并发上报时同一恢复事件只触发一次通知。
+	db := dbcore.GetDBInstance()
+	res := db.Model(&models.OfflineNotification{}).
+		Where("client = ? AND notified_offline = ?", clientID, true).
+		Update("notified_offline", false)
+	if res.Error != nil || res.RowsAffected == 0 {
+		return
+	}
+
 	go func() {
 		if err := messageSender.SendNotification(models.EventMessage{
 			Event:   messageevent.Online,

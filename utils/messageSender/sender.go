@@ -21,6 +21,13 @@ var (
 	currentProvider factory.IMessageSender
 	mu              = sync.Mutex{}
 	once            = sync.Once{}
+	beijingLocation = func() *time.Location {
+		loc, err := time.LoadLocation("Asia/Shanghai")
+		if err == nil {
+			return loc
+		}
+		return time.FixedZone("CST", 8*3600)
+	}()
 )
 
 func CurrentProvider() factory.IMessageSender {
@@ -110,9 +117,9 @@ func SendEvent(event models.EventMessage) error {
 		return fmt.Errorf("message sender provider is not initialized")
 	}
 	if event.Time.IsZero() {
-		event.Time = time.Now().UTC()
+		event.Time = time.Now().In(beijingLocation)
 	} else {
-		event.Time = event.Time.UTC()
+		event.Time = event.Time.In(beijingLocation)
 	}
 	var err error
 	cfg, err := config.GetMany(map[string]any{
@@ -210,7 +217,7 @@ func formatTemplateField(fieldName string, v reflect.Value) string {
 		}
 	case reflect.Struct:
 		if t, ok := v.Interface().(time.Time); ok {
-			return t.In(time.Local).Format("2006-01-02 15:04:05")
+			return t.In(beijingLocation).Format("2006-01-02 15:04:05")
 		}
 	}
 	return ""
