@@ -389,7 +389,7 @@ function stopGlobe() {
   if (canvasRef.value && containerRef.value) {
     const cobeWrapper = canvasRef.value.parentElement
     if (cobeWrapper && cobeWrapper !== containerRef.value) {
-      containerRef.value.appendChild(canvasRef.value)
+      containerRef.value.insertBefore(canvasRef.value, containerRef.value.firstChild)
       cobeWrapper.remove()
     }
   }
@@ -408,9 +408,21 @@ onBeforeUnmount(() => {
   stopGlobe()
 })
 
-// 切换主题时重建 globe
-watch(() => appStore.isDark, () => {
-  rebuildGlobe()
+// 切换主题时动态更新 WebGL 着色器颜色，避免销毁 WebGL 上下文及重排 DOM 导致覆盖层错位或被遮挡
+watch(themeColors, (colors) => {
+  if (!globe)
+    return
+  globe.update({
+    dark: colors.dark,
+    mapBrightness: colors.mapBrightness,
+    baseColor: colors.baseColor,
+    markerColor: colors.markerColor,
+    glowColor: colors.glowColor,
+    arcColor: colors.arcColor,
+  })
+  updateGlobeFrame()
+  if (!shouldAutoRotate.value)
+    triggerStaticRedrawWindow(600)
 })
 
 watch(
@@ -495,20 +507,20 @@ function formatRate(bytesPerSec: number): string {
   <div ref="containerRef" class="relative aspect-square w-full max-w-md mx-auto -translate-y-6 md:-translate-y-12">
     <canvas
       ref="canvasRef"
-      class="earth-globe-canvas absolute inset-0 w-full h-full select-none touch-none cursor-grab active:cursor-grabbing"
+      class="earth-globe-canvas absolute inset-0 z-0 w-full h-full select-none touch-none cursor-grab active:cursor-grabbing"
       @pointerdown="onPointerDown" @pointermove="onPointerMove" @pointerup="onPointerUp" @pointercancel="onPointerUp"
     />
 
     <template v-for="cluster in regionClusters" :key="cluster.code">
       <div
         :ref="bindClusterOverlayRef(cluster.code)"
-        class="absolute -top-7.5 left-0 pointer-events-none rounded transition-[opacity,filter] duration-500"
+        class="absolute -top-7.5 left-0 z-10 pointer-events-none rounded transition-[opacity,filter] duration-500"
       >
         <img
           :src="`/assets/flags/${cluster.code}.svg`" :alt="cluster.code"
-          class="size-4 block absolute -bottom-2 -left-2 z-1"
+          class="size-4 block absolute -bottom-2 -left-2 z-10"
         >
-        <div class="relative z-2 bg-card/95 dark:bg-card/90 border border-border/80 shadow-xs rounded py-0.5 px-1.5 text-xs zoom-80 items-start justify-center text-nowrap backdrop-blur-md">
+        <div class="relative z-1 bg-card/95 dark:bg-card/90 border border-border/80 shadow-xs rounded py-0.5 px-1.5 text-xs zoom-80 items-start justify-center text-nowrap backdrop-blur-md">
           <div class="text-emerald-700 dark:text-emerald-400 font-mono font-medium flex flex-row items-center gap-0.5">
             <Icon icon="tabler:chevron-up" width="12" height="12" /> {{ formatRate(rateFor(cluster.code).up) }}
           </div>
@@ -521,7 +533,7 @@ function formatRate(bytesPerSec: number): string {
 
     <div
       v-if="totalServers > 0"
-      class="absolute top-6 md:top-12 left-0 text-[10px] text-muted-foreground font-medium pointer-events-none flex gap-2 items-center backdrop-blur-md bg-card/90 border border-border/70 rounded px-2 py-0.5 shadow-xs"
+      class="absolute top-6 md:top-12 left-0 z-10 text-[10px] text-muted-foreground font-medium pointer-events-none flex gap-2 items-center backdrop-blur-md bg-card/90 border border-border/70 rounded px-2 py-0.5 shadow-xs"
     >
       <div v-if="onlineServers > 0" class="flex items-center gap-1">
         <span class="inline-block size-1.5 rounded-full bg-green-600 animate-pulse" />
