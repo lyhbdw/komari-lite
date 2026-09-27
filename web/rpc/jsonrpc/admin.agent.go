@@ -73,7 +73,7 @@ func adminUpgradeAgents(ctx context.Context, req *rpc.JsonRpcRequest) (any, *rpc
 	updateParams := v2.UpdateParams{Version: version}
 	dispatched := 0
 	for _, uuid := range targets {
-		agent_runtime.EnqueueV2Update(uuid, updateParams)
+		agent_runtime.DispatchV2Update(uuid, updateParams)
 		dispatched++
 	}
 

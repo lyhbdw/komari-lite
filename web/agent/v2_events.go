@@ -101,6 +101,23 @@ func newV2EventID() string {
 	return fmt.Sprintf("%d", time.Now().UnixNano())
 }
 
+// DispatchV2Update 向节点分发升级事件：WS 在线则直写（写失败降级入队，
+// 重连后由 pushQueuedV2Events/pull 补领），离线则入队等 pull。
+// 直写是必要的：agent 的 pull 循环只在 POST fallback 模式下运行，
+// WS 在线节点不会主动 pull，只入队会让事件躺到重连或 TTL 过期。
+func DispatchV2Update(uuid string, params v2.UpdateParams) bool {
+	if conn := GetConnectedClients()[uuid]; conn != nil {
+		payload := v2.Request{JSONRPC: v2.Version, Method: v2.MethodAgentUpdate, Params: params}
+		if err := conn.WriteJSON(payload); err == nil {
+			return true
+		}
+		// 直写失败（半开连接、写超时）：降级入队，重连后的 agent
+		// 通过 pushQueuedV2Events/pull 拿到该事件。
+	}
+	EnqueueV2Update(uuid, params)
+	return true
+}
+
 // EnqueueV2Update 入队一条 agent.update 升级事件。升级事件按方法整体去重
 // （v2EventCoalesceKey 对 update 方法返回固定 key），重复下发只保留最新一条。
 func EnqueueV2Update(uuid string, params v2.UpdateParams) v2.Event {
