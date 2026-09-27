@@ -278,24 +278,6 @@ func startGoroutinesLocked() {
 	}()
 }
 
-// GetNetStatic 获取当前的所有流量统计数据
-func GetNetStatic() (*NetStatic, error) {
-	mu.RLock()
-	defer mu.RUnlock()
-	ensureInitLocked()
-	// 合并 store + cache（cache 不合并为单点，直接以原样返回临时视图）
-	merged := NetStatic{Interfaces: map[string][]TrafficData{}, Config: configOrDefault(config)}
-	for name, arr := range store.Interfaces {
-		cp := make([]TrafficData, len(arr))
-		copy(cp, arr)
-		merged.Interfaces[name] = cp
-	}
-	for name, arr := range staticCache {
-		merged.Interfaces[name] = append(merged.Interfaces[name], arr...)
-	}
-	return &merged, nil
-}
-
 // StartOrContinue 开始或继续流量统计
 func StartOrContinue() error {
 	if running {
@@ -316,18 +298,6 @@ func StartOrContinue() error {
 
 	// 启动 goroutines
 	startGoroutinesLocked()
-	return nil
-}
-
-// Clear 清除所有流量统计数据
-func Clear() error {
-	mu.Lock()
-	defer mu.Unlock()
-	ensureInitLocked()
-	store.Interfaces = make(map[string][]TrafficData)
-	staticCache = make(map[string][]TrafficData)
-	lastCounters = map[string]struct{ Tx, Rx uint64 }{}
-	// 不落盘，等下次保存或停止时写
 	return nil
 }
 
@@ -352,66 +322,6 @@ func Stop() error {
 	err := saveToFileLocked()
 	mu.Unlock()
 	return err
-}
-
-// GetNetStaticBetween 获取指定时间段内的流量统计数据，start和end为unix时间戳
-func GetNetStaticBetween(start, end uint64) (*NetStatic, error) {
-	mu.RLock()
-	defer mu.RUnlock()
-	ensureInitLocked()
-	res := NetStatic{Interfaces: map[string][]TrafficData{}, Config: configOrDefault(config)}
-	inRange := func(ts uint64) bool { return (start == 0 || ts >= start) && (end == 0 || ts <= end) }
-	for name, arr := range store.Interfaces {
-		var filtered []TrafficData
-		for _, td := range arr {
-			if inRange(td.Timestamp) {
-				filtered = append(filtered, td)
-			}
-		}
-		if len(filtered) > 0 {
-			res.Interfaces[name] = filtered
-		}
-	}
-	// 合并缓存
-	for name, arr := range staticCache {
-		for _, td := range arr {
-			if inRange(td.Timestamp) {
-				res.Interfaces[name] = append(res.Interfaces[name], td)
-			}
-		}
-	}
-	return &res, nil
-}
-
-// GetTotalTraffic 获取总流量统计数据, key为网卡名称, value为对应的流量数据总和
-func GetTotalTraffic() (map[string]TrafficData, error) {
-	mu.RLock()
-	defer mu.RUnlock()
-	ensureInitLocked()
-	res := map[string]TrafficData{}
-	add := func(name string, tx, rx uint64) {
-		cur := res[name]
-		cur.Tx += tx
-		cur.Rx += rx
-		res[name] = cur
-	}
-	for name, arr := range store.Interfaces {
-		var tx, rx uint64
-		for _, td := range arr {
-			tx += td.Tx
-			rx += td.Rx
-		}
-		add(name, tx, rx)
-	}
-	for name, arr := range staticCache {
-		var tx, rx uint64
-		for _, td := range arr {
-			tx += td.Tx
-			rx += td.Rx
-		}
-		add(name, tx, rx)
-	}
-	return res, nil
 }
 
 // GetTotalTrafficBetween 获取指定时间段内的总流量统计数据，start和end为unix时间戳
@@ -519,17 +429,6 @@ func SetNewConfig(newCfg NetStaticConfig) error {
 	}
 	// 立即写盘
 	_ = saveToFileLocked()
-	// 同时做一次过期清理
-	purgeExpiredLocked()
-	return nil
-}
-
-func ForceReplaceRecord(rec map[string][]TrafficData) error {
-	mu.Lock()
-	defer mu.Unlock()
-	ensureInitLocked()
-	store.Interfaces = rec
-	// 不立即写盘，等下一次周期性保存或停止时写
 	// 同时做一次过期清理
 	purgeExpiredLocked()
 	return nil

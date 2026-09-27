@@ -26,8 +26,6 @@ import (
 
 var flags = pkg_flags.GlobalConfig
 
-var warningPanelHost, warningRunAsUser string
-
 var RootCmd = &cobra.Command{
 	Use:   "komari-agent",
 	Short: "komari agent",
@@ -114,14 +112,6 @@ var RootCmd = &cobra.Command{
 }
 
 func Execute() {
-	for i, arg := range os.Args {
-		if arg == "-memory-mode-available" || arg == "--memory-mode-available" {
-			//flags.MemoryIncludeCache = true
-			log.Println("WARNING: The --memory-mode-available flag is deprecated in version 1.0.70 and later. Use --memory-include-cache to report memory usage including cache/buffer.")
-			os.Args = append(os.Args[:i], os.Args[i+1:]...)
-		}
-	}
-
 	if err := RootCmd.Execute(); err != nil {
 		log.Println(err)
 		os.Exit(1)

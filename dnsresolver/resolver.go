@@ -121,13 +121,10 @@ func GetCustomResolver() *net.Resolver {
 	}
 }
 
-// buildTransport 构建带有自定义解析/拨号策略的 HTTP 传输层，可注入 TLS 配置
-func buildTransport(timeout time.Duration, tlsConfig *tls.Config) *http.Transport {
-	return buildTransportWithPreference(timeout, tlsConfig, "")
-}
-
-func buildTransportWithPreference(timeout time.Duration, tlsConfig *tls.Config, preferIPVersion string) *http.Transport {
-	return buildTransportWithPreferenceAndHTTP2(timeout, tlsConfig, preferIPVersion, true)
+// GetHTTPClientWithPreference 返回一个使用自定义解析器并按指定 IP 版本排序的 HTTP 客户端。
+// preferIPVersion 为 "4" 或 "6" 时固定优先对应地址；为空时保留自动选择逻辑。
+func GetHTTPClientWithPreference(timeout time.Duration, preferIPVersion string) *http.Client {
+	return getHTTPClient(timeout, normalizeIPVersionPreference(preferIPVersion), true)
 }
 
 func buildTransportWithPreferenceAndHTTP2(timeout time.Duration, tlsConfig *tls.Config, preferIPVersion string, forceHTTP2 bool) *http.Transport {
@@ -177,23 +174,6 @@ func buildTransportWithPreferenceAndHTTP2(timeout time.Duration, tlsConfig *tls.
 	return transport
 }
 
-func GetHTTPClient(timeout time.Duration) *http.Client {
-	return getHTTPClient(timeout, "", true)
-}
-
-// GetHTTPClientWithPreference 返回一个使用自定义解析器并按指定 IP 版本排序的 HTTP 客户端。
-// preferIPVersion 为 "4" 或 "6" 时固定优先对应地址；为空时保留自动选择逻辑。
-func GetHTTPClientWithPreference(timeout time.Duration, preferIPVersion string) *http.Client {
-	return getHTTPClient(timeout, normalizeIPVersionPreference(preferIPVersion), true)
-}
-
-// GetHTTPClientWithoutHTTP2 returns a client intended for long-lived binary
-// streams. Keeping those streams on HTTP/1.1 avoids proxy-specific HTTP/2
-// stream resets while leaving the control-plane clients on HTTP/2.
-func GetHTTPClientWithoutHTTP2(timeout time.Duration, preferIPVersion string) *http.Client {
-	return getHTTPClient(timeout, normalizeIPVersionPreference(preferIPVersion), false)
-}
-
 func getHTTPClient(timeout time.Duration, preferIPVersion string, forceHTTP2 bool) *http.Client {
 	if timeout <= 0 {
 		timeout = 30 * time.Second
@@ -225,14 +205,6 @@ func GetNetDialer(timeout time.Duration) *net.Dialer {
 		KeepAlive: 30 * time.Second,
 		Resolver:  GetCustomResolver(),
 	}
-}
-
-// GetDialContext 返回一个自定义 DialContext：
-// - 使用自定义解析器解析主机名
-// - 根据本机网络自动选择 IPv4 或 IPv6 优先
-// - 逐个 IP 进行连接尝试，直到成功或全部失败
-func GetDialContext(timeout time.Duration) func(ctx context.Context, network, addr string) (net.Conn, error) {
-	return GetDialContextWithPreference(timeout, "")
 }
 
 // GetDialContextWithPreference 返回一个可显式指定 IPv4/IPv6 优先级的 DialContext。

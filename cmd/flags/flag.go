@@ -8,7 +8,6 @@ import (
 )
 
 type Config struct {
-	MemoryModeAvailable bool    `json:"memory_mode_available" env:"AGENT_MEMORY_MODE_AVAILABLE"`
 	Token               string  `json:"token" env:"AGENT_TOKEN"`
 	Endpoint            string  `json:"endpoint" env:"AGENT_ENDPOINT"`
 	Interval            float64 `json:"interval" env:"AGENT_INTERVAL"`

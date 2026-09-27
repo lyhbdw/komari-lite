@@ -1,17 +1,14 @@
 package server
 
 import (
-	"bytes"
+	"context"
 	"errors"
 	"log"
-	"net/http"
 	"os"
 	"strings"
 	"time"
 
-	"github.com/Tumb1er1376/komari-agent-lite/dnsresolver"
 	monitoring "github.com/Tumb1er1376/komari-agent-lite/monitoring/unit"
-	"github.com/Tumb1er1376/komari-agent-lite/protocol/transport"
 	v2 "github.com/Tumb1er1376/komari-agent-lite/protocol/v2"
 	"github.com/Tumb1er1376/komari-agent-lite/version"
 
@@ -61,59 +58,16 @@ func uploadBasicInfo() error {
 		"version":            version.Current,
 	}
 
-	return tryUploadData(data)
-}
-
-func tryUploadData(data map[string]interface{}) error {
 	return tryUploadDataWithProtocol(data)
 }
 
 func tryUploadDataWithProtocol(data map[string]interface{}) error {
-	endpoint := strings.TrimSuffix(flags.Endpoint, "/") + "/api/clients/v2/rpc"
 	payload := v2.BuildBasicInfoPayload(data)
-	body := payload
-	compressed := false
-	if !flags.DisableCompression {
-		if gz, err := transport.GzipBytes(payload); err == nil {
-			body = gz
-			compressed = true
-		}
-	}
-
-	req, err := http.NewRequest("POST", endpoint, bytes.NewReader(body))
+	_, err := postV2Payload(context.Background(), payload, 30*time.Second, false)
 	if err != nil {
 		return err
-	}
-	req.Header.Set("Content-Type", "application/json")
-	addAgentAuthorization(req)
-	if compressed {
-		req.Header.Set("Content-Encoding", "gzip")
-	}
-
-	client := dnsresolver.GetHTTPClientWithPreference(30*time.Second, flags.PreferIPVersion)
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	respBody, err := readBoundedBody(resp.Body)
-	if err != nil {
-		return err
-	}
-	message := string(respBody)
-
-	if resp.StatusCode != http.StatusOK {
-		return &httpStatusError{StatusCode: resp.StatusCode, Status: resp.Status, Body: message}
-	}
-	if len(bytes.TrimSpace(respBody)) > 0 {
-		if _, err := parseV2Response(respBody); err != nil {
-			return err
-		}
 	}
 	markMigrationReady()
-
 	return nil
 }
 

@@ -2,7 +2,6 @@ package ws
 
 import (
 	"sync"
-	"time"
 
 	"github.com/gorilla/websocket"
 )
@@ -38,10 +37,4 @@ func (sc *SafeConn) Close() error {
 }
 func (sc *SafeConn) ReadMessage() (int, []byte, error) {
 	return sc.conn.ReadMessage()
-}
-func (sc *SafeConn) ReadJSON(v interface{}) error {
-	return sc.conn.ReadJSON(v)
-}
-func (sc *SafeConn) SetReadDeadline(t time.Time) error {
-	return sc.conn.SetReadDeadline(t)
 }

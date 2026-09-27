@@ -1,7 +1,6 @@
 package server
 
 import (
-	"bytes"
 	"context"
 	"crypto/tls"
 	"encoding/json"
@@ -209,42 +208,7 @@ func postV2Request(payload []byte) (*v2.Response, error) {
 }
 
 func postV2RequestContext(ctx context.Context, payload []byte) (*v2.Response, error) {
-	endpoint := strings.TrimSuffix(flags.Endpoint, "/") + "/api/clients/v2/rpc"
-	body := payload
-	compressed := false
-	if !flags.DisableCompression {
-		if gz, err := gzipBytes(payload); err == nil {
-			body = gz
-			compressed = true
-		}
-	}
-	req, err := http.NewRequestWithContext(ctx, "POST", endpoint, bytes.NewReader(body))
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Content-Type", "application/json")
-	addAgentAuthorization(req)
-	if compressed {
-		req.Header.Set("Content-Encoding", "gzip")
-	}
-	client := dnsresolver.GetHTTPClientWithPreference(35*time.Second, flags.PreferIPVersion)
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-	bytesBody, err := readBoundedBody(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-	if resp.StatusCode != http.StatusOK {
-		return nil, &httpStatusError{StatusCode: resp.StatusCode, Status: resp.Status, Body: string(bytesBody)}
-	}
-	rpcResp, err := parseV2Response(bytesBody)
-	if err != nil {
-		return nil, err
-	}
-	return rpcResp, nil
+	return postV2Payload(ctx, payload, 35*time.Second, true)
 }
 
 func processV2ResponseEvents(resp *v2.Response) {

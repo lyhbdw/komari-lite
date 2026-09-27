@@ -2,7 +2,6 @@ package server
 
 import (
 	"bytes"
-	"compress/gzip"
 	"context"
 	"encoding/json"
 	"errors"
@@ -13,6 +12,7 @@ import (
 	"time"
 
 	"github.com/Tumb1er1376/komari-agent-lite/dnsresolver"
+	"github.com/Tumb1er1376/komari-agent-lite/protocol/transport"
 	v2 "github.com/Tumb1er1376/komari-agent-lite/protocol/v2"
 	"github.com/Tumb1er1376/komari-agent-lite/ws"
 	ping "github.com/prometheus-community/pro-bing"
@@ -220,53 +220,48 @@ func postV2RPC(payload interface{}) error {
 	if err != nil {
 		return err
 	}
+	_, err = postV2Payload(context.Background(), body, 30*time.Second, false)
+	return err
+}
+
+// postV2Payload 压缩并 POST v2 RPC 载荷到面板，返回解析后的响应。
+// requireResult 为 true 时，空响应体视为错误（报告/基础信息上传路径需要确认）。
+func postV2Payload(ctx context.Context, body []byte, timeout time.Duration, requireResult bool) (*v2.Response, error) {
 	endpoint := strings.TrimSuffix(flags.Endpoint, "/") + "/api/clients/v2/rpc"
 	compressed := false
 	if !flags.DisableCompression {
-		if gz, err := gzipBytes(body); err == nil {
+		if gz, err := transport.GzipBytes(body); err == nil {
 			body = gz
 			compressed = true
 		}
 	}
-	req, err := http.NewRequest("POST", endpoint, bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(ctx, "POST", endpoint, bytes.NewReader(body))
 	if err != nil {
-		return err
+		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/json")
 	addAgentAuthorization(req)
 	if compressed {
 		req.Header.Set("Content-Encoding", "gzip")
 	}
-	client := dnsresolver.GetHTTPClientWithPreference(30*time.Second, flags.PreferIPVersion)
+	client := dnsresolver.GetHTTPClientWithPreference(timeout, flags.PreferIPVersion)
 	resp, err := client.Do(req)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer resp.Body.Close()
 	respBody, err := readBoundedBody(resp.Body)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if resp.StatusCode != http.StatusOK {
-		return &httpStatusError{StatusCode: resp.StatusCode, Status: resp.Status, Body: string(respBody)}
+		return nil, &httpStatusError{StatusCode: resp.StatusCode, Status: resp.Status, Body: string(respBody)}
 	}
-	if len(bytes.TrimSpace(respBody)) > 0 {
-		if _, err := parseV2Response(respBody); err != nil {
-			return err
+	if len(bytes.TrimSpace(respBody)) == 0 {
+		if requireResult {
+			return nil, errors.New("empty v2 rpc response")
 		}
+		return nil, nil
 	}
-	return nil
-}
-
-func gzipBytes(data []byte) ([]byte, error) {
-	var buf bytes.Buffer
-	zw := gzip.NewWriter(&buf)
-	if _, err := zw.Write(data); err != nil {
-		_ = zw.Close()
-		return nil, err
-	}
-	if err := zw.Close(); err != nil {
-		return nil, err
-	}
-	return buf.Bytes(), nil
+	return parseV2Response(respBody)
 }

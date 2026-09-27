@@ -2,9 +2,7 @@ package monitoring
 
 import (
 	"bufio"
-	"bytes"
 	"os"
-	"os/exec"
 	"runtime"
 	"strconv"
 	"strings"
@@ -126,53 +124,6 @@ func GetMemGopsutil() RamInfo {
 		raminfo.Total = v.Total
 		raminfo.Used = v.Total - v.Available
 	}
-	return raminfo
-}
-
-// 这我还能干嘛，大伙天天说和free显示不一样，我也没办法
-func CallFree() RamInfo {
-	raminfo := RamInfo{Mode: "callFree"}
-
-	// Execute 'free -b' command to get memory in bytes
-	cmd := exec.Command("free", "-b")
-	var out bytes.Buffer
-	cmd.Stdout = &out
-	err := cmd.Run()
-	if err != nil {
-		return raminfo
-	}
-
-	// Parse the output
-	scanner := bufio.NewScanner(&out)
-	lineNum := 0
-	for scanner.Scan() {
-		line := scanner.Text()
-		lineNum++
-
-		// Skip the header line
-		if lineNum == 1 {
-			continue
-		}
-
-		// Parse the "Mem:" line
-		if strings.HasPrefix(line, "Mem:") {
-			fields := strings.Fields(line)
-			// Format: Mem: total used free shared buff/cache available
-			if len(fields) >= 3 {
-				total, err := strconv.ParseUint(fields[1], 10, 64)
-				if err == nil {
-					raminfo.Total = total
-				}
-
-				used, err := strconv.ParseUint(fields[2], 10, 64)
-				if err == nil {
-					raminfo.Used = used
-				}
-			}
-			break
-		}
-	}
-
 	return raminfo
 }
 
