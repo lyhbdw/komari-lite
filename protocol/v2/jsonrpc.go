@@ -9,6 +9,7 @@ const (
 	MethodAgentPingResult = "agent.pingResult"
 	MethodAgentPing       = "agent.ping"
 	MethodAgentPull       = "agent.pull"
+	MethodAgentUpdate     = "agent.update"
 )
 
 type Request struct {
@@ -134,6 +135,13 @@ type PingParams struct {
 	TaskID uint   `json:"ping_task_id"`
 	Type   string `json:"ping_type"`
 	Target string `json:"ping_target"`
+}
+
+// UpdateParams 是 agent.update 事件的参数：目标版本与可选的 sha256。
+// sha256 为空时 agent 下载 .sha256 文件自行校验。
+type UpdateParams struct {
+	Version string `json:"version"`
+	SHA256  string `json:"sha256,omitempty"`
 }
 
 func Success(id any, result any) Response {

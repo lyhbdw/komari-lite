@@ -217,4 +217,8 @@ func registerAdminRoutes(r *gin.Engine) {
 		migration.GET("/legacy", jsonRpc.Bind("admin:getLegacyMigrationStatus"))
 		migration.POST("/legacy", jsonRpc.Bind("admin:runLegacyMigration"))
 	}
+
+	// agent 自动升级（敏感操作需 2FA）
+	g.GET("/agent-asset-version", jsonRpc.Bind("admin:getAgentAssetVersion"))
+	g.POST("/upgrade-agents", jsonRpc.Bind("admin:upgradeAgents"))
 }

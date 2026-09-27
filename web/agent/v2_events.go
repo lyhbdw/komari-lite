@@ -16,6 +16,8 @@ const (
 	v2PingEventTTL    = 3 * time.Second
 	// 零 TTL 事件的默认过期时间，防止它们在队列中永久保留。
 	v2EventDefaultTTL = 10 * time.Minute
+	// 升级事件给足下载窗口：agent 需要下载二进制 + 校验 + 自替换。
+	v2UpdateEventTTL = 30 * time.Minute
 )
 
 type v2EventQueue struct {
@@ -99,6 +101,33 @@ func newV2EventID() string {
 	return fmt.Sprintf("%d", time.Now().UnixNano())
 }
 
+// EnqueueV2Update 入队一条 agent.update 升级事件。升级事件按方法整体去重
+// （v2EventCoalesceKey 对 update 方法返回固定 key），重复下发只保留最新一条。
+func EnqueueV2Update(uuid string, params v2.UpdateParams) v2.Event {
+	now := time.Now().UTC()
+	event := v2.Event{
+		ID:        newV2EventID(),
+		Method:    v2.MethodAgentUpdate,
+		Params:    params,
+		CreatedAt: now,
+		ExpiresAt: now.Add(v2UpdateEventTTL),
+	}
+
+	v2EventMu.Lock()
+	q := getV2EventQueueLocked(uuid)
+	pruneExpiredV2EventsLocked(q)
+	coalesceV2EventLocked(q, event)
+	q.events = append(q.events, event)
+	if len(q.events) > v2EventQueueLimit {
+		q.events = q.events[len(q.events)-v2EventQueueLimit:]
+	}
+	close(q.signal)
+	q.signal = make(chan struct{})
+	v2EventMu.Unlock()
+
+	return event
+}
+
 func coalesceV2EventLocked(q *v2EventQueue, event v2.Event) {
 	key := v2EventCoalesceKey(event)
 	if key == "" {
@@ -114,6 +143,10 @@ func coalesceV2EventLocked(q *v2EventQueue, event v2.Event) {
 }
 
 func v2EventCoalesceKey(event v2.Event) string {
+	if event.Method == v2.MethodAgentUpdate {
+		// 升级事件按方法整体去重：同一节点只保留最新一条待升级事件。
+		return event.Method
+	}
 	if event.Method != v2.MethodAgentPing {
 		return ""
 	}
