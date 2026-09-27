@@ -32,6 +32,7 @@ import {
   Search,
   Server,
   Trash2Icon,
+  ArrowUpCircle,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import {
@@ -311,6 +312,9 @@ const Header = ({
   const { refresh } = useNodeDetails();
   const [loading, setLoading] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const [upgradeVersion, setUpgradeVersion] = useState<string>("");
+  const [upgrading, setUpgrading] = useState(false);
   const inputRef = React.useRef<HTMLInputElement>(null);
   const handleAddNode = async (name: string | undefined) => {
     setDialogOpen(true);
@@ -331,6 +335,52 @@ const Header = ({
     } finally {
       setLoading(false);
       setDialogOpen(false);
+    }
+  };
+
+  const openUpgradeDialog = async () => {
+    setUpgradeOpen(true);
+    setUpgradeVersion("");
+    try {
+      const res = await fetch("/api/admin/agent-asset-version");
+      const data = await res.json();
+      const ver = data?.result?.version || data?.version;
+      if (typeof ver === "string" && ver) setUpgradeVersion(ver);
+    } catch {
+      // 面板版本查询失败时仍允许手动触发（服务端会用默认版本）
+    }
+  };
+
+  const handleUpgradeAgents = async () => {
+    setUpgrading(true);
+    try {
+      const res = await fetch("/api/admin/upgrade-agents", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || data?.error) {
+        throw new Error(data?.error?.message || `HTTP ${res.status}`);
+      }
+      const dispatched = data?.result?.dispatched ?? data?.dispatched;
+      const version = data?.result?.version ?? data?.version ?? upgradeVersion;
+      toast.success(
+        t("admin.nodeTable.upgradeSuccess", {
+          defaultValue: `升级事件已下发（v${version}，${dispatched} 个节点）`,
+          version,
+          dispatched,
+        })
+      );
+      setUpgradeOpen(false);
+    } catch (error) {
+      toast.error(
+        `${t("common.error", "Error")}: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
+    } finally {
+      setUpgrading(false);
     }
   };
   return (
@@ -364,6 +414,44 @@ const Header = ({
             className="w-full h-9 pl-9 pr-3 text-xs rounded-lg border border-border bg-card text-foreground placeholder:text-muted-foreground/60 outline-none focus:border-foreground/50 focus:ring-1 focus:ring-foreground/20 transition-all shadow-2xs"
           />
         </div>
+        <Dialog.Root open={upgradeOpen} onOpenChange={setUpgradeOpen}>
+          <Dialog.Trigger>
+            <button
+              onClick={() => openUpgradeDialog()}
+              className="h-9 px-3.5 rounded-lg border border-border bg-card text-foreground font-medium text-xs flex items-center gap-1.5 shadow-sm hover:bg-muted active:scale-[0.98] transition-all cursor-pointer shrink-0"
+            >
+              <ArrowUpCircle size={14} strokeWidth={2.5} />
+              <span>{t("admin.nodeTable.upgradeAgents")}</span>
+            </button>
+          </Dialog.Trigger>
+          <Dialog.Content className="max-w-md">
+            <Dialog.Title>{t("admin.nodeTable.upgradeAgents")}</Dialog.Title>
+            <div className="mt-2 text-xs text-muted-foreground leading-relaxed">
+              {t("admin.nodeTable.upgradeDescription", {
+                defaultValue:
+                  "将向全部节点下发升级事件。Agent 会从面板下载新版本并自动完成替换与重启。",
+                version: upgradeVersion,
+              })}
+              {upgradeVersion ? (
+                <div className="mt-2 font-mono text-foreground">
+                  {t("admin.nodeTable.upgradeTargetVersion")}: v{upgradeVersion}
+                </div>
+              ) : null}
+            </div>
+            <Flex justify="end" gap="2" mt="4">
+              <Dialog.Close>
+                <Button variant="soft" color="gray" disabled={upgrading}>
+                  {t("common.cancel", "Cancel")}
+                </Button>
+              </Dialog.Close>
+              <Button onClick={() => handleUpgradeAgents()} disabled={upgrading}>
+                {upgrading
+                  ? t("admin.nodeTable.upgrading", "下发中...")
+                  : t("admin.nodeTable.upgradeConfirm", "确认升级")}
+              </Button>
+            </Flex>
+          </Dialog.Content>
+        </Dialog.Root>
         <Dialog.Root open={dialogOpen} onOpenChange={setDialogOpen}>
           <Dialog.Trigger>
             <button
@@ -513,7 +601,7 @@ const SortableRow = ({
       </TableCell>
       <TableCell className="w-20 px-2 text-center">
         <span className="inline-block font-mono text-[11px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground border border-border/60">
-          v{node.version || "1.0.5"}
+          v{node.version || "1.0.6"}
         </span>
       </TableCell>
       <TableCell className="w-20 px-2 text-center">

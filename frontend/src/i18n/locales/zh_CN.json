@@ -69,6 +69,12 @@
       "waiting": "等待..."
     },
     "nodeTable": {
+      "upgradeAgents": "升级 Agent",
+      "upgradeDescription": "将向全部节点下发升级事件。Agent 会从面板下载新版本并自动完成替换与重启。",
+      "upgradeTargetVersion": "目标版本",
+      "upgradeConfirm": "确认升级",
+      "upgrading": "下发中...",
+      "upgradeSuccess": "升级事件已下发（v{{version}}，{{dispatched}} 个节点）",
       "addNode": "添加节点",
       "autoDiscovery": {
         "disabledDescription": "开启自动发现后，无需逐台手动添加节点。只要在目标服务器上运行一条命令，Agent 就会携带密钥自动注册并上线，非常适合批量部署多台服务器。",
