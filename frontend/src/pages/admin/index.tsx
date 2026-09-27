@@ -608,7 +608,7 @@ const SortableRow = ({
       </TableCell>
       <TableCell className="w-20 px-2 text-center">
         <span className="inline-block font-mono text-[11px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground border border-border/60">
-          v{node.version || "1.0.6"}
+          v{node.version || "1.0.7"}
         </span>
       </TableCell>
       <TableCell className="w-20 px-2 text-center">

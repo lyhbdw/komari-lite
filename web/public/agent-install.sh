@@ -407,7 +407,7 @@ if [ -n "$install_version" ]; then
         version_to_install="$install_version"
     fi
 else
-    version_to_install="1.0.6"
+    version_to_install="1.0.7"
     log_info "No version specified, defaulting to version: ${GREEN}$version_to_install${NC}"
 fi
 
