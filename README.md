@@ -113,8 +113,7 @@ cp komari-theme.json ../web/public/defaultTheme/komari-theme.json
 
 ```bash
 cd ..
-CGO_ENABLED=1 go build \
-  -tags sqlite_omit_load_extension \
+CGO_ENABLED=1 go build -tags nomsgpack,sqlite_omit_load_extension \
   -ldflags "-s -w -X github.com/Tumb1er1376/komari-monitor-lite/utils.CurrentVersion=1.0.0" \
   -o komari .
 ```
@@ -131,8 +130,7 @@ CGO_ENABLED=1 go build \
 
 ```bash
 # 先按上面的步骤生成 Linux amd64 可执行文件
-CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build \
-  -tags sqlite_omit_load_extension \
+CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -tags nomsgpack,sqlite_omit_load_extension \
   -ldflags "-s -w -X github.com/Tumb1er1376/komari-monitor-lite/utils.CurrentVersion=1.0.0" \
   -o komari-linux-amd64 .
 

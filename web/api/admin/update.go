@@ -1,11 +1,12 @@
 package admin
 
 import (
-	"github.com/gin-gonic/gin"
+	"encoding/json"
 	"github.com/Tumb1er1376/komari-monitor-lite/database/accounts"
 	"github.com/Tumb1er1376/komari-monitor-lite/database/auditlog"
 	"github.com/Tumb1er1376/komari-monitor-lite/utils/geoip"
 	"github.com/Tumb1er1376/komari-monitor-lite/web/api"
+	"github.com/gin-gonic/gin"
 )
 
 // update.go
@@ -14,13 +15,17 @@ import (
 
 func UpdateUser(c *gin.Context) {
 	var req struct {
-		Uuid     string  `json:"uuid" binding:"required"`
+		Uuid     string  `json:"uuid"`
 		Name     *string `json:"username"`
 		Password *string `json:"password"`
 		TwoFa    string  `json:"2fa_code"`
 	}
-	if err := c.ShouldBindJSON(&req); err != nil {
+	if err := json.NewDecoder(c.Request.Body).Decode(&req); err != nil {
 		api.RespondError(c, 400, "Invalid or missing request body: "+err.Error())
+		return
+	}
+	if req.Uuid == "" {
+		api.RespondError(c, 400, "Invalid or missing request body: uuid is required")
 		return
 	}
 	if req.Password == nil && req.Name == nil {

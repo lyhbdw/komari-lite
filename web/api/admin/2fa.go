@@ -1,13 +1,14 @@
 package admin
 
 import (
+	"encoding/json"
 	"image/png"
 	"net/http"
 
-	"github.com/gin-gonic/gin"
 	"github.com/Tumb1er1376/komari-monitor-lite/database/accounts"
 	"github.com/Tumb1er1376/komari-monitor-lite/utils"
 	"github.com/Tumb1er1376/komari-monitor-lite/web/api"
+	"github.com/gin-gonic/gin"
 	"github.com/pquerna/otp/totp"
 )
 
@@ -34,7 +35,7 @@ func Enable2FA(c *gin.Context) {
 	var body struct {
 		Code string `json:"code"`
 	}
-	_ = c.ShouldBindJSON(&body)
+	_ = json.NewDecoder(c.Request.Body).Decode(&body)
 	code := body.Code
 	if secret == "" || uuid == nil || code == "" {
 		api.RespondError(c, 400, "2FA secret or code not provided")

@@ -55,10 +55,10 @@ jobs:
           LDFLAGS="-s -w -X github.com/Tumb1er1376/komari-monitor-lite/utils.CurrentVersion=${VERSION} -X github.com/Tumb1er1376/komari-monitor-lite/utils.VersionHash=${VERSION_HASH}"
 
           echo "Building for linux/amd64..."
-          GOARCH=amd64 CC="zig cc -target x86_64-linux-musl" go build -tags sqlite_omit_load_extension -trimpath -ldflags="$LDFLAGS" -o komari-linux-amd64
+          GOARCH=amd64 CC="zig cc -target x86_64-linux-musl" go build -tags nomsgpack,sqlite_omit_load_extension -trimpath -ldflags="$LDFLAGS" -o komari-linux-amd64
 
           echo "Building for linux/arm64..."
-          GOARCH=arm64 CC="zig cc -target aarch64-linux-musl" go build -tags sqlite_omit_load_extension -trimpath -ldflags="$LDFLAGS" -o komari-linux-arm64
+          GOARCH=arm64 CC="zig cc -target aarch64-linux-musl" go build -tags nomsgpack,sqlite_omit_load_extension -trimpath -ldflags="$LDFLAGS" -o komari-linux-arm64
 
       - name: Upload Docker binaries
         uses: actions/upload-artifact@v4
