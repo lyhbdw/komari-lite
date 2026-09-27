@@ -5,12 +5,10 @@
  */
 import { LineChart, MapChart, ScatterChart } from 'echarts/charts'
 import {
-  DataZoomComponent,
   GeoComponent,
   GridComponent,
   LegendComponent,
   MarkLineComponent,
-  TitleComponent,
   TooltipComponent,
 } from 'echarts/components'
 import { use } from 'echarts/core'
@@ -26,7 +24,5 @@ use([
   TooltipComponent,
   LegendComponent,
   MarkLineComponent,
-  TitleComponent,
-  DataZoomComponent,
   CanvasRenderer,
 ])
