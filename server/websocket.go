@@ -352,6 +352,9 @@ func processV2Event(conn *ws.SafeConn, method string, params interface{}, eventI
 		} else {
 			log.Printf("bad v2 ping params: %v", err)
 		}
+	case v2.MethodAgentUpdate:
+		// 自升级：下载 + 校验 + 原子替换 + exit，由 init 系统拉起新版本。
+		return HandleAgentUpdate(params)
 	default:
 		log.Printf("unknown v2 event method %s", method)
 	}

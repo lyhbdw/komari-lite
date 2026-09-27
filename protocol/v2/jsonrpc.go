@@ -12,6 +12,7 @@ const (
 	MethodAgentPingResult = "agent.pingResult"
 	MethodAgentPing       = "agent.ping"
 	MethodAgentPull       = "agent.pull"
+	MethodAgentUpdate     = "agent.update"
 )
 
 type Request struct {
@@ -19,6 +20,12 @@ type Request struct {
 	Method  string      `json:"method"`
 	Params  interface{} `json:"params,omitempty"`
 	ID      interface{} `json:"id,omitempty"`
+}
+
+// UpdateParams 是 agent.update 事件的参数。
+type UpdateParams struct {
+	Version string `json:"version"`
+	SHA256  string `json:"sha256,omitempty"`
 }
 
 type Response struct {
