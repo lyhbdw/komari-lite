@@ -809,7 +809,7 @@ function GenerateCommandButton({
     });
     const scriptUrl = `${window.location.origin}/download/agent-install.sh`;
     const downloadBase = `${window.location.origin}/download/agent/1.0.5`;
-    return `curl --fail --proto '=https' --tlsv1.2 --location ${JSON.stringify(scriptUrl)} | sudo bash -s -- ${quoteShellArgs(args)} --install-version 1.0.5 --download-base ${JSON.stringify(downloadBase)}`;
+    return `curl --fail --proto '=https' --tlsv1.2 --location ${JSON.stringify(scriptUrl)} | bash -s -- ${quoteShellArgs(args)} --install-version 1.0.5 --download-base ${JSON.stringify(downloadBase)}`;
   };
 
   const copyToClipboard = async (text: string) => {
