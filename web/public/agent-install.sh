@@ -255,6 +255,7 @@ if ! printf '%s' "$komari_args" | grep -qE '(^| )(-e|--endpoint)( |$)|--endpoint
         if [ -n "$stored_endpoint" ]; then
             komari_args="$komari_args -e $stored_endpoint"
             komari_args="${komari_args# }"
+            agent_endpoint="$stored_endpoint"
             log_info "Reusing stored panel endpoint: ${GREEN}$stored_endpoint${NC}"
         fi
     fi
@@ -519,6 +520,8 @@ fi
 
 log_step "Preparing $file_name ..."
 download_tmp=$(mktemp "${target_dir}/.agent-download.XXXXXX")
+# Non-migration installs never staged a partial target dir; keep the trap a no-op.
+cleanup_target_on_exit() { :; }
 cleanup_download() {
     rm -f "$download_tmp"
     cleanup_target_on_exit
