@@ -344,7 +344,8 @@ const Header = ({
     try {
       const res = await fetch("/api/admin/agent-asset-version");
       const data = await res.json();
-      const ver = data?.result?.version || data?.version;
+      // REST 别名经 renderStandard 包装: {status, message, data: {version}}
+      const ver = data?.data?.version || data?.result?.version || data?.version;
       if (typeof ver === "string" && ver) setUpgradeVersion(ver);
     } catch {
       // 面板版本查询失败时仍允许手动触发（服务端会用默认版本）
@@ -360,11 +361,17 @@ const Header = ({
         body: JSON.stringify({}),
       });
       const data = await res.json().catch(() => null);
-      if (!res.ok || data?.error) {
-        throw new Error(data?.error?.message || `HTTP ${res.status}`);
+      if (!res.ok || data?.status === "error") {
+        throw new Error(data?.message || `HTTP ${res.status}`);
       }
-      const dispatched = data?.result?.dispatched ?? data?.dispatched;
-      const version = data?.result?.version ?? data?.version ?? upgradeVersion;
+      // REST 别名经 renderStandard 包装: {status, message, data: {version, dispatched}}
+      const dispatched =
+        data?.data?.dispatched ?? data?.result?.dispatched ?? data?.dispatched;
+      const version =
+        data?.data?.version ??
+        data?.result?.version ??
+        data?.version ??
+        upgradeVersion;
       toast.success(
         t("admin.nodeTable.upgradeSuccess", {
           defaultValue: `升级事件已下发（v${version}，${dispatched} 个节点）`,
