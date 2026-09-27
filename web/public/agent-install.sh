@@ -49,6 +49,7 @@ install_dir_specified=false
 service_user="${KOMARI_SERVICE_USER:-komari}"
 user_service=false
 agent_token="${AGENT_TOKEN:-}"
+agent_endpoint="${AGENT_ENDPOINT:-}"
 credential_file=""
 runner_file=""
 
@@ -137,13 +138,30 @@ extract_token_argument() {
     IFS=$old_ifs
     rebuilt=""
     skip_next=false
+    next_is_endpoint=false
     for arg in "$@"; do
         if [ "$skip_next" = true ]; then
             agent_token="$arg"
             skip_next=false
             continue
         fi
+        if [ "$next_is_endpoint" = true ]; then
+            agent_endpoint="$arg"
+            next_is_endpoint=false
+        fi
         case "$arg" in
+            -e|--endpoint)
+                next_is_endpoint=true
+                quoted=$(shell_quote "$arg")
+                if [ -n "$rebuilt" ]; then rebuilt="$rebuilt "; fi
+                rebuilt="$rebuilt$quoted"
+                ;;
+            --endpoint=*)
+                agent_endpoint=${arg#--endpoint=}
+                quoted=$(shell_quote "$arg")
+                if [ -n "$rebuilt" ]; then rebuilt="$rebuilt "; fi
+                rebuilt="$rebuilt$quoted"
+                ;;
             -t|--token)
                 skip_next=true
                 ;;
@@ -388,16 +406,27 @@ if [ -n "$install_version" ]; then
         version_to_install="$install_version"
     fi
 else
-    log_info "No version specified, installing the latest version."
+    version_to_install="1.0.5"
+    log_info "No version specified, defaulting to version: ${GREEN}$version_to_install${NC}"
+fi
+
+# Auto-derive download_base from agent_endpoint when not specified
+if [ -z "$download_base" ] && [ -n "$agent_endpoint" ]; then
+    case "$agent_endpoint" in
+        https://*|http://*)
+            download_base="${agent_endpoint%/}/download/agent/${version_to_install}"
+            log_info "Using controller download base: ${CYAN}$download_base${NC}"
+            ;;
+    esac
 fi
 
 # Construct download URL. A controller-provided base avoids depending on
 # GitHub availability while retaining the same mandatory SHA256 verification.
 if [ -n "$download_base" ]; then
     case "$download_base" in
-        https://*) ;;
+        https://*|http://*) ;;
         *)
-            log_error "--download-base must use HTTPS"
+            log_error "--download-base must use HTTP or HTTPS"
             exit 1
             ;;
     esac

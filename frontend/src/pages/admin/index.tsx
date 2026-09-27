@@ -807,9 +807,8 @@ function GenerateCommandButton({
       includeNics: enableIncludeNics ? installOptions.includeNics : undefined,
       excludeNics: enableExcludeNics ? installOptions.excludeNics : undefined,
     });
-    const scriptUrl = `${window.location.origin}/download/agent-install.sh`;
-    const downloadBase = `${window.location.origin}/download/agent/1.0.5`;
-    return `curl --fail --proto '=https' --tlsv1.2 --location ${JSON.stringify(scriptUrl)} | bash -s -- ${quoteShellArgs(args)} --install-version 1.0.5 --download-base ${JSON.stringify(downloadBase)}`;
+    const scriptUrl = `${host}/download/agent-install.sh`;
+    return `curl -fsSL ${JSON.stringify(scriptUrl)} | bash -s -- ${quoteShellArgs(args)}`;
   };
 
   const copyToClipboard = async (text: string) => {

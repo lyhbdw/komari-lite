@@ -45,6 +45,13 @@ func TestServeAgentAssetAllowsOnlyPinnedFiles(t *testing.T) {
 			contentType: "application/octet-stream",
 		},
 		{
+			name:        "binary latest",
+			path:        "/download/agent/latest/komari-agent-linux-amd64",
+			wantStatus:  http.StatusOK,
+			wantBody:    binary,
+			contentType: "application/octet-stream",
+		},
+		{
 			name:        "checksum",
 			path:        "/download/agent/" + AgentAssetVersion + "/komari-agent-linux-amd64.sha256",
 			wantStatus:  http.StatusOK,

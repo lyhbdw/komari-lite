@@ -25,7 +25,8 @@ var allowedAgentAssets = map[string]string{
 // the operator. It deliberately does not proxy GitHub or accept arbitrary
 // paths, versions, or filenames.
 func ServeAgentAsset(c *gin.Context) {
-	if c.Param("version") != AgentAssetVersion {
+	reqVersion := c.Param("version")
+	if reqVersion != AgentAssetVersion && reqVersion != "latest" {
 		c.Status(http.StatusNotFound)
 		return
 	}

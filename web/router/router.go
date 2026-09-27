@@ -34,9 +34,11 @@ func registerPublicRoutes(r *gin.Engine) {
 	r.POST("/api/login", public_api.Login)
 	r.GET("/api/setup/status", api.SetupStatus)
 	r.POST("/api/setup/create-admin", api.SetupCreateAdmin)
-	r.GET("/download/agent-install.sh", func(c *gin.Context) {
+	installScriptHandler := func(c *gin.Context) {
 		c.Data(200, "text/x-shellscript; charset=utf-8", public.AgentInstallScript)
-	})
+	}
+	r.GET("/download/agent-install.sh", installScriptHandler)
+	r.GET("/install.sh", installScriptHandler)
 	r.GET("/download/agent/:version/:asset", public.ServeAgentAsset)
 	r.POST("/api/logout", public_api.Logout)
 	registerLiteDisabledRoutes(r)
