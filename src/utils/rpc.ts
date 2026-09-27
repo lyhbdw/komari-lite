@@ -707,61 +707,13 @@ export class KomariRpc {
     return this.client.call<{ count: number, records: StatusRecord[] }>('common:getNodeRecentStatus', { uuid, limit })
   }
 
-  /**
-   * 获取公开的站点信息
-   */
-  async getPublicInfo(): Promise<PublicInfo> {
-    return this.client.call<PublicInfo>('common:getPublicInfo')
-  }
-
-  /**
-   * 获取后端版本
-   */
-  async getBackendVersion(): Promise<VersionInfo> {
-    return this.client.call<VersionInfo>('common:getBackendVersion')
-  }
-
+  
+  
   // ==================== 历史记录方法 ====================
 
-  /**
-   * 获取历史记录（通用方法）
-   */
-  async getRecords(params: {
-    type: 'load' | 'ping'
-    uuid?: string
-    hours?: number
-    task_id?: number
-    load_type?: string
-    max_count?: number
-  }): Promise<unknown> {
-    return this.client.call('common:getRecords', params)
-  }
-
-  /**
-   * 获取负载记录
-   */
-  async getLoadRecords(uuid?: string, hours?: number, loadType?: string, maxCount?: number): Promise<{ records: StatusRecord[] }> {
-    return this.client.call<{ records: StatusRecord[] }>('common:getRecords', {
-      type: 'load',
-      uuid,
-      hours,
-      load_type: loadType,
-      max_count: maxCount,
-    })
-  }
-
-  /**
-   * 获取 Ping 记录
-   */
-  async getPingRecords(taskId?: number, hours?: number, maxCount?: number): Promise<{ records: PingRecord[] }> {
-    return this.client.call<{ records: PingRecord[] }>('common:getRecords', {
-      type: 'ping',
-      task_id: taskId,
-      hours,
-      max_count: maxCount,
-    })
-  }
-
+  
+  
+  
   /**
    * 关闭连接
    */
