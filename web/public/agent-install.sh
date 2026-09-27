@@ -258,6 +258,18 @@ if ! printf '%s' "$komari_args" | grep -qE '(^| )(-e|--endpoint)( |$)|--endpoint
             agent_endpoint="$stored_endpoint"
             log_info "Reusing stored panel endpoint: ${GREEN}$stored_endpoint${NC}"
         fi
+        # Inherit the previous agent flags (e.g. --month-rotate N) so an
+        # upgrade does not silently reset them. Drop -t/--token (re-injected
+        # from .agent.env), -e/--endpoint (handled above) and the one-shot
+        # migration marker flag.
+        stored_flags=$(tr -d "'" < "$upgrade_runner_dir/run-agent.sh" |
+            grep -oE '\-\-month-rotate [^ \\"]+|\-\-include-nics [^ \\"]+|\-\-exclude-nics [^ \\"]+|\-\-include-mountpoint [^ \\"]+|\-\-interval [^ \\"]+|\-\-gpu|\-\-ignore-unsafe-cert' |
+            tr '\n' ' ' | sed 's/ *$//')
+        if [ -n "$stored_flags" ]; then
+            komari_args="$komari_args $stored_flags"
+            komari_args="${komari_args# }"
+            log_info "Inheriting previous agent flags: ${GREEN}$stored_flags${NC}"
+        fi
     fi
 fi
 
