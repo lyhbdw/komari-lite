@@ -24,7 +24,6 @@ func TestPrivateSiteLoginWhitelist(t *testing.T) {
 		"public:getMe",
 		"public:getPublicSettings",
 		"public:getVersion",
-		"public:recordVisitorEvent",
 	}
 	for _, m := range required {
 		if !privateSiteLoginWhitelist[m] {
@@ -34,9 +33,9 @@ func TestPrivateSiteLoginWhitelist(t *testing.T) {
 
 	// 节点列表等数据接口不应在白名单(应被私有站点拦截)。
 	mustBlocked := []string{
-		"public:getNodesInformation",
-		"public:getRecordsByUUID",
-		"public:getPingRecords",
+		"common:getNodes",
+		"common:getRecords",
+		"public:queryMetrics",
 	}
 	for _, m := range mustBlocked {
 		if privateSiteLoginWhitelist[m] {
