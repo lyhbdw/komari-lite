@@ -8,7 +8,6 @@ import (
 
 	"github.com/Tumb1er1376/komari-monitor-lite/database/models"
 	"github.com/Tumb1er1376/komari-monitor-lite/pkg/metric"
-	logger "github.com/Tumb1er1376/komari-monitor-lite/utils/log"
 )
 
 // GetRecordsByClientAndTime 从 metric store 查询记录并重构为 models.Record
@@ -110,13 +109,6 @@ func recordSeriesInterval(s *metric.Store, start, end, now time.Time) time.Durat
 	return s.CompatibleSeriesInterval(start, now, interval)
 }
 
-// gpuSeriesInterval 选择 GPU 记录查询的降采样间隔，与 recordSeriesInterval
-// 相同地经过 CompatibleSeriesInterval 对齐到可用 rollup 层级。
-func gpuSeriesInterval(s *metric.Store, start, end, now time.Time) time.Duration {
-	interval := recordDownsampleInterval(end.Sub(start), 500)
-	return s.CompatibleSeriesInterval(start, now, interval)
-}
-
 func recordDownsampleInterval(rangeDuration time.Duration, maxPoints int) time.Duration {
 	if maxPoints <= 0 {
 		maxPoints = 500
@@ -197,88 +189,6 @@ func sortRecords(records []models.Record) {
 		}
 		return records[i].Time.Before(records[j].Time)
 	})
-}
-
-// GetGPURecordsByClientAndTime 从 metric store 查询 GPU 记录
-func GetGPURecordsByClientAndTime(ctx context.Context, clientUUID string, start, end time.Time) ([]models.GPURecord, error) {
-	s := GetStore()
-	if s == nil {
-		return nil, fmt.Errorf("metric store not enabled")
-	}
-	now := time.Now().UTC()
-
-	// 查询 GPU 相关指标（每设备利用率使用独立指标 gpu.device.usage）
-	gpuMetrics := []string{MetricGPUDeviceUsage, MetricGPUMem, MetricGPUMemTotal, MetricGPUTemp}
-	interval := gpuSeriesInterval(s, start, end, now)
-
-	// 按设备索引和时间组织数据
-	type gpuKey struct {
-		deviceIndex int
-		timestamp   int64
-	}
-	recordMap := make(map[gpuKey]*models.GPURecord)
-
-	for _, metricName := range gpuMetrics {
-		points, err := s.Series(ctx, metric.AggregateQuery{
-			Query: metric.Query{
-				MetricName: metricName,
-				EntityID:   clientUUID,
-				Start:      start,
-				End:        end,
-				Order:      metric.OrderAsc,
-			},
-			Aggregation:    metric.AggLast,
-			Interval:       interval,
-			PreserveSeries: true,
-		}, now)
-		if err != nil {
-			// GPU 数据可能不存在（例如该 agent 没有 GPU），但其他错误仍应
-			// 留下日志，避免静默吞掉存储故障。
-			logger.Errorf("metricstore", "failed to query GPU metric %s for %s: %v", metricName, clientUUID, err)
-			continue
-		}
-
-		for _, p := range points {
-			deviceIndex := 0
-			deviceName := ""
-			if idx, ok := p.Tags["device_index"]; ok {
-				fmt.Sscanf(idx, "%d", &deviceIndex)
-			}
-			if name, ok := p.Tags["device_name"]; ok {
-				deviceName = name
-			}
-
-			key := gpuKey{deviceIndex: deviceIndex, timestamp: p.Bucket.Unix()}
-			if recordMap[key] == nil {
-				recordMap[key] = &models.GPURecord{
-					Client:      clientUUID,
-					Time:        p.Bucket.UTC(),
-					DeviceIndex: deviceIndex,
-					DeviceName:  deviceName,
-				}
-			}
-			rec := recordMap[key]
-
-			switch metricName {
-			case MetricGPUDeviceUsage:
-				rec.Utilization = float32(p.Value)
-			case MetricGPUMem:
-				rec.MemUsed = int64(p.Value)
-			case MetricGPUMemTotal:
-				rec.MemTotal = int64(p.Value)
-			case MetricGPUTemp:
-				rec.Temperature = int(p.Value)
-			}
-		}
-	}
-
-	// 转换为切片
-	records := make([]models.GPURecord, 0, len(recordMap))
-	for _, rec := range recordMap {
-		records = append(records, *rec)
-	}
-
-	return records, nil
 }
 
 // GetPingRecords 从 metric store 查询兼容旧接口的 ping 记录。

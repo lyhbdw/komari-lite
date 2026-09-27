@@ -19,11 +19,6 @@ func DeleteAll() error {
 	return metricstore.DeleteAllRecords(context.Background())
 }
 
-// GetGPURecordsByClientAndTime 获取 GPU 记录数据。
-func GetGPURecordsByClientAndTime(uuid string, start, end time.Time) ([]models.GPURecord, error) {
-	return metricstore.GetGPURecordsByClientAndTime(context.Background(), uuid, start, end)
-}
-
 func GetRecordsByClientAndTime(uuid string, start, end time.Time) ([]models.Record, error) {
 	return metricstore.GetRecordsByClientAndTime(context.Background(), uuid, start, end)
 }
