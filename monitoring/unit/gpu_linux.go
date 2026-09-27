@@ -237,6 +237,13 @@ func isExcludedSysfsGPUName(name string) bool {
 		strings.Contains(lower, "cirrus")
 }
 
+// SoC 型号提取正则（预编译，parseSocModel 每次 basicInfo 都会调用）。
+var (
+	adrenoRegex = regexp.MustCompile(`adreno[-_](\d+)`)
+	maliRegex   = regexp.MustCompile(`mali[-_]([a-z]\d+)`)
+	sunxiRegex  = regexp.MustCompile(`sun\d+i-([a-z0-9]+)`)
+)
+
 // parseSocModel 解析设备树 compatible 字符串，提取人性化名称
 func parseSocModel(driver string, rawBytes []byte) string {
 	// compatible 文件包含多个以 \0 分隔的字符串
@@ -246,8 +253,7 @@ func parseSocModel(driver string, rawBytes []byte) string {
 	// 高通 Adreno (Qualcomm)
 	if driver == "msm" || strings.Contains(lower, "adreno") {
 		// "adreno-750", "adreno-660"
-		re := regexp.MustCompile(`adreno[-_](\d+)`)
-		matches := re.FindStringSubmatch(lower)
+		matches := adrenoRegex.FindStringSubmatch(lower)
 		if len(matches) > 1 {
 			return "Qualcomm Adreno " + matches[1]
 		}
@@ -257,8 +263,7 @@ func parseSocModel(driver string, rawBytes []byte) string {
 	// ARM Mali (Rockchip/MediaTek/AmLogic)
 	if driver == "panfrost" || driver == "lima" || strings.Contains(lower, "mali") {
 		// "mali-g610", "mali-t860"
-		re := regexp.MustCompile(`mali[-_]([a-z]\d+)`)
-		matches := re.FindStringSubmatch(lower)
+		matches := maliRegex.FindStringSubmatch(lower)
 		if len(matches) > 1 {
 			return "ARM Mali " + strings.ToUpper(matches[1]) // Mali G610
 		}
@@ -281,8 +286,7 @@ func parseSocModel(driver string, rawBytes []byte) string {
 	// Allwinner (全志)
 	// "allwinner,sun50i-h6-display-engine"
 	if strings.Contains(lower, "allwinner") || strings.Contains(lower, "sun50i") || strings.Contains(lower, "sun8i") {
-		re := regexp.MustCompile(`sun\d+i-([a-z0-9]+)`)
-		matches := re.FindStringSubmatch(lower)
+		matches := sunxiRegex.FindStringSubmatch(lower)
 		if len(matches) > 1 {
 			model := strings.ToUpper(matches[1])
 			return "Allwinner " + model

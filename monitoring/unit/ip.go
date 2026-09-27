@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/http"
 	"regexp"
+	"sync"
 	"time"
 
 	"github.com/Tumb1er1376/komari-agent-lite/dnsresolver"
@@ -45,6 +46,12 @@ var (
 	userAgent = "curl/8.0.1"
 )
 
+// 预编译的 IP 提取正则（原在循环体内每次编译）。
+var (
+	ipv4Regex = regexp.MustCompile(`\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}`)
+	ipv6Regex = regexp.MustCompile(`(([0-9A-Fa-f]{1,4}:){7})([0-9A-Fa-f]{1,4})|(([0-9A-Fa-f]{1,4}:){1,6}:)(([0-9A-Fa-f]{1,4}:){0,4})([0-9A-Fa-f]{0,4})`)
+)
+
 func GetIPv4Address() (string, error) {
 
 	webAPIs := []string{
@@ -73,13 +80,13 @@ func GetIPv4Address() (string, error) {
 		if err != nil {
 			continue
 		}
-		re := regexp.MustCompile(`\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}`)
-		ipv4 := re.FindString(string(body))
+		ipv4 := ipv4Regex.FindString(string(body))
 		if ipv4 != "" {
 			log.Printf("Get IPV4 Success: %s", ipv4)
 			return ipv4, nil
 		}
 	}
+	log.Println("Get IPV4 failed: all providers exhausted")
 	return "", nil
 }
 
@@ -110,17 +117,50 @@ func GetIPv6Address() (string, error) {
 		}
 
 		// 使用正则表达式从响应体中提取IPv6地址
-		re := regexp.MustCompile(`(([0-9A-Fa-f]{1,4}:){7})([0-9A-Fa-f]{1,4})|(([0-9A-Fa-f]{1,4}:){1,6}:)(([0-9A-Fa-f]{1,4}:){0,4})([0-9A-Fa-f]{0,4})`)
-		ipv6 := re.FindString(string(body))
+		ipv6 := ipv6Regex.FindString(string(body))
 		if ipv6 != "" {
 			log.Printf("Get IPV6 Success:  %s", ipv6)
 			return ipv6, nil
 		}
 	}
+	log.Println("Get IPV6 failed: all providers exhausted")
 	return "", nil
 }
 
+// 公网 IP 缓存：basicInfo 每次重连都会重传，无缓存时重连风暴会
+// 串行打满第三方 IP API（每个 15s 超时），并拖慢重连。
+var (
+	ipCacheMu     sync.Mutex
+	ipCachev4     string
+	ipCachev6     string
+	ipCachedAt    time.Time
+	ipCacheTTL    = 10 * time.Minute
+)
+
+// GetIPAddress 返回本机公网 IPv4/IPv6，带 TTL 缓存。
+// 缓存过期或上次未取到时重新探测；取不到时返回空串（不报错，与旧行为一致）。
 func GetIPAddress() (ipv4, ipv6 string, err error) {
+	ipCacheMu.Lock()
+	if time.Since(ipCachedAt) < ipCacheTTL && (ipCachev4 != "" || ipCachev6 != "") {
+		v4, v6 := ipCachev4, ipCachev6
+		ipCacheMu.Unlock()
+		return v4, v6, nil
+	}
+	ipCacheMu.Unlock()
+
+	ipv4, ipv6, err = getIPAddressUncached()
+
+	ipCacheMu.Lock()
+	ipCachedAt = time.Now()
+	// 全部为空时不刷新缓存值（下次仍会重试），但记录时间避免失败风暴。
+	if ipv4 != "" || ipv6 != "" {
+		ipCachev4, ipCachev6 = ipv4, ipv6
+	}
+	ipCacheMu.Unlock()
+	return ipv4, ipv6, err
+}
+
+func getIPAddressUncached() (ipv4, ipv6 string, err error) {
 
 	if flags.GetIpAddrFromNic {
 		allowNics, err := InterfaceList()

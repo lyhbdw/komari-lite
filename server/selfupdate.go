@@ -11,10 +11,12 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/Tumb1er1376/komari-agent-lite/dnsresolver"
 	v2 "github.com/Tumb1er1376/komari-agent-lite/protocol/v2"
 	"github.com/Tumb1er1376/komari-agent-lite/version"
 )
@@ -36,22 +38,14 @@ func assetName() string {
 	return fmt.Sprintf("komari-agent-%s-%s", runtime.GOOS, runtime.GOARCH)
 }
 
-// versionLess 比较两个点分版本号：a < b 返回 true。解析失败时按字符串比较。
+// versionLess 比较两个点分版本号：a < b 返回 true。
+// 任一段解析失败（非纯数字）时按字符串比较，避免畸形版本号被
+// Sscanf 宽松解析成意外数值（如 "1.0.5x" 被当作 5）。
 func versionLess(a, b string) bool {
-	var ai, bi []int
-	for _, s := range strings.Split(a, ".") {
-		var n int
-		if _, err := fmt.Sscanf(s, "%d", &n); err != nil {
-			return a < b
-		}
-		ai = append(ai, n)
-	}
-	for _, s := range strings.Split(b, ".") {
-		var n int
-		if _, err := fmt.Sscanf(s, "%d", &n); err != nil {
-			return a < b
-		}
-		bi = append(bi, n)
+	ai, aok := parseVersion(a)
+	bi, bok := parseVersion(b)
+	if !aok || !bok {
+		return a < b
 	}
 	for i := 0; i < len(ai) && i < len(bi); i++ {
 		if ai[i] != bi[i] {
@@ -59,6 +53,31 @@ func versionLess(a, b string) bool {
 		}
 	}
 	return len(ai) < len(bi)
+}
+
+// parseVersion 严格解析点分数字版本号；任何一段非纯数字则 ok=false。
+func parseVersion(v string) ([]int, bool) {
+	if v == "" {
+		return nil, false
+	}
+	parts := strings.Split(v, ".")
+	out := make([]int, 0, len(parts))
+	for _, s := range parts {
+		if s == "" {
+			return nil, false
+		}
+		for _, r := range s {
+			if r < '0' || r > '9' {
+				return nil, false
+			}
+		}
+		n, err := strconv.Atoi(s)
+		if err != nil {
+			return nil, false
+		}
+		out = append(out, n)
+	}
+	return out, true
 }
 
 // HandleAgentUpdate 处理 agent.update 事件。返回 true 表示事件已接受
@@ -166,6 +185,12 @@ func performSelfUpdate(targetVersion, expectedSHA string) {
 	os.Exit(0)
 }
 
+// updateHTTPClient 返回升级下载专用 client：走 dnsresolver 的 IP 偏好栈
+// （--prefer-ip-version 生效），超时按下载阶段区分。
+func updateHTTPClient(timeout time.Duration) *http.Client {
+	return dnsresolver.GetHTTPClientWithPreference(timeout, flags.PreferIPVersion)
+}
+
 // fetchSHA256 从面板下载 <asset>.sha256 文件并解析出十六进制摘要。
 func fetchSHA256(base, targetVersion, asset string) (string, error) {
 	url := fmt.Sprintf("%s/download/agent/%s/%s.sha256", base, targetVersion, asset)
@@ -175,7 +200,7 @@ func fetchSHA256(base, targetVersion, asset string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := updateHTTPClient(30 * time.Second).Do(req)
 	if err != nil {
 		return "", fmt.Errorf("fetch sha256: %w", err)
 	}
@@ -207,7 +232,7 @@ func downloadBinary(url string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := updateHTTPClient(5 * time.Minute).Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("download: %w", err)
 	}

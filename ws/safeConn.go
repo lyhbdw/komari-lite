@@ -2,9 +2,14 @@ package ws
 
 import (
 	"sync"
+	"time"
 
 	"github.com/gorilla/websocket"
 )
+
+// writeTimeout 是单次 WS 写操作的超时。gorilla/websocket 默认无限等待，
+// 网络半死（TCP 未断但拥塞）时写会永久阻塞，卡死整个上报循环。
+const writeTimeout = 15 * time.Second
 
 type SafeConn struct {
 	conn *websocket.Conn
@@ -21,12 +26,18 @@ func NewSafeConn(conn *websocket.Conn) *SafeConn {
 func (sc *SafeConn) WriteMessage(messageType int, data []byte) error {
 	sc.mu.Lock()
 	defer sc.mu.Unlock()
+	if err := sc.conn.SetWriteDeadline(time.Now().Add(writeTimeout)); err != nil {
+		return err
+	}
 	return sc.conn.WriteMessage(messageType, data)
 }
 
 func (sc *SafeConn) WriteJSON(v interface{}) error {
 	sc.mu.Lock()
 	defer sc.mu.Unlock()
+	if err := sc.conn.SetWriteDeadline(time.Now().Add(writeTimeout)); err != nil {
+		return err
+	}
 	return sc.conn.WriteJSON(v)
 }
 
