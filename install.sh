@@ -295,35 +295,6 @@ if [ "$EUID" -eq 0 ] && ! id "$service_user" >/dev/null 2>&1; then
 fi
 credential_file="${target_dir}/.agent.env"
 runner_file="${target_dir}/run-agent.sh"
-
-# Upgrade-in-place: when re-running the installer on a node that already has
-# a working Agent Lite installation, reuse the stored token and endpoint so
-# the operator can upgrade with a bare `bash agent-install.sh` (no args).
-# The stored credential file is the same one this script wrote earlier
-# (0600, root/service-user owned); reading it back is safe and avoids
-# re-distributing tokens per node.
-if [ -z "$agent_token" ] && [ -f "$credential_file" ]; then
-    stored_token=$(sed -n 's/^export AGENT_TOKEN=//p' "$credential_file" | tail -n 1)
-    # strip optional surrounding quotes written by shell_quote
-    case "$stored_token" in
-        \'*\') stored_token=$(printf '%s' "$stored_token" | sed "s/^'//;s/'\$//") ;;
-    esac
-    if [ -n "$stored_token" ]; then
-        agent_token="$stored_token"
-        log_info "Reusing stored agent token from ${credential_file}"
-    fi
-fi
-if [ -f "$runner_file" ]; then
-    stored_endpoint=$(sed -n 's/.*\(-e \|--endpoint=\)\([^ "'"'"']*"\).*/\2/p' "$runner_file" | tail -n 1)
-    if [ -z "$stored_endpoint" ]; then
-        stored_endpoint=$(grep -oE '(--endpoint=|-e )[^\\"'"'"' ]+' "$runner_file" | tail -n 1 | sed 's/^--endpoint=//; s/^-e //')
-    fi
-    if [ -n "$stored_endpoint" ] && ! printf '%s' "$komari_args" | grep -qE '(^| )(-e|--endpoint)( |$)|--endpoint='; then
-        komari_args="$komari_args -e $stored_endpoint"
-        komari_args="${komari_args# }"
-        log_info "Reusing stored panel endpoint: ${GREEN}$stored_endpoint${NC}"
-    fi
-fi
 if [ "$migration_mode" = true ]; then
     migration_ready_file="${KOMARI_MIGRATION_READY_FILE:-${target_dir}/.migration-ready}"
     migration_ready_dir=$(dirname "$migration_ready_file")
