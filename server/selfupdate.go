@@ -129,14 +129,14 @@ func performSelfUpdate(targetVersion, expectedSHA string) {
 
 	// sha256：优先用事件内嵌值，否则从面板取 .sha256 文件。
 	if expectedSHA == "" {
-		expectedSHA, err = fetchSHA256(base, targetVersion, asset)
+		expectedSHA, err = fetchSHA256WithRetry(base, targetVersion, asset)
 		if err != nil {
 			log.Printf("selfupdate: %v", err)
 			return
 		}
 	}
 
-	bin, err := downloadBinary(binURL)
+	bin, err := downloadBinaryWithRetry(binURL)
 	if err != nil {
 		log.Printf("selfupdate: %v", err)
 		return
@@ -189,6 +189,42 @@ func performSelfUpdate(targetVersion, expectedSHA string) {
 // （--prefer-ip-version 生效），超时按下载阶段区分。
 func updateHTTPClient(timeout time.Duration) *http.Client {
 	return dnsresolver.GetHTTPClientWithPreference(timeout, flags.PreferIPVersion)
+}
+
+// fetchSHA256WithRetry 在网络抖动下重试获取 sha256（节点到面板的链路
+// 可能不稳定，单次失败直接放弃会让升级事件被白白消费）。
+func fetchSHA256WithRetry(base, targetVersion, asset string) (string, error) {
+	var lastErr error
+	for attempt := 1; attempt <= 3; attempt++ {
+		sha, err := fetchSHA256(base, targetVersion, asset)
+		if err == nil {
+			return sha, nil
+		}
+		lastErr = err
+		log.Printf("selfupdate: fetch sha256 attempt %d failed: %v", attempt, err)
+		if attempt < 3 {
+			time.Sleep(time.Duration(attempt) * 10 * time.Second)
+		}
+	}
+	return "", lastErr
+}
+
+// downloadBinaryWithRetry 在网络抖动下重试下载（约 8MB，弱网节点
+// 一次 TLS 握手超时很常见）。
+func downloadBinaryWithRetry(url string) ([]byte, error) {
+	var lastErr error
+	for attempt := 1; attempt <= 3; attempt++ {
+		bin, err := downloadBinary(url)
+		if err == nil {
+			return bin, nil
+		}
+		lastErr = err
+		log.Printf("selfupdate: download attempt %d failed: %v", attempt, err)
+		if attempt < 3 {
+			time.Sleep(time.Duration(attempt) * 10 * time.Second)
+		}
+	}
+	return nil, lastErr
 }
 
 // fetchSHA256 从面板下载 <asset>.sha256 文件并解析出十六进制摘要。
