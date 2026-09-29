@@ -27,7 +27,26 @@ runs:
           sudo apt-get install -y zstd
         fi
 
-    - name: Clone and build frontend
+    - name: Build theme (visitor UI)
+      shell: bash
+      run: |
+        set -euxo pipefail
+        cd theme
+        npm ci
+        npm run build
+        cd ..
+
+        mkdir -p web/public/defaultTheme
+        rm -rf web/public/defaultTheme/dist web/public/defaultTheme/dist.tar.zst
+        test -f theme/dist/index.html
+        tar -cf "$RUNNER_TEMP/komari-theme-dist.tar" -C theme/dist .
+        zstd -19 -T0 -q -f "$RUNNER_TEMP/komari-theme-dist.tar" -o web/public/defaultTheme/dist.tar.zst
+        rm -f "$RUNNER_TEMP/komari-theme-dist.tar"
+        cp -f theme/komari-theme.json web/public/defaultTheme/
+        if [ -f theme/public/preview.png ]; then cp -f theme/public/preview.png web/public/defaultTheme/; fi
+        if [ -f theme/preview.png ]; then cp -f theme/preview.png web/public/defaultTheme/; fi
+
+    - name: Build admin frontend
       shell: bash
       run: |
         set -euxo pipefail
@@ -36,17 +55,11 @@ runs:
         npm run build
         cd ..
 
-        mkdir -p web/public/defaultTheme
-        rm -rf web/public/defaultTheme/dist web/public/defaultTheme/dist.tar.zst
+        rm -rf web/public/defaultTheme/admin-dist.tar.zst
         test -f frontend/dist/index.html
-        tar -cf "$RUNNER_TEMP/komari-default-dist.tar" -C frontend/dist .
-        zstd -19 -T0 -q -f "$RUNNER_TEMP/komari-default-dist.tar" -o web/public/defaultTheme/dist.tar.zst
-        rm -f "$RUNNER_TEMP/komari-default-dist.tar"
-        cp -f frontend/komari-theme.json web/public/defaultTheme/
-        if [ -f frontend/preview.png ]; then cp -f frontend/preview.png web/public/defaultTheme/; fi
-        if [ -f frontend/perview.png ]; then cp -f frontend/perview.png web/public/defaultTheme/; fi
-        if [ -f web/public/defaultTheme/preview.png ] && [ ! -f web/public/defaultTheme/perview.png ]; then cp -f web/public/defaultTheme/preview.png web/public/defaultTheme/perview.png; fi
-        if [ -f web/public/defaultTheme/perview.png ] && [ ! -f web/public/defaultTheme/preview.png ]; then cp -f web/public/defaultTheme/perview.png web/public/defaultTheme/preview.png; fi
+        tar -cf "$RUNNER_TEMP/komari-admin-dist.tar" -C frontend/dist .
+        zstd -19 -T0 -q -f "$RUNNER_TEMP/komari-admin-dist.tar" -o web/public/defaultTheme/admin-dist.tar.zst
+        rm -f "$RUNNER_TEMP/komari-admin-dist.tar"
 
     - name: Pack frontend artifact
       if: ${{ inputs.artifact-name != '' }}

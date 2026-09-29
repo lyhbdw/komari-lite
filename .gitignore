@@ -40,4 +40,11 @@ komari-linux-*
 /dist/
 .codex
 
+# Frontend & Theme
+node_modules/
+/theme/dist/
+/theme/node_modules/
+/frontend/dist/
+/frontend/node_modules/
+
 /web/filemanager/data
