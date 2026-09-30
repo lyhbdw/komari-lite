@@ -228,15 +228,15 @@ async function fetchHistoryData() {
   error.value = null
 
   try {
-    const apiBase = import.meta.env.VITE_API_BASE
-    const response = await fetch(`${apiBase}/records/load?uuid=${props.uuid}&hours=${hours}`)
-
-    if (!response.ok) {
-      throw new Error(`HTTP error: ${response.status}`)
-    }
-
-    const resp = await response.json()
-    const records = resp.data?.records || []
+    // /api/records/load REST 别名已在 67fe5dc 移除，改走 JSON-RPC common:getRecords。
+    // 返回 { count, records: { [uuid]: StatusRecord[] } }（load_type=all 时按客户端分组）。
+    const result = await rpc.getClient().call<{ count: number, records: Record<string, StatusRecord[]> }>('common:getRecords', {
+      type: 'load',
+      uuid: props.uuid,
+      hours,
+      load_type: 'all',
+    })
+    const records = result?.records?.[props.uuid] || []
 
     // 按时间排序
     records.sort((a: StatusRecord, b: StatusRecord) =>
