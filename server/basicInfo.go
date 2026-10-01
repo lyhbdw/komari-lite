@@ -17,6 +17,14 @@ import (
 
 var flags = pkg_flags.GlobalConfig
 
+// onReconnected 在 WS 重连成功后调用：作废公网 IP 缓存并立即重传
+// basicInfo。换 IP 后节点重新上线时，新 IP 随重连同步到位，而不是等
+// 5 分钟定时器 + 10 分钟 IP 缓存 TTL。
+func onReconnected() {
+	monitoring.InvalidateIPCache()
+	go UpdateBasicInfo()
+}
+
 func DoUploadBasicInfoWorks() {
 	ticker := time.NewTicker(time.Duration(flags.InfoReportInterval) * time.Minute)
 	for range ticker.C {

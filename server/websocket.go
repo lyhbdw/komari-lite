@@ -67,6 +67,7 @@ func EstablishWebSocketConnection() {
 					conn, err = connectWebSocket(websocketEndpoint)
 					if err == nil {
 						log.Println("WebSocket connected using v2 protocol")
+						onReconnected()
 						done := make(chan struct{})
 						readDone = done
 						go handleWebSocketMessages(conn, done)
@@ -163,6 +164,8 @@ func runPostFallback(websocketEndpoint string, interval float64) (*ws.SafeConn, 
 		case <-reconnectTicker.C:
 			conn, err := connectWebSocket(websocketEndpoint)
 			if err == nil {
+				log.Println("WebSocket recovered from POST fallback")
+				onReconnected()
 				return conn, nil
 			}
 			log.Println("POST fallback WebSocket recovery failed:", err)

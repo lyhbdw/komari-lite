@@ -137,6 +137,15 @@ var (
 	ipCacheTTL    = 10 * time.Minute
 )
 
+// InvalidateIPCache 作废公网 IP 缓存，下次 GetIPAddress 重新探测。
+// WS 重连成功后调用：换 IP 场景下节点重新上线时立即拿到新地址。
+func InvalidateIPCache() {
+	ipCacheMu.Lock()
+	defer ipCacheMu.Unlock()
+	ipCachev4, ipCachev6 = "", ""
+	ipCachedAt = time.Time{}
+}
+
 // GetIPAddress 返回本机公网 IPv4/IPv6，带 TTL 缓存。
 // 缓存过期或上次未取到时重新探测；取不到时返回空串（不报错，与旧行为一致）。
 func GetIPAddress() (ipv4, ipv6 string, err error) {
