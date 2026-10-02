@@ -50,26 +50,26 @@ export function getPingToneClass(value: number): string {
 
 function getLatencyToneClass(latency: number): string {
   if (latency <= 60)
-    return 'bg-emerald-500/80'
+    return 'bg-emerald-500/60'
   if (latency <= 120)
-    return 'bg-emerald-600/70'
+    return 'bg-emerald-600/50'
   if (latency <= 180)
-    return 'bg-amber-400/80'
+    return 'bg-amber-400/60'
   if (latency <= 240)
-    return 'bg-orange-400/80'
-  return 'bg-rose-500/80'
+    return 'bg-orange-400/60'
+  return 'bg-rose-500/60'
 }
 
 function getLossToneClass(loss: number): string {
   if (loss <= 1)
-    return 'bg-emerald-500/80'
+    return 'bg-emerald-500/60'
   if (loss <= 3)
-    return 'bg-emerald-600/70'
+    return 'bg-emerald-600/50'
   if (loss <= 6)
-    return 'bg-amber-400/80'
+    return 'bg-amber-400/60'
   if (loss <= 9)
-    return 'bg-orange-400/80'
-  return 'bg-rose-500/80'
+    return 'bg-orange-400/60'
+  return 'bg-rose-500/60'
 }
 
 function getNetworkShortName(name: string): string {

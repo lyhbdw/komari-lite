@@ -194,10 +194,10 @@ function getRowTransitionStyle(index: number): Record<string, string> {
             <template v-for="col in columns" :key="col.key">
               <!-- 在线状态指示器 -->
               <div v-if="col.key === 'status'" class="flex justify-center">
-                <div class="size-2 rounded-full relative" :class="[node.online ? 'bg-emerald-600' : 'bg-red-600']">
+                <div class="size-2 rounded-full relative" :class="[node.online ? 'bg-emerald-500' : 'bg-rose-500']">
                   <div
-                    class="animate-ping absolute inset-0 rounded-full opacity-50"
-                    :class="[node.online ? 'bg-emerald-600' : 'bg-red-600']"
+                    class="absolute -inset-0.5 rounded-full opacity-25"
+                    :class="[node.online ? 'bg-emerald-400' : 'bg-rose-400']"
                   />
                 </div>
               </div>

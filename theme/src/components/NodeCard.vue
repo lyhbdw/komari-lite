@@ -130,10 +130,10 @@ function openPingDialog() {
   >
     <template #header>
       <div class="flex gap-2 min-w-0 items-center">
-        <div class="size-2 rounded-full relative shrink-0" :class="[props.node.online ? 'bg-emerald-600' : 'bg-red-600']">
+        <div class="size-2 rounded-full relative shrink-0" :class="[props.node.online ? 'bg-emerald-500' : 'bg-rose-500']">
           <div
-            class="animate-ping absolute inset-0 rounded-full opacity-50"
-            :class="[props.node.online ? 'bg-emerald-600' : 'bg-red-600']"
+            class="absolute -inset-0.5 rounded-full opacity-25"
+            :class="[props.node.online ? 'bg-emerald-400' : 'bg-rose-400']"
           />
         </div>
         <div class="text-md font-bold flex-1 min-w-0 truncate" :title="props.node.name">
