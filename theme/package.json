@@ -7,12 +7,12 @@
     "name": "lyhbdw",
     "url": "https://github.com/lyhbdw"
   },
+  "license": "MIT",
+  "homepage": "https://github.com/lyhbdw/komari-monitor-lite",
   "repository": {
     "type": "git",
     "url": "https://github.com/lyhbdw/komari-monitor-lite.git"
   },
-  "homepage": "https://github.com/lyhbdw/komari-monitor-lite",
-  "license": "MIT",
   "engines": {
     "node": "^20.19.0 || >=22.12.0",
     "bun": ">=1.2.0"

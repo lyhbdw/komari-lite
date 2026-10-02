@@ -7,7 +7,6 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { CardX } from '@/components/ui/card-x'
 import { Empty } from '@/components/ui/empty'
-import { useBackgroundSurface } from '@/composables/useBackgroundSurface'
 import { useNodeFormatters } from '@/composables/useNodeFormatters'
 import { useAppStore } from '@/stores/app'
 import { useNodesStore } from '@/stores/nodes'
@@ -16,7 +15,7 @@ import { formatDateTime } from '@/utils/helper'
 import { getTrafficUsed } from '@/utils/nodeHelpers'
 import { getOSImage, getOSName } from '@/utils/osImageHelper'
 import { getFlagSrc, getRegionDisplayName } from '@/utils/regionHelper'
-import { getBillingCycleText, getExpireText, getExpireTextClass } from '@/utils/tagHelper'
+import { getExpireText, getExpireTextClass } from '@/utils/tagHelper'
 
 const LoadChart = defineAsyncComponent(() => import('@/components/LoadChart.vue'))
 const PingChart = defineAsyncComponent(() => import('@/components/PingChart.vue'))
@@ -25,7 +24,6 @@ const route = useRoute()
 const router = useRouter()
 
 const appStore = useAppStore()
-const { pickSurfaceClass } = useBackgroundSurface()
 const nodesStore = useNodesStore()
 const { formatBytes, formatBytesPerSecond, formatUptime } = useNodeFormatters()
 const exchangeRates = ref(financeHelper.DEFAULT_EXCHANGE_RATES)
@@ -59,12 +57,6 @@ interface MetricCard {
 
 const EXPIRES_IN_SUFFIX_REGEX = /^(\d+)\s*(天|days?)$/i
 const CURRENCY_SUFFIX_REGEX = /^(\S.*\S)\s+([A-Z]{3})$/
-
-function formatFinanceMetricValue(amountCNY: number, currency: CurrencyCode): string {
-  const targetRate = exchangeRates.value[currency] || 1
-  const formattedValue = financeHelper.formatFinanceAmount(amountCNY * targetRate, currency)
-  return `${formattedValue.symbol}${formattedValue.value} ${formattedValue.currency}`
-}
 
 function splitMetricValue(value: string): { value: string, unit?: string } {
   const cycleIndex = value.indexOf(' / ')
@@ -234,8 +226,7 @@ const trafficProgressStyle = computed(() => ({
   <div class="instance-detail space-y-4">
     <div v-if="!data" class="p-4">
       <CardX
-        class="border-none transition-all rounded-md"
-        :class="pickSurfaceClass('bg-background/60 hover:bg-background', 'bg-background/50 hover:bg-background backdrop-blur-xs')"
+        class="border border-border bg-card transition-all rounded-md"
       >
         <Empty description="节点不存在或已被删除">
           <template #extra>

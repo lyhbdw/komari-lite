@@ -395,11 +395,6 @@ function stopGlobe() {
   }
 }
 
-function rebuildGlobe() {
-  stopGlobe()
-  startGlobe()
-}
-
 onMounted(() => {
   startGlobe()
 })

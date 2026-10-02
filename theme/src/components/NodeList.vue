@@ -153,7 +153,7 @@ function getRowTransitionStyle(index: number): Record<string, string> {
           v-for="col in columns" :key="col.key"
           :class="[
             col.sortable ? 'cursor-pointer hover:text-foreground transition-colors' : '',
-            ['status', 'os'].includes(col.key) ? 'text-center' : ['cpu', 'mem', 'disk', 'traffic', 'rate'].includes(col.key) ? 'text-right' : 'text-left'
+            ['status', 'os'].includes(col.key) ? 'text-center' : ['cpu', 'mem', 'disk', 'traffic', 'rate'].includes(col.key) ? 'text-right' : 'text-left',
           ]"
           @click="handleSort(col)"
         >
@@ -161,7 +161,7 @@ function getRowTransitionStyle(index: number): Record<string, string> {
             class="text-xs font-semibold text-foreground/90 dark:text-foreground/80 flex items-center gap-1 tracking-wide"
             :class="[
               ['status', 'os'].includes(col.key) ? 'justify-center' : ['cpu', 'mem', 'disk', 'traffic', 'rate'].includes(col.key) ? 'justify-end' : '',
-              col.sortable && sortKey === col.key ? 'text-foreground font-bold' : ''
+              col.sortable && sortKey === col.key ? 'text-foreground font-bold' : '',
             ]"
           >
             {{ col.label }}

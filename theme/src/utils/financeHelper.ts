@@ -1,5 +1,5 @@
-import { ref } from 'vue'
 import type { NodeData } from '@/stores/nodes'
+import { ref } from 'vue'
 
 const FINANCE_CURRENCY_CONFIG = {
   AUD: { rate: 0.20941, symbol: 'A$' },
@@ -184,13 +184,16 @@ export interface NodePremiumInfo {
   symbol: string
 }
 
+const FREE_NODE_REGEX = /白嫖|免费|free/i
+const NODE_PREMIUM_TAG_REGEX = /溢价\s*(\d+(?:\.\d+)?)\s*(?:rmb|cny|usd|eur|gbp|[r元$€£])?/i
+
 export function isFreeNode(node: NodeData): boolean {
   const price = Number(node.price)
   if (price === 0 || price === -1)
     return true
 
   const tags = String(node.tags || '')
-  return /白嫖|免费|free/i.test(tags)
+  return FREE_NODE_REGEX.test(tags)
 }
 
 export function getNodePremiumInfo(node: NodeData): NodePremiumInfo {
@@ -198,9 +201,9 @@ export function getNodePremiumInfo(node: NodeData): NodePremiumInfo {
   let tagCurrency: CurrencyCode | null = null
 
   if (node.tags) {
-    const match = node.tags.match(/溢价\s*([0-9]+(?:\.[0-9]+)?)\s*(r|元|rmb|cny|\$|usd|€|eur|£|gbp)?/i)
+    const match = node.tags.match(NODE_PREMIUM_TAG_REGEX)
     if (match && match[1]) {
-      const val = parseFloat(match[1])
+      const val = Number.parseFloat(match[1])
       if (Number.isFinite(val) && val > 0) {
         tagAmount = val
         const unit = (match[2] || '').toLowerCase()

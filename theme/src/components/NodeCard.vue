@@ -6,16 +6,15 @@ import { Badge } from '@/components/ui/badge'
 import { CardX } from '@/components/ui/card-x'
 import { DataTooltip } from '@/components/ui/data-tooltip'
 import { ProgressThin } from '@/components/ui/progress-thin'
-import { useBackgroundSurface } from '@/composables/useBackgroundSurface'
 import { useNodeFormatters } from '@/composables/useNodeFormatters'
 import { useNodePingDisplay } from '@/composables/useNodePingDisplay'
 import { useAppStore } from '@/stores/app'
+import * as financeHelper from '@/utils/financeHelper'
+import { sharedExchangeRates, sharedFinanceCurrency } from '@/utils/financeHelper'
 import { formatDateTime, getStatus, getStatusTextClass } from '@/utils/helper'
 import { getCustomTags, getDiskPercentage, getMemPercentage, getPriceTags, getRemainingTimeTagClass, getTrafficUsed, getTrafficUsedPercentage, hasRegion, showTrafficProgress } from '@/utils/nodeHelpers'
 import { getOSImage, getOSName } from '@/utils/osImageHelper'
 import { getFlagSrc, getRegionDisplayName } from '@/utils/regionHelper'
-import * as financeHelper from '@/utils/financeHelper'
-import { sharedExchangeRates, sharedFinanceCurrency } from '@/utils/financeHelper'
 
 const props = defineProps<{ node: NodeData }>()
 
@@ -25,7 +24,6 @@ const emit = defineEmits<{
 }>()
 
 const appStore = useAppStore()
-const { pickSurfaceClass } = useBackgroundSurface()
 const { formatBytes, formatBytesPerSecond, formatUptime } = useNodeFormatters()
 
 const offlineTime = computed(() => formatDateTime(props.node.time))
@@ -256,7 +254,9 @@ function openPingDialog() {
             class="absolute inset-0 z-10 flex flex-col items-center justify-center space-y-1"
           >
             <span class="text-sm text-red-600">离线</span>
-            <div class="font-mono tabular-nums">{{ offlineTime }}</div>
+            <div class="font-mono tabular-nums">
+              {{ offlineTime }}
+            </div>
           </div>
           <div class="flex flex-col gap-y-2" :class="[!props.node.online && 'blur-xs opacity-60 pointer-events-none']">
             <div class="flex items-center">

@@ -67,10 +67,12 @@ export function getRemainingTimeTagClass(node: NodeData): string {
   return getExpireTextClass(node.expired_at)
 }
 
+const PREMIUM_TAG_FILTER_REGEX = /^溢价\s*\d+(?:\.\d+)?\s*(?:rmb|cny|usd|eur|gbp|[r元$€£])?$/i
+
 export function getCustomTags(node: NodeData): string[] {
   return parseTags(node.tags)
     .map(t => t.text)
-    .filter(t => !/^溢价\s*[0-9]+(?:\.[0-9]+)?\s*(?:r|元|rmb|cny|\$|usd|€|eur|£|gbp)?$/i.test(t.trim()))
+    .filter(t => !PREMIUM_TAG_FILTER_REGEX.test(t.trim()))
 }
 
 export function formatOfflineTime(node: NodeData): string {

@@ -707,13 +707,8 @@ export class KomariRpc {
     return this.client.call<{ count: number, records: StatusRecord[] }>('common:getNodeRecentStatus', { uuid, limit })
   }
 
-  
-  
   // ==================== 历史记录方法 ====================
 
-  
-  
-  
   /**
    * 关闭连接
    */

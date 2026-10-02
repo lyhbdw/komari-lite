@@ -4,9 +4,6 @@
  * @see https://www.komari.wiki/dev/api.html
  */
 
-const HTTP_PROTOCOL_REGEX = /^http/
-const HTTPS_PROTOCOL_REGEX = /^https/
-
 // ==================== 类型定义 ====================
 
 /** API 响应基础结构 */
