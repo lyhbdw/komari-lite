@@ -5,10 +5,29 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strings"
 	"testing"
 
 	"github.com/gin-gonic/gin"
 )
+
+// TestAgentInstallScriptDefaultIsLatest guards against reintroducing a
+// hardcoded semver default in agent-install.sh. The controller only serves
+// AgentAssetVersion and "latest"; a pinned default like "1.0.7" 404s as soon
+// as the hosted asset moves on, breaking one-click installs.
+func TestAgentInstallScriptDefaultIsLatest(t *testing.T) {
+	script, err := os.ReadFile("agent-install.sh")
+	if err != nil {
+		t.Fatal(err)
+	}
+	hardcodedDefault := regexp.MustCompile(`(?m)^\s*version_to_install="[0-9]+\.[0-9]+`)
+	if loc := hardcodedDefault.FindIndex(script); loc != nil {
+		line := strings.SplitN(string(script[:loc[0]]), "\n", -1)
+		t.Fatalf("agent-install.sh hardcodes a version default at line %d; use \"latest\" so the controller resolves it: %q",
+			len(line), strings.TrimSpace(string(script[loc[0]:loc[1]+40])))
+	}
+}
 
 func TestServeAgentAssetAllowsOnlyPinnedFiles(t *testing.T) {
 	gin.SetMode(gin.TestMode)
