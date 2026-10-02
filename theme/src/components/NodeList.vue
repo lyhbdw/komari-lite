@@ -141,7 +141,7 @@ function getRowTransitionStyle(index: number): Record<string, string> {
 </script>
 
 <template>
-  <div class="overflow-x-auto overflow-y-hidden min-w-0 p-1 -m-1">
+  <div class="w-full max-w-full overflow-x-auto overflow-y-hidden min-w-0 rounded-md">
     <div class="min-w-fit w-full flex flex-col gap-1">
       <!-- 表头 -->
       <div

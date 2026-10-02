@@ -298,32 +298,30 @@ const trafficProgressStyle = computed(() => ({
       <div class="px-4 gap-4 grid grid-cols-1 lg:grid-cols-2">
         <CardX
           title="硬件信息" size="small"
-          class="group h-full border-none transition-all rounded-md"
-          :class="pickSurfaceClass('bg-background/60 hover:bg-background', 'bg-background/50 hover:bg-background backdrop-blur-xs')"
+          class="group h-full border border-border bg-card transition-all rounded-md hover:border-foreground/35 hover:shadow-xs shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
         >
           <div class="gap-3 grid grid-cols-3">
             <div
               v-for="(item, index) in hardwareInfo" :key="item.label"
-              class="min-w-0 flex flex-col gap-1 rounded-sm bg-slate-500/5 p-2" :class="!index && 'col-span-3'"
+              class="min-w-0 flex flex-col gap-1 rounded-md bg-muted/40 p-2.5 border border-border/40" :class="!index && 'col-span-3'"
             >
               <div class="flex gap-1 items-center text-muted-foreground">
                 <Icon v-if="item.icon" :icon="item.icon" :width="14" :height="14" />
                 <span class="text-xs sm:text-sm">{{ item.label }}</span>
               </div>
-              <span class="text-xs sm:text-sm break-all">{{ item.value }}</span>
+              <span class="text-xs sm:text-sm break-all font-mono tabular-nums">{{ item.value }}</span>
             </div>
           </div>
         </CardX>
 
         <CardX
           title="系统信息" size="small"
-          class="group h-full border-none transition-all rounded-md"
-          :class="pickSurfaceClass('bg-background/60 hover:bg-background', 'bg-background/50 hover:bg-background backdrop-blur-xs')"
+          class="group h-full border border-border bg-card transition-all rounded-md hover:border-foreground/35 hover:shadow-xs shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
         >
           <div class="gap-3 grid grid-cols-1 sm:grid-cols-2">
             <div
               v-for="item in systemInfo" :key="item.label"
-              class="min-w-0 flex flex-col gap-1 rounded-sm bg-slate-500/5 p-2"
+              class="min-w-0 flex flex-col gap-1 rounded-md bg-muted/40 p-2.5 border border-border/40"
             >
               <div class="flex gap-1 items-center text-muted-foreground">
                 <Icon v-if="item.icon" :icon="item.icon" :width="14" :height="14" />
@@ -334,7 +332,7 @@ const trafficProgressStyle = computed(() => ({
                   v-if="item.label === '操作系统'" :src="getOSImage(data.os)" :alt="getOSName(data.os)"
                   class="size-5 shrink-0"
                 >
-                <span class="text-xs sm:text-sm break-all">
+                <span class="text-xs sm:text-sm break-all font-mono tabular-nums">
                   {{ item.value }}
                 </span>
               </div>
@@ -344,34 +342,32 @@ const trafficProgressStyle = computed(() => ({
 
         <CardX
           title="存储信息" size="small"
-          class="group h-full border-none transition-all rounded-md"
-          :class="pickSurfaceClass('bg-background/60 hover:bg-background', 'bg-background/50 hover:bg-background backdrop-blur-xs')"
+          class="group h-full border border-border bg-card transition-all rounded-md hover:border-foreground/35 hover:shadow-xs shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
         >
           <div class="gap-3 grid grid-cols-3">
             <div
               v-for="item in storageInfo" :key="item.label"
-              class="min-w-0 flex flex-col gap-1 rounded-sm bg-slate-500/5 p-2"
+              class="min-w-0 flex flex-col gap-1 rounded-md bg-muted/40 p-2.5 border border-border/40"
             >
               <div class="flex gap-1 items-center text-muted-foreground">
                 <Icon v-if="item.icon" :icon="item.icon" :width="14" :height="14" />
                 <span class="text-xs sm:text-sm">{{ item.label }}</span>
               </div>
-              <span class="text-xs sm:text-sm break-all">{{ item.value }}</span>
+              <span class="text-xs sm:text-sm break-all font-mono tabular-nums">{{ item.value }}</span>
             </div>
           </div>
         </CardX>
 
         <CardX
           title="网络信息" size="small"
-          class="group h-full border-none transition-all rounded-md"
-          :class="pickSurfaceClass('bg-background/60 hover:bg-background', 'bg-background/50 hover:bg-background backdrop-blur-xs')"
+          class="group h-full border border-border bg-card transition-all rounded-md hover:border-foreground/35 hover:shadow-xs shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
           content-class="pt-0"
         >
           <div class="gap-3 grid grid-cols-2">
-            <div class="relative min-w-0 overflow-hidden rounded-sm bg-slate-500/5 p-2">
+            <div class="relative min-w-0 overflow-hidden rounded-md bg-muted/40 p-2.5 border border-border/40">
               <div
                 v-if="hasTrafficLimit"
-                class="absolute inset-y-0 left-0 rounded-sm bg-primary/10 pointer-events-none transition-[width] duration-300 ease-out"
+                class="absolute inset-y-0 left-0 rounded-md bg-primary/10 pointer-events-none transition-[width] duration-300 ease-out"
                 :style="trafficProgressStyle"
               />
               <div class="relative flex flex-col gap-1.5">
@@ -391,17 +387,17 @@ const trafficProgressStyle = computed(() => ({
                     </span>
                   </div>
                 </div>
-                <span class="text-xs sm:text-sm break-all">
+                <span class="text-xs sm:text-sm break-all font-mono tabular-nums">
                   {{ trafficUsageText }}
                 </span>
               </div>
             </div>
-            <div class="min-w-0 flex flex-col gap-1 rounded-sm bg-slate-500/5 p-2">
+            <div class="min-w-0 flex flex-col gap-1 rounded-md bg-muted/40 p-2.5 border border-border/40">
               <div class="flex gap-1 items-center text-muted-foreground">
                 <Icon icon="icon-park-outline:dashboard-one" :width="14" :height="14" />
                 <span class="text-xs sm:text-sm">网络速率</span>
               </div>
-              <span class="text-xs sm:text-sm break-all flex flex-row flex-wrap items-center gap-1">
+              <span class="text-xs sm:text-sm break-all flex flex-row flex-wrap items-center gap-1 font-mono tabular-nums">
                 <Icon icon="tabler:chevron-up" width="12" height="12" />
                 {{ formatBytesPerSecond(data?.net_out ?? 0) }}
                 <span class="px-0.5" />

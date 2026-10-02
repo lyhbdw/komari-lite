@@ -256,40 +256,12 @@ function getNodeItemTransitionStyle(index: number): Record<string, string> {
     <Dialog v-model:open="pingDialogOpen">
       <DialogContent
         v-if="selectedPingNode"
-        class="max-w-6xl gap-0 overflow-hidden border-border/80 p-0 shadow-2xl transition-all"
-        :class="pickSurfaceClass('bg-background', 'bg-background/90 backdrop-blur-xl')"
+        class="max-w-6xl gap-0 overflow-hidden border border-border/80 p-0 shadow-2xl transition-all bg-card"
       >
-        <DialogHeader class="flex h-13 flex-row items-center px-4">
+        <DialogHeader class="flex h-13 flex-row items-center px-4 border-b border-border/60">
           <DialogTitle class="truncate">
             {{ selectedPingNode.name }} 延迟 / 丢包
           </DialogTitle>
-          <div class="absolute inset-0 mx-0 max-w-none overflow-hidden bg-muted/10 -z-9 zoom-90">
-            <div class="absolute top-0 left-1/2 -ml-152 h-100 w-325 dark:mask-[linear-gradient(white,transparent)]">
-              <div
-                class="absolute inset-0 bg-linear-to-r from-foreground/10 to-transparent mask-[radial-gradient(farthest-side_at_top,white,transparent)] opacity-40 dark:opacity-80"
-              >
-                <svg
-                  aria-hidden="true"
-                  class="absolute inset-x-0 inset-y-[-50%] h-[200%] w-full skew-y-[-18deg] fill-black/40 stroke-black/50 mix-blend-overlay dark:fill-white/2.5 dark:stroke-white/5"
-                >
-                  <defs>
-                    <pattern id="_S_1_" width="72" height="56" patternUnits="userSpaceOnUse" x="-12" y="4">
-                      <path d="M.5 56V.5H72" fill="none" />
-                    </pattern>
-                  </defs>
-                  <rect width="100%" height="100%" stroke-width="0" fill="url(#_S_1_)" /><svg
-                    x="-12" y="4"
-                    class="overflow-visible"
-                  >
-                    <rect stroke-width="0" width="73" height="57" x="288" y="168" />
-                    <rect stroke-width="0" width="73" height="57" x="144" y="56" />
-                    <rect stroke-width="0" width="73" height="57" x="504" y="168" />
-                    <rect stroke-width="0" width="73" height="57" x="720" y="336" />
-                  </svg>
-                </svg>
-              </div>
-            </div>
-          </div>
         </DialogHeader>
         <div class="max-h-[calc(90vh-4rem)] overflow-y-auto p-4 pt-0">
           <PingChart :uuid="selectedPingNode.uuid" />

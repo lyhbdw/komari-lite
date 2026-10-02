@@ -412,7 +412,7 @@ onMounted(async () => {
 
     <!-- 剩余价值与汇率详情模态弹窗 (Vercel 极简无彩色设计) -->
     <Dialog v-model:open="openFinanceDialog">
-      <DialogContent class="sm:max-w-xl border-border/80 bg-background/95 backdrop-blur-md shadow-2xl p-0 overflow-hidden">
+      <DialogContent class="sm:max-w-xl border border-border bg-card shadow-2xl p-0 overflow-hidden">
         <DialogHeader class="p-5 border-b border-border/70 bg-card/60">
           <div class="flex items-center justify-between pr-6">
             <div class="flex items-center gap-2.5">
