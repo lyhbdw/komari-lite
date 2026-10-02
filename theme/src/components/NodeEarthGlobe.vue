@@ -14,6 +14,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useAppStore } from '@/stores/app'
 import { useNodesStore } from '@/stores/nodes'
 import { getCoordByCode, getCountryCodeFromRegion } from '@/utils/geoHelper'
+import { formatBytesPerSecondSplit } from '@/utils/helper'
 
 const props = defineProps<{
   nodes?: NodeData[]
@@ -103,6 +104,11 @@ function clusterKey(c: RegionCluster) {
   return `${c.code}:${c.servers}:${c.onlineServers}`
 }
 
+interface RegionRate {
+  up: number
+  down: number
+}
+
 // 节点按地区聚合
 const regionClusters = computed<RegionCluster[]>(() => {
   const map = new Map<string, RegionCluster>()
@@ -124,6 +130,25 @@ const regionClusters = computed<RegionCluster[]>(() => {
       entry.onlineServers += 1
   }
   return Array.from(map.values()).sort((a, b) => b.servers - a.servers)
+})
+
+const regionRates = computed<Map<string, RegionRate>>(() => {
+  const map = new Map<string, RegionRate>()
+  for (const node of displayNodes.value) {
+    if (!node.online)
+      continue
+    const code = getCountryCodeFromRegion(node.region)
+    if (!code)
+      continue
+    let entry = map.get(code)
+    if (!entry) {
+      entry = { up: 0, down: 0 }
+      map.set(code, entry)
+    }
+    entry.up += node.net_out || 0
+    entry.down += node.net_in || 0
+  }
+  return map
 })
 
 const arcsEnabled = computed(() => appStore.visitorInfoCardEnabled && appStore.visitorCountryCode != null)
@@ -463,10 +488,18 @@ const totalServers = computed(() => displayNodes.value.length)
 const onlineServers = computed(() => displayNodes.value.filter(node => node.online).length)
 const offlineServers = computed(() => totalServers.value - onlineServers.value)
 
+function rateFor(code: string): RegionRate {
+  return regionRates.value.get(code) ?? { up: 0, down: 0 }
+}
+
+function formatRate(bytesPerSec: number): string {
+  const { value, unit } = formatBytesPerSecondSplit(bytesPerSec, appStore.byteDecimals)
+  return `${value} ${unit}`
+}
 </script>
 
 <template>
-  <div ref="containerRef" class="relative aspect-square w-full max-w-[260px] md:max-w-[280px] mx-auto flex items-center justify-center">
+  <div ref="containerRef" class="relative aspect-square w-full max-w-md mx-auto -translate-y-6 md:-translate-y-12">
     <canvas
       ref="canvasRef"
       class="earth-globe-canvas absolute inset-0 z-0 w-full h-full select-none touch-none cursor-grab active:cursor-grabbing"
@@ -476,30 +509,39 @@ const offlineServers = computed(() => totalServers.value - onlineServers.value)
     <template v-for="cluster in regionClusters" :key="cluster.code">
       <div
         :ref="bindClusterOverlayRef(cluster.code)"
-        class="absolute -top-3 left-0 z-10 pointer-events-none rounded transition-[opacity,filter] duration-500"
+        class="absolute -top-7.5 left-0 z-10 pointer-events-none rounded transition-[opacity,filter] duration-500"
       >
-        <div class="relative z-1 flex items-center gap-1 bg-card/90 dark:bg-card/85 border border-border/80 shadow-xs rounded px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground backdrop-blur-md">
-          <img
-            :src="`/assets/flags/${cluster.code}.svg`" :alt="cluster.code"
-            class="size-3.5 block rounded-xs shrink-0"
-          >
-          <span v-if="cluster.servers > 1" class="font-medium text-foreground/80">{{ cluster.servers }}</span>
+        <img
+          :src="`/assets/flags/${cluster.code}.svg`" :alt="cluster.code"
+          class="size-4 block absolute -bottom-2 -left-2 z-10"
+        >
+        <div class="relative z-1 bg-card/95 dark:bg-card/90 border border-border/80 shadow-xs rounded py-0.5 px-1.5 text-xs zoom-80 items-start justify-center text-nowrap backdrop-blur-md">
+          <div class="text-emerald-700 dark:text-emerald-400 font-mono font-medium flex flex-row items-center gap-0.5">
+            <Icon icon="tabler:chevron-up" width="12" height="12" /> {{ formatRate(rateFor(cluster.code).up) }}
+          </div>
+          <div class="text-sky-700 dark:text-sky-400 font-mono font-medium flex flex-row items-center gap-0.5">
+            <Icon icon="tabler:chevron-down" width="12" height="12" /> {{ formatRate(rateFor(cluster.code).down) }}
+          </div>
         </div>
       </div>
     </template>
 
     <div
       v-if="totalServers > 0"
-      class="absolute top-1 left-1 z-10 text-[10px] text-muted-foreground font-medium pointer-events-none flex gap-2 items-center backdrop-blur-md bg-card/90 border border-border/70 rounded px-2 py-0.5 shadow-xs"
+      class="absolute top-6 md:top-12 left-0 z-10 text-[10px] text-muted-foreground font-medium pointer-events-none flex gap-2 items-center backdrop-blur-md bg-card/90 border border-border/70 rounded px-2 py-0.5 shadow-xs"
     >
       <div v-if="onlineServers > 0" class="flex items-center gap-1">
-        <span class="inline-block size-1.5 rounded-full bg-emerald-500" />
-        <span class="text-emerald-700 dark:text-emerald-400 font-mono">{{ onlineServers }} 在线</span>
+        <span class="inline-block size-1.5 rounded-full bg-green-600 animate-pulse" />
+        <span class="text-green-600">{{ onlineServers }}</span>
       </div>
       <div v-if="offlineServers > 0" class="flex items-center gap-1">
-        <span class="inline-block size-1.5 rounded-full bg-rose-500" />
-        <span class="text-rose-700 dark:text-rose-400 font-mono">{{ offlineServers }} 离线</span>
+        <span class="inline-block size-1.5 rounded-full bg-yellow-600 animate-pulse" />
+        <span class="text-yellow-600">{{ offlineServers }}</span>
       </div>
+      <!-- <div v-if="totalServers > 0" class="flex items-center gap-1">
+        <span class="inline-block size-1.5 rounded-full bg-blue-600 animate-pulse" />
+        <span class="text-blue-600">{{ totalServers }}</span>
+      </div> -->
     </div>
   </div>
 </template>
