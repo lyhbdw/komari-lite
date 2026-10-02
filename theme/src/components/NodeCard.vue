@@ -170,10 +170,11 @@ function openPingDialog() {
               <span class="font-mono tabular-nums" :class="cpuTextClass">{{ (props.node.cpu ?? 0).toFixed(1) }}%</span>
             </div>
             <ProgressThin :percentage="props.node.cpu ?? 0" :status="cpuStatus" :height="4" />
-            <div class="text-[11px] text-foreground/85 dark:text-muted-foreground truncate font-mono font-medium tabular-nums tracking-normal">
-              {{ props.node.load.toFixed(2) ?? 0 }}, {{ props.node.load5.toFixed(2) ?? 0 }}, {{
-                props.node.load15.toFixed(2) ?? 0 }}
-            </div>
+            <DataTooltip placement="top" :content="`负载均值 (1/5/15m): ${props.node.load?.toFixed(2) ?? 0}, ${props.node.load5?.toFixed(2) ?? 0}, ${props.node.load15?.toFixed(2) ?? 0}`">
+              <div class="text-[11px] text-muted-foreground truncate font-mono tabular-nums">
+                {{ props.node.cpu_cores ? `${props.node.cpu_cores} 核心` : '单核' }}
+              </div>
+            </DataTooltip>
           </div>
 
           <!-- 内存 -->
@@ -259,11 +260,10 @@ function openPingDialog() {
             </div>
           </div>
           <div class="flex flex-col gap-y-2" :class="[!props.node.online && 'blur-xs opacity-60 pointer-events-none']">
-            <div class="flex items-center">
-              <span class="truncate tracking-wide">
+            <div class="flex items-center justify-between">
+              <span class="truncate tracking-wide text-muted-foreground">
                 速率
               </span>
-              <div class="border-t-2 border-dotted border-gray-500/10 mx-2 flex-1" />
               <div class="truncate flex flex-row gap-1.5 font-mono tabular-nums">
                 <div class="text-emerald-600 dark:text-emerald-400 font-medium flex flex-row items-center gap-0.5">
                   <Icon icon="tabler:chevron-up" width="12" height="12" class="text-emerald-500 shrink-0" />
@@ -276,19 +276,17 @@ function openPingDialog() {
               </div>
             </div>
             <div class="flex items-center justify-between">
-              <span class="truncate tracking-wide">
+              <span class="truncate tracking-wide text-muted-foreground">
                 在线
               </span>
-              <div class="border-t-2 border-dotted border-gray-500/10 mx-2 flex-1" />
-              <span class="truncate">
-                {{ props.node.uptime > 0 ? formatUptime(props.node.uptime) : '' }}
+              <span class="truncate font-mono tabular-nums text-foreground/85">
+                {{ props.node.uptime > 0 ? formatUptime(props.node.uptime) : '-' }}
               </span>
             </div>
             <div class="flex items-center justify-between">
-              <span class="truncate tracking-wide">
+              <span class="truncate tracking-wide text-muted-foreground">
                 费用
               </span>
-              <div class="border-t-2 border-dotted border-gray-500/10 mx-2 flex-1" />
               <DataTooltip placement="left" :content="expiredDate" content-class="whitespace-nowrap right-0 mr-0">
                 <span class="truncate flex flex-row gap-1">
                   <template v-for="(tag, index) in priceTags" :key="tag.text">
@@ -301,10 +299,9 @@ function openPingDialog() {
               </DataTooltip>
             </div>
             <div class="flex items-center justify-between">
-              <span class="truncate tracking-wide">
+              <span class="truncate tracking-wide text-muted-foreground">
                 三网
               </span>
-              <div class="border-t-2 border-dotted border-gray-500/10 mx-2 flex-1" />
               <div v-if="topPingNetworks.length > 0" class="flex flex-row items-center gap-1.5">
                 <DataTooltip
                   v-for="net in topPingNetworks" :key="net.name" placement="top"
@@ -316,8 +313,8 @@ function openPingDialog() {
                   </div>
                 </DataTooltip>
               </div>
-              <div v-else class="truncate">
-                N/A
+              <div v-else class="truncate text-muted-foreground/60">
+                -
               </div>
             </div>
             <div class="grid grid-cols-6 gap-x-3">
@@ -330,7 +327,6 @@ function openPingDialog() {
               >
                 <div class="flex items-center justify-between text-[11px] leading-none relative">
                   <span class="text-muted-foreground">延迟</span>
-                  <div class="border-t-2 border-dotted border-gray-500/10 mx-2 flex-1" />
                   <span class="font-medium text-foreground/85">{{ latencyDisplay }}</span>
                 </div>
                 <div
@@ -357,7 +353,6 @@ function openPingDialog() {
               >
                 <div class="flex items-center justify-between text-[11px] leading-none">
                   <span class="text-muted-foreground">丢包</span>
-                  <div class="border-t-2 border-dotted border-gray-500/10 mx-2 flex-1" />
                   <span class="font-medium text-foreground/85">{{ lossDisplay }}</span>
                 </div>
                 <div

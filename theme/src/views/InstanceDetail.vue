@@ -125,7 +125,7 @@ const metricCards = computed<MetricCard[]>(() => {
   const totalRemainingCNY = financeHelper.calculateRemainingValueCNY(data.value, exchangeRates.value)
   const totalItem = formatFinanceAmountObject(totalRemainingCNY, financeBaseCurrency.value)
 
-  return [
+  const cards: MetricCard[] = [
     {
       label: '剩余价值',
       value: `${baseItem.symbol}${baseItem.value}`,
@@ -135,15 +135,21 @@ const metricCards = computed<MetricCard[]>(() => {
       iconClass: 'text-slate-500/25 group-hover:text-slate-500',
       cardBorderHoverClass: 'hover:border-foreground/30',
     },
-    {
+  ]
+
+  if (hasPremium && premiumItem) {
+    cards.push({
       label: '购入溢价',
-      value: premiumItem ? `${premiumItem.symbol}${premiumItem.value}` : (appStore.lang === 'zh-CN' ? '无溢价' : 'None'),
-      unit: premiumItem ? premiumItem.currency : undefined,
+      value: `${premiumItem.symbol}${premiumItem.value}`,
+      unit: premiumItem.currency,
       icon: 'tabler:cash-plus',
       valueClass: 'text-foreground',
       iconClass: 'text-slate-500/25 group-hover:text-slate-500',
       cardBorderHoverClass: 'hover:border-foreground/30',
-    },
+    })
+  }
+
+  cards.push(
     {
       label: '月均支出',
       value: monthlyItem ? `${monthlyItem.symbol}${monthlyItem.value}` : (appStore.lang === 'zh-CN' ? '不适用' : 'N/A'),
@@ -162,7 +168,10 @@ const metricCards = computed<MetricCard[]>(() => {
       iconClass: 'text-slate-500/25 group-hover:text-slate-500',
       cardBorderHoverClass: 'hover:border-foreground/30',
     },
-    {
+  )
+
+  if (hasPremium) {
+    cards.push({
       label: '剩余总价值',
       value: `${totalItem.symbol}${totalItem.value}`,
       unit: totalItem.currency,
@@ -170,16 +179,23 @@ const metricCards = computed<MetricCard[]>(() => {
       valueClass: 'text-foreground',
       iconClass: 'text-slate-500/25 group-hover:text-slate-500',
       cardBorderHoverClass: 'hover:border-foreground/30',
-    },
-  ]
+    })
+  }
+
+  return cards
 })
 
-const hardwareInfo = computed<InfoItem[]>(() => [
-  { label: 'CPU', value: data.value ? `${data.value.cpu_name} (x${data.value.cpu_cores})` : '-', icon: 'icon-park-outline:cpu' },
-  { label: '架构', value: data.value?.arch ?? '-', icon: 'icon-park-outline:application-two' },
-  { label: '虚拟化', value: data.value?.virtualization ?? '-', icon: 'icon-park-outline:server' },
-  { label: 'GPU', value: data.value?.gpu_name || '-', icon: 'icon-park-outline:video-one' },
-])
+const hardwareInfo = computed<InfoItem[]>(() => {
+  const items: InfoItem[] = [
+    { label: 'CPU', value: data.value ? `${data.value.cpu_name} (x${data.value.cpu_cores})` : '-', icon: 'icon-park-outline:cpu' },
+    { label: '架构', value: data.value?.arch ?? '-', icon: 'icon-park-outline:application-two' },
+    { label: '虚拟化', value: data.value?.virtualization ?? '-', icon: 'icon-park-outline:server' },
+  ]
+  if (data.value?.gpu_name && data.value.gpu_name !== '-' && data.value.gpu_name.trim() !== '') {
+    items.push({ label: 'GPU', value: data.value.gpu_name, icon: 'icon-park-outline:video-one' })
+  }
+  return items
+})
 
 const systemInfo = computed<InfoItem[]>(() => [
   { label: '操作系统', value: data.value?.os ?? '-', icon: 'icon-park-outline:computer' },
@@ -255,7 +271,7 @@ const trafficProgressStyle = computed(() => ({
         </Badge>
       </div>
 
-      <div class="px-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+      <div class="px-4 grid gap-3" :class="metricCards.length <= 3 ? 'grid-cols-1 sm:grid-cols-3' : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-5'">
         <CardX
           v-for="item in metricCards" :key="item.label" hoverable size="small"
           class="group h-full border border-border/80 bg-card transition-all rounded-md"
@@ -291,10 +307,11 @@ const trafficProgressStyle = computed(() => ({
           title="硬件信息" size="small"
           class="group h-full border border-border bg-card transition-all rounded-md hover:border-foreground/35 hover:shadow-xs shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
         >
-          <div class="gap-3 grid grid-cols-3">
+          <div class="gap-3 grid" :class="hardwareInfo.length <= 3 ? 'grid-cols-2' : 'grid-cols-3'">
             <div
               v-for="(item, index) in hardwareInfo" :key="item.label"
-              class="min-w-0 flex flex-col gap-1 rounded-md bg-muted/40 p-2.5 border border-border/40" :class="!index && 'col-span-3'"
+              class="min-w-0 flex flex-col gap-1 rounded-md bg-muted/40 p-2.5 border border-border/40"
+              :class="index === 0 ? (hardwareInfo.length <= 3 ? 'col-span-2' : 'col-span-3') : 'col-span-1'"
             >
               <div class="flex gap-1 items-center text-muted-foreground">
                 <Icon v-if="item.icon" :icon="item.icon" :width="14" :height="14" />

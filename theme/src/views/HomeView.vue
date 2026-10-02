@@ -172,11 +172,11 @@ function getNodeItemTransitionStyle(index: number): Record<string, string> {
       :transition-key="appStore.nodeSelectedGroup"
     />
 
-    <div class="node-info p-4 pt-0 flex flex-col gap-4 relative z-1 md:pointer-events-none" :class="appStore.earthViewMode === 'hide' && 'pt-4'">
+    <div class="node-info p-4 pt-0 flex flex-col gap-4 relative z-1" :class="appStore.earthViewMode === 'hide' && 'pt-4'">
       <div class="nodes">
         <Tabs v-model="appStore.nodeSelectedGroup" class="w-full flex-col gap-4">
           <div class="flex gap-2 items-start flex-nowrap">
-            <div class="overflow-x-auto rounded-md md:pointer-events-auto">
+            <div class="overflow-x-auto rounded-md">
               <TabsList class="w-max h-8 p-0.5 bg-muted/80 dark:bg-muted/60 border border-border/60 rounded-md">
                 <TabsTrigger
                   v-for="g in groups" :key="g.name" :value="g.name"
@@ -186,7 +186,7 @@ function getNodeItemTransitionStyle(index: number): Record<string, string> {
                 </TabsTrigger>
               </TabsList>
             </div>
-            <div class="ml-auto search flex gap-2 items-center pointer-events-auto">
+            <div class="ml-auto search flex gap-2 items-center">
               <div class="flex items-center p-0.5 bg-muted/80 dark:bg-muted/60 border border-border/60 rounded-md h-8">
                 <button
                   type="button"

@@ -188,10 +188,10 @@ const showEarth = computed(() => appStore.earthViewMode === 'earth' || appStore.
 const showMaps = computed(() => appStore.earthViewMode === 'maps')
 const showVisualPanel = computed(() => showEarth.value || showMaps.value)
 const wrapperClass = computed(() => showVisualPanel.value
-  ? 'p-4 grid grid-cols-12 grid-rows-1 gap-2 h-auto md:h-58'
+  ? 'p-4 grid grid-cols-12 grid-rows-1 gap-2 h-auto md:h-58 items-center'
   : 'p-4 grid grid-cols-1 gap-2 h-auto')
 const cardGridClass = computed(() => showVisualPanel.value
-  ? 'h-42 -mt-42 md:mt-0 col-span-12 row-start-3 z-9 md:h-auto md:col-span-6 md:row-start-1 grid grid-cols-12 grid-rows-2 gap-2'
+  ? 'col-span-12 row-start-2 md:col-span-6 md:row-start-1 grid grid-cols-12 grid-rows-2 gap-2'
   : 'col-span-1 grid grid-cols-3 md:grid-cols-6 gap-2')
 
 onMounted(async () => {
@@ -205,8 +205,8 @@ onMounted(async () => {
 
 <template>
   <div :class="wrapperClass">
-    <NodeEarthGlobe v-if="showEarth" :nodes="globeNodes" class="col-span-12 col-start-1 md:col-span-6 md:col-start-7" />
-    <NodeEarthMaps v-else-if="showMaps" :nodes="globeNodes" class="col-span-12 col-start-1 md:col-span-6 md:col-start-7" />
+    <NodeEarthGlobe v-if="showEarth" :nodes="globeNodes" class="col-span-12 col-start-1 md:col-span-6 md:col-start-7 flex items-center justify-center overflow-hidden" />
+    <NodeEarthMaps v-else-if="showMaps" :nodes="globeNodes" class="col-span-12 col-start-1 md:col-span-6 md:col-start-7 flex items-center justify-center overflow-hidden" />
 
     <div :class="cardGridClass">
       <CardX
@@ -302,7 +302,10 @@ onMounted(async () => {
                 <span class="text-md md:text-2xl font-bold dark:font-semibold leading-none tracking-tight font-mono tabular-nums">
                   {{ formattedRemainingValue.symbol }}{{ formattedRemainingValue.value }}
                 </span>
-                <span class="block truncate text-[11px] md:text-xs font-medium text-muted-foreground">
+                <span
+                  v-if="formattedRemainingValue.currency !== 'CNY' || formattedRemainingValue.symbol !== '¥'"
+                  class="block truncate text-[11px] md:text-xs font-medium text-muted-foreground"
+                >
                   {{ formattedRemainingValue.currency }}
                 </span>
               </div>
