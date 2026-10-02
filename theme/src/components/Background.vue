@@ -144,7 +144,7 @@ onUnmounted(() => {
           >
             <svg
               aria-hidden="true"
-              class="absolute inset-x-0 inset-y-[-50%] h-[200%] w-full skew-y-[-18deg] text-foreground/[0.025] fill-foreground/[0.003] dark:text-white/[0.045] dark:fill-white/[0.006]"
+              class="absolute inset-x-0 inset-y-[-50%] h-[200%] w-full skew-y-[-18deg] text-foreground/[0.025] fill-foreground/[0.003] dark:text-foreground/[0.045] dark:fill-foreground/[0.006]"
             >
               <defs>
                 <pattern id="_S_1_" width="72" height="56" patternUnits="userSpaceOnUse" x="-12" y="4">
@@ -155,10 +155,10 @@ onUnmounted(() => {
                 x="-12" y="4"
                 class="overflow-visible"
               >
-                <rect stroke-width="0" width="73" height="57" x="288" y="168" class="fill-foreground/[0.01] dark:fill-white/[0.015]" />
-                <rect stroke-width="0" width="73" height="57" x="144" y="56" class="fill-foreground/[0.01] dark:fill-white/[0.015]" />
-                <rect stroke-width="0" width="73" height="57" x="504" y="168" class="fill-foreground/[0.01] dark:fill-white/[0.015]" />
-                <rect stroke-width="0" width="73" height="57" x="720" y="336" class="fill-foreground/[0.01] dark:fill-white/[0.015]" />
+                <rect stroke-width="0" width="73" height="57" x="288" y="168" class="fill-foreground/[0.01] dark:fill-foreground/[0.015]" />
+                <rect stroke-width="0" width="73" height="57" x="144" y="56" class="fill-foreground/[0.01] dark:fill-foreground/[0.015]" />
+                <rect stroke-width="0" width="73" height="57" x="504" y="168" class="fill-foreground/[0.01] dark:fill-foreground/[0.015]" />
+                <rect stroke-width="0" width="73" height="57" x="720" y="336" class="fill-foreground/[0.01] dark:fill-foreground/[0.015]" />
               </svg>
             </svg>
           </div>

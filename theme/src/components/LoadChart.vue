@@ -60,14 +60,14 @@ const chartColors = {
 
 // 图表主题相关颜色
 const chartThemeColors = computed(() => ({
-  text: isDark.value ? 'rgba(255, 255, 255, 0.90)' : 'rgba(0, 0, 0, 0.90)',
-  textSecondary: isDark.value ? 'rgba(255, 255, 255, 0.65)' : 'rgba(0, 0, 0, 0.68)',
-  textTertiary: isDark.value ? 'rgba(255, 255, 255, 0.45)' : 'rgba(0, 0, 0, 0.45)',
-  borderColor: isDark.value ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
-  splitLineColor: isDark.value ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)',
-  tooltipBg: isDark.value ? 'rgba(20, 20, 20, 0.96)' : 'rgba(255, 255, 255, 0.96)',
-  tooltipShadow: isDark.value ? 'rgba(0, 0, 0, 0.5)' : 'rgba(0, 0, 0, 0.1)',
-  crosshairColor: isDark.value ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.15)',
+  text: isDark.value ? 'rgba(230, 227, 223, 0.90)' : 'rgba(44, 40, 37, 0.90)',
+  textSecondary: isDark.value ? 'rgba(230, 227, 223, 0.65)' : 'rgba(44, 40, 37, 0.68)',
+  textTertiary: isDark.value ? 'rgba(230, 227, 223, 0.45)' : 'rgba(44, 40, 37, 0.45)',
+  borderColor: isDark.value ? 'rgba(230, 227, 223, 0.15)' : 'rgba(44, 40, 37, 0.12)',
+  splitLineColor: isDark.value ? 'rgba(230, 227, 223, 0.08)' : 'rgba(44, 40, 37, 0.08)',
+  tooltipBg: isDark.value ? 'rgba(26, 25, 24, 0.96)' : 'rgba(253, 252, 250, 0.96)',
+  tooltipShadow: isDark.value ? 'rgba(0, 0, 0, 0.5)' : 'rgba(0, 0, 0, 0.08)',
+  crosshairColor: isDark.value ? 'rgba(230, 227, 223, 0.2)' : 'rgba(44, 40, 37, 0.15)',
 }))
 
 // 通用 Tooltip 配置
