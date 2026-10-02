@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Arc, COBEOptions, Globe, Marker } from 'cobe'
+import type { COBEOptions, Globe, Marker } from 'cobe'
 import type { ComponentPublicInstance } from 'vue'
 import type { NodeData } from '@/stores/nodes'
 import { Icon } from '@iconify/vue'
@@ -151,13 +151,6 @@ const regionRates = computed<Map<string, RegionRate>>(() => {
   return map
 })
 
-const arcsEnabled = computed(() => false)
-const userCoord = computed<[number, number] | null>(() => {
-  if (!appStore.visitorInfoCardEnabled)
-    return null
-  return getCoordByCode(appStore.visitorCountryCode)
-})
-
 const clusterOverlayEls = new Map<string, HTMLDivElement>()
 const clusterOverlayRefBinders = new Map<string, (el: Element | ComponentPublicInstance | null) => void>()
 
@@ -258,18 +251,6 @@ const markers = computed<Marker[]>(() => {
   }))
 })
 
-// 从各地区汇聚到用户当前位置；无用户坐标时回退到 hub 拓扑
-const arcs = computed<Arc[]>(() => {
-  const clusters = regionClusters.value
-  const user = userCoord.value
-  if (!arcsEnabled.value || !user || clusters.length === 0)
-    return []
-  return clusters.map(cluster => ({
-    from: cluster.coord,
-    to: user,
-  }))
-})
-
 const themeColors = computed(() => {
   if (appStore.isDark) {
     return {
@@ -278,7 +259,6 @@ const themeColors = computed(() => {
       baseColor: [0.15, 0.15, 0.15] as [number, number, number],
       markerColor: [0.95, 0.95, 0.95] as [number, number, number],
       glowColor: [0.1, 0.1, 0.1] as [number, number, number],
-      arcColor: [0.75, 0.75, 0.75] as [number, number, number],
     }
   }
   return {
@@ -287,7 +267,6 @@ const themeColors = computed(() => {
     baseColor: [0.95, 0.95, 0.95] as [number, number, number],
     markerColor: [0.15, 0.15, 0.15] as [number, number, number],
     glowColor: [0.9, 0.9, 0.9] as [number, number, number],
-    arcColor: [0.35, 0.35, 0.35] as [number, number, number],
   }
 })
 
@@ -308,10 +287,6 @@ function buildInitialOptions(): COBEOptions {
     markerColor: colors.markerColor,
     glowColor: colors.glowColor,
     markers: markers.value,
-    arcs: arcs.value,
-    arcColor: colors.arcColor,
-    arcWidth: 0.8,
-    arcHeight: 0.4,
     markerElevation: MARKER_ELEVATION,
   }
 }
@@ -413,7 +388,6 @@ watch(themeColors, (colors) => {
     baseColor: colors.baseColor,
     markerColor: colors.markerColor,
     glowColor: colors.glowColor,
-    arcColor: colors.arcColor,
   })
   updateGlobeFrame()
   if (!shouldAutoRotate.value)
@@ -440,11 +414,11 @@ watch(
 )
 
 watch(
-  [() => regionClusters.value.map(clusterKey).join(','), userCoord],
+  () => regionClusters.value.map(clusterKey).join(','),
   async () => {
     if (!globe)
       return
-    globe.update({ markers: markers.value, arcs: arcs.value })
+    globe.update({ markers: markers.value })
     await nextTick()
     syncClusterOverlayPositions()
     if (!shouldAutoRotate.value)
