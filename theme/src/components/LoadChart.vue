@@ -68,6 +68,7 @@ const chartThemeColors = computed(() => ({
   tooltipBg: isDark.value ? 'rgba(26, 25, 24, 0.96)' : 'rgba(253, 252, 250, 0.96)',
   tooltipShadow: isDark.value ? 'rgba(0, 0, 0, 0.5)' : 'rgba(0, 0, 0, 0.08)',
   crosshairColor: isDark.value ? 'rgba(230, 227, 223, 0.2)' : 'rgba(44, 40, 37, 0.15)',
+  fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif',
 }))
 
 // 通用 Tooltip 配置
@@ -80,6 +81,7 @@ const baseTooltipConfig = computed(() => ({
   borderRadius: 6,
   textStyle: {
     color: chartThemeColors.value.text,
+    fontFamily: chartThemeColors.value.fontFamily,
     fontSize: 12,
     lineHeight: 20,
   },
@@ -328,6 +330,7 @@ const baseXAxisConfig = computed(() => ({
   type: 'category' as const,
   data: chartData.value.map(r => formatTime(r.time, showDateInAxis.value)),
   axisLabel: {
+    fontFamily: chartThemeColors.value.fontFamily,
     fontSize: 11,
     color: chartThemeColors.value.textSecondary,
     margin: 12,
@@ -345,6 +348,7 @@ const baseXAxisConfig = computed(() => ({
 const baseYAxisConfig = computed(() => ({
   type: 'value' as const,
   axisLabel: {
+    fontFamily: chartThemeColors.value.fontFamily,
     fontSize: 11,
     color: chartThemeColors.value.textSecondary,
   },

@@ -39,6 +39,7 @@ const chartThemeColors = computed(() => ({
   tooltipBg: isDark.value ? 'rgba(26, 25, 24, 0.96)' : 'rgba(253, 252, 250, 0.96)',
   tooltipShadow: isDark.value ? 'rgba(0, 0, 0, 0.5)' : 'rgba(0, 0, 0, 0.08)',
   crosshairColor: isDark.value ? 'rgba(230, 227, 223, 0.2)' : 'rgba(44, 40, 37, 0.15)',
+  fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif',
 }))
 
 // 优化后的图表配色方案（多任务时使用）
@@ -686,6 +687,7 @@ const baseTooltipConfig = computed(() => ({
   borderRadius: 6,
   textStyle: {
     color: chartThemeColors.value.text,
+    fontFamily: chartThemeColors.value.fontFamily,
     fontSize: 12,
     lineHeight: 20,
   },
@@ -799,8 +801,11 @@ const pingChartOption = computed(() => {
       itemHeight: 12,
       itemGap: 16,
       icon: 'roundRect',
-      textStyle: { fontSize: 11, color: chartThemeColors.value.textSecondary },
+      textStyle: { fontSize: 11, color: chartThemeColors.value.textSecondary, fontFamily: chartThemeColors.value.fontFamily },
       data: taskList.map(t => t.name),
+    },
+    textStyle: {
+      fontFamily: chartThemeColors.value.fontFamily,
     },
     grid: chartMargin,
     xAxis: {

@@ -136,7 +136,7 @@ function openPingDialog() {
             :class="[props.node.online ? 'bg-emerald-400' : 'bg-rose-400']"
           />
         </div>
-        <div class="text-md font-bold flex-1 min-w-0 truncate" :title="props.node.name">
+        <div class="text-md font-bold dark:font-semibold flex-1 min-w-0 truncate" :title="props.node.name">
           {{ props.node.name }}
         </div>
         <div v-if="customTags.length > 0" class="flex shrink-0 gap-1 items-center">
@@ -166,7 +166,7 @@ function openPingDialog() {
           <!-- CPU -->
           <div class="flex flex-col gap-1">
             <div class="w-full text-xs flex flex-row justify-between">
-              <span class="text-muted-foreground">
+              <span class="text-muted-foreground tracking-wide">
                 CPU
               </span>
               <span class="font-mono tabular-nums" :class="cpuTextClass">{{ (props.node.cpu ?? 0).toFixed(1) }}%</span>
@@ -181,7 +181,7 @@ function openPingDialog() {
           <!-- 内存 -->
           <div class="flex flex-col gap-1">
             <div class="w-full text-xs flex flex-row justify-between">
-              <span class="text-muted-foreground">
+              <span class="text-muted-foreground tracking-wide">
                 内存
               </span>
               <span class="font-mono tabular-nums" :class="memTextClass">{{ memPercentage.toFixed(1) }}%</span>
@@ -203,7 +203,7 @@ function openPingDialog() {
           <!-- 硬盘 -->
           <div class="flex flex-col gap-1">
             <div class="w-full text-xs flex flex-row justify-between">
-              <span class="text-muted-foreground">
+              <span class="text-muted-foreground tracking-wide">
                 硬盘
               </span>
               <span class="font-mono tabular-nums" :class="diskTextClass">{{ diskPercentage.toFixed(1) }}%</span>
@@ -217,7 +217,7 @@ function openPingDialog() {
           <!-- 流量进度条 -->
           <div class="flex flex-col gap-1">
             <div class="w-full text-xs flex flex-row justify-between">
-              <span class="text-muted-foreground">
+              <span class="text-muted-foreground tracking-wide">
                 流量
               </span>
               <span class="font-mono tabular-nums">{{ trafficUsedPercentage.toFixed(1) }}%</span>
@@ -260,7 +260,7 @@ function openPingDialog() {
           </div>
           <div class="flex flex-col gap-y-2" :class="[!props.node.online && 'blur-xs opacity-60 pointer-events-none']">
             <div class="flex items-center">
-              <span class="truncate">
+              <span class="truncate tracking-wide">
                 速率
               </span>
               <div class="border-t-2 border-dotted border-gray-500/10 mx-2 flex-1" />
@@ -276,7 +276,7 @@ function openPingDialog() {
               </div>
             </div>
             <div class="flex items-center justify-between">
-              <span class="truncate">
+              <span class="truncate tracking-wide">
                 在线
               </span>
               <div class="border-t-2 border-dotted border-gray-500/10 mx-2 flex-1" />
@@ -285,7 +285,7 @@ function openPingDialog() {
               </span>
             </div>
             <div class="flex items-center justify-between">
-              <span class="truncate">
+              <span class="truncate tracking-wide">
                 费用
               </span>
               <div class="border-t-2 border-dotted border-gray-500/10 mx-2 flex-1" />
@@ -301,7 +301,7 @@ function openPingDialog() {
               </DataTooltip>
             </div>
             <div class="flex items-center justify-between">
-              <span class="truncate">
+              <span class="truncate tracking-wide">
                 三网
               </span>
               <div class="border-t-2 border-dotted border-gray-500/10 mx-2 flex-1" />
@@ -385,7 +385,7 @@ function openPingDialog() {
               </span>
               <DataTooltip v-if="monthlyCostInfo.tooltip" placement="top" :content="monthlyCostInfo.tooltip">
                 <span
-                  class="font-mono font-bold tabular-nums"
+                  class="font-mono font-bold dark:font-semibold tabular-nums"
                   :class="[monthlyCostInfo.isFree ? 'text-muted-foreground font-normal' : 'text-foreground']"
                 >
                   {{ monthlyCostInfo.text }}
@@ -393,7 +393,7 @@ function openPingDialog() {
               </DataTooltip>
               <span
                 v-else
-                class="font-mono font-bold tabular-nums"
+                class="font-mono font-bold dark:font-semibold tabular-nums"
                 :class="[monthlyCostInfo.isFree ? 'text-muted-foreground font-normal' : 'text-foreground']"
               >
                 {{ monthlyCostInfo.text }}

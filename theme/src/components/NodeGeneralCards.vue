@@ -232,7 +232,7 @@ onMounted(async () => {
               :key="`memory-${summaryTransitionKey}`" class="flex items-baseline gap-1 min-w-0"
               :style="getMetricSwitchStyle(0)"
             >
-              <span class="text-md md:text-2xl font-bold leading-none tracking-tight font-mono tabular-nums">
+              <span class="text-md md:text-2xl font-bold dark:font-semibold leading-none tracking-tight font-mono tabular-nums">
                 {{ formattedMemoryUsed.value }}
               </span>
               <span class="text-[11px] md:text-xs font-medium text-muted-foreground truncate font-mono tabular-nums">
@@ -263,7 +263,7 @@ onMounted(async () => {
               :key="`disk-${summaryTransitionKey}`" class="flex items-baseline gap-1 min-w-0"
               :style="getMetricSwitchStyle(1)"
             >
-              <span class="text-md md:text-2xl font-bold leading-none tracking-tight font-mono tabular-nums">
+              <span class="text-md md:text-2xl font-bold dark:font-semibold leading-none tracking-tight font-mono tabular-nums">
                 {{ formattedDiskUsed.value }}
               </span>
               <span class="text-[11px] md:text-xs font-medium text-muted-foreground truncate font-mono tabular-nums">
@@ -301,7 +301,7 @@ onMounted(async () => {
                 :key="`remaining-value-${summaryTransitionKey}`" class="flex items-baseline gap-1 min-w-0"
                 :style="getMetricSwitchStyle(2)"
               >
-                <span class="text-md md:text-2xl font-bold leading-none tracking-tight font-mono tabular-nums">
+                <span class="text-md md:text-2xl font-bold dark:font-semibold leading-none tracking-tight font-mono tabular-nums">
                   {{ formattedRemainingValue.symbol }}{{ formattedRemainingValue.value }}
                 </span>
                 <span class="block truncate text-[11px] md:text-xs font-medium text-muted-foreground">
@@ -338,7 +338,7 @@ onMounted(async () => {
                 :key="`traffic-${summaryTransitionKey}`" class="flex items-baseline gap-1"
                 :style="getMetricSwitchStyle(3)"
               >
-                <span class="inline-block text-md md:text-2xl font-bold leading-none tracking-tight font-mono tabular-nums">
+                <span class="inline-block text-md md:text-2xl font-bold dark:font-semibold leading-none tracking-tight font-mono tabular-nums">
                   {{ totalTrafficTooltip.value }}
                 </span>
                 <span class="inline-block text-[11px] md:text-xs font-medium text-muted-foreground">
@@ -371,7 +371,7 @@ onMounted(async () => {
               :key="`speed-up-${summaryTransitionKey}`" class="flex items-baseline gap-1"
               :style="getMetricSwitchStyle(4)"
             >
-              <span class="text-md md:text-2xl font-bold leading-none tracking-tight font-mono tabular-nums">{{ formattedSpeedUp.value
+              <span class="text-md md:text-2xl font-bold dark:font-semibold leading-none tracking-tight font-mono tabular-nums">{{ formattedSpeedUp.value
               }}</span>
               <span class="text-[11px] md:text-xs font-medium text-muted-foreground">{{ formattedSpeedUp.unit }}</span>
             </div>
@@ -399,7 +399,7 @@ onMounted(async () => {
               :key="`speed-down-${summaryTransitionKey}`" class="flex items-baseline gap-1"
               :style="getMetricSwitchStyle(5)"
             >
-              <span class="text-md md:text-2xl font-bold leading-none tracking-tight font-mono tabular-nums">
+              <span class="text-md md:text-2xl font-bold dark:font-semibold leading-none tracking-tight font-mono tabular-nums">
                 {{ formattedSpeedDown.value }}
               </span>
               <span class="text-[11px] md:text-xs font-medium text-muted-foreground">{{ formattedSpeedDown.unit
