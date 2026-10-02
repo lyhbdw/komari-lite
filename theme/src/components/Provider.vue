@@ -36,18 +36,6 @@ watch(
   },
   { immediate: true },
 )
-
-watch(
-  () => appStore.backgroundEnabled,
-  (enabled) => {
-    const body = document.body
-    if (enabled)
-      body.style.setProperty('background-color', 'transparent', 'important')
-    else
-      body.style.removeProperty('background-color')
-  },
-  { immediate: true },
-)
 </script>
 
 <template>

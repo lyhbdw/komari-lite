@@ -10,7 +10,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/Tumb1er1376/komari-monitor-lite/database/accounts"
 	"github.com/Tumb1er1376/komari-monitor-lite/database/clients"
-	"github.com/Tumb1er1376/komari-monitor-lite/internal/config"
 	"github.com/Tumb1er1376/komari-monitor-lite/pkg/rpc"
 	"github.com/Tumb1er1376/komari-monitor-lite/utils/log"
 	"gorm.io/gorm"
@@ -101,64 +100,6 @@ func GetRole(c *gin.Context) string {
 		return s
 	}
 	return RoleGuest
-}
-
-// --- 私有站点访问控制 ---
-
-var publicPaths = []string{
-	"/ping",
-	"/api/public",
-	"/api/login",
-	"/api/me",
-
-	"/api/version",
-	"/api/recent",
-	"/api/admin",    // 由 RequireRole 处理
-	"/api/clients/", // 由 RequireRole 处理
-	"/api/preview/", // 预览令牌校验后放行
-}
-
-// PrivateSiteMiddleware 私有站点访问控制。
-// 依赖 IdentityMiddleware 已设置的 role，对未认证的访客在私有站点模式下进行拦截。
-func PrivateSiteMiddleware() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		// 已认证用户直接放行
-		if GetRole(c) != RoleGuest {
-			c.Next()
-			return
-		}
-
-		path := c.Request.URL.Path
-
-		// 公开路径直接放行
-		for _, p := range publicPaths {
-			if strings.HasPrefix(path, p) {
-				c.Next()
-				return
-			}
-		}
-
-		// 非 API 路径直接放行（静态资源等）
-		if !strings.HasPrefix(path, "/api") {
-			c.Next()
-			return
-		}
-
-		// 非私有站点直接放行
-		privateSite, err := config.GetAs[bool](config.PrivateSiteKey, false)
-		if err != nil {
-			RespondError(c, http.StatusInternalServerError, "Failed to get configuration.")
-			c.Abort()
-			return
-		}
-		if !privateSite {
-			c.Next()
-			return
-		}
-
-		RespondError(c, http.StatusUnauthorized, "Private site is enabled, please login first.")
-		c.Abort()
-	}
 }
 
 func extractClientToken(c *gin.Context) string {

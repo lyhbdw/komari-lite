@@ -97,7 +97,6 @@ func GetPublicInfo() (map[string]interface{}, error) {
 		"record_enabled":            retention.AllPositive, // 兼容旧版本主题
 		"record_preserve_time":      retention.MaxDays * 24,
 		"ping_record_preserve_time": retention.MaxDays * 24,
-		"private_site":              cst.PrivateSite,
 		"theme":                     cst.Theme,
 		"theme_settings":            tc_data,
 	}, nil

@@ -116,16 +116,6 @@ export default function SiteSettings() {
           await updateSettingsWithToast({ script_domain: data }, t);
         }}
       />
-      <SettingCardLabel>{t("settings.site.private_site")}</SettingCardLabel>
-      <SettingCardSwitch
-        title={t("settings.site.private_site")}
-        description={t("settings.site.private_site_description")}
-        defaultChecked={settings.private_site}
-        onChange={async (checked) => {
-          await updateSettingsWithToast({ private_site: checked }, t);
-        }}
-        className="km-setting-card"
-      />
 
       <SettingCardLabel>{t("settings.site.backup")}</SettingCardLabel>
       <SettingCardIconButton

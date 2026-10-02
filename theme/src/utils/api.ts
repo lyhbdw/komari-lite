@@ -33,7 +33,6 @@ export interface PublicSettings {
   oauth_enable: boolean
   oauth_provider: string | null
   ping_record_preserve_time: number
-  private_site: boolean
   record_enabled: boolean
   record_preserve_time: number
   sitename: string

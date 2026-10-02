@@ -121,7 +121,7 @@ func (a *App) BuildRouter() error {
 	}
 	r.Use(logger.GinLogger(), logger.GinRecovery())
 	cors := security.NewCorsController(a.settings.CorsOriginCheckEnabled, a.settings.CorsAllowedOrigins)
-	r.Use(cors.Middleware(), api.IdentityMiddleware(), api.PrivateSiteMiddleware(), noStoreAPIResponses())
+	r.Use(cors.Middleware(), api.IdentityMiddleware(), noStoreAPIResponses())
 
 	router.Register(r)
 

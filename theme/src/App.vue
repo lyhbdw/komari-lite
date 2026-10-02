@@ -3,7 +3,6 @@ import { nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { Toaster } from '@/components/ui/sonner'
 import { useAppStore } from '@/stores/app'
 import { destroyInitManager, initApp } from '@/utils/init'
-import Background from './components/Background.vue'
 import Footer from './components/Footer.vue'
 import Header from './components/Header.vue'
 import LoadingCover from './components/LoadingCover.vue'
@@ -32,7 +31,6 @@ onUnmounted(() => {
 
 <template>
   <Provider>
-    <Background />
     <LoadingCover v-if="appStore.loading" />
     <Header />
     <main v-if="!appStore.loading" class="flex-1">

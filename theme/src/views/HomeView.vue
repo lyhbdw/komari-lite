@@ -4,7 +4,6 @@ import { Icon } from '@iconify/vue'
 import { useDebounceFn } from '@vueuse/core'
 import { computed, defineAsyncComponent, nextTick, onActivated, onDeactivated, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import MarkdownRenderer from '@/components/MarkdownRenderer.vue'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Empty } from '@/components/ui/empty'
@@ -103,8 +102,6 @@ const nodeList = computed(() => {
   if (debouncedSearchText.value.trim()) {
     filtered = filtered.filter(n => isNodeMatchSearch(n, debouncedSearchText.value))
   }
-  if (!appStore.offlineNodesLast)
-    return filtered
   // 稳定排序：在线节点在前、离线节点在后，组内保持原有顺序
   return [...filtered].sort((a, b) => (a.online === b.online ? 0 : a.online ? -1 : 1))
 })
@@ -151,17 +148,6 @@ function getNodeItemTransitionStyle(index: number): Record<string, string> {
       >
         <AlertTitle>RPC 服务错误</AlertTitle>
         <AlertDescription>连接服务器失败，请检查网络设置或刷新页面后再试。</AlertDescription>
-      </Alert>
-    </div>
-
-    <div v-if="appStore.alertEnabled && appStore.alertContent" class="alert px-4">
-      <Alert :class="pickSurfaceClass('border-none bg-background rounded-md', 'border-none bg-background/60 backdrop-blur-xs rounded-md')">
-        <AlertTitle v-if="appStore.alertTitle">
-          {{ appStore.alertTitle }}
-        </AlertTitle>
-        <AlertDescription>
-          <MarkdownRenderer :content="appStore.alertContent" />
-        </AlertDescription>
       </Alert>
     </div>
 
@@ -222,8 +208,8 @@ function getNodeItemTransitionStyle(index: number): Record<string, string> {
           <TabsContent :key="appStore.nodeSelectedGroup" :value="appStore.nodeSelectedGroup" class="pointer-events-auto">
             <TransitionGroup
               v-if="nodeList.length !== 0 && appStore.nodeViewMode === 'card'"
-              :appear="!appStore.disablePageAnimation"
-              :css="!appStore.disablePageAnimation"
+              :appear="false"
+              :css="false"
               name="node-card-switch"
               tag="div"
               class="gap-3 grid grid-cols-1 sm:grid-cols-[repeat(auto-fill,minmax(300px,1fr))]"

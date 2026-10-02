@@ -12,7 +12,6 @@ export interface PublicInfo {
   disable_password_login: boolean;
   metric_retention_days: number;
   sitename: string;
-  private_site: boolean;
   theme: string;
   theme_settings: any;
   [property: string]: any;

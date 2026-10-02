@@ -90,31 +90,6 @@ const useAppStore = defineStore('app', () => {
   // 字节格式化精度（固定配置）
   const byteDecimals: ByteDecimalsConfig = { ...BYTE_DECIMALS }
 
-  // 计算属性：公告配置
-  const alertEnabled = computed<boolean>(() => {
-    const settings = publicSettings.value?.theme_settings
-    if (settings && typeof settings.alertEnabled === 'boolean') {
-      return settings.alertEnabled
-    }
-    return false
-  })
-
-  const alertTitle = computed<string>(() => {
-    const settings = publicSettings.value?.theme_settings
-    if (settings && typeof settings.alertTitle === 'string') {
-      return settings.alertTitle
-    }
-    return ''
-  })
-
-  const alertContent = computed<string>(() => {
-    const settings = publicSettings.value?.theme_settings
-    if (settings && typeof settings.alertContent === 'string') {
-      return settings.alertContent
-    }
-    return ''
-  })
-
   const earthViewMode = computed<EarthViewMode>(() => {
     const settings = publicSettings.value?.theme_settings
     if (settings && typeof settings.earthViewMode === 'string' && isValidEarthViewMode(settings.earthViewMode)) {
@@ -133,21 +108,7 @@ const useAppStore = defineStore('app', () => {
 
   const visitorCountryCode = ref<string | null>(null)
 
-  const hideAdminEntryWhenLoggedOut = computed<boolean>(() => {
-    const settings = publicSettings.value?.theme_settings
-    if (settings && typeof settings.hideAdminEntryWhenLoggedOut === 'boolean') {
-      return settings.hideAdminEntryWhenLoggedOut
-    }
-    return false
-  })
-
-  const disablePageAnimation = computed<boolean>(() => {
-    const settings = publicSettings.value?.theme_settings
-    if (settings && typeof settings.disablePageAnimation === 'boolean') {
-      return settings.disablePageAnimation
-    }
-    return false
-  })
+  const disablePageAnimation = computed<boolean>(() => true)
 
   // 计算属性：三网延迟显示节点顺序（未配置时返回空数组，保持默认排序）
   const pingNetworkOrder = computed<string[]>(() => {
@@ -167,116 +128,8 @@ const useAppStore = defineStore('app', () => {
     return names
   })
 
-  // 计算属性：离线节点后置（默认顺序下离线节点排到所有节点最后）
-  const offlineNodesLast = computed<boolean>(() => {
-    const settings = publicSettings.value?.theme_settings
-    if (settings && typeof settings.offlineNodesLast === 'boolean') {
-      return settings.offlineNodesLast
-    }
-    return false
-  })
-
-  // 计算属性：ICP 备案配置
-  const icpEnabled = computed<boolean>(() => {
-    const settings = publicSettings.value?.theme_settings
-    if (settings && typeof settings.icpEnabled === 'boolean') {
-      return settings.icpEnabled
-    }
-    return false
-  })
-
-  const icpNumber = computed<string>(() => {
-    const settings = publicSettings.value?.theme_settings
-    if (settings && typeof settings.icpNumber === 'string') {
-      return settings.icpNumber
-    }
-    return ''
-  })
-
-  const icpUrl = computed<string>(() => {
-    const settings = publicSettings.value?.theme_settings
-    if (settings && typeof settings.icpUrl === 'string' && settings.icpUrl.trim()) {
-      return settings.icpUrl.trim()
-    }
-    return 'https://beian.miit.gov.cn/'
-  })
-
-  // 计算属性：公安备案配置
-  const policeEnabled = computed<boolean>(() => {
-    const settings = publicSettings.value?.theme_settings
-    if (settings && typeof settings.policeEnabled === 'boolean') {
-      return settings.policeEnabled
-    }
-    return false
-  })
-
-  const policeNumber = computed<string>(() => {
-    const settings = publicSettings.value?.theme_settings
-    if (settings && typeof settings.policeNumber === 'string') {
-      return settings.policeNumber
-    }
-    return ''
-  })
-
-  const policeUrl = computed<string>(() => {
-    const settings = publicSettings.value?.theme_settings
-    if (settings && typeof settings.policeUrl === 'string' && settings.policeUrl.trim()) {
-      return settings.policeUrl.trim()
-    }
-    return ''
-  })
-
-  // 计算属性：自定义背景配置
-  const backgroundEnabled = computed<boolean>(() => {
-    const settings = publicSettings.value?.theme_settings
-    if (settings && typeof settings.backgroundEnabled === 'boolean') {
-      return settings.backgroundEnabled
-    }
-    return false
-  })
-
-  const backgroundType = computed<'image' | 'video'>(() => {
-    const settings = publicSettings.value?.theme_settings
-    if (settings && typeof settings.backgroundType === 'string') {
-      const type = settings.backgroundType
-      if (type === 'image' || type === 'video') {
-        return type
-      }
-    }
-    return 'image'
-  })
-
-  const lightBackgroundUrl = computed<string>(() => {
-    const settings = publicSettings.value?.theme_settings
-    if (settings && typeof settings.lightBackgroundUrl === 'string') {
-      return settings.lightBackgroundUrl.trim()
-    }
-    return ''
-  })
-
-  const darkBackgroundUrl = computed<string>(() => {
-    const settings = publicSettings.value?.theme_settings
-    if (settings && typeof settings.darkBackgroundUrl === 'string') {
-      return settings.darkBackgroundUrl.trim()
-    }
-    return ''
-  })
-
-  const backgroundBlur = computed<number>(() => {
-    const settings = publicSettings.value?.theme_settings
-    if (settings && typeof settings.backgroundBlur === 'number' && settings.backgroundBlur >= 0) {
-      return settings.backgroundBlur
-    }
-    return 0
-  })
-
-  const backgroundOverlay = computed<number>(() => {
-    const settings = publicSettings.value?.theme_settings
-    if (settings && typeof settings.backgroundOverlay === 'number' && settings.backgroundOverlay >= -100 && settings.backgroundOverlay <= 100) {
-      return settings.backgroundOverlay
-    }
-    return 0
-  })
+  // 计算属性：离线节点后置（默认顺序下离线节点排到所有节点最后，固定默认开启）
+  const offlineNodesLast = computed<boolean>(() => true)
 
   // 当 publicSettings 加载后，如果 localStorage 没有保存过视图模式或值为非法值，使用默认值
   watch(publicSettings, (settings) => {
@@ -304,18 +157,6 @@ const useAppStore = defineStore('app', () => {
   })
 
   const resolvedThemeMode = computed<'light' | 'dark'>(() => isDark.value ? 'dark' : 'light')
-
-  // 计算属性：当前主题模式下的背景 URL
-  const currentBackgroundUrl = computed<string>(() => {
-    if (!backgroundEnabled.value) {
-      return ''
-    }
-
-    if (resolvedThemeMode.value === 'dark') {
-      return darkBackgroundUrl.value
-    }
-    return lightBackgroundUrl.value
-  })
 
   function updateThemeMode(mode?: ThemeMode) {
     if (mode) {
@@ -348,29 +189,12 @@ const useAppStore = defineStore('app', () => {
     defaultViewMode,
     rpcTransportMode,
     byteDecimals,
-    alertEnabled,
-    alertTitle,
-    alertContent,
     earthViewMode,
     visitorInfoCardEnabled,
     visitorCountryCode,
-    hideAdminEntryWhenLoggedOut,
     disablePageAnimation,
     pingNetworkOrder,
     offlineNodesLast,
-    icpEnabled,
-    icpNumber,
-    icpUrl,
-    policeEnabled,
-    policeNumber,
-    policeUrl,
-    backgroundEnabled,
-    backgroundType,
-    lightBackgroundUrl,
-    darkBackgroundUrl,
-    currentBackgroundUrl,
-    backgroundBlur,
-    backgroundOverlay,
     isLoggedIn,
     publicSettings,
     connectionError,

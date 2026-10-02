@@ -623,7 +623,6 @@ type Settings struct {
 	WsOriginCheckEnabled   bool   `json:"ws_origin_check_enabled" default:"true"`              // 是否校验 WebSocket Origin
 	WsAllowedOrigins       string `json:"ws_allowed_origins" default:""`                       // WebSocket Origin 允许列表
 	Theme                  string `json:"theme" default:"Lite"`                                // 主题名称，默认 Lite
-	PrivateSite            bool   `json:"private_site" default:"false"`                        // 是否为私有站点，默认 false
 	SendIpAddrToGuest      bool   `json:"send_ip_addr_to_guest" default:"false"`               // 是否向访客页面发送 IP 地址，默认 false
 	// GeoIP 配置
 	GeoIpEnabled         bool   `json:"geo_ip_enabled" default:"true"`
@@ -656,7 +655,6 @@ const (
 	WsOriginCheckEnabledKey   = "ws_origin_check_enabled"
 	WsAllowedOriginsKey       = "ws_allowed_origins"
 	ThemeKey                  = "theme"
-	PrivateSiteKey            = "private_site"
 	SendIpAddrToGuestKey      = "send_ip_addr_to_guest"
 	GeoIpEnabledKey           = "geo_ip_enabled"
 	GeoIpProviderKey          = "geo_ip_provider"
