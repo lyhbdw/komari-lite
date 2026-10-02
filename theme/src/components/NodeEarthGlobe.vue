@@ -151,7 +151,7 @@ const regionRates = computed<Map<string, RegionRate>>(() => {
   return map
 })
 
-const arcsEnabled = computed(() => appStore.visitorInfoCardEnabled && appStore.visitorCountryCode != null)
+const arcsEnabled = computed(() => false)
 const userCoord = computed<[number, number] | null>(() => {
   if (!appStore.visitorInfoCardEnabled)
     return null
