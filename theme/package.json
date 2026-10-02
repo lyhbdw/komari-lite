@@ -4,14 +4,14 @@
   "version": "1.1.0",
   "description": "Custom modern theme for Komari Lite",
   "author": {
-    "name": "Tumb1er1376",
-    "url": "https://github.com/Tumb1er1376"
+    "name": "lyhbdw",
+    "url": "https://github.com/lyhbdw"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/Tumb1er1376/komari-theme-lite.git"
+    "url": "https://github.com/lyhbdw/komari-monitor-lite.git"
   },
-  "homepage": "https://github.com/Tumb1er1376/komari-theme-lite",
+  "homepage": "https://github.com/lyhbdw/komari-monitor-lite",
   "license": "MIT",
   "engines": {
     "node": "^20.19.0 || >=22.12.0",

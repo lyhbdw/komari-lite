@@ -33,7 +33,7 @@ const NavBar = () => {
         <IconButton
           variant="soft"
           onClick={() => {
-            window.open("https://github.com/Tumb1er1376/komari-monitor-lite", "_blank");
+            window.open("https://github.com/lyhbdw/komari-monitor-lite", "_blank");
           }}
         >
           <GitHubLogoIcon />
