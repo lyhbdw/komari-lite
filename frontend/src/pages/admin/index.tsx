@@ -24,7 +24,6 @@ import {
   CornerRightUp,
   Download,
   Folder,
-  Globe,
   Pencil,
   Plus,
   Search,
@@ -549,12 +548,67 @@ const MetricsOverview = ({
   const { t } = useTranslation();
   const total = nodes.length;
   const onlineCount = nodes.filter((n) => n.online).length;
-  const uniqueRegions = Array.from(
-    new Set(nodes.map((n) => n.region).filter(Boolean))
-  );
   const uniqueGroups = Array.from(
     new Set(nodes.map((n) => n.group).filter(Boolean))
   );
+
+  const [trafficStats, setTrafficStats] = useState<{
+    totalUp: number;
+    totalDown: number;
+    totalBytes: number;
+    isLoading: boolean;
+  }>({
+    totalUp: 0,
+    totalDown: 0,
+    totalBytes: 0,
+    isLoading: true,
+  });
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchTraffic = async () => {
+      try {
+        const res = await fetch("/api/rpc2", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            jsonrpc: "2.0",
+            id: 1,
+            method: "common:getNodesLatestStatus",
+            params: [],
+          }),
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        const statusMap = data.result || {};
+        let up = 0;
+        let down = 0;
+        Object.values(statusMap).forEach((st: any) => {
+          if (st) {
+            up += Number(st.net_total_up || 0);
+            down += Number(st.net_total_down || 0);
+          }
+        });
+        if (isMounted) {
+          setTrafficStats({
+            totalUp: up,
+            totalDown: down,
+            totalBytes: up + down,
+            isLoading: false,
+          });
+        }
+      } catch {
+        // ignore
+      }
+    };
+
+    fetchTraffic();
+    const timer = setInterval(fetchTraffic, 10000);
+    return () => {
+      isMounted = false;
+      clearInterval(timer);
+    };
+  }, []);
 
   const isExpiringActive = selectedStatus === "expiring";
 
@@ -581,22 +635,26 @@ const MetricsOverview = ({
         </div>
       </div>
 
-      {/* 2. 地区覆盖 */}
+      {/* 2. 网络总流量 */}
       <div className="p-3 rounded-lg border border-border bg-card shadow-2xs hover:border-foreground/30 transition-all">
         <div className="flex items-center justify-between text-muted-foreground mb-1 text-[11px] font-medium uppercase tracking-wider">
-          <span>{t("admin.overview.regions", "地区覆盖")}</span>
-          <Globe size={14} className="opacity-70" />
+          <span>{t("admin.overview.traffic_total", "网络总流量")}</span>
+          <ArrowUpDown size={14} className="opacity-70" />
         </div>
         <div className="flex items-baseline justify-between mt-1">
           <span className="text-xl font-bold font-mono tracking-tight text-foreground">
-            {uniqueRegions.length || (total > 0 ? 1 : 0)}
+            {trafficStats.isLoading && trafficStats.totalBytes === 0
+              ? "..."
+              : formatBytes(trafficStats.totalBytes)}
           </span>
-          <span
-            className="text-xs text-muted-foreground truncate max-w-[120px] sm:max-w-[140px] cursor-help"
-            title={uniqueRegions.map((r) => r.toUpperCase()).join(", ")}
+          <div
+            className="flex items-center gap-1.5 text-xs text-muted-foreground font-mono truncate cursor-help"
+            title={`总上行: ${formatBytes(trafficStats.totalUp)} · 总下行: ${formatBytes(trafficStats.totalDown)}`}
           >
-            {uniqueRegions.slice(0, 5).map((r) => r.toUpperCase()).join(",")}{uniqueRegions.length > 5 ? ` +${uniqueRegions.length - 5}` : ""}
-          </span>
+            <span>↑ {formatBytes(trafficStats.totalUp)}</span>
+            <span>·</span>
+            <span>↓ {formatBytes(trafficStats.totalDown)}</span>
+          </div>
         </div>
       </div>
 
