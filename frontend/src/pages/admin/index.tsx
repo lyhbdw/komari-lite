@@ -23,7 +23,6 @@ import {
   Copy,
   CornerRightUp,
   Download,
-  Folder,
   Pencil,
   Plus,
   Search,
@@ -65,6 +64,7 @@ import {
   DrawerTrigger,
 } from "@/components/ui/drawer";
 import { formatBytes, stringToBytes } from "@/utils/unitHelper";
+import * as financeHelper from "@/utils/financeHelper";
 import PriceTags from "@/components/PriceTags";
 import Loading from "@/components/loading";
 import Tips from "@/components/ui/tips";
@@ -548,9 +548,6 @@ const MetricsOverview = ({
   const { t } = useTranslation();
   const total = nodes.length;
   const onlineCount = nodes.filter((n) => n.online).length;
-  const uniqueGroups = Array.from(
-    new Set(nodes.map((n) => n.group).filter(Boolean))
-  );
 
   const [trafficStats, setTrafficStats] = useState<{
     totalUp: number;
@@ -563,6 +560,36 @@ const MetricsOverview = ({
     totalBytes: 0,
     isLoading: true,
   });
+
+  const remainingStats = React.useMemo(() => {
+    if (!Array.isArray(nodes)) {
+      return { total: "¥0.00", base: "¥0.00", premium: "¥0.00", hasPremium: false };
+    }
+    const totalRemaining = financeHelper.calculateTotalRemainingValueCNY(
+      nodes,
+      financeHelper.DEFAULT_EXCHANGE_RATES,
+      false
+    );
+    const baseRemaining = financeHelper.calculateTotalBaseRemainingValueCNY(
+      nodes,
+      financeHelper.DEFAULT_EXCHANGE_RATES,
+      false
+    );
+    const totalPremium = financeHelper.calculateTotalPremiumCNY(
+      nodes,
+      financeHelper.DEFAULT_EXCHANGE_RATES,
+      false
+    );
+    const fmtTotal = financeHelper.formatFinanceAmount(totalRemaining, "CNY");
+    const fmtBase = financeHelper.formatFinanceAmount(baseRemaining, "CNY");
+    const fmtPrem = financeHelper.formatFinanceAmount(totalPremium, "CNY");
+    return {
+      total: `${fmtTotal.symbol}${fmtTotal.value}`,
+      base: `${fmtBase.symbol}${fmtBase.value}`,
+      premium: `${fmtPrem.symbol}${fmtPrem.value}`,
+      hasPremium: totalPremium > 0,
+    };
+  }, [nodes]);
 
   useEffect(() => {
     let isMounted = true;
@@ -658,19 +685,28 @@ const MetricsOverview = ({
         </div>
       </div>
 
-      {/* 3. 分组数 */}
+      {/* 3. 剩余总价值 */}
       <div className="p-3 rounded-lg border border-border bg-card shadow-2xs hover:border-foreground/30 transition-all">
         <div className="flex items-center justify-between text-muted-foreground mb-1 text-[11px] font-medium uppercase tracking-wider">
-          <span>{t("admin.overview.groups", "分组数")}</span>
-          <Folder size={14} className="opacity-70" />
+          <span>{t("admin.overview.total_remaining_value", "剩余总价值")}</span>
+          <CircleDollarSign size={14} className="opacity-70" />
         </div>
         <div className="flex items-baseline justify-between mt-1">
           <span className="text-xl font-bold font-mono tracking-tight text-foreground">
-            {uniqueGroups.length || (total > 0 ? 1 : 0)}
+            {remainingStats.total}
           </span>
-          <span className="text-xs text-muted-foreground">
-            业务逻辑分组
-          </span>
+          <div
+            className="flex items-center gap-1.5 text-xs text-muted-foreground font-mono truncate cursor-help"
+            title={`租金折余: ${remainingStats.base} · 溢价折算: ${remainingStats.premium}`}
+          >
+            <span>折余 {remainingStats.base}</span>
+            {remainingStats.hasPremium && (
+              <>
+                <span>·</span>
+                <span>溢 {remainingStats.premium}</span>
+              </>
+            )}
+          </div>
         </div>
       </div>
 
