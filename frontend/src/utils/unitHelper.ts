@@ -109,3 +109,25 @@ export function formatBytes(bytes: number): string {
     return `${size.toFixed(2)} ${units[unitIndex]}`;
   }
 }
+
+export function formatBytesPerSecond(bytesPerSec: number): string {
+  const units = ["B/s", "KB/s", "MB/s", "GB/s", "TB/s"];
+  let size = bytesPerSec;
+  let unitIndex = 0;
+
+  while (size >= 1024 && unitIndex < units.length - 1) {
+    size /= 1024;
+    unitIndex++;
+  }
+
+  if (unitIndex === 0) {
+    return `${Math.round(size)} ${units[unitIndex]}`;
+  } else if (unitIndex >= 2 && bytesPerSec >= 1024 ** 3) {
+    return `${size.toFixed(2)} ${units[unitIndex]}`;
+  } else if (size > 99.99) {
+    return `${size.toFixed(1)} ${units[unitIndex]}`;
+  } else {
+    return `${size.toFixed(1)} ${units[unitIndex]}`;
+  }
+}
+

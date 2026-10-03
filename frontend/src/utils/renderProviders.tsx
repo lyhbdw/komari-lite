@@ -173,7 +173,7 @@ export const renderProviderInputs = ({
                 defaultValue={String(fieldValue)}
                 type={isNumber ? "number" : "text"}
                 showSaveButton={false}
-                className={["bot_token", "password", "secret", "key", "endpoint", "url", "api_url", "server_url", "device_key"].includes(f.name) ? "w-full max-w-xl" : "w-full"}
+                className="w-full"
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                     const value = isNumber ? (e.target.value === "" ? 0 : Number(e.target.value)) : e.target.value;
                     updateLocalValue(f.name, value);
@@ -184,6 +184,30 @@ export const renderProviderInputs = ({
             />
         );
     };
+
+    if (title === "") {
+        return (
+            <div key={currentProvider} className="space-y-4 pt-1">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {fields.map((f: any) => renderField(f))}
+                </div>
+                {footer && (
+                    <label className="text-xs text-muted-foreground mt-2 block">
+                        {footer}
+                    </label>
+                )}
+                <div className="pt-2 flex justify-end">
+                    <button
+                        type="button"
+                        onClick={handleSaveAll}
+                        className="h-8 px-4 rounded-lg bg-foreground text-background text-xs font-medium hover:opacity-90 active:scale-[0.98] transition-all cursor-pointer shadow-xs"
+                    >
+                        {t("common.save", "保存配置")}
+                    </button>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div key={currentProvider}>

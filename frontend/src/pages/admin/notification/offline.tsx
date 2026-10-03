@@ -189,42 +189,48 @@ const InnerLayout = () => {
     return <div>Error: {onError?.message || onNodeError}</div>;
   }
   return (
-    <div className="km-page-admin-notification-offline flex flex-col gap-4">
-      <Flex justify="between" align="center" wrap="wrap">
-        <label className="text-xl sm:text-2xl font-semibold tracking-tight text-foreground">
-          {t("notification.offline.full_title", "离线通知设置")}
-        </label>
-        <TextField.Root
-          type="text"
-          className="max-w-64"
-          placeholder={t("common.search")}
-          value={search}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-            setSearch(e.target.value)
-          }
-        >
-          <TextField.Slot>
-            <Search size={16} />
-          </TextField.Slot>
-        </TextField.Root>
-      </Flex>
+    <div className="space-y-4 km-page-admin-notification-offline max-w-7xl">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 pb-2 border-b border-border/40">
+        <div>
+          <div className="flex items-center gap-2">
+            <h1 className="text-lg sm:text-xl font-bold tracking-tight text-foreground">
+              {t("notification.offline.full_title", "离线通知设置")}
+            </h1>
+            <span className="px-2 py-0.2 text-[11px] font-mono font-medium rounded-full bg-muted text-muted-foreground border border-border">
+              {offlineNotification?.length || 0} 台服务器
+            </span>
+          </div>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            为每台服务器单独配置断联告警、静默冷却时间（Cooldown）与宕机确认宽限期（Grace Period）。
+          </p>
+        </div>
+        <div className="relative w-full sm:w-56 flex items-center">
+          <Search size={13} className="absolute left-2.5 text-muted-foreground pointer-events-none" />
+          <input
+            type="text"
+            className="w-full h-8 pl-8 pr-3 text-xs rounded-lg border border-border bg-card text-foreground placeholder:text-muted-foreground/60 outline-none focus:border-foreground/50 focus:ring-1 focus:ring-foreground/20 transition-all shadow-2xs"
+            placeholder={t("common.search", "搜索服务器...")}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+      </div>
       <OfflineNotificationTable
         search={search}
         selected={selected}
         onSelectionChange={setSelected}
       />
-      <label className="text-sm text-muted-foreground">
-        {t("common.selected", {
-          count: selected.length,
-        })}
-      </label>
-      <Flex gap="2" align="center">
+      <div className="flex items-center justify-between text-xs text-muted-foreground pt-1">
+        <span>
+          {t("common.selected", {
+            count: selected.length,
+          })}
+        </span>
         <Dialog.Root open={batchDialogOpen} onOpenChange={setBatchDialogOpen}>
           <Dialog.Trigger>
-            <Button
-              variant="soft"
+            <button
+              type="button"
               onClick={() => {
-                // 默认取第一个选中项的配置作为初始值
                 const first = offlineNotification.find(
                   (n) => n.client === selected[0]
                 );
@@ -235,9 +241,10 @@ const InnerLayout = () => {
                 });
               }}
               disabled={batchLoading || selected.length === 0}
+              className="h-8 px-3 rounded-lg border border-border bg-card text-foreground font-medium text-xs flex items-center gap-1.5 shadow-2xs hover:bg-muted active:scale-[0.98] transition-all cursor-pointer disabled:opacity-50"
             >
-              {t("common.batch_edit")}
-            </Button>
+              <span>{t("common.batch_edit", "批量编辑设置")}</span>
+            </button>
           </Dialog.Trigger>
           <Dialog.Content>
             <Dialog.Title>{t("common.batch_edit")}</Dialog.Title>
@@ -249,12 +256,7 @@ const InnerLayout = () => {
             />
           </Dialog.Content>
         </Dialog.Root>
-      </Flex>
-      <label className="km-notification-offline-preview text-sm text-muted-foreground">
-        <span
-          dangerouslySetInnerHTML={{ __html: t("notification.offline.tips") }}
-        />
-      </label>
+      </div>
     </div>
   );
 };

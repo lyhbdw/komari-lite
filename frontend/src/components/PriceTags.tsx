@@ -13,8 +13,6 @@ const PriceTags = ({
   billing_cycle?: number;
   currency?: string;
   tags?: string;
-  ip4?: any;
-  ip6?: any;
   hidden?: boolean;
   [key: string]: any;
 }) => {
@@ -49,45 +47,46 @@ const PriceTags = ({
 
   return (
     <div className="flex flex-col gap-1 w-full max-w-[260px]">
-      {/* Line 1: Price and Expiration */}
-      <div className="flex items-center gap-1.5 flex-nowrap overflow-hidden">
-        {price !== 0 && (
-          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-mono font-medium bg-muted text-foreground border border-border/80 shrink-0">
+      {/* Line 1: Price and Expiration in strict tabular grid */}
+      <div className="grid grid-cols-[76px_72px] items-center gap-2 flex-nowrap">
+        {price !== 0 ? (
+          <span className="inline-flex items-center justify-center h-6 px-2 rounded-md text-[11px] font-mono font-medium bg-muted/70 text-foreground border border-border/80 w-[76px] truncate shadow-2xs" title={`${price == -1 ? t("common.free") : `${currency}${price}`}/${getCycleLabel()}`}>
             {price == -1 ? t("common.free") : `${currency}${price}`}/{getCycleLabel()}
           </span>
+        ) : (
+          <span className="w-[76px]" />
         )}
         <span
-          className={`inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-mono font-medium border shrink-0 ${
+          className={`inline-flex items-center justify-center h-6 px-2 rounded-md text-[11px] font-mono font-medium border w-[72px] shrink-0 shadow-2xs ${
             diffDays <= 7
               ? "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20"
               : diffDays <= 15
               ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
-              : "bg-muted/50 text-muted-foreground border-border/60"
+              : "bg-muted/40 text-muted-foreground border-border/60"
           }`}
+          title={getExpiryLabel()}
         >
           {getExpiryLabel()}
         </span>
       </div>
 
       {/* Line 2: Custom tags (always single line, truncated for symmetry) */}
-      <div className="flex items-center gap-1 overflow-hidden flex-nowrap h-5">
-        {tagList.length > 0 ? (
-          tagList.map((tag, index) => {
+      {tagList.length > 0 && (
+        <div className="flex items-center gap-1 overflow-hidden flex-nowrap h-5">
+          {tagList.map((tag, index) => {
             const text = tag.replace(/<\w+>$/, "");
             return (
               <span
                 key={index}
-                className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-muted/60 text-muted-foreground border border-border/50 shrink-0 truncate max-w-[100px]"
+                className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-muted/60 text-muted-foreground border border-border/50 shrink-0 truncate max-w-[120px]"
                 title={text}
               >
                 {text}
               </span>
             );
-          })
-        ) : (
-          <span className="text-[11px] text-muted-foreground/30 font-mono">-</span>
-        )}
-      </div>
+          })}
+        </div>
+      )}
     </div>
   );
 };

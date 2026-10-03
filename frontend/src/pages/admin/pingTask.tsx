@@ -45,11 +45,21 @@ const InnerLayout = () => {
     return <div>{error || nodeDetailError}</div>;
   }
   return (
-    <Flex direction="column" gap="4" className="km-page-admin-pingtask">
-      <div className="flex justify-between items-center">
-        <label className="text-xl sm:text-2xl font-semibold tracking-tight text-foreground">
-          {t("ping.title")}
-        </label>
+    <div className="space-y-4 km-page-admin-pingtask max-w-7xl">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 pb-2 border-b border-border/40">
+        <div>
+          <div className="flex items-center gap-2">
+            <h1 className="text-lg sm:text-xl font-bold tracking-tight text-foreground">
+              {t("ping.title", "延迟监测")}
+            </h1>
+            <span className="px-2 py-0.2 text-[11px] font-mono font-medium rounded-full bg-muted text-muted-foreground border border-border">
+              {pingTasks?.length || 0} 个任务
+            </span>
+          </div>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            配置 ICMP / TCP / HTTP 目标探测任务，监控各节点到全球关键网络端点的实时延迟与丢包率。
+          </p>
+        </div>
         <AddButton />
       </div>
       <Tabs.Root defaultValue="task" className="km-pingtask-nav">
@@ -66,7 +76,7 @@ const InnerLayout = () => {
           </Tabs.Content>
         </Box>
       </Tabs.Root>
-    </Flex>
+    </div>
   );
 };
 

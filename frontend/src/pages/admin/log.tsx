@@ -88,14 +88,23 @@ const LogPage = () => {
   }
 
   return (
-    <div className="km-page-admin-log flex flex-col gap-4">
-      <div className="km-log-toolbar flex justify-between items-center">
-        <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-foreground">
-          {t("logs.title")}
-        </h1>
-        <div className="flex items-center gap-2">
-
-          Limit
+    <div className="space-y-4 km-page-admin-log max-w-7xl">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 pb-2 border-b border-border/40">
+        <div>
+          <div className="flex items-center gap-2">
+            <h1 className="text-lg sm:text-xl font-bold tracking-tight text-foreground">
+              {t("logs.title", "系统审计日志")}
+            </h1>
+            <span className="px-2 py-0.2 text-[11px] font-mono font-medium rounded-full bg-muted text-muted-foreground border border-border">
+              共 {total} 条
+            </span>
+          </div>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            记录面板运行、认证鉴权、节点变更与告警触发的审计历史。
+          </p>
+        </div>
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <span>每页:</span>
           <NumberPicker
             defaultValue={limit}
             onChange={setLimit}

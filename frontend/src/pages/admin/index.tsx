@@ -26,7 +26,6 @@ import {
   Pencil,
   Plus,
   Search,
-  Server,
   Trash2Icon,
   ArrowUpCircle,
   MoreHorizontal,
@@ -63,7 +62,7 @@ import {
   DrawerTitle,
   DrawerTrigger,
 } from "@/components/ui/drawer";
-import { formatBytes, stringToBytes } from "@/utils/unitHelper";
+import { formatBytes, formatBytesPerSecond, stringToBytes } from "@/utils/unitHelper";
 import * as financeHelper from "@/utils/financeHelper";
 import PriceTags from "@/components/PriceTags";
 import Loading from "@/components/loading";
@@ -91,8 +90,7 @@ const Layout = () => {
   const [selectedStatus, setSelectedStatus] = useState<"all" | "online" | "offline" | "expiring">("all");
   const [selectedNodes, setSelectedNodes] = useState<string[]>([]);
 
-  // 排序状态：名称 / IP / 版本 / 分组 / 账单
-  type SortField = "name" | "ip" | "version" | "group" | "billing" | "none";
+  type SortField = "name" | "ip" | "group" | "billing" | "none";
   type SortOrder = "asc" | "desc";
   const [sortField, setSortField] = useState<SortField>("none");
   const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
@@ -101,7 +99,7 @@ const Layout = () => {
   const [batchGroupOpen, setBatchGroupOpen] = useState(false);
   const [batchDeleteOpen, setBatchDeleteOpen] = useState(false);
 
-  const handleSort = (field: "name" | "ip" | "version" | "group" | "billing") => {
+  const handleSort = (field: "name" | "ip" | "group" | "billing") => {
     if (sortField !== field) {
       setSortField(field);
       setSortOrder("asc");
@@ -191,11 +189,6 @@ const Layout = () => {
           return sortOrder === "asc"
             ? aIp.localeCompare(bIp, undefined, { numeric: true })
             : bIp.localeCompare(aIp, undefined, { numeric: true });
-        }
-        if (sortField === "version") {
-          const aVer = a.version || "";
-          const bVer = b.version || "";
-          return sortOrder === "asc" ? aVer.localeCompare(bVer) : bVer.localeCompare(aVer);
         }
         if (sortField === "group") {
           const aGrp = a.group || "";
@@ -546,18 +539,20 @@ const MetricsOverview = ({
   expiringCount: number;
 }) => {
   const { t } = useTranslation();
-  const total = nodes.length;
-  const onlineCount = nodes.filter((n) => n.online).length;
 
   const [trafficStats, setTrafficStats] = useState<{
     totalUp: number;
     totalDown: number;
     totalBytes: number;
+    speedUp: number;
+    speedDown: number;
     isLoading: boolean;
   }>({
     totalUp: 0,
     totalDown: 0,
     totalBytes: 0,
+    speedUp: 0,
+    speedDown: 0,
     isLoading: true,
   });
 
@@ -591,6 +586,23 @@ const MetricsOverview = ({
     };
   }, [nodes]);
 
+  const monthlyCostStats = React.useMemo(() => {
+    if (!Array.isArray(nodes)) {
+      return { totalCNY: "¥0.00/月", yearCNY: "年均 ¥0.00" };
+    }
+    const totalCNY = financeHelper.calculateTotalMonthlyAverageCostCNY(
+      nodes,
+      financeHelper.DEFAULT_EXCHANGE_RATES,
+      false
+    );
+    const fmtTotal = financeHelper.formatFinanceAmount(totalCNY, "CNY");
+    const fmtYear = financeHelper.formatFinanceAmount(totalCNY * 12, "CNY");
+    return {
+      totalCNY: `${fmtTotal.symbol}${fmtTotal.value}/月`,
+      yearCNY: `年均 ${fmtYear.symbol}${fmtYear.value}`,
+    };
+  }, [nodes]);
+
   useEffect(() => {
     let isMounted = true;
     const fetchTraffic = async () => {
@@ -605,22 +617,33 @@ const MetricsOverview = ({
             params: [],
           }),
         });
+
         if (!res.ok) return;
         const data = await res.json();
         const statusMap = data.result || {};
         let up = 0;
         let down = 0;
+        let sUp = 0;
+        let sDown = 0;
+
         Object.values(statusMap).forEach((st: any) => {
           if (st) {
             up += Number(st.net_total_up || 0);
             down += Number(st.net_total_down || 0);
+            if (st.online) {
+              sUp += Number(st.net_out || 0);
+              sDown += Number(st.net_in || 0);
+            }
           }
         });
+
         if (isMounted) {
           setTrafficStats({
             totalUp: up,
             totalDown: down,
             totalBytes: up + down,
+            speedUp: sUp,
+            speedDown: sDown,
             isLoading: false,
           });
         }
@@ -630,7 +653,7 @@ const MetricsOverview = ({
     };
 
     fetchTraffic();
-    const timer = setInterval(fetchTraffic, 10000);
+    const timer = setInterval(fetchTraffic, 5000);
     return () => {
       isMounted = false;
       clearInterval(timer);
@@ -640,77 +663,64 @@ const MetricsOverview = ({
   const isExpiringActive = selectedStatus === "expiring";
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
-      {/* 1. 总节点 */}
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3">
+      {/* 1. 资产与预算（剩余价值 + 月均支出） */}
       <div className="p-3 rounded-lg border border-border bg-card shadow-2xs hover:border-foreground/30 transition-all">
         <div className="flex items-center justify-between text-muted-foreground mb-1 text-[11px] font-medium uppercase tracking-wider">
-          <span>{t("admin.overview.total_nodes", "接入节点")}</span>
-          <Server size={14} className="opacity-70" />
-        </div>
-        <div className="flex items-baseline justify-between mt-1">
-          <span className="text-xl font-bold font-mono tracking-tight text-foreground">
-            {total}
-          </span>
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <span
-              className={`inline-block w-1.5 h-1.5 rounded-full ${
-                onlineCount > 0 ? "bg-emerald-500 animate-pulse" : "bg-rose-500"
-              }`}
-            />
-            <span>{onlineCount} 在线 · {total - onlineCount} 离线</span>
-          </div>
-        </div>
-      </div>
-
-      {/* 2. 网络总流量 */}
-      <div className="p-3 rounded-lg border border-border bg-card shadow-2xs hover:border-foreground/30 transition-all">
-        <div className="flex items-center justify-between text-muted-foreground mb-1 text-[11px] font-medium uppercase tracking-wider">
-          <span>{t("admin.overview.traffic_total", "网络总流量")}</span>
-          <ArrowUpDown size={14} className="opacity-70" />
-        </div>
-        <div className="flex items-baseline justify-between mt-1">
-          <span className="text-xl font-bold font-mono tracking-tight text-foreground">
-            {trafficStats.isLoading && trafficStats.totalBytes === 0
-              ? "..."
-              : formatBytes(trafficStats.totalBytes)}
-          </span>
-          <div
-            className="flex items-center gap-1.5 text-xs text-muted-foreground font-mono truncate cursor-help"
-            title={`总上行: ${formatBytes(trafficStats.totalUp)} · 总下行: ${formatBytes(trafficStats.totalDown)}`}
-          >
-            <span>↑ {formatBytes(trafficStats.totalUp)}</span>
-            <span>·</span>
-            <span>↓ {formatBytes(trafficStats.totalDown)}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* 3. 剩余总价值 */}
-      <div className="p-3 rounded-lg border border-border bg-card shadow-2xs hover:border-foreground/30 transition-all">
-        <div className="flex items-center justify-between text-muted-foreground mb-1 text-[11px] font-medium uppercase tracking-wider">
-          <span>{t("admin.overview.total_remaining_value", "剩余总价值")}</span>
+          <span>{t("admin.overview.financial_overview", "资产与预算")}</span>
           <CircleDollarSign size={14} className="opacity-70" />
         </div>
         <div className="flex items-baseline justify-between mt-1">
-          <span className="text-xl font-bold font-mono tracking-tight text-foreground">
-            {remainingStats.total}
-          </span>
-          <div
-            className="flex items-center gap-1.5 text-xs text-muted-foreground font-mono truncate cursor-help"
-            title={`租金折余: ${remainingStats.base} · 溢价折算: ${remainingStats.premium}`}
-          >
-            <span>折余 {remainingStats.base}</span>
-            {remainingStats.hasPremium && (
-              <>
-                <span>·</span>
-                <span>溢 {remainingStats.premium}</span>
-              </>
-            )}
+          <div className="flex items-baseline gap-1.5">
+            <span className="text-xl font-bold font-mono tracking-tight text-foreground">
+              {remainingStats.total}
+            </span>
+            <span className="text-[10px] text-muted-foreground">剩余</span>
+          </div>
+          <div className="flex items-baseline gap-1 text-xs text-muted-foreground font-mono">
+            <span>支出</span>
+            <span className="text-foreground/90 font-semibold">{monthlyCostStats.totalCNY}</span>
           </div>
         </div>
       </div>
 
-      {/* 4. 待续费机器（一键直达筛选） */}
+      {/* 2. 流量与速率（累计流量 + 实时上/下行速率） */}
+      <div className="p-3 rounded-lg border border-border bg-card shadow-2xs hover:border-foreground/30 transition-all">
+        <div className="flex items-center justify-between text-muted-foreground mb-1 text-[11px] font-medium uppercase tracking-wider">
+          <span>{t("admin.overview.traffic_total", "累计流量与速率")}</span>
+          <ArrowUpDown size={14} className="opacity-70" />
+        </div>
+        <div className="flex items-baseline justify-between mt-1">
+          <div className="flex items-baseline gap-1.5">
+            <span className="text-xl font-bold font-mono tracking-tight text-foreground">
+              {trafficStats.isLoading && trafficStats.totalBytes === 0
+                ? "..."
+                : formatBytes(trafficStats.totalBytes)}
+            </span>
+            <span className="text-[10px] text-muted-foreground">累计</span>
+          </div>
+          <div
+            className="flex items-baseline gap-1.5 text-xs text-muted-foreground font-mono truncate cursor-help"
+            title={`累计上行: ${formatBytes(trafficStats.totalUp)} · 累计下行: ${formatBytes(trafficStats.totalDown)}`}
+          >
+            <span className="flex items-center gap-0.5">
+              <span>↑</span>
+              <span className="text-foreground/90 font-medium">
+                {trafficStats.isLoading ? "..." : formatBytesPerSecond(trafficStats.speedUp)}
+              </span>
+            </span>
+            <span>·</span>
+            <span className="flex items-center gap-0.5">
+              <span>↓</span>
+              <span className="text-foreground/90 font-medium">
+                {trafficStats.isLoading ? "..." : formatBytesPerSecond(trafficStats.speedDown)}
+              </span>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* 3. 待续费机器（一键直达筛选） */}
       <div
         onClick={() => setSelectedStatus(isExpiringActive ? "all" : "expiring")}
         className={`p-3 rounded-lg border bg-card shadow-2xs cursor-pointer transition-all duration-150 group select-none ${
@@ -906,45 +916,29 @@ const Header = ({
     }
   };
   return (
-    <div className="space-y-3 pb-2 border-b border-border/40">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
-              {t("admin.nodeTable.nodeList")}
-            </h1>
-            <span className="px-2 py-0.5 text-xs font-mono font-medium rounded-full bg-muted text-muted-foreground border border-border">
-              {totalNodes}
+    <div className="space-y-2.5 pb-2 border-b border-border/40">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+        {/* 左侧：标题与升级按钮整合 */}
+        <div className="flex items-center gap-2">
+          <h1 className="text-lg sm:text-xl font-bold tracking-tight text-foreground">
+            {t("admin.nodeTable.nodeList")}
+          </h1>
+          {selectedNodes.length > 0 && (
+            <span className="px-2 py-0.2 text-[11px] font-mono font-medium rounded-full bg-foreground text-background">
+              {selectedNodes.length} 已选
             </span>
-            {selectedNodes.length > 0 && (
-              <span className="px-2 py-0.5 text-xs font-mono font-medium rounded-full bg-foreground text-background">
-                {selectedNodes.length} selected
-              </span>
-            )}
-          </div>
-          <p className="text-xs text-muted-foreground mt-1">
-            {t("admin.nodeTable.subtitle", "实时管理与监控所有已接入的主机探针与网络资产")}
-          </p>
-        </div>
-        <div className="flex items-center gap-2.5 w-full sm:w-auto">
-          <div className="relative flex-1 sm:w-64 flex items-center">
-            <Search size={14} className="absolute left-3 text-muted-foreground pointer-events-none" />
-            <input
-              type="text"
-              placeholder={t("admin.nodeTable.searchByName", "搜索节点、IP、分组...")}
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full h-9 pl-9 pr-3 text-xs rounded-lg border border-border bg-card text-foreground placeholder:text-muted-foreground/60 outline-none focus:border-foreground/50 focus:ring-1 focus:ring-foreground/20 transition-all shadow-2xs"
-            />
-          </div>
+          )}
+
+          {/* 升级 Agent 收纳为标题旁的小图标按钮 */}
           <Dialog.Root open={upgradeOpen} onOpenChange={setUpgradeOpen}>
             <Dialog.Trigger>
               <button
+                type="button"
                 onClick={() => openUpgradeDialog()}
-                className="h-9 px-3.5 rounded-lg border border-border bg-card text-foreground font-medium text-xs flex items-center gap-1.5 shadow-sm hover:bg-muted active:scale-[0.98] transition-all cursor-pointer shrink-0"
+                className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+                title={t("admin.nodeTable.upgradeAgents", "批量升级 Agent")}
               >
-                <ArrowUpCircle size={14} strokeWidth={2.5} />
-                <span>{t("admin.nodeTable.upgradeAgents")}</span>
+                <ArrowUpCircle size={15} />
               </button>
             </Dialog.Trigger>
             <Dialog.Content className="max-w-md">
@@ -975,13 +969,28 @@ const Header = ({
               </Flex>
             </Dialog.Content>
           </Dialog.Root>
+        </div>
+
+        {/* 右侧：紧凑搜索框与添加节点 */}
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <div className="relative flex-1 sm:w-56 flex items-center">
+            <Search size={13} className="absolute left-2.5 text-muted-foreground pointer-events-none" />
+            <input
+              type="text"
+              placeholder={t("admin.nodeTable.searchByName", "搜索节点、IP、分组...")}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full h-8 pl-8 pr-3 text-xs rounded-lg border border-border bg-card text-foreground placeholder:text-muted-foreground/60 outline-none focus:border-foreground/50 focus:ring-1 focus:ring-foreground/20 transition-all shadow-2xs"
+            />
+          </div>
+
           <Dialog.Root open={dialogOpen} onOpenChange={setDialogOpen}>
             <Dialog.Trigger>
               <button
                 onClick={() => setDialogOpen(true)}
-                className="h-9 px-3.5 rounded-lg bg-foreground text-background font-medium text-xs flex items-center gap-1.5 shadow-sm hover:opacity-90 active:scale-[0.98] transition-all cursor-pointer shrink-0"
+                className="h-8 px-3 rounded-lg bg-foreground text-background font-medium text-xs flex items-center gap-1.5 shadow-sm hover:opacity-90 active:scale-[0.98] transition-all cursor-pointer shrink-0"
               >
-                <Plus size={14} strokeWidth={2.5} />
+                <Plus size={13} strokeWidth={2.5} />
                 <span>{t("admin.nodeTable.addNode")}</span>
               </button>
             </Dialog.Trigger>
@@ -1021,14 +1030,14 @@ const Header = ({
         </div>
       </div>
 
-      {/* 快捷过滤工具条：状态过滤 + 分组过滤 */}
-      <div className="flex flex-wrap items-center justify-between gap-2.5 pt-1">
+      {/* 快捷过滤工具条：状态分段器 + 分组下拉框（精简为单行） */}
+      <div className="flex flex-wrap items-center justify-between gap-2 pt-0.5">
         {/* 在线状态筛选 */}
-        <div className="inline-flex items-center p-0.5 bg-muted/70 rounded-lg border border-border/60 text-xs">
+        <div className="inline-flex items-center p-0.5 bg-muted/60 rounded-lg border border-border/60 text-xs">
           <button
             type="button"
             onClick={() => setSelectedStatus("all")}
-            className={`px-3 py-1 rounded-md transition-all cursor-pointer font-medium ${
+            className={`px-2.5 py-0.5 rounded-md transition-all cursor-pointer font-medium text-[11px] ${
               selectedStatus === "all"
                 ? "bg-card text-foreground shadow-xs font-semibold"
                 : "text-muted-foreground hover:text-foreground"
@@ -1039,7 +1048,7 @@ const Header = ({
           <button
             type="button"
             onClick={() => setSelectedStatus("online")}
-            className={`px-3 py-1 rounded-md flex items-center gap-1.5 transition-all cursor-pointer font-medium ${
+            className={`px-2.5 py-0.5 rounded-md flex items-center gap-1 transition-all cursor-pointer font-medium text-[11px] ${
               selectedStatus === "online"
                 ? "bg-card text-foreground shadow-xs font-semibold"
                 : "text-muted-foreground hover:text-foreground"
@@ -1051,7 +1060,7 @@ const Header = ({
           <button
             type="button"
             onClick={() => setSelectedStatus("offline")}
-            className={`px-3 py-1 rounded-md flex items-center gap-1.5 transition-all cursor-pointer font-medium ${
+            className={`px-2.5 py-0.5 rounded-md flex items-center gap-1 transition-all cursor-pointer font-medium text-[11px] ${
               selectedStatus === "offline"
                 ? "bg-card text-foreground shadow-xs font-semibold"
                 : "text-muted-foreground hover:text-foreground"
@@ -1064,7 +1073,7 @@ const Header = ({
             <button
               type="button"
               onClick={() => setSelectedStatus(selectedStatus === "expiring" ? "all" : "expiring")}
-              className={`px-3 py-1 rounded-md flex items-center gap-1.5 transition-all cursor-pointer font-medium ${
+              className={`px-2.5 py-0.5 rounded-md flex items-center gap-1 transition-all cursor-pointer font-medium text-[11px] ${
                 selectedStatus === "expiring"
                   ? "bg-amber-500/15 text-amber-700 dark:text-amber-300 shadow-xs font-semibold border border-amber-500/30"
                   : "text-muted-foreground hover:text-foreground"
@@ -1076,37 +1085,22 @@ const Header = ({
           )}
         </div>
 
-        {/* 分组筛选胶囊 */}
+        {/* 分组筛选：精简下拉选择框 */}
         {availableGroups.length > 0 && (
-          <div className="flex items-center gap-1.5 overflow-x-auto max-w-full py-0.5">
-            <span className="text-xs text-muted-foreground font-medium shrink-0 mr-1">
-              分组:
-            </span>
-            <button
-              type="button"
-              onClick={() => setSelectedGroup("all")}
-              className={`px-2.5 py-1 text-xs rounded-full border transition-all cursor-pointer shrink-0 ${
-                selectedGroup === "all"
-                  ? "bg-foreground text-background border-foreground font-medium shadow-2xs"
-                  : "bg-card text-muted-foreground border-border hover:text-foreground"
-              }`}
+          <div className="flex items-center gap-1.5 text-xs">
+            <span className="text-[11px] text-muted-foreground">分组:</span>
+            <select
+              value={selectedGroup}
+              onChange={(e) => setSelectedGroup(e.target.value)}
+              className="h-7 px-2 text-xs rounded-md border border-border bg-card text-foreground outline-none focus:border-foreground/50 cursor-pointer shadow-2xs"
             >
-              全部
-            </button>
-            {availableGroups.map((g) => (
-              <button
-                key={g}
-                type="button"
-                onClick={() => setSelectedGroup(g)}
-                className={`px-2.5 py-1 text-xs rounded-full border transition-all cursor-pointer shrink-0 ${
-                  selectedGroup === g
-                    ? "bg-foreground text-background border-foreground font-medium shadow-2xs"
-                    : "bg-card text-muted-foreground border-border hover:text-foreground"
-                }`}
-              >
-                {g}
-              </button>
-            ))}
+              <option value="all">全部分组 ({totalNodes})</option>
+              {availableGroups.map((g) => (
+                <option key={g} value={g}>
+                  {g}
+                </option>
+              ))}
+            </select>
           </div>
         )}
       </div>
@@ -1142,25 +1136,22 @@ const ServerRow = ({
         <DetailView node={node} />
       </TableCell>
       <TableCell className="w-52 px-3">
-        <div className="flex items-center gap-1.5 flex-wrap">
+        <div className="flex items-center gap-1.5 flex-nowrap">
           {node.ipv4 ? (
-            <div className="inline-flex items-center gap-1 group bg-muted/60 px-1.5 py-0.5 rounded border border-border/50 text-foreground/90">
-              <span className="font-mono text-xs select-all">
+            <div
+              onClick={() => copy(node.ipv4!)}
+              className="inline-flex items-center justify-between gap-1 group bg-muted/60 hover:bg-muted/90 px-2 py-0.5 rounded border border-border/50 text-foreground/90 w-[142px] shrink-0 cursor-pointer transition-colors shadow-2xs select-none"
+              title={`${node.ipv4} (点击复制)`}
+            >
+              <span className="font-mono text-xs truncate">
                 {node.ipv4}
               </span>
-              <button
-                type="button"
-                onClick={() => copy(node.ipv4!)}
-                className="opacity-0 group-hover:opacity-100 p-0.5 text-muted-foreground hover:text-foreground transition-opacity cursor-pointer"
-                title={t("common.copy")}
-              >
-                <Copy size={11} />
-              </button>
+              <Copy size={11} className="text-muted-foreground/60 group-hover:text-foreground shrink-0 transition-colors" />
             </div>
           ) : null}
           {node.ipv6 ? (
             <div
-              className="inline-flex items-center gap-1 group bg-muted/40 hover:bg-muted/70 px-1.5 py-0.5 rounded border border-border/40 text-[10px] text-muted-foreground transition-colors cursor-pointer select-none"
+              className="inline-flex items-center justify-center gap-1 group bg-muted/40 hover:bg-muted/70 px-1.5 py-0.5 rounded border border-border/40 text-[10px] text-muted-foreground transition-colors cursor-pointer select-none shrink-0 w-[50px]"
               onClick={() => copy(node.ipv6!)}
               title={`${node.ipv6} (点击复制)`}
             >
@@ -1172,11 +1163,6 @@ const ServerRow = ({
             <span className="text-xs text-muted-foreground/40 font-mono">-</span>
           )}
         </div>
-      </TableCell>
-      <TableCell className="w-20 px-2 text-center">
-        <span className="inline-block font-mono text-[11px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground border border-border/60">
-          v{node.version || "1.0.7"}
-        </span>
       </TableCell>
       <TableCell className="w-20 px-2 text-center">
         {node.group ? (
@@ -1226,9 +1212,9 @@ const NodeTable = ({
   selectedNodes: string[];
   setSelectedNodes: (nodes: string[]) => void;
   settings: any;
-  sortField: "name" | "ip" | "version" | "group" | "billing" | "none";
+  sortField: "name" | "ip" | "group" | "billing" | "none";
   sortOrder: "asc" | "desc";
-  onSort: (field: "name" | "ip" | "version" | "group" | "billing") => void;
+  onSort: (field: "name" | "ip" | "group" | "billing") => void;
 }) => {
   const { t } = useTranslation();
 
@@ -1244,7 +1230,7 @@ const NodeTable = ({
     );
   };
 
-  const renderSortIcon = (field: "name" | "ip" | "version" | "group" | "billing") => {
+  const renderSortIcon = (field: "name" | "ip" | "group" | "billing") => {
     if (sortField !== field) {
       return (
         <ArrowUpDown
@@ -1290,15 +1276,6 @@ const NodeTable = ({
               <span className="inline-flex items-center">
                 <span>{t("admin.nodeDetail.ipAddress")}</span>
                 {renderSortIcon("ip")}
-              </span>
-            </TableHead>
-            <TableHead
-              onClick={() => onSort("version")}
-              className="w-20 px-2 text-center cursor-pointer select-none group hover:text-foreground transition-colors"
-            >
-              <span className="inline-flex items-center justify-center">
-                <span>{t("admin.nodeDetail.clientVersion", "版本")}</span>
-                {renderSortIcon("version")}
               </span>
             </TableHead>
             <TableHead
@@ -2081,8 +2058,8 @@ function DetailView({ node }: { node: NodeDetail }) {
                 </span>
               )}
             </div>
-            <span className="text-[11px] text-muted-foreground/70 font-mono truncate max-w-[240px]">
-              {node.os || "Linux"} {node.arch ? `· ${node.arch}` : ""}
+            <span className="text-[11px] text-muted-foreground/70 font-mono truncate max-w-[280px]">
+              {node.os || "Linux"} {node.arch ? `· ${node.arch}` : ""} {node.version ? `· v${node.version}` : ""}
             </span>
           </div>
         </div>

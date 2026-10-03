@@ -106,16 +106,29 @@ export default function Sessions() {
   }
 
   return (
-    <div className="km-page-admin-sessions space-y-4">
-      <div className="flex justify-between items-center">
-        <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-foreground">
-          {t("sessions.title")}
-        </h1>
+    <div className="space-y-4 km-page-admin-sessions max-w-7xl">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 pb-2 border-b border-border/40">
+        <div>
+          <div className="flex items-center gap-2">
+            <h1 className="text-lg sm:text-xl font-bold tracking-tight text-foreground">
+              {t("sessions.title", "登录会话管理")}
+            </h1>
+            <span className="px-2 py-0.2 text-[11px] font-mono font-medium rounded-full bg-muted text-muted-foreground border border-border">
+              {sessions.data.length} 个活动会话
+            </span>
+          </div>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            查看当前所有授权登录的管理端设备、浏览器 User-Agent 及来源 IP。
+          </p>
+        </div>
         <Dialog.Root>
           <Dialog.Trigger>
-            <Button color="red" variant="soft" size="2">
-              {t("sessions.delete_all")}
-            </Button>
+            <button
+              type="button"
+              className="h-8 px-3 rounded-lg border border-destructive/30 bg-destructive/10 text-destructive font-medium text-xs flex items-center gap-1.5 shadow-2xs hover:bg-destructive/20 active:scale-[0.98] transition-all cursor-pointer"
+            >
+              <span>{t("sessions.delete_all", "退出所有会话")}</span>
+            </button>
           </Dialog.Trigger>
           <Dialog.Content>
             <Dialog.Title>{t("sessions.delete_all")}</Dialog.Title>

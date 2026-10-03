@@ -117,11 +117,20 @@ const InnerLayout = () => {
   
   return (
     <div className="km-page-admin-account max-w-4xl space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">{t("account.title")}</h1>
-        <p className="text-sm text-muted-foreground">
-          {t("account.greeting", { username: account?.username })}
-        </p>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 pb-2 border-b border-border/40">
+        <div>
+          <div className="flex items-center gap-2">
+            <h1 className="text-lg sm:text-xl font-bold tracking-tight text-foreground">
+              {t("account.title", "管理员账户设置")}
+            </h1>
+            <span className="px-2 py-0.2 text-[11px] font-mono font-medium rounded-full bg-muted text-muted-foreground border border-border">
+              {account?.username}
+            </span>
+          </div>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            管理后台管理员凭证、两步验证（2FA）绑定与密码策略。
+          </p>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -167,9 +176,6 @@ const InnerLayout = () => {
             ) : (
               <TwoFactorDisabled />
             )}
-            <p className="text-muted-foreground text-xs">
-              {t("account_settings.looking_for_backup")}
-            </p>
           </div>
         </div>
 
