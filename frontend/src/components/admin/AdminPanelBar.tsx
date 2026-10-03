@@ -19,6 +19,8 @@ import InlineSvgIcon from "../InlineSvgIcon";
 import { useAccount } from "@/contexts/useAccount";
 import { usePublicInfo } from "@/contexts/usePublicInfo";
 import { useRPC2Call } from "@/contexts/useRPC2";
+import { useThemeMode } from "@/hooks/useSystemTheme";
+import { Moon, Sun, SunMedium } from "lucide-react";
 
 // 将JSON配置转换为类型安全的菜单项数组 (基础静态菜单)
 const baseMenuItems = (menuConfig as { menu: MenuItem[] }).menu;
@@ -43,6 +45,7 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
   const [t] = useTranslation();
   const location = useLocation();
   const { publicInfo } = usePublicInfo();
+  const { themeMode, toggleThemeMode } = useThemeMode();
 
   // 获取版本信息
   const [versionInfo, setVersionInfo] = useState<{
@@ -279,6 +282,29 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
               <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
             </svg>
           </a>
+
+          <IconButton
+            variant="ghost"
+            size="2"
+            className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+            onClick={toggleThemeMode}
+            title={
+              themeMode === "auto"
+                ? t("common.theme_auto", "自动主题")
+                : themeMode === "light"
+                ? t("common.theme_light", "浅色主题")
+                : t("common.theme_dark", "深色主题")
+            }
+            aria-label="Toggle Theme"
+          >
+            {themeMode === "auto" ? (
+              <SunMedium className="w-4 h-4" />
+            ) : themeMode === "light" ? (
+              <Sun className="w-4 h-4" />
+            ) : (
+              <Moon className="w-4 h-4" />
+            )}
+          </IconButton>
 
           <div className="h-3.5 w-px bg-border/60 mx-1 hidden sm:block" />
 

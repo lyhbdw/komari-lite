@@ -13,8 +13,6 @@ export default function App() {
   const resolvedAppearance = useSystemTheme();
 
   React.useEffect(() => {
-    localStorage.removeItem("appearance");
-    localStorage.removeItem("color");
     const isDark = resolvedAppearance === "dark";
     document.documentElement.classList.toggle("dark", isDark);
   }, [resolvedAppearance]);
