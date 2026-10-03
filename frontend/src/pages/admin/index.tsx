@@ -105,13 +105,13 @@ const Layout = () => {
   const [selectedStatus, setSelectedStatus] = useState<"all" | "online" | "offline" | "expiring">("all");
   const [selectedNodes, setSelectedNodes] = useState<string[]>([]);
 
-  // 判定是否为 14 天内即将到期机器
+  // 判定是否为 7 天内即将到期机器
   const isExpiringSoon = React.useCallback((node: NodeDetail) => {
     if (!node.expired_at) return false;
     const exp = new Date(node.expired_at);
     const now = new Date();
-    const fourteenDaysLater = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
-    return exp > now && exp <= fourteenDaysLater;
+    const sevenDaysLater = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+    return exp > now && exp <= sevenDaysLater;
   }, []);
 
   const expiringCount = React.useMemo(() => {
@@ -367,7 +367,7 @@ const MetricsOverview = ({
           <span>{expiringCount} 台</span>
           {expiringCount > 0 && (
             <span className="text-[10px] font-sans font-normal text-amber-600 dark:text-amber-400 px-1.5 py-0.2 rounded bg-amber-500/10 border border-amber-500/20">
-              14天内
+              7天内
             </span>
           )}
         </div>
@@ -873,8 +873,8 @@ const SortableRow = ({
             if (!node.expired_at) return false;
             const exp = new Date(node.expired_at);
             const now = new Date();
-            const fourteenDaysLater = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
-            return exp > now && exp <= fourteenDaysLater;
+            const sevenDaysLater = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+            return exp > now && exp <= sevenDaysLater;
           })()}
         />
       </TableCell>
