@@ -12,8 +12,6 @@ import { toast } from "sonner";
 import Loading from "@/components/loading";
 import React from "react";
 import { renderProviderInputs } from "@/utils/renderProviders";
-import { SquareArrowOutUpRight } from "lucide-react";
-import { Link } from "react-router-dom";
 
 const NotificationSettings = () => {
   const { t } = useTranslation();
@@ -130,7 +128,10 @@ const NotificationSettings = () => {
       <SettingCardSelect
         title={t("settings.notification.method")}
         description={t("settings.notification.method_description")}
-        options={messageList.map((sender) => ({ value: sender, label: sender }))}
+        options={messageList.map((sender) => ({
+          value: sender,
+          label: sender.charAt(0).toUpperCase() + sender.slice(1),
+        }))}
         value={currentMessageSender}
         OnSave={async (val: string) => {
           if (val === currentMessageSender) return;
@@ -172,23 +173,15 @@ const NotificationSettings = () => {
           } catch (error) {
             toast.error(
               t("common.error") +
-              ": " +
-              (error instanceof Error ? error.message : String(error))
+                ": " +
+                (error instanceof Error ? error.message : String(error))
             );
           }
         }}
         className="km-setting-card"
       >
-        GO
+        {t("common.save") === "保存" ? "发送测试" : "Send test"}
       </SettingCardButton>
-      <label className="text-muted-foreground text-sm flex flex-row items-center gap-1">
-        {t("settings.notification.moved")}
-        <Link
-          to="/admin/notification/general"
-        >
-          <SquareArrowOutUpRight size={16} />
-        </Link>
-      </label>
     </>
   );
 };

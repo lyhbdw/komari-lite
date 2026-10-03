@@ -173,6 +173,7 @@ export const renderProviderInputs = ({
                 defaultValue={String(fieldValue)}
                 type={isNumber ? "number" : "text"}
                 showSaveButton={false}
+                className={["bot_token", "password", "secret", "key", "endpoint", "url", "api_url", "server_url", "device_key"].includes(f.name) ? "w-full max-w-xl" : "w-full"}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                     const value = isNumber ? (e.target.value === "" ? 0 : Number(e.target.value)) : e.target.value;
                     updateLocalValue(f.name, value);
@@ -191,7 +192,7 @@ export const renderProviderInputs = ({
                 description={description}
                 defaultOpen={true}
             >
-                <div className="flex gap-4 flex-col">
+                <div className="flex gap-3 flex-col">
                     {/* 按照服务器传来的顺序渲染所有字段 */}
                     {fields.map((f: any) => renderField(f))}
 
@@ -203,12 +204,14 @@ export const renderProviderInputs = ({
                     )}
 
                     {/* 统一的保存按钮 */}
-                    <SettingCardButton
-                        bordless
-                        onClick={handleSaveAll}
-                    >
-                        {t("common.save")}
-                    </SettingCardButton>
+                    <div className="pt-1">
+                        <SettingCardButton
+                            bordless
+                            onClick={handleSaveAll}
+                        >
+                            {t("common.save")}
+                        </SettingCardButton>
+                    </div>
                 </div>
             </SettingCardCollapse>
         </div>

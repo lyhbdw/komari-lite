@@ -162,7 +162,6 @@ export function SettingCardButton({
   autoDisabled?: boolean;
 }) {
   const [disabled, setDisabled] = React.useState(false);
-  const resolvedLabel = label;
   const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     if (autoDisabled) setDisabled(true);
     const result: any = onClick ? onClick(event.currentTarget) : undefined;
@@ -180,7 +179,6 @@ export function SettingCardButton({
       <SettingCard.Action>
         <Flex>
           <Flex direction="row" gap="2" align="center">
-            <label className="text-sm text-muted-foreground">{resolvedLabel}</label>
             <Button onClick={handleClick} variant={variant} disabled={disabled}>
               {children}
             </Button>
@@ -561,7 +559,7 @@ export function SettingCardLongTextInput({
     >
       <Flex direction="column" className="w-full mt-1" gap="2" align="start">
         <TextArea
-          className="w-full"
+          className="w-full max-w-2xl"
           defaultValue={defaultValue}
           resize="vertical"
           value={value}
