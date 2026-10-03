@@ -19,15 +19,12 @@ import {
   DropdownMenu,
 } from "@radix-ui/themes";
 import {
-  Activity,
   CircleDollarSign,
   Copy,
   CornerRightUp,
   Download,
   Folder,
   Globe,
-  GripVertical,
-  MenuIcon,
   Pencil,
   Plus,
   Search,
@@ -35,28 +32,18 @@ import {
   Trash2Icon,
   ArrowUpCircle,
   MoreHorizontal,
-  CreditCard,
   Key,
   AlertTriangle,
   CalendarClock,
   CalendarCheck,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  CheckSquare,
+  X,
+  Layers,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import {
-  DndContext,
-  closestCenter,
-  useSensor,
-  useSensors,
-  TouchSensor,
-  MouseSensor,
-  KeyboardSensor,
-} from "@dnd-kit/core";
-import {
-  SortableContext,
-  useSortable,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
 import { toast } from "sonner";
 import Flag from "@/components/Flag";
 import {
@@ -104,6 +91,28 @@ const Layout = () => {
   const [selectedGroup, setSelectedGroup] = useState<string>("all");
   const [selectedStatus, setSelectedStatus] = useState<"all" | "online" | "offline" | "expiring">("all");
   const [selectedNodes, setSelectedNodes] = useState<string[]>([]);
+
+  // 排序状态：名称 / IP / 版本 / 分组 / 账单
+  type SortField = "name" | "ip" | "version" | "group" | "billing" | "none";
+  type SortOrder = "asc" | "desc";
+  const [sortField, setSortField] = useState<SortField>("none");
+  const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
+
+  // 批量操作弹窗状态
+  const [batchGroupOpen, setBatchGroupOpen] = useState(false);
+  const [batchDeleteOpen, setBatchDeleteOpen] = useState(false);
+
+  const handleSort = (field: "name" | "ip" | "version" | "group" | "billing") => {
+    if (sortField !== field) {
+      setSortField(field);
+      setSortOrder("asc");
+    } else if (sortOrder === "asc") {
+      setSortOrder("desc");
+    } else {
+      setSortField("none");
+      setSortOrder("asc");
+    }
+  };
 
   // 判定是否为 7 天内即将到期机器
   const isExpiringSoon = React.useCallback((node: NodeDetail) => {
@@ -164,15 +173,99 @@ const Layout = () => {
         );
       })
       .sort((a, b) => {
-        // 筛选待续费时，按到期时间升序排序（最快到期的排最前）
+        // 待续费模式下优先按到期时间排序
         if (selectedStatus === "expiring") {
           const aTime = a.expired_at ? new Date(a.expired_at).getTime() : Infinity;
           const bTime = b.expired_at ? new Date(b.expired_at).getTime() : Infinity;
           return aTime - bTime;
         }
+
+        // 自定义列排序
+        if (sortField === "name") {
+          return sortOrder === "asc"
+            ? a.name.localeCompare(b.name, undefined, { numeric: true })
+            : b.name.localeCompare(a.name, undefined, { numeric: true });
+        }
+        if (sortField === "ip") {
+          const aIp = a.ipv4 || a.ipv6 || "";
+          const bIp = b.ipv4 || b.ipv6 || "";
+          return sortOrder === "asc"
+            ? aIp.localeCompare(bIp, undefined, { numeric: true })
+            : bIp.localeCompare(aIp, undefined, { numeric: true });
+        }
+        if (sortField === "version") {
+          const aVer = a.version || "";
+          const bVer = b.version || "";
+          return sortOrder === "asc" ? aVer.localeCompare(bVer) : bVer.localeCompare(aVer);
+        }
+        if (sortField === "group") {
+          const aGrp = a.group || "";
+          const bGrp = b.group || "";
+          return sortOrder === "asc" ? aGrp.localeCompare(bGrp) : bGrp.localeCompare(aGrp);
+        }
+        if (sortField === "billing") {
+          const aTime = a.expired_at ? new Date(a.expired_at).getTime() : Infinity;
+          const bTime = b.expired_at ? new Date(b.expired_at).getTime() : Infinity;
+          if (aTime !== bTime) {
+            return sortOrder === "asc" ? aTime - bTime : bTime - aTime;
+          }
+          return sortOrder === "asc" ? a.price - b.price : b.price - a.price;
+        }
+
         return a.weight - b.weight;
       });
-  }, [nodeDetail, selectedStatus, selectedGroup, searchTerm, isExpiringSoon]);
+  }, [nodeDetail, selectedStatus, selectedGroup, searchTerm, isExpiringSoon, sortField, sortOrder]);
+
+  // 批量操作处理器
+  const handleBatchCopyIPs = async () => {
+    if (!Array.isArray(nodeDetail)) return;
+    const ips = selectedNodes
+      .map((uuid) => {
+        const n = nodeDetail.find((node) => node.uuid === uuid);
+        return n?.ipv4 || n?.ipv6 || "";
+      })
+      .filter(Boolean);
+    if (ips.length === 0) {
+      toast.error("未找到有效 IP");
+      return;
+    }
+    await navigator.clipboard.writeText(ips.join("\n"));
+    toast.success(`已复制 ${ips.length} 台服务器 IP 到剪贴板`);
+  };
+
+  const handleBatchGroupConfirm = async (newGroup: string) => {
+    try {
+      await Promise.all(
+        selectedNodes.map((uuid) =>
+          fetch(`/api/admin/client/${uuid}/edit`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ group: newGroup }),
+          })
+        )
+      );
+      toast.success(`已批量将 ${selectedNodes.length} 台服务器分组设为：${newGroup || "默认"}`);
+      setSelectedNodes([]);
+      refresh();
+    } catch (err) {
+      toast.error(`批量修改失败: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  };
+
+  const handleBatchDeleteConfirm = async () => {
+    try {
+      await Promise.all(
+        selectedNodes.map((uuid) =>
+          fetch(`/api/admin/client/${uuid}/remove`, { method: "POST" })
+        )
+      );
+      toast.success(`已成功删除 ${selectedNodes.length} 台服务器`);
+      setSelectedNodes([]);
+      refresh();
+    } catch (err) {
+      toast.error(`批量删除失败: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  };
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -215,7 +308,7 @@ const Layout = () => {
   const isEmpty = Array.isArray(nodeDetail) && nodeDetail.length === 0;
 
   return (
-    <div className="km-page-admin-index space-y-5">
+    <div className="km-page-admin-index space-y-4">
       <Header
         searchTerm={searchTerm}
         setSearchTerm={setSearchTerm}
@@ -240,6 +333,67 @@ const Layout = () => {
         />
       )}
 
+      {/* 批量操作浮动工具栏 */}
+      {selectedNodes.length > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-2.5 p-2.5 sm:p-3 rounded-lg border border-primary/25 bg-card shadow-xs text-xs">
+          <div className="flex items-center gap-2">
+            <CheckSquare size={15} className="text-foreground" />
+            <span className="font-semibold text-foreground">
+              已选中 {selectedNodes.length} 台服务器
+            </span>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              type="button"
+              onClick={() => setBatchGroupOpen(true)}
+              className="px-2.5 py-1 rounded-md border border-border bg-card text-foreground font-medium hover:bg-muted transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
+            >
+              <Layers size={13} />
+              <span>设置分组</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleBatchCopyIPs}
+              className="px-2.5 py-1 rounded-md border border-border bg-card text-foreground font-medium hover:bg-muted transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
+            >
+              <Copy size={13} />
+              <span>复制选中 IP</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setBatchDeleteOpen(true)}
+              className="px-2.5 py-1 rounded-md border border-destructive/30 bg-destructive/10 text-destructive font-medium hover:bg-destructive/20 transition-colors flex items-center gap-1.5 cursor-pointer"
+            >
+              <Trash2Icon size={13} />
+              <span>批量删除</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedNodes([])}
+              className="px-2 py-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors flex items-center gap-1 cursor-pointer"
+            >
+              <X size={13} />
+              <span>取消选择</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      <BatchGroupDialog
+        open={batchGroupOpen}
+        onOpenChange={setBatchGroupOpen}
+        selectedCount={selectedNodes.length}
+        onConfirm={handleBatchGroupConfirm}
+        availableGroups={availableGroups}
+      />
+
+      <BatchDeleteDialog
+        open={batchDeleteOpen}
+        onOpenChange={setBatchDeleteOpen}
+        selectedCount={selectedNodes.length}
+        onConfirm={handleBatchDeleteConfirm}
+      />
+
       {isEmpty ? (
         <EmptyNodesGuide />
       ) : (
@@ -248,11 +402,138 @@ const Layout = () => {
           selectedNodes={selectedNodes}
           setSelectedNodes={setSelectedNodes}
           settings={settings}
+          sortField={sortField}
+          sortOrder={sortOrder}
+          onSort={handleSort}
         />
       )}
     </div>
   );
 };
+
+function BatchGroupDialog({
+  open,
+  onOpenChange,
+  selectedCount,
+  onConfirm,
+  availableGroups,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  selectedCount: number;
+  onConfirm: (group: string) => Promise<void>;
+  availableGroups: string[];
+}) {
+  const { t } = useTranslation();
+  const [group, setGroup] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = async () => {
+    try {
+      setSaving(true);
+      await onConfirm(group.trim());
+      onOpenChange(false);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog.Root open={open} onOpenChange={onOpenChange}>
+      <Dialog.Content className="max-w-sm">
+        <Dialog.Title>批量设置分组</Dialog.Title>
+        <Dialog.Description className="text-xs text-muted-foreground mt-1">
+          将选中的 {selectedCount} 台服务器归入指定分组：
+        </Dialog.Description>
+        <div className="my-3 space-y-2.5">
+          <TextField.Root
+            value={group}
+            onChange={(e) => setGroup(e.target.value)}
+            placeholder="输入新分组名称或快速选择已有"
+            autoFocus
+          />
+          {availableGroups.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 items-center">
+              <span className="text-[11px] text-muted-foreground">已有分组:</span>
+              {availableGroups.map((g) => (
+                <button
+                  key={g}
+                  type="button"
+                  onClick={() => setGroup(g)}
+                  className="px-2 py-0.5 text-xs rounded bg-muted hover:bg-muted/80 text-foreground transition-colors cursor-pointer border border-border/50"
+                >
+                  {g}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        <Flex justify="end" gap="2" mt="4">
+          <Dialog.Close>
+            <Button variant="soft" color="gray" disabled={saving}>
+              {t("common.cancel")}
+            </Button>
+          </Dialog.Close>
+          <Button onClick={handleSave} disabled={saving}>
+            {saving ? "保存中..." : t("common.save")}
+          </Button>
+        </Flex>
+      </Dialog.Content>
+    </Dialog.Root>
+  );
+}
+
+function BatchDeleteDialog({
+  open,
+  onOpenChange,
+  selectedCount,
+  onConfirm,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  selectedCount: number;
+  onConfirm: () => Promise<void>;
+}) {
+  const { t } = useTranslation();
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDelete = async () => {
+    try {
+      setDeleting(true);
+      await onConfirm();
+      onOpenChange(false);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  return (
+    <Dialog.Root open={open} onOpenChange={onOpenChange}>
+      <Dialog.Content className="max-w-md">
+        <Dialog.Title className="text-destructive flex items-center gap-1.5">
+          <AlertTriangle size={18} />
+          <span>确认批量删除</span>
+        </Dialog.Title>
+        <div className="my-3 p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-xs leading-relaxed">
+          警告：此操作不可撤销！将同时永久删除选中的 <strong>{selectedCount}</strong> 台服务器及其监控历史数据。
+        </div>
+        <Dialog.Description className="text-xs text-muted-foreground">
+          确定要继续删除这 {selectedCount} 台节点吗？
+        </Dialog.Description>
+        <Flex justify="end" gap="2" mt="4">
+          <Dialog.Close>
+            <Button variant="soft" color="gray" disabled={deleting}>
+              {t("common.cancel")}
+            </Button>
+          </Dialog.Close>
+          <Button onClick={handleDelete} disabled={deleting} color="red">
+            {deleting ? "删除中..." : `确认删除 (${selectedCount}台)`}
+          </Button>
+        </Flex>
+      </Dialog.Content>
+    </Dialog.Root>
+  );
+}
 
 const MetricsOverview = ({
   nodes,
@@ -278,80 +559,75 @@ const MetricsOverview = ({
   const isExpiringActive = selectedStatus === "expiring";
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-      <div className="p-3.5 rounded-lg border border-border bg-card shadow-2xs hover:border-foreground/30 transition-all">
-        <div className="flex items-center justify-between text-muted-foreground mb-1">
-          <span className="text-[11px] font-medium uppercase tracking-wider">
-            {t("admin.overview.total_nodes", "接入节点")}
-          </span>
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
+      {/* 1. 总节点 */}
+      <div className="p-3 rounded-lg border border-border bg-card shadow-2xs hover:border-foreground/30 transition-all">
+        <div className="flex items-center justify-between text-muted-foreground mb-1 text-[11px] font-medium uppercase tracking-wider">
+          <span>{t("admin.overview.total_nodes", "接入节点")}</span>
           <Server size={14} className="opacity-70" />
         </div>
-        <div className="text-xl font-bold font-mono tracking-tight text-foreground">
-          {total}
-        </div>
-        <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground mt-1">
-          <span
-            className={`inline-block w-1.5 h-1.5 rounded-full ${
-              onlineCount > 0 ? "bg-emerald-500 animate-pulse" : "bg-rose-500"
-            }`}
-          />
-          <span>
-            {total > 0
-              ? `${onlineCount} 在线 · ${total - onlineCount} 离线`
-              : t("admin.overview.no_nodes", "等待节点接入")}
+        <div className="flex items-baseline justify-between mt-1">
+          <span className="text-xl font-bold font-mono tracking-tight text-foreground">
+            {total}
           </span>
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <span
+              className={`inline-block w-1.5 h-1.5 rounded-full ${
+                onlineCount > 0 ? "bg-emerald-500 animate-pulse" : "bg-rose-500"
+              }`}
+            />
+            <span>{onlineCount} 在线 · {total - onlineCount} 离线</span>
+          </div>
         </div>
       </div>
 
-      <div className="p-3.5 rounded-lg border border-border bg-card shadow-2xs hover:border-foreground/30 transition-all">
-        <div className="flex items-center justify-between text-muted-foreground mb-1">
-          <span className="text-[11px] font-medium uppercase tracking-wider">
-            {t("admin.overview.regions", "地区覆盖")}
-          </span>
+      {/* 2. 地区覆盖 */}
+      <div className="p-3 rounded-lg border border-border bg-card shadow-2xs hover:border-foreground/30 transition-all">
+        <div className="flex items-center justify-between text-muted-foreground mb-1 text-[11px] font-medium uppercase tracking-wider">
+          <span>{t("admin.overview.regions", "地区覆盖")}</span>
           <Globe size={14} className="opacity-70" />
         </div>
-        <div className="text-xl font-bold font-mono tracking-tight text-foreground">
-          {uniqueRegions.length || (total > 0 ? 1 : 0)}
-        </div>
-        <div
-          className="text-[11px] text-muted-foreground mt-1 truncate cursor-help"
-          title={uniqueRegions.map((r) => r.toUpperCase()).join(", ")}
-        >
-          {uniqueRegions.length > 0
-            ? `${uniqueRegions.slice(0, 7).map((r) => r.toUpperCase()).join(", ")}${
-                uniqueRegions.length > 7 ? ` +${uniqueRegions.length - 7}` : ""
-              }`
-            : t("common.global", "全球网络")}
+        <div className="flex items-baseline justify-between mt-1">
+          <span className="text-xl font-bold font-mono tracking-tight text-foreground">
+            {uniqueRegions.length || (total > 0 ? 1 : 0)}
+          </span>
+          <span
+            className="text-xs text-muted-foreground truncate max-w-[120px] sm:max-w-[140px] cursor-help"
+            title={uniqueRegions.map((r) => r.toUpperCase()).join(", ")}
+          >
+            {uniqueRegions.slice(0, 5).map((r) => r.toUpperCase()).join(",")}{uniqueRegions.length > 5 ? ` +${uniqueRegions.length - 5}` : ""}
+          </span>
         </div>
       </div>
 
-      <div className="p-3.5 rounded-lg border border-border bg-card shadow-2xs hover:border-foreground/30 transition-all">
-        <div className="flex items-center justify-between text-muted-foreground mb-1">
-          <span className="text-[11px] font-medium uppercase tracking-wider">
-            {t("admin.overview.groups", "分组数")}
-          </span>
+      {/* 3. 分组数 */}
+      <div className="p-3 rounded-lg border border-border bg-card shadow-2xs hover:border-foreground/30 transition-all">
+        <div className="flex items-center justify-between text-muted-foreground mb-1 text-[11px] font-medium uppercase tracking-wider">
+          <span>{t("admin.overview.groups", "分组数")}</span>
           <Folder size={14} className="opacity-70" />
         </div>
-        <div className="text-xl font-bold font-mono tracking-tight text-foreground">
-          {uniqueGroups.length || (total > 0 ? 1 : 0)}
-        </div>
-        <div className="text-[11px] text-muted-foreground mt-1">
-          {t("admin.overview.groups_desc", "节点逻辑业务编组")}
+        <div className="flex items-baseline justify-between mt-1">
+          <span className="text-xl font-bold font-mono tracking-tight text-foreground">
+            {uniqueGroups.length || (total > 0 ? 1 : 0)}
+          </span>
+          <span className="text-xs text-muted-foreground">
+            业务逻辑分组
+          </span>
         </div>
       </div>
 
-      {/* 临期续费直达卡片：点击直达筛选 */}
+      {/* 4. 待续费机器（一键直达筛选） */}
       <div
         onClick={() => setSelectedStatus(isExpiringActive ? "all" : "expiring")}
-        className={`p-3.5 rounded-lg border bg-card shadow-2xs cursor-pointer transition-all duration-150 group select-none ${
+        className={`p-3 rounded-lg border bg-card shadow-2xs cursor-pointer transition-all duration-150 group select-none ${
           isExpiringActive
             ? "border-amber-500/80 ring-2 ring-amber-500/20 bg-amber-500/5 dark:bg-amber-500/10"
             : "border-border hover:border-amber-500/50 hover:shadow-xs"
         }`}
         title={isExpiringActive ? "点击恢复展示全部节点" : "点击在下方列表筛选这批临期节点"}
       >
-        <div className="flex items-center justify-between text-muted-foreground mb-1">
-          <span className="text-[11px] font-medium uppercase tracking-wider group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
+        <div className="flex items-center justify-between text-muted-foreground mb-1 text-[11px] font-medium uppercase tracking-wider">
+          <span className="group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
             {t("admin.overview.expiring_soon", "待续费机器")}
           </span>
           <CalendarClock
@@ -363,30 +639,28 @@ const MetricsOverview = ({
             }`}
           />
         </div>
-        <div className="text-xl font-bold font-mono tracking-tight text-foreground flex items-baseline gap-1.5">
-          <span>{expiringCount} 台</span>
-          {expiringCount > 0 && (
-            <span className="text-[10px] font-sans font-normal text-amber-600 dark:text-amber-400 px-1.5 py-0.2 rounded bg-amber-500/10 border border-amber-500/20">
-              7天内
+        <div className="flex items-baseline justify-between mt-1">
+          <div className="flex items-baseline gap-1.5">
+            <span className="text-xl font-bold font-mono tracking-tight text-foreground">
+              {expiringCount} 台
             </span>
-          )}
-        </div>
-        <div className="text-[11px] mt-1 flex items-center justify-between">
-          {expiringCount > 0 ? (
-            <span
-              className={`font-medium transition-colors ${
-                isExpiringActive
-                  ? "text-amber-600 dark:text-amber-400 underline underline-offset-2"
-                  : "text-muted-foreground group-hover:text-foreground"
-              }`}
-            >
-              {isExpiringActive ? "已筛选临期 · 点击取消" : "点击一键筛选"}
-            </span>
-          ) : (
-            <span className="text-muted-foreground">
-              全部机器续费正常
-            </span>
-          )}
+            {expiringCount > 0 && (
+              <span className="text-[10px] font-sans font-normal text-amber-600 dark:text-amber-400 px-1.5 py-0.2 rounded bg-amber-500/10 border border-amber-500/20">
+                7天内
+              </span>
+            )}
+          </div>
+          <span
+            className={`text-xs font-medium transition-colors ${
+              isExpiringActive
+                ? "text-amber-600 dark:text-amber-400 underline underline-offset-2"
+                : expiringCount > 0
+                ? "text-muted-foreground group-hover:text-foreground"
+                : "text-muted-foreground"
+            }`}
+          >
+            {expiringCount > 0 ? (isExpiringActive ? "点击取消" : "点击筛选") : "正常"}
+          </span>
         </div>
       </div>
     </div>
@@ -746,7 +1020,7 @@ const Header = ({
   );
 };
 
-const SortableRow = ({
+const ServerRow = ({
   node,
   selectedNodes,
   handleSelectNode,
@@ -757,42 +1031,14 @@ const SortableRow = ({
   handleSelectNode: (uuid: string, checked: boolean) => void;
   settings: any;
 }) => {
-  const { attributes, listeners, setNodeRef, transform, transition } =
-    useSortable({ id: node.uuid });
   const { t } = useTranslation();
-  const isMobile = useIsMobile();
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-  };
   function copy(text: string) {
     navigator.clipboard.writeText(text);
     toast.success(t("copy_success"));
   }
   return (
-    <TableRow ref={setNodeRef} style={style} className="hover:bg-muted/40 transition-colors h-[54px]">
-      <TableCell className="w-9 pl-3 pr-0 text-center">
-        <div
-          {...attributes}
-          {...listeners}
-          className={`cursor-grab p-1 rounded hover:bg-muted text-muted-foreground/40 hover:text-foreground transition-colors inline-flex items-center justify-center ${
-            isMobile ? "touch-manipulation select-none" : ""
-          }`}
-          style={{
-            touchAction: "none", // 禁用移动端的默认手势
-            WebkitUserSelect: "none",
-            userSelect: "none",
-          }}
-          title={
-            isMobile
-              ? t("admin.nodeTable.dragToReorder", "长按拖拽重新排序")
-              : undefined
-          }
-        >
-          <MenuIcon size={14} />
-        </div>
-      </TableCell>
-      <TableCell className="w-9 px-1 text-center">
+    <TableRow className="hover:bg-muted/40 transition-colors h-[54px]">
+      <TableCell className="w-10 px-2 text-center">
         <Checkbox
           checked={selectedNodes.includes(node.uuid)}
           onCheckedChange={(checked) => handleSelectNode(node.uuid, !!checked)}
@@ -847,15 +1093,6 @@ const SortableRow = ({
           <span className="text-xs text-muted-foreground/40 font-mono">-</span>
         )}
       </TableCell>
-      <TableCell className="w-24 px-2 text-center">
-        {node.remark ? (
-          <span className="inline-block text-xs text-muted-foreground truncate max-w-[80px]" title={node.remark}>
-            {node.remark}
-          </span>
-        ) : (
-          <span className="text-xs text-muted-foreground/40 font-mono">-</span>
-        )}
-      </TableCell>
       <TableCell className="w-48 px-3">
         <PriceTags
           price={node.price}
@@ -887,80 +1124,22 @@ const NodeTable = ({
   selectedNodes,
   setSelectedNodes,
   settings,
+  sortField,
+  sortOrder,
+  onSort,
 }: {
   nodes: NodeDetail[];
   selectedNodes: string[];
   setSelectedNodes: (nodes: string[]) => void;
   settings: any;
+  sortField: "name" | "ip" | "version" | "group" | "billing" | "none";
+  sortOrder: "asc" | "desc";
+  onSort: (field: "name" | "ip" | "version" | "group" | "billing") => void;
 }) => {
   const { t } = useTranslation();
-  const sensors = useSensors(
-    useSensor(MouseSensor, {
-      // 需要按住 10px 距离才开始拖拽，避免与点击冲突
-      activationConstraint: {
-        distance: 10,
-      },
-    }),
-    useSensor(TouchSensor, {
-      // 移动端需要按住 5px 距离才开始拖拽，并且延迟 200ms，避免与滚动冲突
-      activationConstraint: {
-        delay: 200,
-        tolerance: 5,
-      },
-    }),
-    useSensor(KeyboardSensor, {})
-  );
-  // 添加 localNodes 状态，实现即时 UI 更新
-  const [localNodes, setLocalNodes] = useState<NodeDetail[]>(nodes);
-  const [isDragging, setIsDragging] = useState(false);
-  React.useEffect(() => {
-    setLocalNodes(nodes);
-  }, [nodes]);
-  const handleDragStart = () => {
-    setIsDragging(true);
-    if ("vibrate" in navigator) {
-      navigator.vibrate(50);
-    }
-  };
 
-  const handleDragEnd = async (event: any) => {
-    setIsDragging(false);
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
-
-    const oldIndex = localNodes.findIndex((node) => node.uuid === active.id);
-    const newIndex = localNodes.findIndex((node) => node.uuid === over.id);
-    const reorderedNodes = Array.from(localNodes);
-    const [reorderedItem] = reorderedNodes.splice(oldIndex, 1);
-    reorderedNodes.splice(newIndex, 0, reorderedItem);
-
-    // 立即更新 UI
-    setLocalNodes(reorderedNodes);
-
-    if ("vibrate" in navigator) {
-      navigator.vibrate([30, 10, 30]);
-    }
-
-    try {
-      const orderData = reorderedNodes.reduce((acc, node, index) => {
-        acc[node.uuid] = index;
-        return acc;
-      }, {} as Record<string, number>);
-
-      await fetch("/api/admin/client/order", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(orderData),
-      });
-      // 不再调用 refresh，以免覆盖本地排序
-    } catch {
-      toast.error(t("admin.nodeTable.errorRefreshNodeList"));
-    }
-  };
-
-  // 更新全选逻辑，使用 localNodes
   const handleSelectAll = (checked: boolean) => {
-    setSelectedNodes(checked ? localNodes.map((node) => node.uuid) : []);
+    setSelectedNodes(checked ? nodes.map((node) => node.uuid) : []);
   };
 
   const handleSelectNode = (uuid: string, checked: boolean) => {
@@ -970,62 +1149,99 @@ const NodeTable = ({
         : selectedNodes.filter((id) => id !== uuid)
     );
   };
+
+  const renderSortIcon = (field: "name" | "ip" | "version" | "group" | "billing") => {
+    if (sortField !== field) {
+      return (
+        <ArrowUpDown
+          size={11}
+          className="opacity-25 group-hover:opacity-70 transition-opacity ml-1 inline-block shrink-0"
+        />
+      );
+    }
+    return sortOrder === "asc" ? (
+      <ArrowUp size={11} className="text-foreground ml-1 inline-block shrink-0" />
+    ) : (
+      <ArrowDown size={11} className="text-foreground ml-1 inline-block shrink-0" />
+    );
+  };
+
   return (
-    <div
-      className={`rounded-lg border border-border bg-card overflow-hidden ${
-        isDragging ? "select-none" : ""
-      }`}
-    >
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragStart={handleDragStart}
-        onDragEnd={handleDragEnd}
-      >
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-muted/40 border-b border-border/80 text-[11px]">
-              <TableHead className="w-9 pl-3 pr-0 text-center" title={t("admin.nodeTable.dragToReorder", "长按拖拽重新排序")}>
-                <GripVertical size={13} className="text-muted-foreground/30 mx-auto" />
-              </TableHead>
-              <TableHead className="w-9 px-1 text-center">
-                <Checkbox
-                  checked={
-                    selectedNodes.length === localNodes.length &&
-                    localNodes.length > 0
-                  }
-                  onCheckedChange={handleSelectAll}
-                />
-              </TableHead>
-              <TableHead className="min-w-[240px] px-3 text-left">
-                <span className="pl-[34px]">{t("admin.nodeTable.name")}</span>
-              </TableHead>
-              <TableHead className="w-52 px-3 text-left">{t("admin.nodeDetail.ipAddress")}</TableHead>
-              <TableHead className="w-20 px-2 text-center">{t("admin.nodeDetail.clientVersion", "版本")}</TableHead>
-              <TableHead className="w-20 px-2 text-center">{t("common.group")}</TableHead>
-              <TableHead className="w-24 px-2 text-center">{t("admin.nodeEdit.remark", "备注")}</TableHead>
-              <TableHead className="w-48 px-3 text-left">{t("admin.nodeTable.billing")}</TableHead>
-              <TableHead className="w-auto min-w-[130px] px-2 text-center">{t("common.actions", "操作")}</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            <SortableContext
-              items={localNodes.map((node) => node.uuid)}
-              strategy={verticalListSortingStrategy}
+    <div className="rounded-lg border border-border bg-card overflow-hidden">
+      <Table>
+        <TableHeader>
+          <TableRow className="bg-muted/40 border-b border-border/80 text-[11px]">
+            <TableHead className="w-10 px-2 text-center">
+              <Checkbox
+                checked={
+                  selectedNodes.length === nodes.length &&
+                  nodes.length > 0
+                }
+                onCheckedChange={handleSelectAll}
+              />
+            </TableHead>
+            <TableHead
+              onClick={() => onSort("name")}
+              className="min-w-[240px] px-3 text-left cursor-pointer select-none group hover:text-foreground transition-colors"
             >
-              {localNodes.map((node) => (
-                <SortableRow
-                  key={node.uuid}
-                  node={node}
-                  selectedNodes={selectedNodes}
-                  handleSelectNode={handleSelectNode}
-                  settings={settings}
-                />
-              ))}
-            </SortableContext>
-          </TableBody>
-        </Table>
-      </DndContext>
+              <span className="inline-flex items-center">
+                <span>{t("admin.nodeTable.name")}</span>
+                {renderSortIcon("name")}
+              </span>
+            </TableHead>
+            <TableHead
+              onClick={() => onSort("ip")}
+              className="w-52 px-3 text-left cursor-pointer select-none group hover:text-foreground transition-colors"
+            >
+              <span className="inline-flex items-center">
+                <span>{t("admin.nodeDetail.ipAddress")}</span>
+                {renderSortIcon("ip")}
+              </span>
+            </TableHead>
+            <TableHead
+              onClick={() => onSort("version")}
+              className="w-20 px-2 text-center cursor-pointer select-none group hover:text-foreground transition-colors"
+            >
+              <span className="inline-flex items-center justify-center">
+                <span>{t("admin.nodeDetail.clientVersion", "版本")}</span>
+                {renderSortIcon("version")}
+              </span>
+            </TableHead>
+            <TableHead
+              onClick={() => onSort("group")}
+              className="w-20 px-2 text-center cursor-pointer select-none group hover:text-foreground transition-colors"
+            >
+              <span className="inline-flex items-center justify-center">
+                <span>{t("common.group")}</span>
+                {renderSortIcon("group")}
+              </span>
+            </TableHead>
+            <TableHead
+              onClick={() => onSort("billing")}
+              className="w-48 px-3 text-left cursor-pointer select-none group hover:text-foreground transition-colors"
+            >
+              <span className="inline-flex items-center">
+                <span>{t("admin.nodeTable.billing")}</span>
+                {renderSortIcon("billing")}
+              </span>
+            </TableHead>
+            <TableHead className="w-auto min-w-[130px] px-2 text-center">
+              {t("common.actions", "操作")}
+            </TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {nodes.map((node) => (
+            <ServerRow
+              key={node.uuid}
+              node={node}
+              selectedNodes={selectedNodes}
+              handleSelectNode={handleSelectNode}
+              settings={settings}
+            />
+          ))}
+        </TableBody>
+      </Table>
     </div>
   );
 };
@@ -1750,9 +1966,27 @@ function DetailView({ node }: { node: NodeDetail }) {
             />
           </div>
           <div className="flex flex-col min-w-0">
-            <span className="font-medium text-sm text-foreground group-hover:text-primary transition-colors truncate max-w-[280px] lg:max-w-[340px]" title={node.name}>
-              {node.name}
-            </span>
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className="font-medium text-sm text-foreground group-hover:text-primary transition-colors truncate max-w-[240px] lg:max-w-[300px]" title={node.name}>
+                {node.name}
+              </span>
+              {node.remark && (
+                <span
+                  className="text-[10px] px-1.5 py-0.2 rounded bg-muted text-muted-foreground border border-border/60 font-normal truncate max-w-[120px] shrink-0"
+                  title={`私有备注: ${node.remark}`}
+                >
+                  {node.remark}
+                </span>
+              )}
+              {node.public_remark && !node.remark && (
+                <span
+                  className="text-[10px] px-1.5 py-0.2 rounded bg-muted text-muted-foreground border border-border/60 font-normal truncate max-w-[120px] shrink-0"
+                  title={`公开备注: ${node.public_remark}`}
+                >
+                  {node.public_remark}
+                </span>
+              )}
+            </div>
             <span className="text-[11px] text-muted-foreground/70 font-mono truncate max-w-[240px]">
               {node.os || "Linux"} {node.arch ? `· ${node.arch}` : ""}
             </span>
