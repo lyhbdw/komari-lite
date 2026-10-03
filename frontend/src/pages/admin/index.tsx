@@ -39,6 +39,7 @@ import {
   Key,
   AlertTriangle,
   CalendarClock,
+  CalendarCheck,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import {
@@ -864,10 +865,17 @@ const SortableRow = ({
           tags={node.tags || ""}
         />
       </TableCell>
-      <TableCell className="w-28 px-2 text-center">
+      <TableCell className="w-auto min-w-[130px] px-2 text-center whitespace-nowrap">
         <ActionButtons
           node={node}
           settings={settings}
+          isExpiring={(() => {
+            if (!node.expired_at) return false;
+            const exp = new Date(node.expired_at);
+            const now = new Date();
+            const fourteenDaysLater = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
+            return exp > now && exp <= fourteenDaysLater;
+          })()}
         />
       </TableCell>
     </TableRow>
@@ -997,7 +1005,7 @@ const NodeTable = ({
               <TableHead className="w-20 px-2 text-center">{t("common.group")}</TableHead>
               <TableHead className="w-24 px-2 text-center">{t("admin.nodeEdit.remark", "备注")}</TableHead>
               <TableHead className="w-48 px-3 text-left">{t("admin.nodeTable.billing")}</TableHead>
-              <TableHead className="w-28 px-2 text-center">{t("common.actions", "操作")}</TableHead>
+              <TableHead className="w-auto min-w-[130px] px-2 text-center">{t("common.actions", "操作")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -1025,13 +1033,18 @@ const NodeTable = ({
 const ActionButtons = ({
   node,
   settings,
+  isExpiring = false,
 }: {
   node: NodeDetail;
   settings: any;
+  isExpiring?: boolean;
 }) => {
   const { t } = useTranslation();
   const [billingOpen, setBillingOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [renewOpen, setRenewOpen] = useState(false);
+
+  const cycleDays = Number(node.billing_cycle) > 0 ? Number(node.billing_cycle) : 30;
 
   const copyToken = () => {
     navigator.clipboard.writeText(node.token);
@@ -1040,6 +1053,19 @@ const ActionButtons = ({
 
   return (
     <div className="flex items-center justify-center gap-1">
+      {/* 临期快速续费按钮：当机器处于待续费状态时直接外显 */}
+      {isExpiring && (
+        <button
+          type="button"
+          onClick={() => setRenewOpen(true)}
+          className="h-7 px-2 text-[11px] font-medium rounded-md bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/25 active:scale-[0.98] transition-all flex items-center gap-1 cursor-pointer shrink-0 shadow-2xs"
+          title={`已续费？点击按计费周期顺延 +${cycleDays}天`}
+        >
+          <CalendarCheck size={12} className="text-emerald-600 dark:text-emerald-400" />
+          <span>已续费</span>
+        </button>
+      )}
+
       {/* 常用高频操作 1：编辑信息 */}
       <EditButton node={node} />
 
@@ -1049,7 +1075,7 @@ const ActionButtons = ({
         nodeToken={node.token}
       />
 
-      {/* 更多操作下拉菜单：隔离危险操作，收纳账单与复制 */}
+      {/* 更多操作下拉菜单：隔离危险操作，收纳续费、账单与复制 */}
       <DropdownMenu.Root>
         <DropdownMenu.Trigger>
           <IconButton
@@ -1061,7 +1087,11 @@ const ActionButtons = ({
             <MoreHorizontal size={16} />
           </IconButton>
         </DropdownMenu.Trigger>
-        <DropdownMenu.Content align="end" className="min-w-[140px]">
+        <DropdownMenu.Content align="end" className="min-w-[150px]">
+          <DropdownMenu.Item onClick={() => setRenewOpen(true)}>
+            <CalendarCheck size={14} className="mr-2 text-emerald-600 dark:text-emerald-400" />
+            <span>{t("admin.nodeTable.renewOneCycle", `续费周期 (+${cycleDays}天)`)}</span>
+          </DropdownMenu.Item>
           <DropdownMenu.Item onClick={() => setBillingOpen(true)}>
             <CircleDollarSign size={14} className="mr-2 opacity-70" />
             <span>{t("admin.nodeTable.billing", "账单管理")}</span>
@@ -1082,6 +1112,11 @@ const ActionButtons = ({
         </DropdownMenu.Content>
       </DropdownMenu.Root>
 
+      <RenewDialog
+        node={node}
+        open={renewOpen}
+        onOpenChange={setRenewOpen}
+      />
       <BillingButton
         node={node}
         open={billingOpen}
@@ -1097,6 +1132,121 @@ const ActionButtons = ({
     </div>
   );
 };
+
+function RenewDialog({
+  node,
+  open,
+  onOpenChange,
+}: {
+  node: NodeDetail;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const { t } = useTranslation();
+  const { refresh } = useNodeDetails();
+  const [loading, setLoading] = useState(false);
+
+  const cycleDays = Number(node.billing_cycle) > 0 ? Number(node.billing_cycle) : 30;
+
+  // 计算新的到期时间
+  const calculateNewExpiry = () => {
+    const now = new Date();
+    let baseTime = now.getTime();
+    if (node.expired_at) {
+      const expTime = new Date(node.expired_at).getTime();
+      if (expTime > now.getTime()) {
+        baseTime = expTime;
+      }
+    }
+    const newTimestamp = baseTime + cycleDays * 24 * 60 * 60 * 1000;
+    return new Date(newTimestamp);
+  };
+
+  const newExpiry = calculateNewExpiry();
+  const currentDateStr = node.expired_at
+    ? new Date(node.expired_at).toLocaleDateString()
+    : "未设置";
+  const newDateStr = newExpiry.toLocaleDateString();
+
+  const handleRenew = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch(`/api/admin/client/${node.uuid}/edit`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          expired_at: newExpiry.toISOString(),
+        }),
+      });
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+      }
+      toast.success(
+        t("admin.nodeTable.renewSuccess", {
+          defaultValue: `已成功续费！到期时间顺延至：${newDateStr} (+${cycleDays}天)`,
+          date: newDateStr,
+          days: cycleDays,
+        })
+      );
+      onOpenChange(false);
+      refresh();
+    } catch (err) {
+      toast.error(
+        `${t("common.error", "Error")}: ${
+          err instanceof Error ? err.message : String(err)
+        }`
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Dialog.Root open={open} onOpenChange={onOpenChange}>
+      <Dialog.Content className="max-w-md">
+        <Dialog.Title className="flex items-center gap-2">
+          <CalendarCheck size={18} className="text-emerald-600 dark:text-emerald-400" />
+          <span>{t("admin.nodeTable.renewTitle", "确认节点已续费")}</span>
+        </Dialog.Title>
+        <div className="my-3 space-y-3">
+          <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-800 dark:text-emerald-300 text-xs leading-relaxed">
+            确认已在服务商处完成该机器的续费？系统将按该节点已配置的计费周期自动顺延时长。
+          </div>
+          <div className="rounded-lg border border-border/80 bg-muted/40 p-3 space-y-2 text-xs">
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">服务器名称:</span>
+              <span className="font-semibold text-foreground">{node.name}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">计费周期:</span>
+              <span className="font-mono text-foreground">{cycleDays} 天</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">当前到期日:</span>
+              <span className="font-mono text-foreground">{currentDateStr}</span>
+            </div>
+            <div className="pt-2 border-t border-border/60 flex justify-between items-center">
+              <span className="font-medium text-foreground">续费后新到期日:</span>
+              <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400 text-sm">
+                {newDateStr}
+              </span>
+            </div>
+          </div>
+        </div>
+        <Flex justify="end" gap="2" mt="4">
+          <Dialog.Close>
+            <Button variant="soft" color="gray" disabled={loading}>
+              {t("common.cancel", "取消")}
+            </Button>
+          </Dialog.Close>
+          <Button onClick={handleRenew} disabled={loading} color="green">
+            {loading ? t("common.saving", "更新中...") : t("admin.nodeTable.confirmRenew", "确认续费")}
+          </Button>
+        </Flex>
+      </Dialog.Content>
+    </Dialog.Root>
+  );
+}
 
 export default NodeDetailsPage;
 function DeleteButton({
