@@ -16,6 +16,7 @@ import {
   TextArea,
   Select,
   Switch,
+  DropdownMenu,
 } from "@radix-ui/themes";
 import {
   Activity,
@@ -33,6 +34,10 @@ import {
   Server,
   Trash2Icon,
   ArrowUpCircle,
+  MoreHorizontal,
+  CreditCard,
+  Key,
+  AlertTriangle,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import {
@@ -94,21 +99,54 @@ const Layout = () => {
   const { account } = useAccount();
   const { settings } = useSettings();
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedGroup, setSelectedGroup] = useState<string>("all");
+  const [selectedStatus, setSelectedStatus] = useState<"all" | "online" | "offline">("all");
   const [selectedNodes, setSelectedNodes] = useState<string[]>([]);
-  const filteredNodes = Array.isArray(nodeDetail)
-    ? nodeDetail
-        .filter((node) => {
-          const lower = searchTerm.toLowerCase();
-          if (lower === "online" || lower === "在线") return !!node.online;
-          if (lower === "offline" || lower === "离线") return !node.online;
-          return (
-            node.name.toLowerCase().includes(lower) ||
-            (node.ipv4 && node.ipv4.includes(searchTerm)) ||
-            (node.group && node.group.toLowerCase().includes(lower))
-          );
-        })
-        .sort((a, b) => a.weight - b.weight)
-    : [];
+
+  const availableGroups = React.useMemo(() => {
+    if (!Array.isArray(nodeDetail)) return [];
+    const groups = new Set<string>();
+    nodeDetail.forEach((n) => {
+      if (n.group && n.group.trim()) {
+        groups.add(n.group.trim());
+      }
+    });
+    return Array.from(groups);
+  }, [nodeDetail]);
+
+  const filteredNodes = React.useMemo(() => {
+    if (!Array.isArray(nodeDetail)) return [];
+    return nodeDetail
+      .filter((node) => {
+        // 状态筛选
+        if (selectedStatus === "online" && !node.online) return false;
+        if (selectedStatus === "offline" && node.online) return false;
+
+        // 分组筛选
+        if (selectedGroup !== "all") {
+          if (selectedGroup === "_ungrouped_") {
+            if (node.group && node.group.trim()) return false;
+          } else if (node.group !== selectedGroup) {
+            return false;
+          }
+        }
+
+        // 文本搜索
+        if (!searchTerm) return true;
+        const lower = searchTerm.toLowerCase();
+        if (lower === "online" || lower === "在线") return !!node.online;
+        if (lower === "offline" || lower === "离线") return !node.online;
+        return (
+          node.name.toLowerCase().includes(lower) ||
+          (node.ipv4 && node.ipv4.includes(searchTerm)) ||
+          (node.ipv6 && node.ipv6.toLowerCase().includes(lower)) ||
+          (node.remark && node.remark.toLowerCase().includes(lower)) ||
+          (node.tags && node.tags.toLowerCase().includes(lower)) ||
+          (node.group && node.group.toLowerCase().includes(lower))
+        );
+      })
+      .sort((a, b) => a.weight - b.weight);
+  }, [nodeDetail, selectedStatus, selectedGroup, searchTerm]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -157,6 +195,13 @@ const Layout = () => {
         setSearchTerm={setSearchTerm}
         selectedNodes={selectedNodes}
         totalNodes={nodeDetail?.length || 0}
+        selectedGroup={selectedGroup}
+        setSelectedGroup={setSelectedGroup}
+        availableGroups={availableGroups}
+        selectedStatus={selectedStatus}
+        setSelectedStatus={setSelectedStatus}
+        onlineCount={nodeDetail?.filter((n) => n.online).length || 0}
+        offlineCount={nodeDetail?.filter((n) => !n.online).length || 0}
       />
 
       {!isEmpty && <MetricsOverview nodes={nodeDetail || []} />}
@@ -185,6 +230,34 @@ const MetricsOverview = ({ nodes }: { nodes: NodeDetail[] }) => {
   const uniqueGroups = Array.from(
     new Set(nodes.map((n) => n.group).filter(Boolean))
   );
+
+  // 实时运维洞察：计算总月度支出与 30 天内临期到期机器
+  const now = new Date();
+  const thirtyDaysLater = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+  let expiringSoonCount = 0;
+  const monthlyCostByCurrency: Record<string, number> = {};
+
+  nodes.forEach((n) => {
+    if (n.expired_at) {
+      const exp = new Date(n.expired_at);
+      if (exp > now && exp <= thirtyDaysLater) {
+        expiringSoonCount++;
+      }
+    }
+    const price = Number(n.price);
+    const cycle = Number(n.billing_cycle);
+    if (price > 0 && cycle > 0) {
+      const curr = n.currency || "$";
+      const monthlyPrice = (price / cycle) * 30;
+      monthlyCostByCurrency[curr] = (monthlyCostByCurrency[curr] || 0) + monthlyPrice;
+    }
+  });
+
+  const costStrings = Object.entries(monthlyCostByCurrency)
+    .map(([curr, amt]) => `${curr}${amt.toFixed(amt >= 100 ? 0 : 1)}`)
+    .slice(0, 2);
+  const costDisplay = costStrings.length > 0 ? costStrings.join(" + ") + "/月" : "-";
 
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
@@ -222,9 +295,14 @@ const MetricsOverview = ({ nodes }: { nodes: NodeDetail[] }) => {
         <div className="text-xl font-bold font-mono tracking-tight text-foreground">
           {uniqueRegions.length || (total > 0 ? 1 : 0)}
         </div>
-        <div className="text-[11px] text-muted-foreground mt-1 truncate">
+        <div
+          className="text-[11px] text-muted-foreground mt-1 truncate cursor-help"
+          title={uniqueRegions.map((r) => r.toUpperCase()).join(", ")}
+        >
           {uniqueRegions.length > 0
-            ? uniqueRegions.map((r) => r.toUpperCase()).join(", ")
+            ? `${uniqueRegions.slice(0, 7).map((r) => r.toUpperCase()).join(", ")}${
+                uniqueRegions.length > 7 ? ` +${uniqueRegions.length - 7}` : ""
+              }`
             : t("common.global", "全球网络")}
         </div>
       </div>
@@ -247,15 +325,23 @@ const MetricsOverview = ({ nodes }: { nodes: NodeDetail[] }) => {
       <div className="p-3.5 rounded-lg border border-border bg-card shadow-2xs hover:border-foreground/30 transition-all">
         <div className="flex items-center justify-between text-muted-foreground mb-1">
           <span className="text-[11px] font-medium uppercase tracking-wider">
-            {t("admin.overview.system", "引擎架构")}
+            {t("admin.overview.billing", "支出与续费")}
           </span>
-          <Activity size={14} className="opacity-70" />
+          <CircleDollarSign size={14} className="opacity-70" />
         </div>
         <div className="text-xl font-bold font-mono tracking-tight text-foreground">
-          Lite Core
+          {costDisplay}
         </div>
-        <div className="text-[11px] text-muted-foreground mt-1 font-mono">
-          v1.1.0 · 高吞吐微核
+        <div className="text-[11px] mt-1 flex items-center gap-1.5">
+          {expiringSoonCount > 0 ? (
+            <span className="text-amber-600 dark:text-amber-400 font-medium">
+              ⚠️ {expiringSoonCount} 台临期 (30天内)
+            </span>
+          ) : (
+            <span className="text-muted-foreground">
+              全部机器续费正常
+            </span>
+          )}
         </div>
       </div>
     </div>
@@ -302,11 +388,25 @@ const Header = ({
   setSearchTerm,
   selectedNodes,
   totalNodes,
+  selectedGroup,
+  setSelectedGroup,
+  availableGroups,
+  selectedStatus,
+  setSelectedStatus,
+  onlineCount,
+  offlineCount,
 }: {
   searchTerm: string;
   setSearchTerm: (term: string) => void;
   selectedNodes: string[];
   totalNodes: number;
+  selectedGroup: string;
+  setSelectedGroup: (group: string) => void;
+  availableGroups: string[];
+  selectedStatus: "all" | "online" | "offline";
+  setSelectedStatus: (status: "all" | "online" | "offline") => void;
+  onlineCount: number;
+  offlineCount: number;
 }) => {
   const { t } = useTranslation();
   const { refresh } = useNodeDetails();
@@ -391,117 +491,195 @@ const Header = ({
     }
   };
   return (
-    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-2 border-b border-border/40">
-      <div>
-        <div className="flex items-center gap-2.5">
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
-            {t("admin.nodeTable.nodeList")}
-          </h1>
-          <span className="px-2 py-0.5 text-xs font-mono font-medium rounded-full bg-muted text-muted-foreground border border-border">
-            {totalNodes}
-          </span>
-          {selectedNodes.length > 0 && (
-            <span className="px-2 py-0.5 text-xs font-mono font-medium rounded-full bg-foreground text-background">
-              {selectedNodes.length} selected
+    <div className="space-y-3 pb-2 border-b border-border/40">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
+              {t("admin.nodeTable.nodeList")}
+            </h1>
+            <span className="px-2 py-0.5 text-xs font-mono font-medium rounded-full bg-muted text-muted-foreground border border-border">
+              {totalNodes}
             </span>
-          )}
+            {selectedNodes.length > 0 && (
+              <span className="px-2 py-0.5 text-xs font-mono font-medium rounded-full bg-foreground text-background">
+                {selectedNodes.length} selected
+              </span>
+            )}
+          </div>
+          <p className="text-xs text-muted-foreground mt-1">
+            {t("admin.nodeTable.subtitle", "实时管理与监控所有已接入的主机探针与网络资产")}
+          </p>
         </div>
-        <p className="text-xs text-muted-foreground mt-1">
-          {t("admin.nodeTable.subtitle", "实时管理与监控所有已接入的主机探针与网络资产")}
-        </p>
-      </div>
-      <div className="flex items-center gap-2.5 w-full sm:w-auto">
-        <div className="relative flex-1 sm:w-64 flex items-center">
-          <Search size={14} className="absolute left-3 text-muted-foreground pointer-events-none" />
-          <input
-            type="text"
-            placeholder={t("admin.nodeTable.searchByName")}
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full h-9 pl-9 pr-3 text-xs rounded-lg border border-border bg-card text-foreground placeholder:text-muted-foreground/60 outline-none focus:border-foreground/50 focus:ring-1 focus:ring-foreground/20 transition-all shadow-2xs"
-          />
-        </div>
-        <Dialog.Root open={upgradeOpen} onOpenChange={setUpgradeOpen}>
-          <Dialog.Trigger>
-            <button
-              onClick={() => openUpgradeDialog()}
-              className="h-9 px-3.5 rounded-lg border border-border bg-card text-foreground font-medium text-xs flex items-center gap-1.5 shadow-sm hover:bg-muted active:scale-[0.98] transition-all cursor-pointer shrink-0"
-            >
-              <ArrowUpCircle size={14} strokeWidth={2.5} />
-              <span>{t("admin.nodeTable.upgradeAgents")}</span>
-            </button>
-          </Dialog.Trigger>
-          <Dialog.Content className="max-w-md">
-            <Dialog.Title>{t("admin.nodeTable.upgradeAgents")}</Dialog.Title>
-            <div className="mt-2 text-xs text-muted-foreground leading-relaxed">
-              {t("admin.nodeTable.upgradeDescription", {
-                defaultValue:
-                  "将向全部节点下发升级事件。Agent 会从面板下载新版本并自动完成替换与重启。",
-                version: upgradeVersion,
-              })}
-              {upgradeVersion ? (
-                <div className="mt-2 font-mono text-foreground">
-                  {t("admin.nodeTable.upgradeTargetVersion")}: v{upgradeVersion}
-                </div>
-              ) : null}
-            </div>
-            <Flex justify="end" gap="2" mt="4">
-              <Dialog.Close>
-                <Button variant="soft" color="gray" disabled={upgrading}>
-                  {t("common.cancel", "Cancel")}
-                </Button>
-              </Dialog.Close>
-              <Button onClick={() => handleUpgradeAgents()} disabled={upgrading}>
-                {upgrading
-                  ? t("admin.nodeTable.upgrading", "下发中...")
-                  : t("admin.nodeTable.upgradeConfirm", "确认升级")}
-              </Button>
-            </Flex>
-          </Dialog.Content>
-        </Dialog.Root>
-        <Dialog.Root open={dialogOpen} onOpenChange={setDialogOpen}>
-          <Dialog.Trigger>
-            <button
-              onClick={() => setDialogOpen(true)}
-              className="h-9 px-3.5 rounded-lg bg-foreground text-background font-medium text-xs flex items-center gap-1.5 shadow-sm hover:opacity-90 active:scale-[0.98] transition-all cursor-pointer shrink-0"
-            >
-              <Plus size={14} strokeWidth={2.5} />
-              <span>{t("admin.nodeTable.addNode")}</span>
-            </button>
-          </Dialog.Trigger>
-          <Dialog.Content className="max-w-md">
-            <Dialog.Title>{t("admin.nodeTable.addNode")}</Dialog.Title>
-            <div className="mt-2">
-              <label className="text-xs font-medium text-muted-foreground block mb-1.5">
-                {t("admin.nodeTable.nameOptional")}
-              </label>
-              <TextField.Root
-                ref={inputRef}
-                placeholder={t("admin.nodeTable.nameOptional")}
-                autoFocus
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    handleAddNode(inputRef.current?.value);
-                  }
-                }}
-              />
-            </div>
-            <Flex justify="end" gap="2" mt="4">
-              <Dialog.Close>
-                <Button variant="soft" color="gray" disabled={loading}>
-                  {t("common.cancel", "Cancel")}
-                </Button>
-              </Dialog.Close>
-              <Button
-                onClick={() => handleAddNode(inputRef.current?.value)}
-                disabled={loading}
+        <div className="flex items-center gap-2.5 w-full sm:w-auto">
+          <div className="relative flex-1 sm:w-64 flex items-center">
+            <Search size={14} className="absolute left-3 text-muted-foreground pointer-events-none" />
+            <input
+              type="text"
+              placeholder={t("admin.nodeTable.searchByName", "搜索节点、IP、分组...")}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full h-9 pl-9 pr-3 text-xs rounded-lg border border-border bg-card text-foreground placeholder:text-muted-foreground/60 outline-none focus:border-foreground/50 focus:ring-1 focus:ring-foreground/20 transition-all shadow-2xs"
+            />
+          </div>
+          <Dialog.Root open={upgradeOpen} onOpenChange={setUpgradeOpen}>
+            <Dialog.Trigger>
+              <button
+                onClick={() => openUpgradeDialog()}
+                className="h-9 px-3.5 rounded-lg border border-border bg-card text-foreground font-medium text-xs flex items-center gap-1.5 shadow-sm hover:bg-muted active:scale-[0.98] transition-all cursor-pointer shrink-0"
               >
-                {t("admin.nodeTable.addNode")}
-              </Button>
-            </Flex>
-          </Dialog.Content>
-        </Dialog.Root>
+                <ArrowUpCircle size={14} strokeWidth={2.5} />
+                <span>{t("admin.nodeTable.upgradeAgents")}</span>
+              </button>
+            </Dialog.Trigger>
+            <Dialog.Content className="max-w-md">
+              <Dialog.Title>{t("admin.nodeTable.upgradeAgents")}</Dialog.Title>
+              <div className="mt-2 text-xs text-muted-foreground leading-relaxed">
+                {t("admin.nodeTable.upgradeDescription", {
+                  defaultValue:
+                    "将向全部节点下发升级事件。Agent 会从面板下载新版本并自动完成替换与重启。",
+                  version: upgradeVersion,
+                })}
+                {upgradeVersion ? (
+                  <div className="mt-2 font-mono text-foreground">
+                    {t("admin.nodeTable.upgradeTargetVersion")}: v{upgradeVersion}
+                  </div>
+                ) : null}
+              </div>
+              <Flex justify="end" gap="2" mt="4">
+                <Dialog.Close>
+                  <Button variant="soft" color="gray" disabled={upgrading}>
+                    {t("common.cancel", "Cancel")}
+                  </Button>
+                </Dialog.Close>
+                <Button onClick={() => handleUpgradeAgents()} disabled={upgrading}>
+                  {upgrading
+                    ? t("admin.nodeTable.upgrading", "下发中...")
+                    : t("admin.nodeTable.upgradeConfirm", "确认升级")}
+                </Button>
+              </Flex>
+            </Dialog.Content>
+          </Dialog.Root>
+          <Dialog.Root open={dialogOpen} onOpenChange={setDialogOpen}>
+            <Dialog.Trigger>
+              <button
+                onClick={() => setDialogOpen(true)}
+                className="h-9 px-3.5 rounded-lg bg-foreground text-background font-medium text-xs flex items-center gap-1.5 shadow-sm hover:opacity-90 active:scale-[0.98] transition-all cursor-pointer shrink-0"
+              >
+                <Plus size={14} strokeWidth={2.5} />
+                <span>{t("admin.nodeTable.addNode")}</span>
+              </button>
+            </Dialog.Trigger>
+            <Dialog.Content className="max-w-md">
+              <Dialog.Title>{t("admin.nodeTable.addNode")}</Dialog.Title>
+              <div className="mt-2">
+                <label className="text-xs font-medium text-muted-foreground block mb-1.5">
+                  {t("admin.nodeTable.nameOptional")}
+                </label>
+                <TextField.Root
+                  ref={inputRef}
+                  placeholder={t("admin.nodeTable.nameOptional")}
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleAddNode(inputRef.current?.value);
+                    }
+                  }}
+                />
+              </div>
+              <Flex justify="end" gap="2" mt="4">
+                <Dialog.Close>
+                  <Button variant="soft" color="gray" disabled={loading}>
+                    {t("common.cancel", "Cancel")}
+                  </Button>
+                </Dialog.Close>
+                <Button
+                  onClick={() => handleAddNode(inputRef.current?.value)}
+                  disabled={loading}
+                >
+                  {t("admin.nodeTable.addNode")}
+                </Button>
+              </Flex>
+            </Dialog.Content>
+          </Dialog.Root>
+        </div>
+      </div>
+
+      {/* 快捷过滤工具条：状态过滤 + 分组过滤 */}
+      <div className="flex flex-wrap items-center justify-between gap-2.5 pt-1">
+        {/* 在线状态筛选 */}
+        <div className="inline-flex items-center p-0.5 bg-muted/70 rounded-lg border border-border/60 text-xs">
+          <button
+            type="button"
+            onClick={() => setSelectedStatus("all")}
+            className={`px-3 py-1 rounded-md transition-all cursor-pointer font-medium ${
+              selectedStatus === "all"
+                ? "bg-card text-foreground shadow-xs font-semibold"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            全部 ({totalNodes})
+          </button>
+          <button
+            type="button"
+            onClick={() => setSelectedStatus("online")}
+            className={`px-3 py-1 rounded-md flex items-center gap-1.5 transition-all cursor-pointer font-medium ${
+              selectedStatus === "online"
+                ? "bg-card text-foreground shadow-xs font-semibold"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
+            在线 ({onlineCount})
+          </button>
+          <button
+            type="button"
+            onClick={() => setSelectedStatus("offline")}
+            className={`px-3 py-1 rounded-md flex items-center gap-1.5 transition-all cursor-pointer font-medium ${
+              selectedStatus === "offline"
+                ? "bg-card text-foreground shadow-xs font-semibold"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-rose-500 inline-block" />
+            离线 ({offlineCount})
+          </button>
+        </div>
+
+        {/* 分组筛选胶囊 */}
+        {availableGroups.length > 0 && (
+          <div className="flex items-center gap-1.5 overflow-x-auto max-w-full py-0.5">
+            <span className="text-xs text-muted-foreground font-medium shrink-0 mr-1">
+              分组:
+            </span>
+            <button
+              type="button"
+              onClick={() => setSelectedGroup("all")}
+              className={`px-2.5 py-1 text-xs rounded-full border transition-all cursor-pointer shrink-0 ${
+                selectedGroup === "all"
+                  ? "bg-foreground text-background border-foreground font-medium shadow-2xs"
+                  : "bg-card text-muted-foreground border-border hover:text-foreground"
+              }`}
+            >
+              全部
+            </button>
+            {availableGroups.map((g) => (
+              <button
+                key={g}
+                type="button"
+                onClick={() => setSelectedGroup(g)}
+                className={`px-2.5 py-1 text-xs rounded-full border transition-all cursor-pointer shrink-0 ${
+                  selectedGroup === g
+                    ? "bg-foreground text-background border-foreground font-medium shadow-2xs"
+                    : "bg-card text-muted-foreground border-border hover:text-foreground"
+                }`}
+              >
+                {g}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -531,7 +709,7 @@ const SortableRow = ({
     toast.success(t("copy_success"));
   }
   return (
-    <TableRow ref={setNodeRef} style={style} className="hover:bg-muted/40 transition-colors h-14">
+    <TableRow ref={setNodeRef} style={style} className="hover:bg-muted/40 transition-colors h-[54px]">
       <TableCell className="w-9 pl-3 pr-0 text-center">
         <div
           {...attributes}
@@ -559,50 +737,38 @@ const SortableRow = ({
           onCheckedChange={(checked) => handleSelectNode(node.uuid, !!checked)}
         />
       </TableCell>
-      <TableCell className="min-w-[190px] px-3">
+      <TableCell className="min-w-[240px] px-3">
         <DetailView node={node} />
       </TableCell>
-      <TableCell className="w-48 px-3">
-        <div className="flex flex-col gap-1">
-          {node.ipv4 && (
-            <div className="flex items-center gap-1.5 group">
-              <span className="font-mono text-xs text-foreground/80 bg-muted/60 px-1.5 py-0.5 rounded border border-border/50 select-all">
+      <TableCell className="w-52 px-3">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {node.ipv4 ? (
+            <div className="inline-flex items-center gap-1 group bg-muted/60 px-1.5 py-0.5 rounded border border-border/50 text-foreground/90">
+              <span className="font-mono text-xs select-all">
                 {node.ipv4}
               </span>
               <button
                 type="button"
-                onClick={() => copy(node.ipv4)}
+                onClick={() => copy(node.ipv4!)}
                 className="opacity-0 group-hover:opacity-100 p-0.5 text-muted-foreground hover:text-foreground transition-opacity cursor-pointer"
                 title={t("common.copy")}
               >
-                <Copy size={12} />
+                <Copy size={11} />
               </button>
             </div>
-          )}
-          {node.ipv6 && (
-            <div className="flex items-center gap-1.5 group">
-              <span
-                className="font-mono text-[11px] text-muted-foreground/80 bg-muted/30 px-1.5 py-0.5 rounded border border-border/30 select-all truncate max-w-[180px]"
-                title={node.ipv6}
-              >
-                {node.ipv6.length > 20
-                  ? (() => {
-                      const segments = node.ipv6.split(":");
-                      return segments.length > 3
-                        ? `${segments.slice(0, 2).join(":")}:...:${segments[segments.length - 1]}`
-                        : node.ipv6;
-                    })()
-                  : node.ipv6}
-              </span>
-              <button
-                type="button"
-                onClick={() => copy(node.ipv6)}
-                className="opacity-0 group-hover:opacity-100 p-0.5 text-muted-foreground hover:text-foreground transition-opacity cursor-pointer"
-                title={t("common.copy")}
-              >
-                <Copy size={12} />
-              </button>
+          ) : null}
+          {node.ipv6 ? (
+            <div
+              className="inline-flex items-center gap-1 group bg-muted/40 hover:bg-muted/70 px-1.5 py-0.5 rounded border border-border/40 text-[10px] text-muted-foreground transition-colors cursor-pointer select-none"
+              onClick={() => copy(node.ipv6!)}
+              title={`${node.ipv6} (点击复制)`}
+            >
+              <span className="font-mono font-medium">IPv6</span>
+              <Copy size={10} className="opacity-60 group-hover:opacity-100" />
             </div>
+          ) : null}
+          {!node.ipv4 && !node.ipv6 && (
+            <span className="text-xs text-muted-foreground/40 font-mono">-</span>
           )}
         </div>
       </TableCell>
@@ -638,7 +804,7 @@ const SortableRow = ({
           tags={node.tags || ""}
         />
       </TableCell>
-      <TableCell className="w-32 px-2 text-center">
+      <TableCell className="w-28 px-2 text-center">
         <ActionButtons
           node={node}
           settings={settings}
@@ -763,15 +929,15 @@ const NodeTable = ({
                   onCheckedChange={handleSelectAll}
                 />
               </TableHead>
-              <TableHead className="min-w-[190px] px-3 text-left">
+              <TableHead className="min-w-[240px] px-3 text-left">
                 <span className="pl-[34px]">{t("admin.nodeTable.name")}</span>
               </TableHead>
-              <TableHead className="w-48 px-3 text-left">{t("admin.nodeDetail.ipAddress")}</TableHead>
+              <TableHead className="w-52 px-3 text-left">{t("admin.nodeDetail.ipAddress")}</TableHead>
               <TableHead className="w-20 px-2 text-center">{t("admin.nodeDetail.clientVersion", "版本")}</TableHead>
               <TableHead className="w-20 px-2 text-center">{t("common.group")}</TableHead>
               <TableHead className="w-24 px-2 text-center">{t("admin.nodeEdit.remark", "备注")}</TableHead>
               <TableHead className="w-48 px-3 text-left">{t("admin.nodeTable.billing")}</TableHead>
-              <TableHead className="w-32 px-2 text-center">{t("common.actions", "操作")}</TableHead>
+              <TableHead className="w-28 px-2 text-center">{t("common.actions", "操作")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -803,25 +969,99 @@ const ActionButtons = ({
   node: NodeDetail;
   settings: any;
 }) => {
+  const { t } = useTranslation();
+  const [billingOpen, setBillingOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+
+  const copyToken = () => {
+    navigator.clipboard.writeText(node.token);
+    toast.success(t("admin.nodeTable.tokenCopied", "Token 已复制到剪贴板"));
+  };
+
   return (
     <div className="flex items-center justify-center gap-1">
+      {/* 常用高频操作 1：编辑信息 */}
+      <EditButton node={node} />
+
+      {/* 常用高频操作 2：一键部署指令 */}
       <GenerateCommandButton
         settings={settings}
         nodeToken={node.token}
       />
 
-      <EditButton node={node} />
-      <BillingButton node={node} />
-      <DeleteButton node={node} />
+      {/* 更多操作下拉菜单：隔离危险操作，收纳账单与复制 */}
+      <DropdownMenu.Root>
+        <DropdownMenu.Trigger>
+          <IconButton
+            variant="ghost"
+            size="2"
+            className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+            title={t("common.more_actions", "更多操作")}
+          >
+            <MoreHorizontal size={16} />
+          </IconButton>
+        </DropdownMenu.Trigger>
+        <DropdownMenu.Content align="end" className="min-w-[140px]">
+          <DropdownMenu.Item onClick={() => setBillingOpen(true)}>
+            <CircleDollarSign size={14} className="mr-2 opacity-70" />
+            <span>{t("admin.nodeTable.billing", "账单管理")}</span>
+          </DropdownMenu.Item>
+          <DropdownMenu.Item onClick={copyToken}>
+            <Key size={14} className="mr-2 opacity-70" />
+            <span>{t("admin.nodeTable.copyToken", "复制 Token")}</span>
+          </DropdownMenu.Item>
+          <DropdownMenu.Separator />
+          <DropdownMenu.Item
+            color="red"
+            onClick={() => setDeleteOpen(true)}
+            className="text-destructive focus:bg-destructive/10"
+          >
+            <Trash2Icon size={14} className="mr-2" />
+            <span>{t("common.delete", "删除节点")}</span>
+          </DropdownMenu.Item>
+        </DropdownMenu.Content>
+      </DropdownMenu.Root>
+
+      <BillingButton
+        node={node}
+        open={billingOpen}
+        onOpenChange={setBillingOpen}
+        trigger={null}
+      />
+      <DeleteButton
+        node={node}
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        trigger={null}
+      />
     </div>
   );
 };
 
 export default NodeDetailsPage;
-function DeleteButton({ node }: { node: NodeDetail }) {
+function DeleteButton({
+  node,
+  trigger,
+  open: controlledOpen,
+  onOpenChange,
+}: {
+  node: NodeDetail;
+  trigger?: React.ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}) {
   const { t } = useTranslation();
   const { refresh } = useNodeDetails();
-  const [open, setOpen] = React.useState(false);
+  const [internalOpen, setInternalOpen] = React.useState(false);
+  const isControlled = controlledOpen !== undefined;
+  const open = isControlled ? controlledOpen : internalOpen;
+  const setOpen = (o: boolean) => {
+    if (isControlled) {
+      onOpenChange?.(o);
+    } else {
+      setInternalOpen(o);
+    }
+  };
   const [deleting, setDeleting] = React.useState(false);
   const handleDelete = async () => {
     try {
@@ -829,7 +1069,7 @@ function DeleteButton({ node }: { node: NodeDetail }) {
       await fetch(`/api/admin/client/${node.uuid}/remove`, {
         method: "POST",
       });
-      toast.success(`Delete ${node.name}`);
+      toast.success(`已删除节点：${node.name}`);
       setOpen(false);
       refresh();
     } catch (error) {
@@ -842,22 +1082,37 @@ function DeleteButton({ node }: { node: NodeDetail }) {
   };
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
-      <Dialog.Trigger>
-        <IconButton variant="ghost" color="red" title={t("common.delete")}>
-          <Trash2Icon size="18" />
-        </IconButton>
-      </Dialog.Trigger>
-      <Dialog.Content>
+      {trigger !== null && (
+        <Dialog.Trigger>
+          {trigger !== undefined ? (
+            trigger
+          ) : (
+            <IconButton variant="ghost" color="red" title={t("common.delete")}>
+              <Trash2Icon size="18" />
+            </IconButton>
+          )}
+        </Dialog.Trigger>
+      )}
+      <Dialog.Content className="max-w-md">
         <Dialog.Title>{t("common.delete")}</Dialog.Title>
+        <div className="my-2.5 p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-xs leading-relaxed flex items-start gap-2">
+          <AlertTriangle size={15} className="shrink-0 mt-0.5" />
+          <span>
+            {t(
+              "admin.nodeTable.deleteWarning",
+              "警告：此操作不可撤销！删除后该节点将立即失去连接，历史监控数据将被清除。"
+            )}
+          </span>
+        </div>
         <Dialog.Description className="text-xs text-muted-foreground mt-1">
-          {t("common.confirm_delete")}
+          {t("common.confirm_delete", "确认删除节点：")} <strong className="text-foreground font-mono">{node.name}</strong>？
         </Dialog.Description>
         <Flex justify="end" gap="2" mt="4">
           <Dialog.Close>
             <Button variant="soft" color="gray">{t("common.cancel")}</Button>
           </Dialog.Close>
           <Button disabled={deleting} color="red" onClick={handleDelete}>
-            {t("common.confirm_delete")}
+            {deleting ? t("common.deleting", "删除中...") : t("common.confirm_delete", "确认删除")}
           </Button>
         </Flex>
       </Dialog.Content>
@@ -1285,10 +1540,10 @@ function DetailView({ node }: { node: NodeDetail }) {
             />
           </div>
           <div className="flex flex-col min-w-0">
-            <span className="font-medium text-sm text-foreground group-hover:text-primary transition-colors truncate max-w-[200px]" title={node.name}>
+            <span className="font-medium text-sm text-foreground group-hover:text-primary transition-colors truncate max-w-[280px] lg:max-w-[340px]" title={node.name}>
               {node.name}
             </span>
-            <span className="text-[11px] text-muted-foreground/70 font-mono truncate max-w-[180px]">
+            <span className="text-[11px] text-muted-foreground/70 font-mono truncate max-w-[240px]">
               {node.os || "Linux"} {node.arch ? `· ${node.arch}` : ""}
             </span>
           </div>
@@ -1553,10 +1808,29 @@ const getCurrencySelectOptions = (val: string) => {
   return CURRENCY_SELECT_OPTIONS;
 };
 
-function BillingButton({ node }: { node: NodeDetail }) {
+function BillingButton({
+  node,
+  trigger,
+  open: controlledOpen,
+  onOpenChange,
+}: {
+  node: NodeDetail;
+  trigger?: React.ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}) {
   const { t } = useTranslation();
   const { refresh } = useNodeDetails();
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isControlled = controlledOpen !== undefined;
+  const open = isControlled ? controlledOpen : internalOpen;
+  const setOpen = (o: boolean) => {
+    if (isControlled) {
+      onOpenChange?.(o);
+    } else {
+      setInternalOpen(o);
+    }
+  };
   const [saving, setSaving] = useState(false);
   const [billingCycle, setBillingCycle] = React.useState<string>(
     node.billing_cycle.toString()
@@ -1624,14 +1898,20 @@ function BillingButton({ node }: { node: NodeDetail }) {
 
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
-      <Dialog.Trigger>
-        <IconButton
-          variant="ghost"
-          title={t("admin.nodeTable.billing", "账单")}
-        >
-          <CircleDollarSign size="18" />
-        </IconButton>
-      </Dialog.Trigger>
+      {trigger !== null && (
+        <Dialog.Trigger>
+          {trigger !== undefined ? (
+            trigger
+          ) : (
+            <IconButton
+              variant="ghost"
+              title={t("admin.nodeTable.billing", "账单")}
+            >
+              <CircleDollarSign size="18" />
+            </IconButton>
+          )}
+        </Dialog.Trigger>
+      )}
       <Dialog.Content className="max-w-md">
         <Dialog.Title>{t("admin.nodeTable.billing", "账单")}</Dialog.Title>
         <form onSubmit={handleSave} className="flex flex-col gap-3 my-1">
