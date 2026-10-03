@@ -44,7 +44,38 @@ function handleButtonClick(action: string) {
   }
 }
 
-const sitename = computed(() => appStore.publicSettings?.sitename || 'Komari Monitor')
+function getInitialSitename() {
+  if (typeof window !== 'undefined') {
+    const injected = (window as any).__INITIAL_SITENAME__
+    if (typeof injected === 'string' && injected.trim()) {
+      return injected.trim()
+    }
+    if (document.title && document.title.trim() && document.title !== 'Komari Monitor') {
+      return document.title.trim()
+    }
+    try {
+      const cached = localStorage.getItem('kml_cached_sitename')
+      if (cached && cached.trim())
+        return cached.trim()
+    }
+    catch {}
+  }
+  return 'Komari Monitor'
+}
+
+const fallbackSitename = ref(getInitialSitename())
+
+const sitename = computed(() => {
+  const current = appStore.publicSettings?.sitename
+  if (current && typeof current === 'string' && current.trim()) {
+    try {
+      localStorage.setItem('kml_cached_sitename', current.trim())
+    }
+    catch {}
+    return current.trim()
+  }
+  return fallbackSitename.value
+})
 </script>
 
 <template>

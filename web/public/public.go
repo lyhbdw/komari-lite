@@ -9,6 +9,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -253,9 +254,11 @@ func static(r *gin.RouterGroup, noRoute func(handlers ...gin.HandlerFunc), force
 		}
 
 		// 执行 HTML 内容替换
+		sitename := cfg[config.SitenameKey].(string)
 		replacer := strings.NewReplacer(
-			"<title>Komari Monitor</title>", "<title>"+cfg[config.SitenameKey].(string)+"</title>",
+			"<title>Komari Monitor</title>", "<title>"+sitename+"</title>",
 			"A simple server monitor tool.", cfg[config.DescriptionKey].(string),
+			"<head>", "<head><script>window.__INITIAL_SITENAME__="+strconv.Quote(sitename)+";</script>",
 		)
 
 		c.Data(http.StatusOK, "text/html; charset=utf-8", []byte(replacer.Replace(htmlStr)))

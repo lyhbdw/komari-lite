@@ -33,7 +33,7 @@ const useAppStore = defineStore('app', () => {
   // 使用 VueUse 的 useStorageAsync 实现自动持久化
   const themeMode = useStorageAsync<ThemeMode>('themeMode', 'auto', localStorage)
   const lang = ref<Lang>('zh-CN')
-  const publicSettings = ref<PublicSettings>()
+  const publicSettings = useStorageAsync<PublicSettings | undefined>('kml_public_settings', undefined, localStorage)
   const nodeSelectedGroup = useStorageAsync<string>('nodeSelectedGroup', 'all', localStorage)
   const isLoggedIn = ref<boolean>(false)
   const connectionError = ref<boolean>(false)
