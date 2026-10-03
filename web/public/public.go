@@ -16,7 +16,7 @@ import (
 	"github.com/Tumb1er1376/komari-monitor-lite/internal/config"
 )
 
-//go:embed defaultTheme/komari-theme.json defaultTheme/preview.png
+//go:embed defaultTheme/komari-theme.json
 var PublicFS embed.FS
 
 //go:embed agent-install.sh
@@ -195,7 +195,7 @@ func static(r *gin.RouterGroup, noRoute func(handlers ...gin.HandlerFunc), force
 				return content, mime.TypeByExtension(filepath.Ext(localPath)), true
 			}
 		}
-		if themeID != DefaultTheme && themeID != "Emerald" {
+		if themeID != DefaultTheme {
 			return nil, "", false
 		}
 
@@ -297,11 +297,11 @@ func static(r *gin.RouterGroup, noRoute func(handlers ...gin.HandlerFunc), force
 	// 允许访问 /themes/MyTheme/theme.json 和 /themes/MyTheme/dist/assets/a.js
 	r.GET("/themes/:id/*path", func(c *gin.Context) {
 		themeID := c.Param("id")
-		if themeID != DefaultTheme && themeID != "Emerald" && themeID != "__admin__" {
+		if themeID != DefaultTheme && themeID != "__admin__" {
 			c.Status(http.StatusNotFound)
 			return
 		}
-		if forceDefaultTheme && themeID != "__admin__" && themeID != DefaultTheme && themeID != "Emerald" {
+		if forceDefaultTheme && themeID != "__admin__" && themeID != DefaultTheme {
 			c.Status(http.StatusNotFound)
 			return
 		}

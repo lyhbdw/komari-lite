@@ -19,11 +19,11 @@ import (
 	"github.com/Tumb1er1376/komari-monitor-lite/utils"
 	agent_runtime "github.com/Tumb1er1376/komari-monitor-lite/web/agent"
 
-	cache "github.com/patrickmn/go-cache"
+	"github.com/Tumb1er1376/komari-monitor-lite/utils/ttlcache"
 )
 
 // pingstats:<uuid>
-var pingStatsCache = cache.New(1*time.Minute, 2*time.Minute)
+var pingStatsCache = ttlcache.New(1 * time.Minute)
 
 type pingStat struct {
 	Name   string  `json:"name"`
@@ -55,7 +55,7 @@ func getPingStatsForNode(uuid string, pingTasks []models.PingTask) map[string]pi
 	}
 	if len(assigned) == 0 {
 		empty := map[string]pingStat{}
-		pingStatsCache.Set(key, empty, cache.DefaultExpiration)
+		pingStatsCache.Set(key, empty)
 		return empty
 	}
 	end := time.Now().UTC()
@@ -63,7 +63,7 @@ func getPingStatsForNode(uuid string, pingTasks []models.PingTask) map[string]pi
 	recs, err := tasks.GetPingRecords(uuid, -1, start, end)
 	if err != nil || len(recs) == 0 {
 		empty := map[string]pingStat{}
-		pingStatsCache.Set(key, empty, cache.DefaultExpiration)
+		pingStatsCache.Set(key, empty)
 		return empty
 	}
 	grouped := make(map[uint][]models.PingRecord)
@@ -159,7 +159,7 @@ func getPingStatsForNode(uuid string, pingTasks []models.PingTask) map[string]pi
 			Max:    maxLat,
 		}
 	}
-	pingStatsCache.Set(key, result, cache.DefaultExpiration)
+	pingStatsCache.Set(key, result)
 	return result
 }
 

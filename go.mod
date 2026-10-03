@@ -9,7 +9,6 @@ require (
 	github.com/klauspost/compress v1.17.11
 	github.com/mattn/go-sqlite3 v1.14.27
 	github.com/oschwald/maxminddb-golang v1.13.1
-	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/pquerna/otp v1.5.0
 	github.com/spf13/cobra v1.9.1
 	github.com/stretchr/testify v1.11.1

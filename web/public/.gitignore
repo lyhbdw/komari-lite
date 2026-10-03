@@ -1,6 +1,3 @@
 dist/*
 defaultTheme/*
-!defaultTheme/dist.tar.zst
-!defaultTheme/admin-dist.tar.zst
 !defaultTheme/komari-theme.json
-!defaultTheme/preview.png

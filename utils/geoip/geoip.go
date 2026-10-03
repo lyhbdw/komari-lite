@@ -8,11 +8,11 @@ import (
 
 	"github.com/Tumb1er1376/komari-monitor-lite/internal/config"
 	logger "github.com/Tumb1er1376/komari-monitor-lite/utils/log"
-	"github.com/patrickmn/go-cache"
+	"github.com/Tumb1er1376/komari-monitor-lite/utils/ttlcache"
 )
 
 var CurrentProvider GeoIPService
-var geoCache *cache.Cache
+var geoCache *ttlcache.Cache
 
 type GeoInfo struct {
 	ISOCode string
@@ -21,7 +21,7 @@ type GeoInfo struct {
 
 func init() {
 	CurrentProvider = &EmptyProvider{}
-	geoCache = cache.New(48*time.Hour, 1*time.Hour)
+	geoCache = ttlcache.New(48 * time.Hour)
 }
 
 // GeoIPService 接口定义了获取地理位置信息的核心方法。
@@ -133,7 +133,7 @@ func GetGeoInfo(ip net.IP) (*GeoInfo, error) {
 
 	info, err := CurrentProvider.GetGeoInfo(ip)
 	if err == nil && info != nil {
-		geoCache.Set(cacheKey, info, cache.DefaultExpiration)
+		geoCache.Set(cacheKey, info)
 	}
 	return info, err
 }

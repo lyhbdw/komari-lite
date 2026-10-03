@@ -12,13 +12,14 @@ import (
 	"github.com/Tumb1er1376/komari-monitor-lite/internal/config"
 	logger "github.com/Tumb1er1376/komari-monitor-lite/utils/log"
 	"github.com/Tumb1er1376/komari-monitor-lite/utils/messageSender"
+	"github.com/Tumb1er1376/komari-monitor-lite/utils/ttlcache"
 	agent_runtime "github.com/Tumb1er1376/komari-monitor-lite/web/agent"
-	cache "github.com/patrickmn/go-cache"
 )
 
 // trafficCache 用于记录每个客户端已触发的阈值步进，避免重复提醒
 // key: "traffic:"+clientUUID, value: int 步进百分比（例如 80, 85, 90 ... 100）
-var trafficCache = cache.New(30*24*time.Hour, time.Hour) // 30天缓存，1小时清理
+// 惰性过期：条目量级为节点数（几十），无需后台清理。
+var trafficCache = ttlcache.New(30 * 24 * time.Hour)
 
 // CheckTraffic 检查各客户端流量使用情况，并在达到阈值和每+5%时提醒一次；100%时额外提醒一次
 // 由外部协程每分钟调用一次
@@ -92,7 +93,7 @@ func CheckTraffic() {
 		}
 
 		if curStep > lastStep { // 只在进入新步进时提醒一次
-			trafficCache.SetDefault(key, curStep)
+			trafficCache.Set(key, curStep)
 
 			msg := fmt.Sprintf("used %d%% (%s / %s), type=%s", curStep, humanBytes(used), humanBytes(c.TrafficLimit), strings.ToLower(c.TrafficLimitType))
 			// 发送通知（内部会检查 NotificationEnabled）

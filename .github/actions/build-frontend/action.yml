@@ -43,8 +43,6 @@ runs:
         zstd -19 -T0 -q -f "$RUNNER_TEMP/komari-theme-dist.tar" -o web/public/defaultTheme/dist.tar.zst
         rm -f "$RUNNER_TEMP/komari-theme-dist.tar"
         cp -f theme/komari-theme.json web/public/defaultTheme/
-        if [ -f theme/public/preview.png ]; then cp -f theme/public/preview.png web/public/defaultTheme/; fi
-        if [ -f theme/preview.png ]; then cp -f theme/preview.png web/public/defaultTheme/; fi
 
     - name: Build admin frontend
       shell: bash

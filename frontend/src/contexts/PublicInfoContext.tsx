@@ -1,9 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import {
-  PublicInfoContext,
-  withThemeDefaults,
-  type PublicInfo,
-} from "./public-info-context";
+import { PublicInfoContext, type PublicInfo } from "./public-info-context";
 
 type Response = {
   data: PublicInfo;
@@ -25,7 +21,7 @@ export const PublicInfoProvider: React.FC<{ children: React.ReactNode }> = ({
       const response = await fetch("/api/public");
       if (!response.ok) throw new Error("Failed to fetch public info");
       const resp = (await response.json()) as Response;
-      setPublicInfo(resp?.data ? withThemeDefaults(resp.data) : null);
+      setPublicInfo(resp?.data ?? null);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
