@@ -99,7 +99,10 @@ func filterAdminLogsByMessageType(query *gorm.DB, msgType string) *gorm.DB {
 }
 
 func adminTestSendMessage(_ context.Context, _ *rpc.JsonRpcRequest) (any, *rpc.JsonRpcError) {
-	if err := messageSender.SendNotification(models.EventMessage{
+	// 测试消息走 SendEvent 而非 SendNotification：后者要求 Clients 携带
+	// 真实节点 UUID（空 UUID 会被全部过滤并报 "none of the specified
+	// clients exist"），而测试载荷只需要一个展示用的名称。
+	if err := messageSender.SendEvent(models.EventMessage{
 		Event:   "Test",
 		Time:    time.Now().UTC(),
 		Emoji:   "🔔",
