@@ -38,6 +38,7 @@ import {
   CreditCard,
   Key,
   AlertTriangle,
+  CalendarClock,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import {
@@ -100,8 +101,22 @@ const Layout = () => {
   const { settings } = useSettings();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedGroup, setSelectedGroup] = useState<string>("all");
-  const [selectedStatus, setSelectedStatus] = useState<"all" | "online" | "offline">("all");
+  const [selectedStatus, setSelectedStatus] = useState<"all" | "online" | "offline" | "expiring">("all");
   const [selectedNodes, setSelectedNodes] = useState<string[]>([]);
+
+  // 判定是否为 30 天内即将到期机器
+  const isExpiringSoon = React.useCallback((node: NodeDetail) => {
+    if (!node.expired_at) return false;
+    const exp = new Date(node.expired_at);
+    const now = new Date();
+    const thirtyDaysLater = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+    return exp > now && exp <= thirtyDaysLater;
+  }, []);
+
+  const expiringCount = React.useMemo(() => {
+    if (!Array.isArray(nodeDetail)) return 0;
+    return nodeDetail.filter(isExpiringSoon).length;
+  }, [nodeDetail, isExpiringSoon]);
 
   const availableGroups = React.useMemo(() => {
     if (!Array.isArray(nodeDetail)) return [];
@@ -118,9 +133,10 @@ const Layout = () => {
     if (!Array.isArray(nodeDetail)) return [];
     return nodeDetail
       .filter((node) => {
-        // 状态筛选
+        // 状态筛选：全部 / 在线 / 离线 / 待续费
         if (selectedStatus === "online" && !node.online) return false;
         if (selectedStatus === "offline" && node.online) return false;
+        if (selectedStatus === "expiring" && !isExpiringSoon(node)) return false;
 
         // 分组筛选
         if (selectedGroup !== "all") {
@@ -136,6 +152,7 @@ const Layout = () => {
         const lower = searchTerm.toLowerCase();
         if (lower === "online" || lower === "在线") return !!node.online;
         if (lower === "offline" || lower === "离线") return !node.online;
+        if (lower === "expiring" || lower === "临期" || lower === "待续费") return isExpiringSoon(node);
         return (
           node.name.toLowerCase().includes(lower) ||
           (node.ipv4 && node.ipv4.includes(searchTerm)) ||
@@ -145,8 +162,16 @@ const Layout = () => {
           (node.group && node.group.toLowerCase().includes(lower))
         );
       })
-      .sort((a, b) => a.weight - b.weight);
-  }, [nodeDetail, selectedStatus, selectedGroup, searchTerm]);
+      .sort((a, b) => {
+        // 筛选待续费时，按到期时间升序排序（最快到期的排最前）
+        if (selectedStatus === "expiring") {
+          const aTime = a.expired_at ? new Date(a.expired_at).getTime() : Infinity;
+          const bTime = b.expired_at ? new Date(b.expired_at).getTime() : Infinity;
+          return aTime - bTime;
+        }
+        return a.weight - b.weight;
+      });
+  }, [nodeDetail, selectedStatus, selectedGroup, searchTerm, isExpiringSoon]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -202,9 +227,17 @@ const Layout = () => {
         setSelectedStatus={setSelectedStatus}
         onlineCount={nodeDetail?.filter((n) => n.online).length || 0}
         offlineCount={nodeDetail?.filter((n) => !n.online).length || 0}
+        expiringCount={expiringCount}
       />
 
-      {!isEmpty && <MetricsOverview nodes={nodeDetail || []} />}
+      {!isEmpty && (
+        <MetricsOverview
+          nodes={nodeDetail || []}
+          selectedStatus={selectedStatus}
+          setSelectedStatus={setSelectedStatus}
+          expiringCount={expiringCount}
+        />
+      )}
 
       {isEmpty ? (
         <EmptyNodesGuide />
@@ -220,7 +253,17 @@ const Layout = () => {
   );
 };
 
-const MetricsOverview = ({ nodes }: { nodes: NodeDetail[] }) => {
+const MetricsOverview = ({
+  nodes,
+  selectedStatus,
+  setSelectedStatus,
+  expiringCount,
+}: {
+  nodes: NodeDetail[];
+  selectedStatus: "all" | "online" | "offline" | "expiring";
+  setSelectedStatus: (status: "all" | "online" | "offline" | "expiring") => void;
+  expiringCount: number;
+}) => {
   const { t } = useTranslation();
   const total = nodes.length;
   const onlineCount = nodes.filter((n) => n.online).length;
@@ -231,33 +274,7 @@ const MetricsOverview = ({ nodes }: { nodes: NodeDetail[] }) => {
     new Set(nodes.map((n) => n.group).filter(Boolean))
   );
 
-  // 实时运维洞察：计算总月度支出与 30 天内临期到期机器
-  const now = new Date();
-  const thirtyDaysLater = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-
-  let expiringSoonCount = 0;
-  const monthlyCostByCurrency: Record<string, number> = {};
-
-  nodes.forEach((n) => {
-    if (n.expired_at) {
-      const exp = new Date(n.expired_at);
-      if (exp > now && exp <= thirtyDaysLater) {
-        expiringSoonCount++;
-      }
-    }
-    const price = Number(n.price);
-    const cycle = Number(n.billing_cycle);
-    if (price > 0 && cycle > 0) {
-      const curr = n.currency || "$";
-      const monthlyPrice = (price / cycle) * 30;
-      monthlyCostByCurrency[curr] = (monthlyCostByCurrency[curr] || 0) + monthlyPrice;
-    }
-  });
-
-  const costStrings = Object.entries(monthlyCostByCurrency)
-    .map(([curr, amt]) => `${curr}${amt.toFixed(amt >= 100 ? 0 : 1)}`)
-    .slice(0, 2);
-  const costDisplay = costStrings.length > 0 ? costStrings.join(" + ") + "/月" : "-";
+  const isExpiringActive = selectedStatus === "expiring";
 
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
@@ -322,20 +339,47 @@ const MetricsOverview = ({ nodes }: { nodes: NodeDetail[] }) => {
         </div>
       </div>
 
-      <div className="p-3.5 rounded-lg border border-border bg-card shadow-2xs hover:border-foreground/30 transition-all">
+      {/* 临期续费直达卡片：点击直达筛选 */}
+      <div
+        onClick={() => setSelectedStatus(isExpiringActive ? "all" : "expiring")}
+        className={`p-3.5 rounded-lg border bg-card shadow-2xs cursor-pointer transition-all duration-150 group select-none ${
+          isExpiringActive
+            ? "border-amber-500/80 ring-2 ring-amber-500/20 bg-amber-500/5 dark:bg-amber-500/10"
+            : "border-border hover:border-amber-500/50 hover:shadow-xs"
+        }`}
+        title={isExpiringActive ? "点击恢复展示全部节点" : "点击在下方列表筛选这批临期节点"}
+      >
         <div className="flex items-center justify-between text-muted-foreground mb-1">
-          <span className="text-[11px] font-medium uppercase tracking-wider">
-            {t("admin.overview.billing", "支出与续费")}
+          <span className="text-[11px] font-medium uppercase tracking-wider group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
+            {t("admin.overview.expiring_soon", "待续费机器")}
           </span>
-          <CircleDollarSign size={14} className="opacity-70" />
+          <CalendarClock
+            size={14}
+            className={`transition-colors ${
+              isExpiringActive
+                ? "text-amber-600 dark:text-amber-400"
+                : "opacity-70 group-hover:text-amber-600 dark:group-hover:text-amber-400"
+            }`}
+          />
         </div>
-        <div className="text-xl font-bold font-mono tracking-tight text-foreground">
-          {costDisplay}
+        <div className="text-xl font-bold font-mono tracking-tight text-foreground flex items-baseline gap-1.5">
+          <span>{expiringCount} 台</span>
+          {expiringCount > 0 && (
+            <span className="text-[10px] font-sans font-normal text-amber-600 dark:text-amber-400 px-1.5 py-0.2 rounded bg-amber-500/10 border border-amber-500/20">
+              30天内
+            </span>
+          )}
         </div>
-        <div className="text-[11px] mt-1 flex items-center gap-1.5">
-          {expiringSoonCount > 0 ? (
-            <span className="text-amber-600 dark:text-amber-400 font-medium">
-              ⚠️ {expiringSoonCount} 台临期 (30天内)
+        <div className="text-[11px] mt-1 flex items-center justify-between">
+          {expiringCount > 0 ? (
+            <span
+              className={`font-medium transition-colors ${
+                isExpiringActive
+                  ? "text-amber-600 dark:text-amber-400 underline underline-offset-2"
+                  : "text-muted-foreground group-hover:text-foreground"
+              }`}
+            >
+              {isExpiringActive ? "已筛选临期 · 点击取消" : "点击一键筛选"}
             </span>
           ) : (
             <span className="text-muted-foreground">
@@ -395,6 +439,7 @@ const Header = ({
   setSelectedStatus,
   onlineCount,
   offlineCount,
+  expiringCount,
 }: {
   searchTerm: string;
   setSearchTerm: (term: string) => void;
@@ -403,10 +448,11 @@ const Header = ({
   selectedGroup: string;
   setSelectedGroup: (group: string) => void;
   availableGroups: string[];
-  selectedStatus: "all" | "online" | "offline";
-  setSelectedStatus: (status: "all" | "online" | "offline") => void;
+  selectedStatus: "all" | "online" | "offline" | "expiring";
+  setSelectedStatus: (status: "all" | "online" | "offline" | "expiring") => void;
   onlineCount: number;
   offlineCount: number;
+  expiringCount: number;
 }) => {
   const { t } = useTranslation();
   const { refresh } = useNodeDetails();
@@ -645,6 +691,20 @@ const Header = ({
             <span className="w-1.5 h-1.5 rounded-full bg-rose-500 inline-block" />
             离线 ({offlineCount})
           </button>
+          {expiringCount > 0 && (
+            <button
+              type="button"
+              onClick={() => setSelectedStatus(selectedStatus === "expiring" ? "all" : "expiring")}
+              className={`px-3 py-1 rounded-md flex items-center gap-1.5 transition-all cursor-pointer font-medium ${
+                selectedStatus === "expiring"
+                  ? "bg-amber-500/15 text-amber-700 dark:text-amber-300 shadow-xs font-semibold border border-amber-500/30"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 inline-block" />
+              待续费 ({expiringCount})
+            </button>
+          )}
         </div>
 
         {/* 分组筛选胶囊 */}
