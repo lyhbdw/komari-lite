@@ -180,7 +180,7 @@ export function SettingCardButton({
       <SettingCard.Action>
         <Flex>
           <Flex direction="row" gap="2" align="center">
-            <label>{resolvedLabel}</label>
+            <label className="text-sm text-muted-foreground">{resolvedLabel}</label>
             <Button onClick={handleClick} variant={variant} disabled={disabled}>
               {children}
             </Button>
@@ -426,6 +426,7 @@ export function SettingCardShortTextInput({
           autoFocus={autoFocus}
           name={name}
           id={id}
+          aria-label={typeof title === "string" ? title : undefined}
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
           ref={inputRef}
@@ -566,6 +567,7 @@ export function SettingCardLongTextInput({
           value={value}
           onChange={handleTextAreaChange}
           ref={textAreaRef}
+          aria-label={typeof title === "string" ? title : undefined}
         />
         {descriptionPlacement === "footer" ? (
           showFooterDescription || showSaveButton ? (
