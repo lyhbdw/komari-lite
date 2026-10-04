@@ -12,7 +12,6 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import menuConfig from "../../config/menuConfig.json";
 import type { MenuItem } from "../../types/menu";
 import { iconMap } from "../../utils/iconHelper";
-import { ChevronDownIcon } from "@radix-ui/react-icons";
 import { TablerMenu2 } from "../Icones/Tabler";
 import LoginDialog from "../Login";
 import InlineSvgIcon from "../InlineSvgIcon";
@@ -38,12 +37,10 @@ interface AdminPanelBarProps {
 const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
   const { call } = useRPC2Call();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [openSubMenus, setOpenSubMenus] = useState<{ [key: string]: boolean }>({});
   const { account } = useAccount();
   const isMobile = useIsMobile();
   const ishttps = window.location.protocol === "https:";
   const [t] = useTranslation();
-  const location = useLocation();
   const { publicInfo } = usePublicInfo();
   const { themeMode, toggleThemeMode } = useThemeMode();
 
@@ -88,29 +85,6 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
   const mainItems = useMemo(() => {
     return mergedBaseMenuItems.filter((item) => !item.bottom);
   }, [mergedBaseMenuItems]);
-
-  // 根据当前路径展开对应的菜单分组
-  useEffect(() => {
-    const newState: { [key: string]: boolean } = {};
-    mergedBaseMenuItems.forEach((item) => {
-      if (item.children) {
-        const isMatched = item.children.some((child: MenuItem) => {
-          const childPath = child.path.split("?")[0];
-          return (
-            location.pathname === childPath ||
-            (childPath !== "/" && location.pathname.startsWith(childPath + "/"))
-          );
-        });
-        if (isMatched) {
-          newState[item.path] = true;
-        }
-      }
-    });
-    setOpenSubMenus((prev: Record<string, boolean>) => ({
-      ...prev,
-      ...newState,
-    }));
-  }, [location.pathname, mergedBaseMenuItems]);
 
   // 侧边栏动画变体
   const sidebarVariants = {
@@ -328,96 +302,21 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
 
               {/* Main Navigation Links */}
               <div className="space-y-1">
-                {mainItems.map((item: ExtendedMenuItem) => {
-                  const isOpen = openSubMenus[item.path];
-                  if (item.children && item.children.length) {
-                    return (
-                      <div key={item.path} className="space-y-0.5">
-                        <div
-                          className={`group flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium cursor-pointer transition-all duration-150 ${
-                            isOpen
-                              ? "text-sidebar-foreground bg-sidebar-accent/50"
-                              : "text-muted-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent/40"
-                          }`}
-                          onClick={() => {
-                            setOpenSubMenus((prev) => ({
-                              ...prev,
-                              [item.path]: !prev[item.path],
-                            }));
-                          }}
-                        >
-                          <div className="flex items-center gap-2.5 min-w-0">
-                            {renderIcon(
-                              item.icon,
-                              item.labelKey,
-                              "w-4 h-4 shrink-0 flex items-center justify-center text-muted-foreground group-hover:text-sidebar-foreground transition-colors"
-                            )}
-                            <span className="truncate">
-                              {item.rawLabel || t(item.labelKey)}
-                            </span>
-                          </div>
-                          <ChevronDownIcon
-                            className="w-4 h-4 opacity-50 transition-transform duration-200"
-                            style={{
-                              transform: isOpen ? "rotate(180deg)" : "rotate(0deg)",
-                            }}
-                          />
-                        </div>
-
-                        <motion.div
-                          initial={{ height: 0, opacity: 0 }}
-                          animate={
-                            isOpen
-                              ? { height: "auto", opacity: 1 }
-                              : { height: 0, opacity: 0 }
-                          }
-                          transition={{ duration: 0.15 }}
-                          style={{ overflow: "hidden" }}
-                        >
-                          <div className="ml-4 pl-3 my-1 border-l border-border/40 flex flex-col gap-0.5">
-                            {item.children.map((child: MenuItem) => (
-                              <SidebarItem
-                                key={child.path}
-                                to={child.path}
-                                isSubItem={true}
-                                icon={renderIcon(
-                                  child.icon,
-                                  child.labelKey,
-                                  "w-3.5 h-3.5 shrink-0 flex items-center justify-center"
-                                )}
-                                children={
-                                  (child as ExtendedMenuItem).rawLabel ||
-                                  t(child.labelKey)
-                                }
-                                onClick={() => isMobile && setSidebarOpen(false)}
-                                newTab={child.newTab}
-                                reloadDocument={
-                                  (child as ExtendedMenuItem).reloadDocument
-                                }
-                              />
-                            ))}
-                          </div>
-                        </motion.div>
-                      </div>
-                    );
-                  }
-
-                  return (
-                    <SidebarItem
-                      key={item.path}
-                      to={item.path}
-                      icon={renderIcon(
-                        item.icon,
-                        item.labelKey,
-                        "w-4 h-4 shrink-0 flex items-center justify-center"
-                      )}
-                      children={item.rawLabel || t(item.labelKey)}
-                      onClick={() => isMobile && setSidebarOpen(false)}
-                      newTab={item.newTab}
-                      reloadDocument={item.reloadDocument}
-                    />
-                  );
-                })}
+                {mainItems.map((item: ExtendedMenuItem) => (
+                  <SidebarItem
+                    key={item.path}
+                    to={item.path}
+                    icon={renderIcon(
+                      item.icon,
+                      item.labelKey,
+                      "w-4 h-4 shrink-0 flex items-center justify-center"
+                    )}
+                    children={item.rawLabel || t(item.labelKey)}
+                    onClick={() => isMobile && setSidebarOpen(false)}
+                    newTab={item.newTab}
+                    reloadDocument={item.reloadDocument}
+                  />
+                ))}
               </div>
 
               {/* Bottom Docked Items */}
@@ -491,7 +390,6 @@ const SidebarItem = ({
   children,
   newTab,
   reloadDocument,
-  isSubItem = false,
 }: {
   to: string;
   onClick: () => void;
@@ -499,7 +397,6 @@ const SidebarItem = ({
   children: ReactNode;
   newTab?: boolean;
   reloadDocument?: boolean;
-  isSubItem?: boolean;
 }) => {
   const location = useLocation();
   const isExternalLink = to.startsWith("http://") || to.startsWith("https://");
@@ -513,17 +410,11 @@ const SidebarItem = ({
         (targetPath !== "/admin" && location.pathname.startsWith(targetPath + "/")));
   const openInNewTab = newTab === true || (isExternalLink && newTab !== false);
 
-  const baseClasses = isSubItem
-    ? `group flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[13px] transition-all duration-150 ${
-        isActive
-          ? "bg-accent/80 text-accent-foreground font-medium"
-          : "text-muted-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent/40"
-      }`
-    : `group flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all duration-150 ${
-        isActive
-          ? "bg-accent text-accent-foreground font-medium shadow-2xs"
-          : "text-sidebar-foreground/80 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
-      }`;
+  const baseClasses = `group flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all duration-150 ${
+    isActive
+      ? "bg-accent text-accent-foreground font-medium shadow-2xs"
+      : "text-sidebar-foreground/80 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
+  }`;
 
   const contentInner = (
     <>

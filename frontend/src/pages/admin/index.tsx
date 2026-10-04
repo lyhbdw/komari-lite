@@ -1688,7 +1688,6 @@ function RenewDialog({
   );
 }
 
-export default NodeDetailsPage;
 function DeleteButton({
   node,
   trigger,
@@ -2761,3 +2760,5 @@ function BillingButton({
     </Dialog.Root>
   );
 }
+
+export default NodeDetailsPage;
