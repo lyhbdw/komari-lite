@@ -254,7 +254,7 @@
     "selected_total": "已选 {{count}} / 共 {{total}}",
     "semi_annual": "半年",
     "server": "服务器",
-    "serverList": "服务器列表",
+    "serverList": "节点",
     "sort": "排序",
     "status": "状态",
     "success": "成功",
@@ -379,7 +379,7 @@
     "target": "目标",
     "task": "任务",
     "task_view": "任务视图",
-    "title": "延迟监测"
+    "title": "网络"
   },
   "region_overview": "点亮地区",
   "rpc2": {
@@ -511,7 +511,7 @@
   },
   "status_settings": "状态显示设置",
   "system": {
-    "title": "系统"
+    "title": "设置"
   },
   "time": {
     "ago": "前",
