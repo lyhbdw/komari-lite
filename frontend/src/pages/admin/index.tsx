@@ -1508,7 +1508,10 @@ const ActionButtons = ({
 
   return (
     <div className="flex items-center justify-center gap-1">
-      {/* 1. 续费按钮 */}
+      {/* 1. 编辑信息 */}
+      <EditButton node={node} />
+
+      {/* 2. 续费按钮 */}
       <button
         type="button"
         onClick={() => setRenewOpen(true)}
@@ -1522,7 +1525,7 @@ const ActionButtons = ({
         <CalendarCheck size={13} />
       </button>
 
-      {/* 2. 账单管理 */}
+      {/* 3. 账单管理 */}
       <button
         type="button"
         onClick={() => setBillingOpen(true)}
@@ -1531,9 +1534,6 @@ const ActionButtons = ({
       >
         <CircleDollarSign size={13} />
       </button>
-
-      {/* 3. 编辑信息 */}
-      <EditButton node={node} />
 
       {/* 4. 安装指令 */}
       <button
