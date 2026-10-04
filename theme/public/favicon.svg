@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <!-- White Terminal Background with Crisp Border -->
+  <rect x="10" y="10" width="492" height="492" rx="104" fill="#FFFFFF" stroke="#71717A" stroke-width="20"/>
+  
+  <!-- Prompt > (black) -->
+  <path d="M 108 146 L 224 256 L 108 366" stroke="#09090B" stroke-width="54" stroke-linecap="round" stroke-linejoin="round"/>
+  
+  <!-- Cursor _ (black) -->
+  <rect x="270" y="336" width="138" height="54" rx="18" fill="#09090B"/>
+</svg>
