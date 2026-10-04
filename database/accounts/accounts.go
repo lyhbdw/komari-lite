@@ -87,10 +87,6 @@ func CreateAccountWithDB(db *gorm.DB, username, passwd string) (user models.User
 	return user, nil
 }
 
-func DeleteAccountByUsername(username string) (err error) {
-	return DeleteAccountByUsernameWithDB(dbcore.GetDBInstance(), username)
-}
-
 func DeleteAccountByUsernameWithDB(db *gorm.DB, username string) (err error) {
 	err = db.Where("username = ?", username).Delete(&models.User{}).Error
 	if err != nil {

@@ -1,10 +1,10 @@
 package metric
 
 import (
+	"path/filepath"
 	"database/sql"
 	"fmt"
 	"net/url"
-	"path/filepath"
 	"strings"
 	"time"
 )
@@ -264,45 +264,28 @@ func WithMaxIdleConns(n int) Option {
 	}
 }
 
-// WithConnMaxLifetime sets the maximum lifetime for pooled connections.
-//
-// WithConnMaxLifetime 设置连接最大复用时间。
-func WithConnMaxLifetime(d time.Duration) Option {
+// WithSQLiteWALAutoCheckpoint sets the WAL auto-checkpoint threshold in pages.
+func WithSQLiteWALAutoCheckpoint(pages int) Option {
 	return func(c *Config) {
-		c.ConnMaxLifetime = d
+		c.SQLite.WALAutoCheckpoint = pages
 	}
 }
 
-// WithConnectTimeout sets the timeout used while opening the store.
-//
-// WithConnectTimeout 设置打开 Store 时 ping 数据库的超时时间。
-func WithConnectTimeout(d time.Duration) Option {
-	return func(c *Config) {
-		c.ConnectTimeout = d
-	}
-}
-
-// WithSQLiteProfile sets the SQLite durability and performance profile.
-//
-// WithSQLiteProfile 设置 SQLite 持久化性能预设。
+// WithSQLiteProfile sets the SQLite performance profile preset.
 func WithSQLiteProfile(profile SQLitePerformanceProfile) Option {
 	return func(c *Config) {
 		c.SQLite.PerformanceProfile = profile
 	}
 }
 
-// WithSQLiteCacheSizeKB sets the SQLite page cache size in KB.
-//
-// WithSQLiteCacheSizeKB 设置 SQLite 页缓存大小，单位为 KB。
+// WithSQLiteCacheSizeKB sets the SQLite page cache size in KiB.
 func WithSQLiteCacheSizeKB(kb int) Option {
 	return func(c *Config) {
 		c.SQLite.CacheSizeKB = kb
 	}
 }
 
-// WithSQLiteMMapSize sets SQLite mmap_size.
-//
-// WithSQLiteMMapSize 设置 SQLite mmap_size。
+// WithSQLiteMMapSize sets the SQLite memory-map size in bytes.
 func WithSQLiteMMapSize(bytes int64) Option {
 	return func(c *Config) {
 		c.SQLite.MMapSizeBytes = bytes
@@ -310,20 +293,9 @@ func WithSQLiteMMapSize(bytes int64) Option {
 }
 
 // WithSQLiteTempStoreMemory controls whether SQLite uses memory for temporary storage.
-//
-// WithSQLiteTempStoreMemory 设置 SQLite 是否使用内存临时存储。
 func WithSQLiteTempStoreMemory(enabled bool) Option {
 	return func(c *Config) {
 		c.SQLite.TempStoreMemory = enabled
-	}
-}
-
-// WithSQLiteWALAutoCheckpoint sets the SQLite WAL auto-checkpoint page count.
-//
-// WithSQLiteWALAutoCheckpoint 设置 SQLite WAL 自动 checkpoint 页数。
-func WithSQLiteWALAutoCheckpoint(pages int) Option {
-	return func(c *Config) {
-		c.SQLite.WALAutoCheckpoint = pages
 	}
 }
 

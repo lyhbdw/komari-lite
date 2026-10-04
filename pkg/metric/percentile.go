@@ -6,24 +6,34 @@ import (
 
 // Pxx builds the Aggregation for an arbitrary percentile. The argument is a
 // percentage in (0,100): Pxx(99.9) -> "p99.9", Pxx(50) -> "p50". The fixed
-// AggP50/AggP95/AggP99 constants are just the common cases of this same string
-// form, so they keep working unchanged.
+// AggP50/AggP95/AggP99 constants are the common cases.
 //
-// This is what turns the package from "p50/p95/p99 only" into "any percentile":
-// callers can ask for p75, p90, p99.99, etc., and every path (in-memory,
-// SQL pushdown, and rollup-via-t-digest) understands it.
-//
-// Pxx 根据任意百分位构造 Aggregation。参数是 (0,100) 内的百分比：
+// Pxx 根据任意百分位构造 Aggregation。参数为 (0,100) 内的百分比：
 // Pxx(99.9) -> "p99.9"，Pxx(50) -> "p50"。固定的 AggP50/AggP95/AggP99
-// 常量只是同一字符串形式的常用情况，因此会保持原有行为。
-//
-// 这让 package 从“只支持 p50/p95/p99”变成“支持任意百分位”：调用方可以请求
-// p75、p90、p99.99 等，并且每条路径（内存、SQL 下推、基于 t-digest 的 rollup）
-// 都能理解它。
+// 是常用特例。
 func Pxx(p float64) Aggregation {
 	// Trim trailing zeros so Pxx(95) == AggP95 ("p95"), not "p95.000000".
 	s := strconv.FormatFloat(p, 'f', -1, 64)
 	return Aggregation("p" + s)
+}
+
+// percentileSorted returns the p-th percentile of pre-sorted values using
+// linear interpolation.
+func percentileSorted(values []float64, p float64) float64 {
+	if len(values) == 0 {
+		return 0
+	}
+	if len(values) == 1 {
+		return values[0]
+	}
+	rank := p * float64(len(values)-1)
+	lo := int(rank)
+	hi := lo + 1
+	if hi >= len(values) {
+		return values[len(values)-1]
+	}
+	frac := rank - float64(lo)
+	return values[lo]*(1-frac) + values[hi]*frac
 }
 
 // parsePercentile reports whether agg names a percentile and, if so, returns

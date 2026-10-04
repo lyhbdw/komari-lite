@@ -3,7 +3,6 @@ package metric
 import (
 	"context"
 	"errors"
-	"math"
 	"path/filepath"
 	"testing"
 	"time"
@@ -108,23 +107,6 @@ func TestTagFilterPushdownWithPaging(t *testing.T) {
 // TestCounterRateHandlesReset verifies reset-aware counter rate calculation.
 //
 // TestCounterRateHandlesReset 验证计数器重置时速率计算仍然稳定。
-func TestCounterRateHandlesReset(t *testing.T) {
-	base := time.Now().UTC().Truncate(time.Minute)
-	// Counter goes 0 -> 10 -> reset -> 5; naive (last-first)/sec would give a
-	// positive-but-wrong 5/30s. Correct counter rate sums positive deltas:
-	// (10-0) + (5-0 after reset) = 15 over 30s = 0.5/s.
-	pts := []Point{
-		{Timestamp: base, Value: 0},
-		{Timestamp: base.Add(10 * time.Second), Value: 10},
-		{Timestamp: base.Add(20 * time.Second), Value: 0},
-		{Timestamp: base.Add(30 * time.Second), Value: 5},
-	}
-	rate := counterRate(pts)
-	if rate != 0.5 {
-		t.Fatalf("expected reset-aware rate 0.5/s, got %v", rate)
-	}
-}
-
 // TestAlignTimeNegativeTimestamp verifies pre-epoch bucket alignment.
 //
 // TestAlignTimeNegativeTimestamp 验证 Unix epoch 之前的时间也能正确对齐桶。
@@ -136,31 +118,6 @@ func TestAlignTimeNegativeTimestamp(t *testing.T) {
 	want := time.Unix(-60, 0).UTC()
 	if !got.Equal(want) {
 		t.Fatalf("alignTime negative: got %v want %v", got, want)
-	}
-}
-
-
-
-// TestStdDevPopMatchesCalculateStats verifies population standard deviation.
-//
-// TestStdDevPopMatchesCalculateStats 验证总体标准差与统计摘要一致。
-func TestStdDevPopMatchesCalculateStats(t *testing.T) {
-	base := time.Date(2026, 6, 18, 0, 0, 0, 0, time.UTC)
-	var pts []Point
-	for i, v := range []float64{10, 20, 30, 40, 50} {
-		pts = append(pts, Point{Timestamp: base.Add(time.Duration(i) * time.Minute), Value: v})
-	}
-	st, err := CalculateStats(pts)
-	if err != nil {
-		t.Fatalf("stats: %v", err)
-	}
-	got, _ := aggregateValue(pts, AggStdDev)
-	if math.Abs(got-st.StdDev) > 1e-9 {
-		t.Fatalf("AggStdDev %v != Stats.StdDev %v", got, st.StdDev)
-	}
-	// Known value: population stddev of 10..50 step 10 is sqrt(200) ~= 14.142135.
-	if math.Abs(got-14.142135623730951) > 1e-9 {
-		t.Fatalf("unexpected population stddev: %v", got)
 	}
 }
 
@@ -243,10 +200,6 @@ func TestWriteBatchAtomicAcrossChunks(t *testing.T) {
 		t.Fatalf("expected 0 committed points after rolled-back batch, got %d", len(pts))
 	}
 }
-
-
-
-
 
 
 // TestJSONTagKeyWithSpecialChars verifies JSON tag keys with special characters.

@@ -12,6 +12,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/Tumb1er1376/komari-monitor-lite/database/accounts"
+	"github.com/Tumb1er1376/komari-monitor-lite/database/dbcore"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -97,7 +98,7 @@ func TestLogin(t *testing.T) {
 		})
 	}
 	// 清除测试数据
-	accounts.DeleteAccountByUsername("testuser")
+	accounts.DeleteAccountByUsernameWithDB(dbcore.GetDBInstance(), "testuser")
 	accounts.DeleteAllSessions()
 }
 

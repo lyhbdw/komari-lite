@@ -65,14 +65,6 @@ func levelOf(role string) int {
 	return roleLevel[RoleGuest]
 }
 
-// NamespaceOf 解析方法名的命名空间。"ns:method" 返回 "ns"；无 ":" 返回 DefaultNamespace。
-func NamespaceOf(method string) string {
-	if i := strings.IndexByte(method, ':'); i >= 0 {
-		return method[:i]
-	}
-	return DefaultNamespace
-}
-
 // computeSpecificity 计算 pattern 的特异性。精确匹配（不含通配符）给一个大 bonus
 // 以保证优先级最高；含通配符的按字面（非 "*"）字符数排序，前缀越长越具体。
 func computeSpecificity(pattern string) (spec int, hasWildcard bool) {
@@ -104,11 +96,6 @@ func Allow(pattern, minRole string) {
 		}
 	}
 	aclList = append(aclList, rule)
-}
-
-// RegisterNamespace 便捷封装：为整个命名空间声明所需最低角色（等价于 Allow("ns:*", role)）。
-func RegisterNamespace(namespace, requiredRole string) {
-	Allow(namespace+":*", requiredRole)
 }
 
 // wildcardMatch 判断 s 是否匹配只含 "*" 通配符的 pattern。"*" 匹配任意（含空）字符序列。
@@ -170,11 +157,6 @@ func resolveMinRole(method string) string {
 		return RoleAdmin
 	}
 	return bestRole
-}
-
-// CheckPermission 判定 group 角色是否有权调用 method。
-func CheckPermission(group, method string) bool {
-	return CheckPrincipal(PrincipalFromRole(group), method)
 }
 
 // CheckPrincipal 基于主体的能力集判定是否有权调用 method。

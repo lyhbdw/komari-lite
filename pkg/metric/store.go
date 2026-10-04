@@ -1449,35 +1449,6 @@ func scanDefinition(scanner interface{ Scan(dest ...any) error }) (Definition, e
 	return def, nil
 }
 
-// sortedPoints returns points ordered by timestamp.
-//
-// sortedPoints 返回按时间排序的点；若输入已排序则直接复用。
-func sortedPoints(points []Point) []Point {
-	// Most store queries already return time-ordered representatives. Detecting
-	// that avoids a copy and sort allocation on the common path.
-	if isTimeSorted(points) {
-		return points
-	}
-	out := make([]Point, len(points))
-	copy(out, points)
-	sort.SliceStable(out, func(i, j int) bool {
-		return out[i].Timestamp.Before(out[j].Timestamp)
-	})
-	return out
-}
-
-// isTimeSorted reports whether points are already time sorted.
-//
-// isTimeSorted 判断点序列是否已按时间升序排列。
-func isTimeSorted(points []Point) bool {
-	for i := 1; i < len(points); i++ {
-		if points[i].Timestamp.Before(points[i-1].Timestamp) {
-			return false
-		}
-	}
-	return true
-}
-
 // isUniqueViolation reports whether err is a unique/primary-key constraint
 // violation. It matches on driver error text so the package stays free of
 // driver-specific error type imports; this is a best-effort backstop behind the
