@@ -1179,7 +1179,7 @@ const ServerRow = ({
         <div
           {...attributes}
           {...listeners}
-          className={`cursor-row-resize active:cursor-row-resize p-1 rounded hover:bg-muted text-muted-foreground/35 hover:text-foreground transition-colors inline-flex items-center justify-center ${
+          className={`cursor-default p-1 rounded hover:bg-muted text-muted-foreground/35 hover:text-foreground transition-colors inline-flex items-center justify-center ${
             isMobile ? "touch-manipulation select-none" : ""
           }`}
           style={{
@@ -1385,7 +1385,7 @@ const NodeTable = ({
   return (
     <div
       className={`rounded-lg border border-border bg-card overflow-hidden ${
-        isDragging ? "select-none [&_*]:!cursor-row-resize" : ""
+        isDragging ? "select-none [&_*]:!cursor-default" : ""
       }`}
     >
       <DndContext
