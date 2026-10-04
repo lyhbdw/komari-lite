@@ -685,55 +685,59 @@ const MetricsOverview = ({
   const isExpiringActive = selectedStatus === "expiring";
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3">
-      {/* 1. 资产与预算（剩余价值 + 月均支出） */}
-      <div className="p-3 rounded-lg border border-border bg-card shadow-2xs hover:border-foreground/30 transition-all">
-        <div className="flex items-center justify-between text-muted-foreground mb-1 text-[11px] font-medium uppercase tracking-wider">
-          <span>{t("admin.overview.financial_overview", "资产与预算")}</span>
-          <CircleDollarSign size={14} className="opacity-70" />
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      {/* 1. 资产与预算 */}
+      <div className="p-3.5 rounded-xl border border-border/70 bg-card shadow-2xs hover:border-foreground/25 transition-all flex flex-col justify-between h-[84px]">
+        <div className="flex items-center justify-between text-muted-foreground text-xs font-medium">
+          <span className="tracking-tight">{t("admin.overview.financial_overview", "资产与预算")}</span>
+          <div className="w-6 h-6 rounded-md bg-muted/60 text-muted-foreground flex items-center justify-center shrink-0">
+            <CircleDollarSign size={13} />
+          </div>
         </div>
         <div className="flex items-baseline justify-between mt-1">
-          <div className="flex items-baseline gap-1.5">
+          <div className="flex items-baseline gap-1">
             <span className="text-xl font-bold font-mono tracking-tight text-foreground">
               {remainingStats.total}
             </span>
-            <span className="text-[10px] text-muted-foreground">剩余</span>
+            <span className="text-[11px] text-muted-foreground">剩余</span>
           </div>
-          <div className="flex items-baseline gap-1 text-xs text-muted-foreground font-mono">
+          <div className="px-2 py-0.5 rounded-md bg-muted/50 border border-border/40 text-[11px] font-mono text-muted-foreground flex items-center gap-1">
             <span>支出</span>
-            <span className="text-foreground/90 font-semibold">{monthlyCostStats.totalCNY}</span>
+            <span className="text-foreground/90 font-medium">{monthlyCostStats.totalCNY}</span>
           </div>
         </div>
       </div>
 
-      {/* 2. 流量与速率（累计流量 + 实时上/下行速率） */}
-      <div className="p-3 rounded-lg border border-border bg-card shadow-2xs hover:border-foreground/30 transition-all">
-        <div className="flex items-center justify-between text-muted-foreground mb-1 text-[11px] font-medium uppercase tracking-wider">
-          <span>{t("admin.overview.traffic_total", "累计流量与速率")}</span>
-          <ArrowUpDown size={14} className="opacity-70" />
+      {/* 2. 流量与速率 */}
+      <div className="p-3.5 rounded-xl border border-border/70 bg-card shadow-2xs hover:border-foreground/25 transition-all flex flex-col justify-between h-[84px]">
+        <div className="flex items-center justify-between text-muted-foreground text-xs font-medium">
+          <span className="tracking-tight">{t("admin.overview.traffic_total", "累计流量与速率")}</span>
+          <div className="w-6 h-6 rounded-md bg-muted/60 text-muted-foreground flex items-center justify-center shrink-0">
+            <ArrowUpDown size={13} />
+          </div>
         </div>
         <div className="flex items-baseline justify-between mt-1">
-          <div className="flex items-baseline gap-1.5">
+          <div className="flex items-baseline gap-1">
             <span className="text-xl font-bold font-mono tracking-tight text-foreground">
               {trafficStats.isLoading && trafficStats.totalBytes === 0
                 ? "..."
                 : formatBytes(trafficStats.totalBytes)}
             </span>
-            <span className="text-[10px] text-muted-foreground">累计</span>
+            <span className="text-[11px] text-muted-foreground">累计</span>
           </div>
           <div
-            className="flex items-baseline gap-1.5 text-xs text-muted-foreground font-mono truncate cursor-help"
+            className="px-2 py-0.5 rounded-md bg-muted/50 border border-border/40 text-[11px] font-mono text-muted-foreground flex items-center gap-1.5 cursor-help"
             title={`累计上行: ${formatBytes(trafficStats.totalUp)} · 累计下行: ${formatBytes(trafficStats.totalDown)}`}
           >
             <span className="flex items-center gap-0.5">
-              <span>↑</span>
+              <span className="opacity-60">↑</span>
               <span className="text-foreground/90 font-medium">
                 {trafficStats.isLoading ? "..." : formatBytesPerSecond(trafficStats.speedUp)}
               </span>
             </span>
-            <span>·</span>
+            <span className="opacity-40">·</span>
             <span className="flex items-center gap-0.5">
-              <span>↓</span>
+              <span className="opacity-60">↓</span>
               <span className="text-foreground/90 font-medium">
                 {trafficStats.isLoading ? "..." : formatBytesPerSecond(trafficStats.speedDown)}
               </span>
@@ -742,51 +746,48 @@ const MetricsOverview = ({
         </div>
       </div>
 
-      {/* 3. 待续费机器（一键直达筛选） */}
+      {/* 3. 待续费机器 */}
       <div
         onClick={() => setSelectedStatus(isExpiringActive ? "all" : "expiring")}
-        className={`p-3 rounded-lg border bg-card shadow-2xs cursor-pointer transition-all duration-150 group select-none ${
+        className={`p-3.5 rounded-xl border bg-card shadow-2xs cursor-pointer transition-all duration-150 group select-none flex flex-col justify-between h-[84px] ${
           isExpiringActive
             ? "border-amber-500/80 ring-2 ring-amber-500/20 bg-amber-500/5 dark:bg-amber-500/10"
-            : "border-border hover:border-amber-500/50 hover:shadow-xs"
+            : "border-border/70 hover:border-amber-500/50 hover:shadow-xs"
         }`}
         title={isExpiringActive ? "点击恢复展示全部节点" : "点击在下方列表筛选这批临期节点"}
       >
-        <div className="flex items-center justify-between text-muted-foreground mb-1 text-[11px] font-medium uppercase tracking-wider">
-          <span className="group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
+        <div className="flex items-center justify-between text-muted-foreground text-xs font-medium">
+          <span className="tracking-tight group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
             {t("admin.overview.expiring_soon", "待续费机器")}
           </span>
-          <CalendarClock
-            size={14}
-            className={`transition-colors ${
+          <div
+            className={`w-6 h-6 rounded-md flex items-center justify-center shrink-0 transition-colors ${
               isExpiringActive
-                ? "text-amber-600 dark:text-amber-400"
-                : "opacity-70 group-hover:text-amber-600 dark:group-hover:text-amber-400"
+                ? "bg-amber-500/20 text-amber-600 dark:text-amber-400"
+                : "bg-muted/60 text-muted-foreground group-hover:bg-amber-500/10 group-hover:text-amber-600 dark:group-hover:text-amber-400"
             }`}
-          />
+          >
+            <CalendarClock size={13} />
+          </div>
         </div>
         <div className="flex items-baseline justify-between mt-1">
-          <div className="flex items-baseline gap-1.5">
+          <div className="flex items-baseline gap-1">
             <span className="text-xl font-bold font-mono tracking-tight text-foreground">
               {expiringCount} 台
             </span>
-            {expiringCount > 0 && (
-              <span className="text-[10px] font-sans font-normal text-amber-600 dark:text-amber-400 px-1.5 py-0.2 rounded bg-amber-500/10 border border-amber-500/20">
-                7天内
-              </span>
-            )}
+            <span className="text-[11px] text-muted-foreground">临期</span>
           </div>
-          <span
-            className={`text-xs font-medium transition-colors ${
-              isExpiringActive
-                ? "text-amber-600 dark:text-amber-400 underline underline-offset-2"
-                : expiringCount > 0
-                ? "text-muted-foreground group-hover:text-foreground"
-                : "text-muted-foreground"
-            }`}
-          >
-            {expiringCount > 0 ? (isExpiringActive ? "点击取消" : "点击筛选") : "正常"}
-          </span>
+          {expiringCount > 0 ? (
+            <div className="px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[11px] font-medium flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 inline-block animate-pulse" />
+              <span>{isExpiringActive ? "已筛选" : "需要续费"}</span>
+            </div>
+          ) : (
+            <div className="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-[11px] font-medium flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
+              <span>全部正常</span>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -945,8 +946,11 @@ const Header = ({
           <h1 className="text-lg sm:text-xl font-bold tracking-tight text-foreground">
             {t("admin.nodeTable.nodeList")}
           </h1>
+          <span className="px-2 py-0.5 text-xs font-mono font-medium rounded-full bg-muted text-muted-foreground border border-border/50">
+            {totalNodes}
+          </span>
           {selectedNodes.length > 0 && (
-            <span className="px-2 py-0.2 text-[11px] font-mono font-medium rounded-full bg-foreground text-background">
+            <span className="px-2 py-0.5 text-xs font-mono font-medium rounded-full bg-foreground text-background">
               {selectedNodes.length} 已选
             </span>
           )}
@@ -1002,7 +1006,7 @@ const Header = ({
               placeholder={t("admin.nodeTable.searchByName", "搜索节点、IP、分组...")}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full h-8 pl-8 pr-3 text-xs rounded-lg border border-border bg-card text-foreground placeholder:text-muted-foreground/60 outline-none focus:border-foreground/50 focus:ring-1 focus:ring-foreground/20 transition-all shadow-2xs"
+              className="w-full h-8 pl-8 pr-3 text-xs rounded-lg border border-border/70 bg-card text-foreground placeholder:text-muted-foreground/60 outline-none focus:border-foreground/40 focus:ring-1 focus:ring-foreground/15 transition-all shadow-2xs"
             />
           </div>
 
@@ -1010,7 +1014,7 @@ const Header = ({
             <Dialog.Trigger>
               <button
                 onClick={() => setDialogOpen(true)}
-                className="h-8 px-3 rounded-lg bg-foreground text-background font-medium text-xs flex items-center gap-1.5 shadow-sm hover:opacity-90 active:scale-[0.98] transition-all cursor-pointer shrink-0"
+                className="h-8 px-3 rounded-lg bg-stone-900 hover:bg-stone-800 dark:bg-stone-100 dark:hover:bg-stone-200 text-stone-50 dark:text-stone-900 font-medium text-xs flex items-center gap-1.5 shadow-2xs active:scale-[0.98] transition-all cursor-pointer shrink-0"
               >
                 <Plus size={13} strokeWidth={2.5} />
                 <span>{t("admin.nodeTable.addNode")}</span>
@@ -1055,13 +1059,13 @@ const Header = ({
       {/* 快捷过滤工具条：状态分段器 + 分组下拉框（精简为单行） */}
       <div className="flex flex-wrap items-center justify-between gap-2 pt-0.5">
         {/* 在线状态筛选 */}
-        <div className="inline-flex items-center p-0.5 bg-muted/60 rounded-lg border border-border/60 text-xs">
+        <div className="inline-flex items-center p-0.5 bg-muted/50 rounded-lg border border-border/50 text-xs">
           <button
             type="button"
             onClick={() => setSelectedStatus("all")}
-            className={`px-2.5 py-0.5 rounded-md transition-all cursor-pointer font-medium text-[11px] ${
+            className={`h-6 px-2.5 rounded-md transition-all cursor-pointer font-medium text-[11px] ${
               selectedStatus === "all"
-                ? "bg-card text-foreground shadow-xs font-semibold"
+                ? "bg-card text-foreground shadow-2xs font-semibold"
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
@@ -1070,9 +1074,9 @@ const Header = ({
           <button
             type="button"
             onClick={() => setSelectedStatus("online")}
-            className={`px-2.5 py-0.5 rounded-md flex items-center gap-1 transition-all cursor-pointer font-medium text-[11px] ${
+            className={`h-6 px-2.5 rounded-md flex items-center gap-1.5 transition-all cursor-pointer font-medium text-[11px] ${
               selectedStatus === "online"
-                ? "bg-card text-foreground shadow-xs font-semibold"
+                ? "bg-card text-foreground shadow-2xs font-semibold"
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
@@ -1082,9 +1086,9 @@ const Header = ({
           <button
             type="button"
             onClick={() => setSelectedStatus("offline")}
-            className={`px-2.5 py-0.5 rounded-md flex items-center gap-1 transition-all cursor-pointer font-medium text-[11px] ${
+            className={`h-6 px-2.5 rounded-md flex items-center gap-1.5 transition-all cursor-pointer font-medium text-[11px] ${
               selectedStatus === "offline"
-                ? "bg-card text-foreground shadow-xs font-semibold"
+                ? "bg-card text-foreground shadow-2xs font-semibold"
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
@@ -1095,9 +1099,9 @@ const Header = ({
             <button
               type="button"
               onClick={() => setSelectedStatus(selectedStatus === "expiring" ? "all" : "expiring")}
-              className={`px-2.5 py-0.5 rounded-md flex items-center gap-1 transition-all cursor-pointer font-medium text-[11px] ${
+              className={`h-6 px-2.5 rounded-md flex items-center gap-1.5 transition-all cursor-pointer font-medium text-[11px] ${
                 selectedStatus === "expiring"
-                  ? "bg-amber-500/15 text-amber-700 dark:text-amber-300 shadow-xs font-semibold border border-amber-500/30"
+                  ? "bg-amber-500/15 text-amber-700 dark:text-amber-300 shadow-2xs font-semibold border border-amber-500/30"
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
@@ -1107,14 +1111,13 @@ const Header = ({
           )}
         </div>
 
-        {/* 分组筛选：精简下拉选择框 */}
         {availableGroups.length > 0 && (
           <div className="flex items-center gap-1.5 text-xs">
-            <span className="text-[11px] text-muted-foreground">分组:</span>
+            <span className="text-[11px] text-muted-foreground font-medium">分组:</span>
             <select
               value={selectedGroup}
               onChange={(e) => setSelectedGroup(e.target.value)}
-              className="h-7 px-2 text-xs rounded-md border border-border bg-card text-foreground outline-none focus:border-foreground/50 cursor-pointer shadow-2xs"
+              className="h-7 px-2.5 text-[11px] font-medium rounded-lg border border-border/70 bg-card text-foreground outline-none focus:border-foreground/40 cursor-pointer shadow-2xs transition-colors hover:bg-muted/30"
             >
               <option value="all">全部分组 ({totalNodes})</option>
               {availableGroups.map((g) => (
@@ -1157,13 +1160,13 @@ const ServerRow = ({
     <TableRow
       ref={setNodeRef}
       style={style}
-      className="hover:bg-muted/40 transition-colors h-[54px]"
+      className="hover:bg-muted/40 transition-colors h-[52px]"
     >
-      <TableCell className="w-9 pl-3 pr-0 text-center">
+      <TableCell className="w-8 pl-2.5 pr-0 text-center">
         <div
           {...attributes}
           {...listeners}
-          className={`cursor-grab p-1 rounded hover:bg-muted text-muted-foreground/40 hover:text-foreground transition-colors inline-flex items-center justify-center ${
+          className={`cursor-grab p-1 rounded hover:bg-muted text-muted-foreground/35 hover:text-foreground transition-colors inline-flex items-center justify-center ${
             isMobile ? "touch-manipulation select-none" : ""
           }`}
           style={{
@@ -1177,24 +1180,24 @@ const ServerRow = ({
               : undefined
           }
         >
-          <GripVertical size={14} />
+          <GripVertical size={13} />
         </div>
       </TableCell>
-      <TableCell className="w-9 px-1 text-center">
+      <TableCell className="w-8 px-1 text-center">
         <Checkbox
           checked={selectedNodes.includes(node.uuid)}
           onCheckedChange={(checked) => handleSelectNode(node.uuid, !!checked)}
         />
       </TableCell>
-      <TableCell className="min-w-[240px] px-3">
+      <TableCell className="min-w-[200px] px-2.5">
         <DetailView node={node} />
       </TableCell>
-      <TableCell className="w-52 px-3">
+      <TableCell className="w-44 px-2">
         <div className="flex items-center gap-1.5 flex-nowrap">
           {node.ipv4 ? (
             <div
               onClick={() => copy(node.ipv4!)}
-              className="inline-flex items-center justify-between gap-1 group bg-muted/60 hover:bg-muted/90 px-2 py-0.5 rounded border border-border/50 text-foreground/90 w-[142px] shrink-0 cursor-pointer transition-colors shadow-2xs select-none"
+              className="inline-flex items-center justify-between gap-1 group bg-muted/60 hover:bg-muted/90 px-1.5 py-0.5 rounded border border-border/50 text-foreground/90 w-[128px] shrink-0 cursor-pointer transition-colors shadow-2xs select-none"
               title={`${node.ipv4} (点击复制)`}
             >
               <span className="font-mono text-xs truncate">
@@ -1205,7 +1208,7 @@ const ServerRow = ({
           ) : null}
           {node.ipv6 ? (
             <div
-              className="inline-flex items-center justify-center gap-1 group bg-muted/40 hover:bg-muted/70 px-1.5 py-0.5 rounded border border-border/40 text-[10px] text-muted-foreground transition-colors cursor-pointer select-none shrink-0 w-[50px]"
+              className="inline-flex items-center justify-center gap-1 group bg-muted/40 hover:bg-muted/70 px-1.5 py-0.5 rounded border border-border/40 text-[10px] text-muted-foreground transition-colors cursor-pointer select-none shrink-0 w-[42px]"
               onClick={() => copy(node.ipv6!)}
               title={`${node.ipv6} (点击复制)`}
             >
@@ -1218,16 +1221,16 @@ const ServerRow = ({
           )}
         </div>
       </TableCell>
-      <TableCell className="w-20 px-2 text-center">
+      <TableCell className="w-20 px-1.5 text-center">
         {node.group ? (
-          <span className="inline-block text-xs px-2 py-0.5 rounded-md bg-muted/50 text-foreground/80 font-medium border border-border/40">
+          <span className="inline-block text-xs px-2 py-0.5 rounded-md bg-muted/50 text-foreground/80 font-medium border border-border/40 max-w-[76px] truncate" title={node.group}>
             {node.group}
           </span>
         ) : (
           <span className="text-xs text-muted-foreground/40 font-mono">-</span>
         )}
       </TableCell>
-      <TableCell className="w-48 px-3">
+      <TableCell className="w-40 px-2">
         <PriceTags
           price={node.price}
           billing_cycle={node.billing_cycle}
@@ -1236,7 +1239,7 @@ const ServerRow = ({
           tags={node.tags || ""}
         />
       </TableCell>
-      <TableCell className="w-auto min-w-[130px] px-2 text-center whitespace-nowrap">
+      <TableCell className="w-24 px-1 text-center whitespace-nowrap">
         <ActionButtons
           node={node}
           settings={settings}
@@ -1382,12 +1385,12 @@ const NodeTable = ({
           <TableHeader>
             <TableRow className="bg-muted/40 border-b border-border/80 text-[11px]">
               <TableHead
-                className="w-9 pl-3 pr-0 text-center"
+                className="w-8 pl-2.5 pr-0 text-center"
                 title={t("admin.nodeTable.dragToReorder", "长按拖拽重新排序")}
               >
-                <GripVertical size={13} className="text-muted-foreground/30 mx-auto" />
+                <GripVertical size={13} className="text-muted-foreground/35 mx-auto" />
               </TableHead>
-              <TableHead className="w-9 px-1 text-center">
+              <TableHead className="w-8 px-1 text-center">
                 <Checkbox
                   checked={
                     selectedNodes.length === localNodes.length &&
@@ -1398,7 +1401,7 @@ const NodeTable = ({
               </TableHead>
               <TableHead
                 onClick={() => onSort("name")}
-                className="min-w-[240px] px-3 text-left cursor-pointer select-none group hover:text-foreground transition-colors"
+                className="min-w-[200px] px-2.5 text-left cursor-pointer select-none group hover:text-foreground transition-colors"
               >
                 <span className="inline-flex items-center">
                   <span>{t("admin.nodeTable.name")}</span>
@@ -1407,7 +1410,7 @@ const NodeTable = ({
               </TableHead>
               <TableHead
                 onClick={() => onSort("ip")}
-                className="w-52 px-3 text-left cursor-pointer select-none group hover:text-foreground transition-colors"
+                className="w-44 px-2 text-left cursor-pointer select-none group hover:text-foreground transition-colors"
               >
                 <span className="inline-flex items-center">
                   <span>{t("admin.nodeDetail.ipAddress")}</span>
@@ -1416,7 +1419,7 @@ const NodeTable = ({
               </TableHead>
               <TableHead
                 onClick={() => onSort("group")}
-                className="w-20 px-2 text-center cursor-pointer select-none group hover:text-foreground transition-colors"
+                className="w-20 px-1.5 text-center cursor-pointer select-none group hover:text-foreground transition-colors"
               >
                 <span className="inline-flex items-center justify-center">
                   <span>{t("common.group")}</span>
@@ -1425,14 +1428,14 @@ const NodeTable = ({
               </TableHead>
               <TableHead
                 onClick={() => onSort("billing")}
-                className="w-48 px-3 text-left cursor-pointer select-none group hover:text-foreground transition-colors"
+                className="w-40 px-2 text-left cursor-pointer select-none group hover:text-foreground transition-colors"
               >
                 <span className="inline-flex items-center">
                   <span>{t("admin.nodeTable.billing")}</span>
                   {renderSortIcon("billing")}
                 </span>
               </TableHead>
-              <TableHead className="w-auto min-w-[130px] px-2 text-center">
+              <TableHead className="w-24 px-1 text-center">
                 {t("common.actions", "操作")}
               </TableHead>
             </TableRow>
@@ -1507,14 +1510,13 @@ const ActionButtons = ({
       {/* 更多操作下拉菜单：隔离危险操作，收纳续费、账单与复制 */}
       <DropdownMenu.Root>
         <DropdownMenu.Trigger>
-          <IconButton
-            variant="ghost"
-            size="2"
-            className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+          <button
+            type="button"
+            className="w-7 h-7 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/70 flex items-center justify-center transition-colors cursor-pointer"
             title={t("common.more_actions", "更多操作")}
           >
-            <MoreHorizontal size={16} />
-          </IconButton>
+            <MoreHorizontal size={14} />
+          </button>
         </DropdownMenu.Trigger>
         <DropdownMenu.Content align="end" className="min-w-[150px]">
           <DropdownMenu.Item onClick={() => setRenewOpen(true)}>
@@ -1812,9 +1814,13 @@ function GenerateCommandButton({
   return (
     <Dialog.Root>
       <Dialog.Trigger>
-        <IconButton variant="ghost" title={t("admin.nodeTable.installCommand")}>
-          <Download size="18" />
-        </IconButton>
+        <button
+          type="button"
+          className="w-7 h-7 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/70 flex items-center justify-center transition-colors cursor-pointer"
+          title={t("admin.nodeTable.installCommand", "安装指令")}
+        >
+          <Download size={13} />
+        </button>
       </Dialog.Trigger>
       <Dialog.Content className="max-w-lg">
         <Dialog.Title>
@@ -2003,12 +2009,13 @@ function EditButton({ node }: { node: NodeDetail }) {
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
       <Dialog.Trigger>
-        <IconButton
-          variant="ghost"
+        <button
+          type="button"
+          className="w-7 h-7 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/70 flex items-center justify-center transition-colors cursor-pointer"
           title={t("admin.nodeEdit.editInfo", "编辑信息")}
         >
-          <Pencil size="18" />
-        </IconButton>
+          <Pencil size={13} />
+        </button>
       </Dialog.Trigger>
       <Dialog.Content className="max-w-md">
         <Dialog.Title>{t("admin.nodeEdit.editInfo", "编辑信息")}</Dialog.Title>
@@ -2169,10 +2176,10 @@ function DetailView({ node }: { node: NodeDetail }) {
     <Drawer direction={isMobile ? "bottom" : "right"}>
       <DrawerTrigger asChild>
         <div className="flex items-center gap-2.5 py-1 hover:underline cursor-pointer group">
-          <div className="relative shrink-0 flex items-center justify-center">
-            <Flag flag={node.region} size="6" />
+          <div className="relative shrink-0 w-6 h-5 flex items-center justify-center">
+            <Flag flag={node.region} size="5" className="m-0 shrink-0 rounded-xs" />
             <span
-              className={`absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full ring-2 ring-card ${
+              className={`absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full ring-1.5 ring-card ${
                 node.online ? "bg-emerald-500" : "bg-rose-500"
               }`}
               title={node.online ? t("nodeCard.online", "在线") : t("nodeCard.offline", "离线")}
@@ -2180,12 +2187,12 @@ function DetailView({ node }: { node: NodeDetail }) {
           </div>
           <div className="flex flex-col min-w-0">
             <div className="flex items-center gap-1.5 min-w-0">
-              <span className="font-medium text-sm text-foreground group-hover:text-primary transition-colors truncate max-w-[240px] lg:max-w-[300px]" title={node.name}>
+              <span className="font-semibold text-sm text-foreground group-hover:text-primary transition-colors truncate max-w-[220px] lg:max-w-[320px]" title={node.name}>
                 {node.name}
               </span>
               {node.remark && (
                 <span
-                  className="text-[10px] px-1.5 py-0.2 rounded bg-muted text-muted-foreground border border-border/60 font-normal truncate max-w-[120px] shrink-0"
+                  className="text-[10px] px-1.5 py-0.2 rounded bg-muted/70 text-muted-foreground border border-border/60 font-normal truncate max-w-[120px] shrink-0"
                   title={`私有备注: ${node.remark}`}
                 >
                   {node.remark}
@@ -2193,14 +2200,22 @@ function DetailView({ node }: { node: NodeDetail }) {
               )}
               {node.public_remark && !node.remark && (
                 <span
-                  className="text-[10px] px-1.5 py-0.2 rounded bg-muted text-muted-foreground border border-border/60 font-normal truncate max-w-[120px] shrink-0"
+                  className="text-[10px] px-1.5 py-0.2 rounded bg-muted/70 text-muted-foreground border border-border/60 font-normal truncate max-w-[120px] shrink-0"
                   title={`公开备注: ${node.public_remark}`}
                 >
                   {node.public_remark}
                 </span>
               )}
+              {node.tags && (
+                <span
+                  className="text-[10px] px-1.5 py-0.2 rounded bg-muted/70 text-muted-foreground border border-border/60 font-normal truncate max-w-[120px] shrink-0"
+                  title={`标签: ${node.tags}`}
+                >
+                  {node.tags}
+                </span>
+              )}
             </div>
-            <span className="text-[11px] text-muted-foreground/70 font-mono truncate max-w-[280px]">
+            <span className="text-[11px] text-muted-foreground/75 font-mono truncate max-w-[380px]">
               {node.os || "Linux"} {node.arch ? `· ${node.arch}` : ""} {node.version ? `· v${node.version}` : ""}
             </span>
           </div>

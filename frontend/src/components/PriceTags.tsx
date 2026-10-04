@@ -6,6 +6,7 @@ const PriceTags = ({
   currency = "￥",
   expired_at = Date.now() + 30 * 24 * 60 * 60 * 1000,
   tags = "",
+  showTags = false,
   hidden = false,
 }: {
   expired_at?: string | number;
@@ -13,6 +14,7 @@ const PriceTags = ({
   billing_cycle?: number;
   currency?: string;
   tags?: string;
+  showTags?: boolean;
   hidden?: boolean;
   [key: string]: any;
 }) => {
@@ -46,23 +48,23 @@ const PriceTags = ({
   const tagList = tags ? tags.split(";").map((t) => t.trim()).filter(Boolean) : [];
 
   return (
-    <div className="flex flex-col gap-1 w-full max-w-[260px]">
+    <div className="flex flex-col gap-1 w-full">
       {/* Line 1: Price and Expiration in strict tabular grid */}
-      <div className="grid grid-cols-[76px_72px] items-center gap-2 flex-nowrap">
+      <div className="grid grid-cols-[74px_70px] items-center gap-1.5 flex-nowrap">
         {price !== 0 ? (
-          <span className="inline-flex items-center justify-center h-6 px-2 rounded-md text-[11px] font-mono font-medium bg-muted/70 text-foreground border border-border/80 w-[76px] truncate shadow-2xs" title={`${price == -1 ? t("common.free") : `${currency}${price}`}/${getCycleLabel()}`}>
+          <span className="inline-flex items-center justify-center h-6 px-1.5 rounded-md text-[11px] font-mono font-medium bg-muted/60 text-foreground border border-border/70 w-[74px] truncate shadow-2xs" title={`${price == -1 ? t("common.free") : `${currency}${price}`}/${getCycleLabel()}`}>
             {price == -1 ? t("common.free") : `${currency}${price}`}/{getCycleLabel()}
           </span>
         ) : (
-          <span className="w-[76px]" />
+          <span className="w-[74px]" />
         )}
         <span
-          className={`inline-flex items-center justify-center h-6 px-2 rounded-md text-[11px] font-mono font-medium border w-[72px] shrink-0 shadow-2xs ${
+          className={`inline-flex items-center justify-center h-6 px-1.5 rounded-md text-[11px] font-mono font-medium border w-[70px] shrink-0 shadow-2xs ${
             diffDays <= 7
               ? "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20"
               : diffDays <= 15
               ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
-              : "bg-muted/40 text-muted-foreground border-border/60"
+              : "bg-muted/40 text-muted-foreground border-border/50"
           }`}
           title={getExpiryLabel()}
         >
@@ -70,8 +72,8 @@ const PriceTags = ({
         </span>
       </div>
 
-      {/* Line 2: Custom tags (always single line, truncated for symmetry) */}
-      {tagList.length > 0 && (
+      {/* Line 2: Custom tags (rendered only if explicitly enabled) */}
+      {showTags && tagList.length > 0 && (
         <div className="flex items-center gap-1 overflow-hidden flex-nowrap h-5">
           {tagList.map((tag, index) => {
             const text = tag.replace(/<\w+>$/, "");
