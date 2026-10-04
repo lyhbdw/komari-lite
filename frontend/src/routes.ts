@@ -34,9 +34,10 @@ export const routes: RouteObject[] = [
 
       {
         path: "sessions",
-        element: React.createElement(
-          lazy(() => import("./pages/admin/sessions"))
-        ),
+        element: React.createElement(Navigate, {
+          to: "/admin/settings/sessions",
+          replace: true,
+        }),
       },
       {
         path: "account",
@@ -63,27 +64,25 @@ export const routes: RouteObject[] = [
               lazy(() => import("./pages/admin/settings/site"))
             ),
           },
-
-
-          {
-            path: "notification",
-            element: React.createElement(Navigate, {
-              to: "/admin/notification/channels",
-              replace: true,
-            }),
-          },
           {
             path: "general",
             element: React.createElement(
               lazy(() => import("./pages/admin/settings/general"))
             ),
           },
-
-
+          {
+            path: "sessions",
+            element: React.createElement(
+              lazy(() => import("./pages/admin/sessions"))
+            ),
+          },
         ],
       },
       {
         path: "notification",
+        element: React.createElement(
+          lazy(() => import("./pages/admin/notification/_layout"))
+        ),
         children: [
           {
             index: true,
@@ -95,28 +94,19 @@ export const routes: RouteObject[] = [
           {
             path: "channels",
             element: React.createElement(
-              lazy(() => import("./pages/admin/settings/_layout"))
+              lazy(() => import("./pages/admin/notification/channels"))
             ),
-            children: [
-              {
-                index: true,
-                element: React.createElement(
-                  lazy(() => import("./pages/admin/notification/channels"))
-                ),
-              },
-            ],
+          },
+          {
+            path: "general",
+            element: React.createElement(
+              lazy(() => import("./pages/admin/notification/general"))
+            ),
           },
           {
             path: "offline",
             element: React.createElement(
               lazy(() => import("./pages/admin/notification/offline"))
-            ),
-          },
-
-          {
-            path: "general",
-            element: React.createElement(
-              lazy(() => import("./pages/admin/notification/general"))
             ),
           },
         ],

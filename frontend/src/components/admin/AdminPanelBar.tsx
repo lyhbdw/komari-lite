@@ -503,12 +503,14 @@ const SidebarItem = ({
 }) => {
   const location = useLocation();
   const isExternalLink = to.startsWith("http://") || to.startsWith("https://");
+  const targetPath = to.split("?")[0];
   const isActive =
     !isExternalLink &&
     to !== "/" &&
     (to.includes("?")
       ? location.pathname + location.search === to
-      : location.pathname === to.split("?")[0]);
+      : location.pathname === targetPath ||
+        (targetPath !== "/admin" && location.pathname.startsWith(targetPath + "/")));
   const openInNewTab = newTab === true || (isExternalLink && newTab !== false);
 
   const baseClasses = isSubItem
