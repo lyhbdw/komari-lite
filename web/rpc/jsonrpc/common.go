@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"math"
 	"sort"
-	"strings"
 	"time"
 
 	"github.com/Tumb1er1376/komari-monitor-lite/database"
@@ -13,7 +12,6 @@ import (
 	"github.com/Tumb1er1376/komari-monitor-lite/database/dbcore"
 	"github.com/Tumb1er1376/komari-monitor-lite/database/models"
 	"github.com/Tumb1er1376/komari-monitor-lite/database/tasks"
-	"github.com/Tumb1er1376/komari-monitor-lite/internal/config"
 	"github.com/Tumb1er1376/komari-monitor-lite/pkg/rpc"
 	v2 "github.com/Tumb1er1376/komari-monitor-lite/protocol/v2"
 	"github.com/Tumb1er1376/komari-monitor-lite/utils"
@@ -222,7 +220,6 @@ func getNodes(ctx context.Context, req *rpc.JsonRpcRequest) (any, *rpc.JsonRpcEr
 	}
 	meta := rpc.MetaFromContext(ctx)
 
-	SendIpAddrToGuest, _ := config.GetAs[bool](config.SendIpAddrToGuestKey)
 	if meta.Principal == nil || !meta.Principal.HasRole(rpc.RoleAdmin) {
 		// 过滤 Hidden 节点并隐藏敏感字段
 		filtered := make([]models.Client, 0, len(cinfo))
@@ -230,17 +227,8 @@ func getNodes(ctx context.Context, req *rpc.JsonRpcRequest) (any, *rpc.JsonRpcEr
 			if node.Hidden { // 非 admin 不显示隐藏节点
 				continue
 			}
-			if SendIpAddrToGuest {
-				if node.IPv4 != "" {
-					node.IPv4 = strings.Split(node.IPv4, ".")[0] + ".*.*.*"
-				}
-				if node.IPv6 != "" {
-					node.IPv6 = strings.Split(node.IPv6, ":")[0] + ":*:*:*:*:*:*:*"
-				}
-			} else {
-				node.IPv4 = ""
-				node.IPv6 = ""
-			}
+			node.IPv4 = ""
+			node.IPv6 = ""
 
 			node.Remark = ""
 			node.Version = ""

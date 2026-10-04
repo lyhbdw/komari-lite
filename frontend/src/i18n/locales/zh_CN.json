@@ -491,7 +491,6 @@
       "description": "站点描述",
       "name": "站点名称",
       "script_domain": "Agent 连接地址",
-      "send_ip_addr_to_guest": "向访客显示部分IP地址",
       "ssrf_protection_enabled": "启用 SSRF 防护",
       "title": "站点",
       "ws_allowed_origins": "WebSocket Origin 允许列表",

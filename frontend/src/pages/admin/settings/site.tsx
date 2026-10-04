@@ -13,7 +13,6 @@ export default function SiteSettings() {
   const [sitename, setSitename] = useState("");
   const [description, setDescription] = useState("");
   const [scriptDomain, setScriptDomain] = useState("");
-  const [sendIpToGuest, setSendIpToGuest] = useState(false);
 
   // 安全配置
   const [corsEnabled, setCorsEnabled] = useState(true);
@@ -30,7 +29,6 @@ export default function SiteSettings() {
       setSitename(settings.sitename || "");
       setDescription(settings.description || "");
       setScriptDomain(settings.script_domain || "");
-      setSendIpToGuest(!!settings.send_ip_addr_to_guest);
 
       setCorsEnabled(settings.cors_origin_check_enabled ?? true);
       setCorsOrigins(settings.cors_allowed_origins || "");
@@ -50,7 +48,6 @@ export default function SiteSettings() {
         sitename,
         description,
         script_domain: scriptDomain,
-        send_ip_addr_to_guest: sendIpToGuest,
       };
       await updateSettingsWithToast(payload, t);
       setSettings((prev: any) => ({ ...prev, ...payload }));
@@ -158,26 +155,6 @@ export default function SiteSettings() {
             placeholder="设置站点描述，用于 SEO 元信息及社交媒体卡片预览"
             className="w-full p-2.5 text-xs rounded-lg border border-border bg-background text-foreground outline-none focus:border-foreground/50 shadow-2xs resize-none"
           />
-        </div>
-
-        <div className="h-px bg-border/40" />
-
-        {/* 访客显示部分IP开关 */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-          <div>
-            <span className="text-xs font-medium text-foreground block">
-              {t("settings.site.send_ip_addr_to_guest", "向访客展示部分 IP 地址")}
-            </span>
-            <p className="text-[11px] text-muted-foreground mt-0.5">
-              未登录访客可通过 API 查看脱敏 IP（形如 9.*.*.*），用于部分前台主题展示机器归属。
-            </p>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <span className="text-xs text-muted-foreground">
-              {sendIpToGuest ? "已公开" : "已隐藏"}
-            </span>
-            <Switch checked={sendIpToGuest} onCheckedChange={setSendIpToGuest} />
-          </div>
         </div>
       </div>
 
