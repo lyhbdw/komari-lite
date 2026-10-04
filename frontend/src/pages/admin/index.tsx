@@ -324,9 +324,7 @@ const Layout = () => {
 
   return (
     <div className="km-page-admin-index space-y-4">
-      <PageHeader
-        searchTerm={searchTerm}
-        setSearchTerm={setSearchTerm}
+      <PageTitleBar
         selectedNodes={selectedNodes}
         totalNodes={nodeDetail?.length || 0}
       />
@@ -340,7 +338,9 @@ const Layout = () => {
         />
       )}
 
-      <FilterToolbar
+      <TableToolbar
+        searchTerm={searchTerm}
+        setSearchTerm={setSearchTerm}
         selectedGroup={selectedGroup}
         setSelectedGroup={setSelectedGroup}
         availableGroups={availableGroups}
@@ -835,46 +835,17 @@ const EmptyNodesGuide = () => {
 
 
 
-const PageHeader = ({
-  searchTerm,
-  setSearchTerm,
+const PageTitleBar = ({
   selectedNodes,
   totalNodes,
 }: {
-  searchTerm: string;
-  setSearchTerm: (term: string) => void;
   selectedNodes: string[];
   totalNodes: number;
 }) => {
   const { t } = useTranslation();
-  const { refresh } = useNodeDetails();
-  const [loading, setLoading] = useState(false);
-  const [dialogOpen, setDialogOpen] = useState(false);
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [upgradeVersion, setUpgradeVersion] = useState<string>("");
   const [upgrading, setUpgrading] = useState(false);
-  const inputRef = React.useRef<HTMLInputElement>(null);
-  const handleAddNode = async (name: string | undefined) => {
-    setDialogOpen(true);
-    setLoading(true);
-    try {
-      await fetch("/api/admin/client/add", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name || "" }),
-      });
-      refresh();
-    } catch (error) {
-      toast.error(
-        `${t("common.error", "Error")}: ${
-          error instanceof Error ? error.message : String(error)
-        }`
-      );
-    } finally {
-      setLoading(false);
-      setDialogOpen(false);
-    }
-  };
 
   const openUpgradeDialog = async () => {
     setUpgradeOpen(true);
@@ -926,15 +897,16 @@ const PageHeader = ({
       setUpgrading(false);
     }
   };
+
   return (
-    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-      {/* 左侧：标题与统计徽章 */}
+    <div className="flex items-center justify-between pb-0.5">
+      {/* 标题与数量胶囊 */}
       <div className="flex items-center gap-2.5">
-        <h1 className="text-lg sm:text-xl font-bold tracking-tight text-foreground">
+        <h1 className="text-xl font-bold tracking-tight text-foreground">
           {t("admin.nodeTable.nodeList")}
         </h1>
         <span className="px-2 py-0.5 text-xs font-mono font-medium rounded-full bg-muted text-muted-foreground border border-border/50">
-          {totalNodes}
+          {totalNodes} 台服务器
         </span>
         {selectedNodes.length > 0 && (
           <span className="px-2 py-0.5 text-xs font-mono font-medium rounded-full bg-foreground text-background">
@@ -943,61 +915,211 @@ const PageHeader = ({
         )}
       </div>
 
-      {/* 右侧：紧凑搜索框 + 升级 Agent + 添加节点 */}
+      {/* 批量升级 Agent 按钮 */}
+      <Dialog.Root open={upgradeOpen} onOpenChange={setUpgradeOpen}>
+        <Dialog.Trigger>
+          <button
+            type="button"
+            onClick={() => openUpgradeDialog()}
+            className="h-7 px-2.5 rounded-lg border border-border/60 bg-card hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1.5 text-xs font-medium cursor-pointer shadow-2xs"
+            title={t("admin.nodeTable.upgradeAgents", "批量升级 Agent")}
+          >
+            <ArrowUpCircle size={13} />
+            <span>升级 Agent</span>
+          </button>
+        </Dialog.Trigger>
+        <Dialog.Content className="max-w-md">
+          <Dialog.Title>{t("admin.nodeTable.upgradeAgents")}</Dialog.Title>
+          <div className="mt-2 text-xs text-muted-foreground leading-relaxed">
+            {t("admin.nodeTable.upgradeDescription", {
+              defaultValue:
+                "将向全部节点下发升级事件。Agent 会从面板下载新版本并自动完成替换与重启。",
+              version: upgradeVersion,
+            })}
+            {upgradeVersion ? (
+              <div className="mt-2 font-mono text-foreground">
+                {t("admin.nodeTable.upgradeTargetVersion")}: v{upgradeVersion}
+              </div>
+            ) : null}
+          </div>
+          <Flex justify="end" gap="2" mt="4">
+            <Dialog.Close>
+              <Button variant="soft" color="gray" disabled={upgrading}>
+                {t("common.cancel", "Cancel")}
+              </Button>
+            </Dialog.Close>
+            <Button onClick={() => handleUpgradeAgents()} disabled={upgrading}>
+              {upgrading
+                ? t("admin.nodeTable.upgrading", "下发中...")
+                : t("admin.nodeTable.upgradeConfirm", "确认升级")}
+            </Button>
+          </Flex>
+        </Dialog.Content>
+      </Dialog.Root>
+    </div>
+  );
+};
+
+const TableToolbar = ({
+  searchTerm,
+  setSearchTerm,
+  selectedGroup,
+  setSelectedGroup,
+  availableGroups,
+  selectedStatus,
+  setSelectedStatus,
+  totalNodes,
+  onlineCount,
+  offlineCount,
+  expiringCount,
+}: {
+  searchTerm: string;
+  setSearchTerm: (term: string) => void;
+  selectedGroup: string;
+  setSelectedGroup: (group: string) => void;
+  availableGroups: string[];
+  selectedStatus: "all" | "online" | "offline" | "expiring";
+  setSelectedStatus: (status: "all" | "online" | "offline" | "expiring") => void;
+  totalNodes: number;
+  onlineCount: number;
+  offlineCount: number;
+  expiringCount: number;
+}) => {
+  const { t } = useTranslation();
+  const { refresh } = useNodeDetails();
+  const [loading, setLoading] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const inputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleAddNode = async (name: string | undefined) => {
+    setDialogOpen(true);
+    setLoading(true);
+    try {
+      await fetch("/api/admin/client/add", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: name || "" }),
+      });
+      refresh();
+    } catch (error) {
+      toast.error(
+        `${t("common.error", "Error")}: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
+    } finally {
+      setLoading(false);
+      setDialogOpen(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-1">
+      {/* 左侧：状态筛选药丸栏 */}
+      <div className="inline-flex items-center p-0.5 bg-muted/50 rounded-lg border border-border/50 text-xs">
+        <button
+          type="button"
+          onClick={() => setSelectedStatus("all")}
+          className={`h-7 px-3 rounded-md transition-all cursor-pointer font-medium text-xs ${
+            selectedStatus === "all"
+              ? "bg-card text-foreground shadow-2xs font-semibold"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          全部 ({totalNodes})
+        </button>
+        <button
+          type="button"
+          onClick={() => setSelectedStatus("online")}
+          className={`h-7 px-3 rounded-md flex items-center gap-1.5 transition-all cursor-pointer font-medium text-xs ${
+            selectedStatus === "online"
+              ? "bg-card text-foreground shadow-2xs font-semibold"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
+          在线 ({onlineCount})
+        </button>
+        <button
+          type="button"
+          onClick={() => setSelectedStatus("offline")}
+          className={`h-7 px-3 rounded-md flex items-center gap-1.5 transition-all cursor-pointer font-medium text-xs ${
+            selectedStatus === "offline"
+              ? "bg-card text-foreground shadow-2xs font-semibold"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <span className="w-1.5 h-1.5 rounded-full bg-rose-500 inline-block" />
+          离线 ({offlineCount})
+        </button>
+        {expiringCount > 0 && (
+          <button
+            type="button"
+            onClick={() => setSelectedStatus(selectedStatus === "expiring" ? "all" : "expiring")}
+            className={`h-7 px-3 rounded-md flex items-center gap-1.5 transition-all cursor-pointer font-medium text-xs ${
+              selectedStatus === "expiring"
+                ? "bg-amber-500/15 text-amber-700 dark:text-amber-300 shadow-2xs font-semibold border border-amber-500/30"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 inline-block" />
+            待续费 ({expiringCount})
+          </button>
+        )}
+      </div>
+
+      {/* 右侧：搜索框 + 分组下拉 + 添加节点 */}
       <div className="flex items-center gap-2 w-full sm:w-auto">
-        <div className="relative flex-1 sm:w-56 flex items-center">
+        <div className="relative flex-1 sm:w-52 flex items-center">
           <Search size={13} className="absolute left-2.5 text-muted-foreground pointer-events-none" />
           <input
             type="text"
-            placeholder={t("admin.nodeTable.searchByName", "搜索节点、IP、分组...")}
+            placeholder={t("admin.nodeTable.searchByName", "搜索节点、IP...")}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full h-8 pl-8 pr-3 text-xs rounded-lg border border-border/70 bg-card text-foreground placeholder:text-muted-foreground/60 outline-none focus:border-foreground/40 focus:ring-1 focus:ring-foreground/15 transition-all shadow-2xs"
           />
         </div>
 
-        {/* 升级 Agent 按钮 */}
-        <Dialog.Root open={upgradeOpen} onOpenChange={setUpgradeOpen}>
-          <Dialog.Trigger>
-            <button
-              type="button"
-              onClick={() => openUpgradeDialog()}
-              className="h-8 w-8 rounded-lg border border-border/70 bg-card text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors flex items-center justify-center cursor-pointer shadow-2xs shrink-0"
-              title={t("admin.nodeTable.upgradeAgents", "批量升级 Agent")}
-            >
-              <ArrowUpCircle size={15} />
-            </button>
-          </Dialog.Trigger>
-          <Dialog.Content className="max-w-md">
-            <Dialog.Title>{t("admin.nodeTable.upgradeAgents")}</Dialog.Title>
-            <div className="mt-2 text-xs text-muted-foreground leading-relaxed">
-              {t("admin.nodeTable.upgradeDescription", {
-                defaultValue:
-                  "将向全部节点下发升级事件。Agent 会从面板下载新版本并自动完成替换与重启。",
-                version: upgradeVersion,
-              })}
-              {upgradeVersion ? (
-                <div className="mt-2 font-mono text-foreground">
-                  {t("admin.nodeTable.upgradeTargetVersion")}: v{upgradeVersion}
-                </div>
-              ) : null}
-            </div>
-            <Flex justify="end" gap="2" mt="4">
-              <Dialog.Close>
-                <Button variant="soft" color="gray" disabled={upgrading}>
-                  {t("common.cancel", "Cancel")}
-                </Button>
-              </Dialog.Close>
-              <Button onClick={() => handleUpgradeAgents()} disabled={upgrading}>
-                {upgrading
-                  ? t("admin.nodeTable.upgrading", "下发中...")
-                  : t("admin.nodeTable.upgradeConfirm", "确认升级")}
-              </Button>
-            </Flex>
-          </Dialog.Content>
-        </Dialog.Root>
+        {availableGroups.length > 0 && (
+          <DropdownMenu.Root>
+            <DropdownMenu.Trigger>
+              <button
+                type="button"
+                className="h-8 px-2.5 rounded-lg border border-border/70 bg-card hover:bg-muted/40 text-foreground text-xs font-medium inline-flex items-center gap-1.5 shadow-2xs cursor-pointer transition-colors shrink-0"
+              >
+                <Layers size={13} className="text-muted-foreground/70" />
+                <span>{selectedGroup === "all" ? `分组 (${availableGroups.length})` : selectedGroup}</span>
+                <ChevronDown size={11} className="text-muted-foreground/60 ml-0.5" />
+              </button>
+            </DropdownMenu.Trigger>
+            <DropdownMenu.Content align="end" className="min-w-[150px]">
+              <DropdownMenu.Item
+                onClick={() => setSelectedGroup("all")}
+                className={`flex items-center justify-between cursor-pointer ${
+                  selectedGroup === "all" ? "bg-muted/70 font-semibold" : ""
+                }`}
+              >
+                <span>全部分组 ({totalNodes})</span>
+                {selectedGroup === "all" && <Check size={13} className="text-primary ml-2" />}
+              </DropdownMenu.Item>
+              <DropdownMenu.Separator />
+              {availableGroups.map((g) => (
+                <DropdownMenu.Item
+                  key={g}
+                  onClick={() => setSelectedGroup(g)}
+                  className={`flex items-center justify-between cursor-pointer ${
+                    selectedGroup === g ? "bg-muted/70 font-semibold" : ""
+                  }`}
+                >
+                  <span>{g}</span>
+                  {selectedGroup === g && <Check size={13} className="text-primary ml-2" />}
+                </DropdownMenu.Item>
+              ))}
+            </DropdownMenu.Content>
+          </DropdownMenu.Root>
+        )}
 
-        {/* 添加节点按钮 */}
         <Dialog.Root open={dialogOpen} onOpenChange={setDialogOpen}>
           <Dialog.Trigger>
             <button
@@ -1046,124 +1168,6 @@ const PageHeader = ({
   );
 };
 
-const FilterToolbar = ({
-  selectedGroup,
-  setSelectedGroup,
-  availableGroups,
-  selectedStatus,
-  setSelectedStatus,
-  totalNodes,
-  onlineCount,
-  offlineCount,
-  expiringCount,
-}: {
-  selectedGroup: string;
-  setSelectedGroup: (group: string) => void;
-  availableGroups: string[];
-  selectedStatus: "all" | "online" | "offline" | "expiring";
-  setSelectedStatus: (status: "all" | "online" | "offline" | "expiring") => void;
-  totalNodes: number;
-  onlineCount: number;
-  offlineCount: number;
-  expiringCount: number;
-}) => {
-  return (
-    <div className="flex flex-wrap items-center justify-between gap-2 pt-0.5">
-      {/* 在线状态筛选 */}
-      <div className="inline-flex items-center p-0.5 bg-muted/50 rounded-lg border border-border/50 text-xs">
-        <button
-          type="button"
-          onClick={() => setSelectedStatus("all")}
-          className={`h-6 px-2.5 rounded-md transition-all cursor-pointer font-medium text-[11px] ${
-            selectedStatus === "all"
-              ? "bg-card text-foreground shadow-2xs font-semibold"
-              : "text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          全部 ({totalNodes})
-        </button>
-        <button
-          type="button"
-          onClick={() => setSelectedStatus("online")}
-          className={`h-6 px-2.5 rounded-md flex items-center gap-1.5 transition-all cursor-pointer font-medium text-[11px] ${
-            selectedStatus === "online"
-              ? "bg-card text-foreground shadow-2xs font-semibold"
-              : "text-muted-foreground hover:text-foreground"
-            }`}
-        >
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
-          在线 ({onlineCount})
-        </button>
-        <button
-          type="button"
-          onClick={() => setSelectedStatus("offline")}
-          className={`h-6 px-2.5 rounded-md flex items-center gap-1.5 transition-all cursor-pointer font-medium text-[11px] ${
-            selectedStatus === "offline"
-              ? "bg-card text-foreground shadow-2xs font-semibold"
-              : "text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          <span className="w-1.5 h-1.5 rounded-full bg-rose-500 inline-block" />
-          离线 ({offlineCount})
-        </button>
-        {expiringCount > 0 && (
-          <button
-            type="button"
-            onClick={() => setSelectedStatus(selectedStatus === "expiring" ? "all" : "expiring")}
-            className={`h-6 px-2.5 rounded-md flex items-center gap-1.5 transition-all cursor-pointer font-medium text-[11px] ${
-              selectedStatus === "expiring"
-                ? "bg-amber-500/15 text-amber-700 dark:text-amber-300 shadow-2xs font-semibold border border-amber-500/30"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 inline-block" />
-            待续费 ({expiringCount})
-          </button>
-        )}
-      </div>
-
-      {availableGroups.length > 0 && (
-        <DropdownMenu.Root>
-          <DropdownMenu.Trigger>
-            <button
-              type="button"
-              className="h-7 px-2.5 rounded-lg border border-border/70 bg-card hover:bg-muted/40 text-foreground text-[11px] font-medium inline-flex items-center gap-1.5 shadow-2xs cursor-pointer transition-colors"
-            >
-              <Layers size={12} className="text-muted-foreground/70" />
-              <span>{selectedGroup === "all" ? `全部分组 (${totalNodes})` : selectedGroup}</span>
-              <ChevronDown size={11} className="text-muted-foreground/60 ml-0.5" />
-            </button>
-          </DropdownMenu.Trigger>
-          <DropdownMenu.Content align="end" className="min-w-[150px]">
-            <DropdownMenu.Item
-              onClick={() => setSelectedGroup("all")}
-              className={`flex items-center justify-between cursor-pointer ${
-                selectedGroup === "all" ? "bg-muted/70 font-semibold" : ""
-              }`}
-            >
-              <span>全部分组 ({totalNodes})</span>
-              {selectedGroup === "all" && <Check size={13} className="text-primary ml-2" />}
-            </DropdownMenu.Item>
-            <DropdownMenu.Separator />
-            {availableGroups.map((g) => (
-              <DropdownMenu.Item
-                key={g}
-                onClick={() => setSelectedGroup(g)}
-                className={`flex items-center justify-between cursor-pointer ${
-                  selectedGroup === g ? "bg-muted/70 font-semibold" : ""
-                }`}
-              >
-                <span>{g}</span>
-                {selectedGroup === g && <Check size={13} className="text-primary ml-2" />}
-              </DropdownMenu.Item>
-            ))}
-          </DropdownMenu.Content>
-        </DropdownMenu.Root>
-      )}
-    </div>
-  );
-};
-
 const ServerRow = ({
   node,
   selectedNodes,
@@ -1198,62 +1202,57 @@ const ServerRow = ({
           : "hover:bg-muted/40"
       }`}
     >
-      <TableCell className="w-8 pl-2.5 pr-0 text-center">
-        <div
-          {...attributes}
-          {...listeners}
-          className={`cursor-default p-1 rounded hover:bg-muted text-muted-foreground/35 hover:text-foreground transition-colors inline-flex items-center justify-center ${
-            isMobile ? "touch-manipulation select-none" : ""
-          }`}
-          style={{
-            touchAction: "none",
-            WebkitUserSelect: "none",
-            userSelect: "none",
-          }}
-          title={
-            isMobile
-              ? t("admin.nodeTable.dragToReorder", "长按拖拽重新排序")
-              : undefined
-          }
-        >
-          <GripVertical size={13} />
+      <TableCell className="w-12 pl-2.5 pr-1 text-center">
+        <div className="flex items-center justify-center gap-1.5">
+          <div
+            {...attributes}
+            {...listeners}
+            className={`cursor-default p-0.5 rounded hover:bg-muted text-muted-foreground/30 hover:text-foreground transition-colors inline-flex items-center justify-center ${
+              isMobile ? "touch-manipulation select-none" : ""
+            }`}
+            style={{
+              touchAction: "none",
+              WebkitUserSelect: "none",
+              userSelect: "none",
+            }}
+            title={t("admin.nodeTable.dragToReorder", "长按拖拽重新排序")}
+          >
+            <GripVertical size={13} />
+          </div>
+          <Checkbox
+            checked={selectedNodes.includes(node.uuid)}
+            onCheckedChange={(checked) => handleSelectNode(node.uuid, !!checked)}
+          />
         </div>
-      </TableCell>
-      <TableCell className="w-8 px-1 text-center">
-        <Checkbox
-          checked={selectedNodes.includes(node.uuid)}
-          onCheckedChange={(checked) => handleSelectNode(node.uuid, !!checked)}
-        />
       </TableCell>
       <TableCell className="min-w-[200px] px-2.5">
         <DetailView node={node} />
       </TableCell>
-      <TableCell className="w-52 px-2.5">
-        <div className="flex items-center gap-1.5 flex-nowrap">
+      <TableCell className="w-48 px-3">
+        <div className="flex items-center gap-2 flex-nowrap">
           {node.ipv4 ? (
             <div
               onClick={() => copy(node.ipv4!)}
-              className="inline-flex items-center justify-between gap-1 group bg-muted/60 hover:bg-muted/90 px-1.5 py-0.5 rounded border border-border/50 text-foreground/90 w-[140px] shrink-0 cursor-pointer transition-colors shadow-2xs select-none"
+              className="inline-flex items-center gap-1.5 group cursor-pointer text-foreground/90 hover:text-foreground select-none"
               title={`${node.ipv4} (点击复制)`}
             >
-              <span className="font-mono text-xs truncate">
+              <span className="font-mono text-xs tracking-tight font-medium">
                 {node.ipv4}
               </span>
-              <Copy size={11} className="text-muted-foreground/60 group-hover:text-foreground shrink-0 transition-colors" />
+              <Copy size={11} className="opacity-0 group-hover:opacity-100 text-muted-foreground transition-opacity shrink-0" />
             </div>
-          ) : null}
-          {node.ipv6 ? (
-            <div
-              className="inline-flex items-center justify-center gap-1 group bg-muted/40 hover:bg-muted/70 px-1.5 py-0.5 rounded border border-border/40 text-[10px] text-muted-foreground transition-colors cursor-pointer select-none shrink-0 w-[44px]"
+          ) : (
+            <span className="text-xs text-muted-foreground/40 font-mono">-</span>
+          )}
+          {node.ipv6 && (
+            <button
+              type="button"
               onClick={() => copy(node.ipv6!)}
+              className="px-1.5 py-0.5 rounded text-[10px] font-mono font-medium bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground border border-border/40 transition-colors cursor-pointer shrink-0"
               title={`${node.ipv6} (点击复制)`}
             >
-              <span className="font-mono font-medium">IPv6</span>
-              <Copy size={10} className="opacity-60 group-hover:opacity-100" />
-            </div>
-          ) : null}
-          {!node.ipv4 && !node.ipv6 && (
-            <span className="text-xs text-muted-foreground/40 font-mono">-</span>
+              IPv6
+            </button>
           )}
         </div>
       </TableCell>
@@ -1266,7 +1265,7 @@ const ServerRow = ({
           <span className="text-xs text-muted-foreground/40 font-mono">-</span>
         )}
       </TableCell>
-      <TableCell className="w-40 px-2">
+      <TableCell className="w-36 px-2">
         <PriceTags
           price={node.price}
           billing_cycle={node.billing_cycle}
@@ -1275,7 +1274,7 @@ const ServerRow = ({
           tags={node.tags || ""}
         />
       </TableCell>
-      <TableCell className="w-24 px-1 text-center whitespace-nowrap">
+      <TableCell className="w-20 px-1 text-center whitespace-nowrap">
         <ActionButtons
           node={node}
           settings={settings}
@@ -1420,13 +1419,7 @@ const NodeTable = ({
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/40 border-b border-border/80 text-[11px]">
-              <TableHead
-                className="w-8 pl-2.5 pr-0 text-center"
-                title={t("admin.nodeTable.dragToReorder", "长按拖拽重新排序")}
-              >
-                <GripVertical size={13} className="text-muted-foreground/35 mx-auto" />
-              </TableHead>
-              <TableHead className="w-8 px-1 text-center">
+              <TableHead className="w-12 pl-2.5 pr-1 text-center">
                 <Checkbox
                   checked={
                     selectedNodes.length === localNodes.length &&
@@ -1446,7 +1439,7 @@ const NodeTable = ({
               </TableHead>
               <TableHead
                 onClick={() => onSort("ip")}
-                className="w-52 px-2.5 text-left cursor-pointer select-none group hover:text-foreground transition-colors"
+                className="w-48 px-3 text-left cursor-pointer select-none group hover:text-foreground transition-colors"
               >
                 <span className="inline-flex items-center">
                   <span>{t("admin.nodeDetail.ipAddress")}</span>
@@ -1464,14 +1457,14 @@ const NodeTable = ({
               </TableHead>
               <TableHead
                 onClick={() => onSort("billing")}
-                className="w-40 px-2 text-left cursor-pointer select-none group hover:text-foreground transition-colors"
+                className="w-36 px-2 text-left cursor-pointer select-none group hover:text-foreground transition-colors"
               >
                 <span className="inline-flex items-center">
                   <span>{t("admin.nodeTable.billing")}</span>
                   {renderSortIcon("billing")}
                 </span>
               </TableHead>
-              <TableHead className="w-24 px-1 text-center">
+              <TableHead className="w-20 px-1 text-center">
                 {t("common.actions", "操作")}
               </TableHead>
             </TableRow>
@@ -1511,6 +1504,7 @@ const ActionButtons = ({
   const [billingOpen, setBillingOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [renewOpen, setRenewOpen] = useState(false);
+  const [installOpen, setInstallOpen] = useState(false);
 
   const cycleDays = Number(node.billing_cycle) > 0 ? Number(node.billing_cycle) : 30;
 
@@ -1534,16 +1528,10 @@ const ActionButtons = ({
         </button>
       )}
 
-      {/* 常用高频操作 1：编辑信息 */}
+      {/* 常用高频操作：编辑信息 */}
       <EditButton node={node} />
 
-      {/* 常用高频操作 2：一键部署指令 */}
-      <GenerateCommandButton
-        settings={settings}
-        nodeToken={node.token}
-      />
-
-      {/* 更多操作下拉菜单：隔离危险操作，收纳续费、账单与复制 */}
+      {/* 更多操作下拉菜单：收纳续费、账单、部署指令、复制 Token 与删除 */}
       <DropdownMenu.Root>
         <DropdownMenu.Trigger>
           <button
@@ -1562,6 +1550,10 @@ const ActionButtons = ({
           <DropdownMenu.Item onClick={() => setBillingOpen(true)}>
             <CircleDollarSign size={14} className="mr-2 opacity-70" />
             <span>{t("admin.nodeTable.billing", "账单管理")}</span>
+          </DropdownMenu.Item>
+          <DropdownMenu.Item onClick={() => setInstallOpen(true)}>
+            <Download size={14} className="mr-2 opacity-70" />
+            <span>{t("admin.nodeTable.installCommand", "安装指令")}</span>
           </DropdownMenu.Item>
           <DropdownMenu.Item onClick={copyToken}>
             <Key size={14} className="mr-2 opacity-70" />
@@ -1588,6 +1580,13 @@ const ActionButtons = ({
         node={node}
         open={billingOpen}
         onOpenChange={setBillingOpen}
+        trigger={null}
+      />
+      <GenerateCommandButton
+        settings={settings}
+        nodeToken={node.token}
+        open={installOpen}
+        onOpenChange={setInstallOpen}
         trigger={null}
       />
       <DeleteButton
@@ -1804,9 +1803,15 @@ type InstallOptions = {
 function GenerateCommandButton({
   settings,
   nodeToken,
+  open,
+  onOpenChange,
+  trigger,
 }: {
   settings: any;
   nodeToken: string;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  trigger?: React.ReactNode;
 }) {
   const [installOptions, setInstallOptions] = React.useState<InstallOptions>({
     includeNics: "",
@@ -1848,16 +1853,22 @@ function GenerateCommandButton({
   };
   const { t } = useTranslation();
   return (
-    <Dialog.Root>
-      <Dialog.Trigger>
-        <button
-          type="button"
-          className="w-7 h-7 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/70 flex items-center justify-center transition-colors cursor-pointer"
-          title={t("admin.nodeTable.installCommand", "安装指令")}
-        >
-          <Download size={13} />
-        </button>
-      </Dialog.Trigger>
+    <Dialog.Root open={open} onOpenChange={onOpenChange}>
+      {trigger !== null && (
+        <Dialog.Trigger>
+          {trigger !== undefined ? (
+            trigger
+          ) : (
+            <button
+              type="button"
+              className="w-7 h-7 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/70 flex items-center justify-center transition-colors cursor-pointer"
+              title={t("admin.nodeTable.installCommand", "安装指令")}
+            >
+              <Download size={13} />
+            </button>
+          )}
+        </Dialog.Trigger>
+      )}
       <Dialog.Content className="max-w-lg">
         <Dialog.Title>
           {t("admin.nodeTable.installCommand", "一键部署指令")}
