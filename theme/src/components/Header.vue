@@ -12,7 +12,7 @@ const appStore = useAppStore()
 
 const isScrolled = inject<ReturnType<typeof ref<boolean>>>('isScrolled', ref(false))
 
-const siteFavicon = ref('/favicon.ico')
+const siteFavicon = ref('/favicon.svg?v=4')
 
 const actionButtons = computed(() => {
   const buttons = [
@@ -85,9 +85,9 @@ const sitename = computed(() => {
   >
     <div class="px-4 flex-between h-14 max-w-[1280px] mx-auto">
       <div class="flex items-center gap-3 cursor-pointer" @click="router.push('/')">
-        <Avatar class="size-8">
-          <AvatarImage :src="siteFavicon" :alt="sitename" />
-          <AvatarFallback>{{ sitename.slice(0, 1) }}</AvatarFallback>
+        <Avatar class="size-7.5 rounded-lg select-none shadow-2xs">
+          <AvatarImage :src="siteFavicon" :alt="sitename" class="rounded-lg object-contain" />
+          <AvatarFallback class="rounded-lg">{{ sitename.slice(0, 1) }}</AvatarFallback>
         </Avatar>
         <h3 class="m-0 text-lg font-semibold">
           {{ sitename }}
