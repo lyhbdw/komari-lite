@@ -267,7 +267,7 @@ func static(r *gin.RouterGroup, noRoute func(handlers ...gin.HandlerFunc), force
 
 	// ================= 路由定义 =================
 	// 1. Favicon 优先策略
-	r.GET("/favicon.ico", func(c *gin.Context) {
+	serveFavicon := func(c *gin.Context) {
 		// 优先：./data/favicon.ico
 		localFavicon := filepath.Join(DataDir, FaviconFile)
 		if !forceDefaultTheme {
@@ -278,7 +278,6 @@ func static(r *gin.RouterGroup, noRoute func(handlers ...gin.HandlerFunc), force
 		}
 
 		// 其次：当前主题的 dist/favicon.ico 或 theme_root/favicon.ico ?
-		// 通常构建后的资源在 dist 中，这里假设优先找 dist 内的，如果你的 favicon 在根目录，去掉 DistDir 拼接即可
 		cfg := getConfig()
 		themeFaviconPath := path.Join(DistDir, FaviconFile)
 		currentTheme := cfg[config.ThemeKey].(string)
@@ -292,7 +291,27 @@ func static(r *gin.RouterGroup, noRoute func(handlers ...gin.HandlerFunc), force
 		}
 
 		c.Status(http.StatusNotFound)
-	})
+	}
+	r.GET("/favicon.ico", serveFavicon)
+	r.HEAD("/favicon.ico", serveFavicon)
+
+	serveStaticIcon := func(filename, mimeType string) gin.HandlerFunc {
+		return func(c *gin.Context) {
+			localFile := filepath.Join(DataDir, filename)
+			if _, err := os.Stat(localFile); err == nil {
+				c.File(localFile)
+				return
+			}
+			content, _, exists := getFileContent("__admin__", path.Join(DistDir, filename))
+			if exists {
+				c.Data(http.StatusOK, mimeType, content)
+				return
+			}
+			c.Status(http.StatusNotFound)
+		}
+	}
+	r.GET("/favicon.svg", serveStaticIcon("favicon.svg", "image/svg+xml"))
+	r.GET("/apple-touch-icon.png", serveStaticIcon("apple-touch-icon.png", "image/png"))
 
 	// 2. 静态资源路由 /themes/:id/*path
 	// 允许访问 /themes/MyTheme/theme.json 和 /themes/MyTheme/dist/assets/a.js
