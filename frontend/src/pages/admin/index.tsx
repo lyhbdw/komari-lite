@@ -1223,10 +1223,10 @@ const ServerRow = ({
           />
         </div>
       </TableCell>
-      <TableCell className="max-w-[340px] min-w-0 px-2.5 overflow-hidden">
+      <TableCell className="min-w-0 px-2.5">
         <DetailView node={node} />
       </TableCell>
-      <TableCell className="w-48 px-3">
+      <TableCell className="w-40 px-2">
         <div className="flex items-center gap-2 flex-nowrap">
           {node.ipv4 ? (
             <div
@@ -1437,7 +1437,7 @@ const NodeTable = ({
               </TableHead>
               <TableHead
                 onClick={() => onSort("ip")}
-                className="w-48 px-3 text-left cursor-pointer select-none group hover:text-foreground transition-colors"
+                className="w-40 px-2 text-left cursor-pointer select-none group hover:text-foreground transition-colors"
               >
                 <span className="inline-flex items-center">
                   <span>{t("admin.nodeDetail.ipAddress")}</span>
