@@ -39,7 +39,23 @@ import {
   CheckSquare,
   X,
   Layers,
+  GripVertical,
 } from "lucide-react";
+import {
+  DndContext,
+  closestCenter,
+  useSensor,
+  useSensors,
+  TouchSensor,
+  MouseSensor,
+  KeyboardSensor,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import Flag from "@/components/Flag";
@@ -109,6 +125,11 @@ const Layout = () => {
       setSortField("none");
       setSortOrder("asc");
     }
+  };
+
+  const handleResetSort = () => {
+    setSortField("none");
+    setSortOrder("asc");
   };
 
   // 判定是否为 7 天内即将到期机器
@@ -397,6 +418,7 @@ const Layout = () => {
           sortField={sortField}
           sortOrder={sortOrder}
           onSort={handleSort}
+          onResetSort={handleResetSort}
         />
       )}
     </div>
@@ -1119,14 +1141,46 @@ const ServerRow = ({
   handleSelectNode: (uuid: string, checked: boolean) => void;
   settings: any;
 }) => {
+  const { attributes, listeners, setNodeRef, transform, transition } =
+    useSortable({ id: node.uuid });
   const { t } = useTranslation();
+  const isMobile = useIsMobile();
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
   function copy(text: string) {
     navigator.clipboard.writeText(text);
     toast.success(t("copy_success"));
   }
   return (
-    <TableRow className="hover:bg-muted/40 transition-colors h-[54px]">
-      <TableCell className="w-10 px-2 text-center">
+    <TableRow
+      ref={setNodeRef}
+      style={style}
+      className="hover:bg-muted/40 transition-colors h-[54px]"
+    >
+      <TableCell className="w-9 pl-3 pr-0 text-center">
+        <div
+          {...attributes}
+          {...listeners}
+          className={`cursor-grab p-1 rounded hover:bg-muted text-muted-foreground/40 hover:text-foreground transition-colors inline-flex items-center justify-center ${
+            isMobile ? "touch-manipulation select-none" : ""
+          }`}
+          style={{
+            touchAction: "none",
+            WebkitUserSelect: "none",
+            userSelect: "none",
+          }}
+          title={
+            isMobile
+              ? t("admin.nodeTable.dragToReorder", "长按拖拽重新排序")
+              : undefined
+          }
+        >
+          <GripVertical size={14} />
+        </div>
+      </TableCell>
+      <TableCell className="w-9 px-1 text-center">
         <Checkbox
           checked={selectedNodes.includes(node.uuid)}
           onCheckedChange={(checked) => handleSelectNode(node.uuid, !!checked)}
@@ -1207,6 +1261,7 @@ const NodeTable = ({
   sortField,
   sortOrder,
   onSort,
+  onResetSort,
 }: {
   nodes: NodeDetail[];
   selectedNodes: string[];
@@ -1215,11 +1270,76 @@ const NodeTable = ({
   sortField: "name" | "ip" | "group" | "billing" | "none";
   sortOrder: "asc" | "desc";
   onSort: (field: "name" | "ip" | "group" | "billing") => void;
+  onResetSort?: () => void;
 }) => {
   const { t } = useTranslation();
+  const sensors = useSensors(
+    useSensor(MouseSensor, {
+      activationConstraint: {
+        distance: 10,
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 200,
+        tolerance: 5,
+      },
+    }),
+    useSensor(KeyboardSensor, {})
+  );
+  const [localNodes, setLocalNodes] = useState<NodeDetail[]>(nodes);
+  const [isDragging, setIsDragging] = useState(false);
+  React.useEffect(() => {
+    setLocalNodes(nodes);
+  }, [nodes]);
+
+  const handleDragStart = () => {
+    setIsDragging(true);
+    if ("vibrate" in navigator) {
+      navigator.vibrate(50);
+    }
+  };
+
+  const handleDragEnd = async (event: any) => {
+    setIsDragging(false);
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = localNodes.findIndex((node) => node.uuid === active.id);
+    const newIndex = localNodes.findIndex((node) => node.uuid === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    const reorderedNodes = Array.from(localNodes);
+    const [reorderedItem] = reorderedNodes.splice(oldIndex, 1);
+    reorderedNodes.splice(newIndex, 0, reorderedItem);
+
+    setLocalNodes(reorderedNodes);
+    if (onResetSort) {
+      onResetSort();
+    }
+
+    if ("vibrate" in navigator) {
+      navigator.vibrate([30, 10, 30]);
+    }
+
+    try {
+      const orderData = reorderedNodes.reduce((acc, node, index) => {
+        acc[node.uuid] = index;
+        return acc;
+      }, {} as Record<string, number>);
+
+      await fetch("/api/admin/client/order", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(orderData),
+      });
+    } catch {
+      toast.error(t("admin.nodeTable.errorRefreshNodeList"));
+    }
+  };
 
   const handleSelectAll = (checked: boolean) => {
-    setSelectedNodes(checked ? nodes.map((node) => node.uuid) : []);
+    setSelectedNodes(checked ? localNodes.map((node) => node.uuid) : []);
   };
 
   const handleSelectNode = (uuid: string, checked: boolean) => {
@@ -1247,72 +1367,94 @@ const NodeTable = ({
   };
 
   return (
-    <div className="rounded-lg border border-border bg-card overflow-hidden">
-      <Table>
-        <TableHeader>
-          <TableRow className="bg-muted/40 border-b border-border/80 text-[11px]">
-            <TableHead className="w-10 px-2 text-center">
-              <Checkbox
-                checked={
-                  selectedNodes.length === nodes.length &&
-                  nodes.length > 0
-                }
-                onCheckedChange={handleSelectAll}
-              />
-            </TableHead>
-            <TableHead
-              onClick={() => onSort("name")}
-              className="min-w-[240px] px-3 text-left cursor-pointer select-none group hover:text-foreground transition-colors"
+    <div
+      className={`rounded-lg border border-border bg-card overflow-hidden ${
+        isDragging ? "select-none" : ""
+      }`}
+    >
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+      >
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-muted/40 border-b border-border/80 text-[11px]">
+              <TableHead
+                className="w-9 pl-3 pr-0 text-center"
+                title={t("admin.nodeTable.dragToReorder", "长按拖拽重新排序")}
+              >
+                <GripVertical size={13} className="text-muted-foreground/30 mx-auto" />
+              </TableHead>
+              <TableHead className="w-9 px-1 text-center">
+                <Checkbox
+                  checked={
+                    selectedNodes.length === localNodes.length &&
+                    localNodes.length > 0
+                  }
+                  onCheckedChange={handleSelectAll}
+                />
+              </TableHead>
+              <TableHead
+                onClick={() => onSort("name")}
+                className="min-w-[240px] px-3 text-left cursor-pointer select-none group hover:text-foreground transition-colors"
+              >
+                <span className="inline-flex items-center">
+                  <span>{t("admin.nodeTable.name")}</span>
+                  {renderSortIcon("name")}
+                </span>
+              </TableHead>
+              <TableHead
+                onClick={() => onSort("ip")}
+                className="w-52 px-3 text-left cursor-pointer select-none group hover:text-foreground transition-colors"
+              >
+                <span className="inline-flex items-center">
+                  <span>{t("admin.nodeDetail.ipAddress")}</span>
+                  {renderSortIcon("ip")}
+                </span>
+              </TableHead>
+              <TableHead
+                onClick={() => onSort("group")}
+                className="w-20 px-2 text-center cursor-pointer select-none group hover:text-foreground transition-colors"
+              >
+                <span className="inline-flex items-center justify-center">
+                  <span>{t("common.group")}</span>
+                  {renderSortIcon("group")}
+                </span>
+              </TableHead>
+              <TableHead
+                onClick={() => onSort("billing")}
+                className="w-48 px-3 text-left cursor-pointer select-none group hover:text-foreground transition-colors"
+              >
+                <span className="inline-flex items-center">
+                  <span>{t("admin.nodeTable.billing")}</span>
+                  {renderSortIcon("billing")}
+                </span>
+              </TableHead>
+              <TableHead className="w-auto min-w-[130px] px-2 text-center">
+                {t("common.actions", "操作")}
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            <SortableContext
+              items={localNodes.map((node) => node.uuid)}
+              strategy={verticalListSortingStrategy}
             >
-              <span className="inline-flex items-center">
-                <span>{t("admin.nodeTable.name")}</span>
-                {renderSortIcon("name")}
-              </span>
-            </TableHead>
-            <TableHead
-              onClick={() => onSort("ip")}
-              className="w-52 px-3 text-left cursor-pointer select-none group hover:text-foreground transition-colors"
-            >
-              <span className="inline-flex items-center">
-                <span>{t("admin.nodeDetail.ipAddress")}</span>
-                {renderSortIcon("ip")}
-              </span>
-            </TableHead>
-            <TableHead
-              onClick={() => onSort("group")}
-              className="w-20 px-2 text-center cursor-pointer select-none group hover:text-foreground transition-colors"
-            >
-              <span className="inline-flex items-center justify-center">
-                <span>{t("common.group")}</span>
-                {renderSortIcon("group")}
-              </span>
-            </TableHead>
-            <TableHead
-              onClick={() => onSort("billing")}
-              className="w-48 px-3 text-left cursor-pointer select-none group hover:text-foreground transition-colors"
-            >
-              <span className="inline-flex items-center">
-                <span>{t("admin.nodeTable.billing")}</span>
-                {renderSortIcon("billing")}
-              </span>
-            </TableHead>
-            <TableHead className="w-auto min-w-[130px] px-2 text-center">
-              {t("common.actions", "操作")}
-            </TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {nodes.map((node) => (
-            <ServerRow
-              key={node.uuid}
-              node={node}
-              selectedNodes={selectedNodes}
-              handleSelectNode={handleSelectNode}
-              settings={settings}
-            />
-          ))}
-        </TableBody>
-      </Table>
+              {localNodes.map((node) => (
+                <ServerRow
+                  key={node.uuid}
+                  node={node}
+                  selectedNodes={selectedNodes}
+                  handleSelectNode={handleSelectNode}
+                  settings={settings}
+                />
+              ))}
+            </SortableContext>
+          </TableBody>
+        </Table>
+      </DndContext>
     </div>
   );
 };
