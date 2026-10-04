@@ -1223,7 +1223,7 @@ const ServerRow = ({
           />
         </div>
       </TableCell>
-      <TableCell className="max-w-[280px] min-w-0 px-2.5 overflow-hidden">
+      <TableCell className="max-w-[340px] min-w-0 px-2.5 overflow-hidden">
         <DetailView node={node} />
       </TableCell>
       <TableCell className="w-48 px-3">
@@ -1263,7 +1263,7 @@ const ServerRow = ({
           <span className="text-xs text-muted-foreground/40 font-mono">-</span>
         )}
       </TableCell>
-      <TableCell className="w-36 px-2">
+      <TableCell className="w-28 px-2">
         <PriceTags
           price={node.price}
           billing_cycle={node.billing_cycle}
@@ -1455,7 +1455,7 @@ const NodeTable = ({
               </TableHead>
               <TableHead
                 onClick={() => onSort("billing")}
-                className="w-36 px-2 text-left cursor-pointer select-none group hover:text-foreground transition-colors"
+                className="w-28 px-2 text-left cursor-pointer select-none group hover:text-foreground transition-colors"
               >
                 <span className="inline-flex items-center">
                   <span>{t("admin.nodeTable.billing")}</span>

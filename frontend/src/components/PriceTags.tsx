@@ -5,8 +5,6 @@ const PriceTags = ({
   billing_cycle = 30,
   currency = "￥",
   expired_at = Date.now() + 30 * 24 * 60 * 60 * 1000,
-  tags = "",
-  showTags = false,
   hidden = false,
 }: {
   expired_at?: string | number;
@@ -45,49 +43,49 @@ const PriceTags = ({
     return t("common.expired_in", { days: diffDays });
   };
 
-  const tagList = tags ? tags.split(";").map((t) => t.trim()).filter(Boolean) : [];
+  const isExpired = diffDays <= 0;
+  const isExpiringUrgent = diffDays > 0 && diffDays <= 7;
+  const isExpiringWarning = diffDays > 7 && diffDays <= 30;
+  const isExpiring = isExpired || isExpiringUrgent || isExpiringWarning;
+
+  const priceText =
+    price === -1
+      ? t("common.free")
+      : price !== 0
+      ? `${currency}${price}/${getCycleLabel()}`
+      : "";
+
+  const fullExpiryTooltip = `${expiredDate.toLocaleDateString("zh-CN")} 到期 (${getExpiryLabel()})`;
 
   return (
-    <div className="flex flex-col gap-1 w-full">
-      {/* Line 1: Price and Expiration in strict tabular grid */}
-      <div className="grid grid-cols-[74px_70px] items-center gap-1.5 flex-nowrap">
-        {price !== 0 ? (
-          <span className="inline-flex items-center justify-center h-6 px-1.5 rounded-md text-[11px] font-mono font-medium bg-muted/60 text-foreground border border-border/70 w-[74px] truncate shadow-2xs" title={`${price == -1 ? t("common.free") : `${currency}${price}`}/${getCycleLabel()}`}>
-            {price == -1 ? t("common.free") : `${currency}${price}`}/{getCycleLabel()}
-          </span>
-        ) : (
-          <span className="w-[74px]" />
-        )}
+    <div className="flex items-center">
+      {isExpiring ? (
         <span
-          className={`inline-flex items-center justify-center h-6 px-1.5 rounded-md text-[11px] font-mono font-medium border w-[70px] shrink-0 shadow-2xs ${
-            diffDays <= 7
-              ? "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20"
-              : diffDays <= 15
-              ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
-              : "bg-muted/40 text-muted-foreground border-border/50"
+          className={`inline-flex items-center justify-center h-6 px-2 rounded-md text-[11px] font-mono font-medium border shadow-2xs whitespace-nowrap ${
+            isExpired || isExpiringUrgent
+              ? "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/25"
+              : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/25"
           }`}
-          title={getExpiryLabel()}
+          title={fullExpiryTooltip}
+        >
+          {priceText ? `${priceText} · ${getExpiryLabel()}` : getExpiryLabel()}
+        </span>
+      ) : priceText ? (
+        <span
+          className="inline-flex items-center justify-center h-6 px-2 rounded-md text-[11px] font-mono font-medium bg-muted/60 text-foreground/90 border border-border/70 shadow-2xs whitespace-nowrap"
+          title={fullExpiryTooltip}
+        >
+          {priceText}
+        </span>
+      ) : expired_at ? (
+        <span
+          className="inline-flex items-center justify-center h-6 px-2 rounded-md text-[11px] font-mono font-medium bg-muted/40 text-muted-foreground border border-border/50 shadow-2xs whitespace-nowrap"
+          title={fullExpiryTooltip}
         >
           {getExpiryLabel()}
         </span>
-      </div>
-
-      {/* Line 2: Custom tags (rendered only if explicitly enabled) */}
-      {showTags && tagList.length > 0 && (
-        <div className="flex items-center gap-1 overflow-hidden flex-nowrap h-5">
-          {tagList.map((tag, index) => {
-            const text = tag.replace(/<\w+>$/, "");
-            return (
-              <span
-                key={index}
-                className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-muted/60 text-muted-foreground border border-border/50 shrink-0 truncate max-w-[120px]"
-                title={text}
-              >
-                {text}
-              </span>
-            );
-          })}
-        </div>
+      ) : (
+        <span className="text-xs text-muted-foreground/40 font-mono">-</span>
       )}
     </div>
   );

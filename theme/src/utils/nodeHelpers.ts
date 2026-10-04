@@ -46,12 +46,6 @@ export function getPriceTags(node: NodeData, lang: 'zh-CN' | 'en-US'): PriceTagI
   const priceText = formatPriceWithCycle(node.price, node.billing_cycle, node.currency, lang)
   if (node.price !== 0)
     tags.push({ text: priceText })
-  const premiumInfo = getNodePremiumInfo(node)
-  if (premiumInfo.amount > 0) {
-    tags.push({
-      text: lang === 'zh-CN' ? `溢${premiumInfo.symbol}${premiumInfo.amount}` : `+${premiumInfo.symbol}${premiumInfo.amount}`,
-    })
-  }
   if (status === 'long_term')
     tags.push({ text: lang === 'zh-CN' ? '长期' : 'Long-term' })
   else if (lang === 'zh-CN')

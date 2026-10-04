@@ -160,92 +160,56 @@ function openPingDialog() {
 
     <template #default>
       <div class="flex flex-col gap-3">
-        <div class="gap-x-3 gap-y-1 grid grid-cols-2">
+        <div class="gap-x-3 gap-y-2 grid grid-cols-2">
           <!-- CPU -->
           <div class="flex flex-col gap-1">
-            <div class="w-full text-xs flex flex-row justify-between">
-              <span class="text-muted-foreground tracking-wide">
+            <div class="w-full text-xs flex flex-row justify-between items-baseline">
+              <span class="text-muted-foreground text-[11px] font-medium tracking-wide">
                 CPU
               </span>
-              <span class="font-mono tabular-nums" :class="cpuTextClass">{{ (props.node.cpu ?? 0).toFixed(1) }}%</span>
+              <span class="font-mono tabular-nums text-xs" :class="cpuTextClass">{{ (props.node.cpu ?? 0).toFixed(1) }}%</span>
             </div>
-            <ProgressThin :percentage="props.node.cpu ?? 0" :status="cpuStatus" :height="4" />
-            <DataTooltip placement="top" :content="`负载均值 (1/5/15m): ${props.node.load?.toFixed(2) ?? 0}, ${props.node.load5?.toFixed(2) ?? 0}, ${props.node.load15?.toFixed(2) ?? 0}`">
-              <div class="text-[11px] text-muted-foreground truncate font-mono tabular-nums">
-                {{ props.node.cpu_cores ? `${props.node.cpu_cores} 核心` : '单核' }}
-              </div>
+            <DataTooltip placement="top" :content="`负载均值 (1/5/15m): ${props.node.load?.toFixed(2) ?? 0}, ${props.node.load5?.toFixed(2) ?? 0}, ${props.node.load15?.toFixed(2) ?? 0} · ${props.node.cpu_cores ? `${props.node.cpu_cores} 核心` : '单核'}`">
+              <ProgressThin :percentage="props.node.cpu ?? 0" :status="cpuStatus" :height="3" class="cursor-pointer" />
             </DataTooltip>
           </div>
 
           <!-- 内存 -->
           <div class="flex flex-col gap-1">
-            <div class="w-full text-xs flex flex-row justify-between">
-              <span class="text-muted-foreground tracking-wide">
+            <div class="w-full text-xs flex flex-row justify-between items-baseline">
+              <span class="text-muted-foreground text-[11px] font-medium tracking-wide">
                 内存
               </span>
-              <span class="font-mono tabular-nums" :class="memTextClass">{{ memPercentage.toFixed(1) }}%</span>
+              <span class="font-mono tabular-nums text-xs" :class="memTextClass">{{ memPercentage.toFixed(1) }}%</span>
             </div>
-            <ProgressThin :percentage="memPercentage" :status="memStatus" :height="4" />
-            <DataTooltip placement="top" class="block" :content-class="[!props.node.swap && '!hidden']">
-              <div class="text-[11px] text-muted-foreground truncate font-mono tabular-nums">
-                {{ formatBytes(props.node.ram ?? 0) }} / {{ formatBytes(props.node.mem_total ?? 0) }}
-              </div>
-              <template #content>
-                <div class="flex items-center justify-between gap-3 whitespace-nowrap font-mono tabular-nums">
-                  <span class="text-background/70">Swap</span>
-                  <span>{{ formatBytes(props.node.swap ?? 0) }}</span>
-                </div>
-              </template>
+            <DataTooltip placement="top" :content="`已用: ${formatBytes(props.node.ram ?? 0)} / 总计: ${formatBytes(props.node.mem_total ?? 0)}${props.node.swap ? ` · Swap: ${formatBytes(props.node.swap)}` : ''}`">
+              <ProgressThin :percentage="memPercentage" :status="memStatus" :height="3" class="cursor-pointer" />
             </DataTooltip>
           </div>
 
           <!-- 硬盘 -->
           <div class="flex flex-col gap-1">
-            <div class="w-full text-xs flex flex-row justify-between">
-              <span class="text-muted-foreground tracking-wide">
+            <div class="w-full text-xs flex flex-row justify-between items-baseline">
+              <span class="text-muted-foreground text-[11px] font-medium tracking-wide">
                 硬盘
               </span>
-              <span class="font-mono tabular-nums" :class="diskTextClass">{{ diskPercentage.toFixed(1) }}%</span>
+              <span class="font-mono tabular-nums text-xs" :class="diskTextClass">{{ diskPercentage.toFixed(1) }}%</span>
             </div>
-            <ProgressThin :percentage="diskPercentage" :status="diskStatus" :height="4" />
-            <div class="text-[11px] text-muted-foreground truncate font-mono tabular-nums">
-              {{ formatBytes(props.node.disk ?? 0) }} / {{ formatBytes(props.node.disk_total ?? 0) }}
-            </div>
+            <DataTooltip placement="top" :content="`已用: ${formatBytes(props.node.disk ?? 0)} / 总计: ${formatBytes(props.node.disk_total ?? 0)}`">
+              <ProgressThin :percentage="diskPercentage" :status="diskStatus" :height="3" class="cursor-pointer" />
+            </DataTooltip>
           </div>
 
           <!-- 流量进度条 -->
           <div class="flex flex-col gap-1">
-            <div class="w-full text-xs flex flex-row justify-between">
-              <span class="text-muted-foreground tracking-wide">
+            <div class="w-full text-xs flex flex-row justify-between items-baseline">
+              <span class="text-muted-foreground text-[11px] font-medium tracking-wide">
                 流量
               </span>
-              <span class="font-mono tabular-nums">{{ trafficUsedPercentage.toFixed(1) }}%</span>
+              <span class="font-mono tabular-nums text-xs">{{ trafficUsedPercentage.toFixed(1) }}%</span>
             </div>
-            <ProgressThin :percentage="trafficUsedPercentage" status="success" :height="4" />
-            <DataTooltip placement="top" class="block">
-              <div class="whitespace-pre-wrap text-[11px] text-muted-foreground truncate font-mono tabular-nums">
-                {{ formatBytes(trafficUsed) }} /
-                <template v-if="showTrafficProgress(props.node)">
-                  {{ formatBytes(props.node.traffic_limit) }}
-                </template>
-                <template v-else>
-                  ∞
-                </template>
-              </div>
-              <template #content>
-                <div class="flex items-center justify-between gap-3 whitespace-nowrap font-mono tabular-nums">
-                  <div class="text-[11px] flex flex-col">
-                    <div class="flex flex-row items-center gap-1">
-                      <Icon icon="tabler:chevron-up" width="12" height="12" />
-                      {{ formatBytes(props.node.net_total_up ?? 0) }}
-                    </div>
-                    <div class="flex flex-row items-center gap-1">
-                      <Icon icon="tabler:chevron-down" width="12" height="12" />
-                      {{ formatBytes(props.node.net_total_down ?? 0) }}
-                    </div>
-                  </div>
-                </div>
-              </template>
+            <DataTooltip placement="top" :content="`已用: ${formatBytes(trafficUsed)} / 限额: ${showTrafficProgress(props.node) ? formatBytes(props.node.traffic_limit) : '∞'} · 上行: ${formatBytes(props.node.net_total_up ?? 0)} · 下行: ${formatBytes(props.node.net_total_down ?? 0)}`">
+              <ProgressThin :percentage="trafficUsedPercentage" status="success" :height="3" class="cursor-pointer" />
             </DataTooltip>
           </div>
         </div>
@@ -287,7 +251,7 @@ function openPingDialog() {
               <span class="truncate tracking-wide text-muted-foreground">
                 费用
               </span>
-              <DataTooltip placement="left" :content="expiredDate" content-class="whitespace-nowrap right-0 mr-0">
+              <DataTooltip placement="left" :content="`${expiredDate} 到期${monthlyCostInfo.text && !monthlyCostInfo.isFree ? ` · 月均: ${monthlyCostInfo.text}` : ''}`" content-class="whitespace-nowrap right-0 mr-0">
                 <span class="truncate flex flex-row gap-1">
                   <template v-for="(tag, index) in priceTags" :key="tag.text">
                     <span class="inline-flex flex-row gap-1 items-center">
@@ -370,29 +334,6 @@ function openPingDialog() {
                   </DataTooltip>
                 </div>
               </div>
-            </div>
-
-            <!-- 月均费用（最底部） -->
-            <div class="pt-2 mt-1 border-t border-border/50 flex items-center justify-between text-[11px] leading-none select-none">
-              <span class="text-muted-foreground flex items-center gap-1 font-medium">
-                <Icon icon="tabler:receipt-2" :width="13" :height="13" class="text-slate-500/40" />
-                <span>{{ appStore.lang === 'zh-CN' ? '月均费用' : 'Monthly Cost' }}</span>
-              </span>
-              <DataTooltip v-if="monthlyCostInfo.tooltip" placement="top" :content="monthlyCostInfo.tooltip">
-                <span
-                  class="font-mono font-bold dark:font-semibold tabular-nums"
-                  :class="[monthlyCostInfo.isFree ? 'text-muted-foreground font-normal' : 'text-foreground']"
-                >
-                  {{ monthlyCostInfo.text }}
-                </span>
-              </DataTooltip>
-              <span
-                v-else
-                class="font-mono font-bold dark:font-semibold tabular-nums"
-                :class="[monthlyCostInfo.isFree ? 'text-muted-foreground font-normal' : 'text-foreground']"
-              >
-                {{ monthlyCostInfo.text }}
-              </span>
             </div>
           </div>
         </div>
