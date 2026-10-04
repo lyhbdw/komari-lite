@@ -50,7 +50,7 @@ function getInitialSitename() {
     if (typeof injected === 'string' && injected.trim()) {
       return injected.trim()
     }
-    if (document.title && document.title.trim() && document.title !== 'Komari Monitor') {
+    if (document.title && document.title.trim() && document.title !== 'Monitor' && document.title !== 'Komari Monitor') {
       return document.title.trim()
     }
     try {
@@ -60,7 +60,7 @@ function getInitialSitename() {
     }
     catch {}
   }
-  return 'Komari Monitor'
+  return 'Monitor'
 }
 
 const fallbackSitename = ref(getInitialSitename())

@@ -257,6 +257,7 @@ func static(r *gin.RouterGroup, noRoute func(handlers ...gin.HandlerFunc), force
 		sitename := cfg[config.SitenameKey].(string)
 		replacer := strings.NewReplacer(
 			"<title>Komari Monitor</title>", "<title>"+sitename+"</title>",
+			"<title>Monitor</title>", "<title>"+sitename+"</title>",
 			"A simple server monitor tool.", cfg[config.DescriptionKey].(string),
 			"<head>", "<head><script>window.__INITIAL_SITENAME__="+strconv.Quote(sitename)+";</script>",
 		)
