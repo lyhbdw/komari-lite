@@ -1223,7 +1223,7 @@ const ServerRow = ({
           />
         </div>
       </TableCell>
-      <TableCell className="min-w-[200px] px-2.5">
+      <TableCell className="max-w-[280px] min-w-0 px-2.5 overflow-hidden">
         <DetailView node={node} />
       </TableCell>
       <TableCell className="w-48 px-3">
@@ -1428,7 +1428,7 @@ const NodeTable = ({
               </TableHead>
               <TableHead
                 onClick={() => onSort("name")}
-                className="min-w-[200px] px-2.5 text-left cursor-pointer select-none group hover:text-foreground transition-colors"
+                className="min-w-0 px-2.5 text-left cursor-pointer select-none group hover:text-foreground transition-colors"
               >
                 <span className="inline-flex items-center">
                   <span>{t("admin.nodeTable.name")}</span>
