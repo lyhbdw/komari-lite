@@ -322,19 +322,11 @@ const Layout = () => {
 
   return (
     <div className="km-page-admin-index space-y-4">
-      <Header
+      <PageHeader
         searchTerm={searchTerm}
         setSearchTerm={setSearchTerm}
         selectedNodes={selectedNodes}
         totalNodes={nodeDetail?.length || 0}
-        selectedGroup={selectedGroup}
-        setSelectedGroup={setSelectedGroup}
-        availableGroups={availableGroups}
-        selectedStatus={selectedStatus}
-        setSelectedStatus={setSelectedStatus}
-        onlineCount={nodeDetail?.filter((n) => n.online).length || 0}
-        offlineCount={nodeDetail?.filter((n) => !n.online).length || 0}
-        expiringCount={expiringCount}
       />
 
       {!isEmpty && (
@@ -345,6 +337,18 @@ const Layout = () => {
           expiringCount={expiringCount}
         />
       )}
+
+      <FilterToolbar
+        selectedGroup={selectedGroup}
+        setSelectedGroup={setSelectedGroup}
+        availableGroups={availableGroups}
+        selectedStatus={selectedStatus}
+        setSelectedStatus={setSelectedStatus}
+        totalNodes={nodeDetail?.length || 0}
+        onlineCount={nodeDetail?.filter((n) => n.online).length || 0}
+        offlineCount={nodeDetail?.filter((n) => !n.online).length || 0}
+        expiringCount={expiringCount}
+      />
 
       {/* 批量操作浮动工具栏 */}
       {selectedNodes.length > 0 && (
@@ -829,32 +833,16 @@ const EmptyNodesGuide = () => {
 
 
 
-const Header = ({
+const PageHeader = ({
   searchTerm,
   setSearchTerm,
   selectedNodes,
   totalNodes,
-  selectedGroup,
-  setSelectedGroup,
-  availableGroups,
-  selectedStatus,
-  setSelectedStatus,
-  onlineCount,
-  offlineCount,
-  expiringCount,
 }: {
   searchTerm: string;
   setSearchTerm: (term: string) => void;
   selectedNodes: string[];
   totalNodes: number;
-  selectedGroup: string;
-  setSelectedGroup: (group: string) => void;
-  availableGroups: string[];
-  selectedStatus: "all" | "online" | "offline" | "expiring";
-  setSelectedStatus: (status: "all" | "online" | "offline" | "expiring") => void;
-  onlineCount: number;
-  offlineCount: number;
-  expiringCount: number;
 }) => {
   const { t } = useTranslation();
   const { refresh } = useNodeDetails();
@@ -892,11 +880,10 @@ const Header = ({
     try {
       const res = await fetch("/api/admin/agent-asset-version");
       const data = await res.json();
-      // REST 别名经 renderStandard 包装: {status, message, data: {version}}
       const ver = data?.data?.version || data?.result?.version || data?.version;
       if (typeof ver === "string" && ver) setUpgradeVersion(ver);
     } catch {
-      // 面板版本查询失败时仍允许手动触发（服务端会用默认版本）
+      // ignore
     }
   };
 
@@ -912,7 +899,6 @@ const Header = ({
       if (!res.ok || data?.status === "error") {
         throw new Error(data?.message || `HTTP ${res.status}`);
       }
-      // REST 别名经 renderStandard 包装: {status, message, data: {version, dispatched}}
       const dispatched =
         data?.data?.dispatched ?? data?.result?.dispatched ?? data?.dispatched;
       const version =
@@ -939,196 +925,218 @@ const Header = ({
     }
   };
   return (
-    <div className="space-y-2.5 pb-2 border-b border-border/40">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-        {/* 左侧：标题与升级按钮整合 */}
-        <div className="flex items-center gap-2">
-          <h1 className="text-lg sm:text-xl font-bold tracking-tight text-foreground">
-            {t("admin.nodeTable.nodeList")}
-          </h1>
-          <span className="px-2 py-0.5 text-xs font-mono font-medium rounded-full bg-muted text-muted-foreground border border-border/50">
-            {totalNodes}
+    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+      {/* 左侧：标题与统计徽章 */}
+      <div className="flex items-center gap-2.5">
+        <h1 className="text-lg sm:text-xl font-bold tracking-tight text-foreground">
+          {t("admin.nodeTable.nodeList")}
+        </h1>
+        <span className="px-2 py-0.5 text-xs font-mono font-medium rounded-full bg-muted text-muted-foreground border border-border/50">
+          {totalNodes}
+        </span>
+        {selectedNodes.length > 0 && (
+          <span className="px-2 py-0.5 text-xs font-mono font-medium rounded-full bg-foreground text-background">
+            {selectedNodes.length} 已选
           </span>
-          {selectedNodes.length > 0 && (
-            <span className="px-2 py-0.5 text-xs font-mono font-medium rounded-full bg-foreground text-background">
-              {selectedNodes.length} 已选
-            </span>
-          )}
-
-          {/* 升级 Agent 收纳为标题旁的小图标按钮 */}
-          <Dialog.Root open={upgradeOpen} onOpenChange={setUpgradeOpen}>
-            <Dialog.Trigger>
-              <button
-                type="button"
-                onClick={() => openUpgradeDialog()}
-                className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
-                title={t("admin.nodeTable.upgradeAgents", "批量升级 Agent")}
-              >
-                <ArrowUpCircle size={15} />
-              </button>
-            </Dialog.Trigger>
-            <Dialog.Content className="max-w-md">
-              <Dialog.Title>{t("admin.nodeTable.upgradeAgents")}</Dialog.Title>
-              <div className="mt-2 text-xs text-muted-foreground leading-relaxed">
-                {t("admin.nodeTable.upgradeDescription", {
-                  defaultValue:
-                    "将向全部节点下发升级事件。Agent 会从面板下载新版本并自动完成替换与重启。",
-                  version: upgradeVersion,
-                })}
-                {upgradeVersion ? (
-                  <div className="mt-2 font-mono text-foreground">
-                    {t("admin.nodeTable.upgradeTargetVersion")}: v{upgradeVersion}
-                  </div>
-                ) : null}
-              </div>
-              <Flex justify="end" gap="2" mt="4">
-                <Dialog.Close>
-                  <Button variant="soft" color="gray" disabled={upgrading}>
-                    {t("common.cancel", "Cancel")}
-                  </Button>
-                </Dialog.Close>
-                <Button onClick={() => handleUpgradeAgents()} disabled={upgrading}>
-                  {upgrading
-                    ? t("admin.nodeTable.upgrading", "下发中...")
-                    : t("admin.nodeTable.upgradeConfirm", "确认升级")}
-                </Button>
-              </Flex>
-            </Dialog.Content>
-          </Dialog.Root>
-        </div>
-
-        {/* 右侧：紧凑搜索框与添加节点 */}
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <div className="relative flex-1 sm:w-56 flex items-center">
-            <Search size={13} className="absolute left-2.5 text-muted-foreground pointer-events-none" />
-            <input
-              type="text"
-              placeholder={t("admin.nodeTable.searchByName", "搜索节点、IP、分组...")}
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full h-8 pl-8 pr-3 text-xs rounded-lg border border-border/70 bg-card text-foreground placeholder:text-muted-foreground/60 outline-none focus:border-foreground/40 focus:ring-1 focus:ring-foreground/15 transition-all shadow-2xs"
-            />
-          </div>
-
-          <Dialog.Root open={dialogOpen} onOpenChange={setDialogOpen}>
-            <Dialog.Trigger>
-              <button
-                onClick={() => setDialogOpen(true)}
-                className="h-8 px-3 rounded-lg bg-stone-900 hover:bg-stone-800 dark:bg-stone-100 dark:hover:bg-stone-200 text-stone-50 dark:text-stone-900 font-medium text-xs flex items-center gap-1.5 shadow-2xs active:scale-[0.98] transition-all cursor-pointer shrink-0"
-              >
-                <Plus size={13} strokeWidth={2.5} />
-                <span>{t("admin.nodeTable.addNode")}</span>
-              </button>
-            </Dialog.Trigger>
-            <Dialog.Content className="max-w-md">
-              <Dialog.Title>{t("admin.nodeTable.addNode")}</Dialog.Title>
-              <div className="mt-2">
-                <label className="text-xs font-medium text-muted-foreground block mb-1.5">
-                  {t("admin.nodeTable.nameOptional")}
-                </label>
-                <TextField.Root
-                  ref={inputRef}
-                  placeholder={t("admin.nodeTable.nameOptional")}
-                  autoFocus
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      handleAddNode(inputRef.current?.value);
-                    }
-                  }}
-                />
-              </div>
-              <Flex justify="end" gap="2" mt="4">
-                <Dialog.Close>
-                  <Button variant="soft" color="gray" disabled={loading}>
-                    {t("common.cancel", "Cancel")}
-                  </Button>
-                </Dialog.Close>
-                <Button
-                  onClick={() => handleAddNode(inputRef.current?.value)}
-                  disabled={loading}
-                >
-                  {t("admin.nodeTable.addNode")}
-                </Button>
-              </Flex>
-            </Dialog.Content>
-          </Dialog.Root>
-        </div>
-      </div>
-
-      {/* 快捷过滤工具条：状态分段器 + 分组下拉框（精简为单行） */}
-      <div className="flex flex-wrap items-center justify-between gap-2 pt-0.5">
-        {/* 在线状态筛选 */}
-        <div className="inline-flex items-center p-0.5 bg-muted/50 rounded-lg border border-border/50 text-xs">
-          <button
-            type="button"
-            onClick={() => setSelectedStatus("all")}
-            className={`h-6 px-2.5 rounded-md transition-all cursor-pointer font-medium text-[11px] ${
-              selectedStatus === "all"
-                ? "bg-card text-foreground shadow-2xs font-semibold"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            全部 ({totalNodes})
-          </button>
-          <button
-            type="button"
-            onClick={() => setSelectedStatus("online")}
-            className={`h-6 px-2.5 rounded-md flex items-center gap-1.5 transition-all cursor-pointer font-medium text-[11px] ${
-              selectedStatus === "online"
-                ? "bg-card text-foreground shadow-2xs font-semibold"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
-            在线 ({onlineCount})
-          </button>
-          <button
-            type="button"
-            onClick={() => setSelectedStatus("offline")}
-            className={`h-6 px-2.5 rounded-md flex items-center gap-1.5 transition-all cursor-pointer font-medium text-[11px] ${
-              selectedStatus === "offline"
-                ? "bg-card text-foreground shadow-2xs font-semibold"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <span className="w-1.5 h-1.5 rounded-full bg-rose-500 inline-block" />
-            离线 ({offlineCount})
-          </button>
-          {expiringCount > 0 && (
-            <button
-              type="button"
-              onClick={() => setSelectedStatus(selectedStatus === "expiring" ? "all" : "expiring")}
-              className={`h-6 px-2.5 rounded-md flex items-center gap-1.5 transition-all cursor-pointer font-medium text-[11px] ${
-                selectedStatus === "expiring"
-                  ? "bg-amber-500/15 text-amber-700 dark:text-amber-300 shadow-2xs font-semibold border border-amber-500/30"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 inline-block" />
-              待续费 ({expiringCount})
-            </button>
-          )}
-        </div>
-
-        {availableGroups.length > 0 && (
-          <div className="flex items-center gap-1.5 text-xs">
-            <span className="text-[11px] text-muted-foreground font-medium">分组:</span>
-            <select
-              value={selectedGroup}
-              onChange={(e) => setSelectedGroup(e.target.value)}
-              className="h-7 px-2.5 text-[11px] font-medium rounded-lg border border-border/70 bg-card text-foreground outline-none focus:border-foreground/40 cursor-pointer shadow-2xs transition-colors hover:bg-muted/30"
-            >
-              <option value="all">全部分组 ({totalNodes})</option>
-              {availableGroups.map((g) => (
-                <option key={g} value={g}>
-                  {g}
-                </option>
-              ))}
-            </select>
-          </div>
         )}
       </div>
+
+      {/* 右侧：紧凑搜索框 + 升级 Agent + 添加节点 */}
+      <div className="flex items-center gap-2 w-full sm:w-auto">
+        <div className="relative flex-1 sm:w-56 flex items-center">
+          <Search size={13} className="absolute left-2.5 text-muted-foreground pointer-events-none" />
+          <input
+            type="text"
+            placeholder={t("admin.nodeTable.searchByName", "搜索节点、IP、分组...")}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full h-8 pl-8 pr-3 text-xs rounded-lg border border-border/70 bg-card text-foreground placeholder:text-muted-foreground/60 outline-none focus:border-foreground/40 focus:ring-1 focus:ring-foreground/15 transition-all shadow-2xs"
+          />
+        </div>
+
+        {/* 升级 Agent 按钮 */}
+        <Dialog.Root open={upgradeOpen} onOpenChange={setUpgradeOpen}>
+          <Dialog.Trigger>
+            <button
+              type="button"
+              onClick={() => openUpgradeDialog()}
+              className="h-8 w-8 rounded-lg border border-border/70 bg-card text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors flex items-center justify-center cursor-pointer shadow-2xs shrink-0"
+              title={t("admin.nodeTable.upgradeAgents", "批量升级 Agent")}
+            >
+              <ArrowUpCircle size={15} />
+            </button>
+          </Dialog.Trigger>
+          <Dialog.Content className="max-w-md">
+            <Dialog.Title>{t("admin.nodeTable.upgradeAgents")}</Dialog.Title>
+            <div className="mt-2 text-xs text-muted-foreground leading-relaxed">
+              {t("admin.nodeTable.upgradeDescription", {
+                defaultValue:
+                  "将向全部节点下发升级事件。Agent 会从面板下载新版本并自动完成替换与重启。",
+                version: upgradeVersion,
+              })}
+              {upgradeVersion ? (
+                <div className="mt-2 font-mono text-foreground">
+                  {t("admin.nodeTable.upgradeTargetVersion")}: v{upgradeVersion}
+                </div>
+              ) : null}
+            </div>
+            <Flex justify="end" gap="2" mt="4">
+              <Dialog.Close>
+                <Button variant="soft" color="gray" disabled={upgrading}>
+                  {t("common.cancel", "Cancel")}
+                </Button>
+              </Dialog.Close>
+              <Button onClick={() => handleUpgradeAgents()} disabled={upgrading}>
+                {upgrading
+                  ? t("admin.nodeTable.upgrading", "下发中...")
+                  : t("admin.nodeTable.upgradeConfirm", "确认升级")}
+              </Button>
+            </Flex>
+          </Dialog.Content>
+        </Dialog.Root>
+
+        {/* 添加节点按钮 */}
+        <Dialog.Root open={dialogOpen} onOpenChange={setDialogOpen}>
+          <Dialog.Trigger>
+            <button
+              onClick={() => setDialogOpen(true)}
+              className="h-8 px-3 rounded-lg bg-stone-900 hover:bg-stone-800 dark:bg-stone-100 dark:hover:bg-stone-200 text-stone-50 dark:text-stone-900 font-medium text-xs flex items-center gap-1.5 shadow-2xs active:scale-[0.98] transition-all cursor-pointer shrink-0"
+            >
+              <Plus size={13} strokeWidth={2.5} />
+              <span>{t("admin.nodeTable.addNode")}</span>
+            </button>
+          </Dialog.Trigger>
+          <Dialog.Content className="max-w-md">
+            <Dialog.Title>{t("admin.nodeTable.addNode")}</Dialog.Title>
+            <div className="mt-2">
+              <label className="text-xs font-medium text-muted-foreground block mb-1.5">
+                {t("admin.nodeTable.nameOptional")}
+              </label>
+              <TextField.Root
+                ref={inputRef}
+                placeholder={t("admin.nodeTable.nameOptional")}
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleAddNode(inputRef.current?.value);
+                  }
+                }}
+              />
+            </div>
+            <Flex justify="end" gap="2" mt="4">
+              <Dialog.Close>
+                <Button variant="soft" color="gray" disabled={loading}>
+                  {t("common.cancel", "Cancel")}
+                </Button>
+              </Dialog.Close>
+              <Button
+                onClick={() => handleAddNode(inputRef.current?.value)}
+                disabled={loading}
+              >
+                {t("admin.nodeTable.addNode")}
+              </Button>
+            </Flex>
+          </Dialog.Content>
+        </Dialog.Root>
+      </div>
+    </div>
+  );
+};
+
+const FilterToolbar = ({
+  selectedGroup,
+  setSelectedGroup,
+  availableGroups,
+  selectedStatus,
+  setSelectedStatus,
+  totalNodes,
+  onlineCount,
+  offlineCount,
+  expiringCount,
+}: {
+  selectedGroup: string;
+  setSelectedGroup: (group: string) => void;
+  availableGroups: string[];
+  selectedStatus: "all" | "online" | "offline" | "expiring";
+  setSelectedStatus: (status: "all" | "online" | "offline" | "expiring") => void;
+  totalNodes: number;
+  onlineCount: number;
+  offlineCount: number;
+  expiringCount: number;
+}) => {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-2 pt-0.5">
+      {/* 在线状态筛选 */}
+      <div className="inline-flex items-center p-0.5 bg-muted/50 rounded-lg border border-border/50 text-xs">
+        <button
+          type="button"
+          onClick={() => setSelectedStatus("all")}
+          className={`h-6 px-2.5 rounded-md transition-all cursor-pointer font-medium text-[11px] ${
+            selectedStatus === "all"
+              ? "bg-card text-foreground shadow-2xs font-semibold"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          全部 ({totalNodes})
+        </button>
+        <button
+          type="button"
+          onClick={() => setSelectedStatus("online")}
+          className={`h-6 px-2.5 rounded-md flex items-center gap-1.5 transition-all cursor-pointer font-medium text-[11px] ${
+            selectedStatus === "online"
+              ? "bg-card text-foreground shadow-2xs font-semibold"
+              : "text-muted-foreground hover:text-foreground"
+            }`}
+        >
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
+          在线 ({onlineCount})
+        </button>
+        <button
+          type="button"
+          onClick={() => setSelectedStatus("offline")}
+          className={`h-6 px-2.5 rounded-md flex items-center gap-1.5 transition-all cursor-pointer font-medium text-[11px] ${
+            selectedStatus === "offline"
+              ? "bg-card text-foreground shadow-2xs font-semibold"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <span className="w-1.5 h-1.5 rounded-full bg-rose-500 inline-block" />
+          离线 ({offlineCount})
+        </button>
+        {expiringCount > 0 && (
+          <button
+            type="button"
+            onClick={() => setSelectedStatus(selectedStatus === "expiring" ? "all" : "expiring")}
+            className={`h-6 px-2.5 rounded-md flex items-center gap-1.5 transition-all cursor-pointer font-medium text-[11px] ${
+              selectedStatus === "expiring"
+                ? "bg-amber-500/15 text-amber-700 dark:text-amber-300 shadow-2xs font-semibold border border-amber-500/30"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 inline-block" />
+            待续费 ({expiringCount})
+          </button>
+        )}
+      </div>
+
+      {availableGroups.length > 0 && (
+        <div className="flex items-center gap-1.5 text-xs">
+          <span className="text-[11px] text-muted-foreground font-medium">分组:</span>
+          <select
+            value={selectedGroup}
+            onChange={(e) => setSelectedGroup(e.target.value)}
+            className="h-7 px-2.5 text-[11px] font-medium rounded-lg border border-border/70 bg-card text-foreground outline-none focus:border-foreground/40 cursor-pointer shadow-2xs transition-colors hover:bg-muted/30"
+          >
+            <option value="all">全部分组 ({totalNodes})</option>
+            {availableGroups.map((g) => (
+              <option key={g} value={g}>
+                {g}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
     </div>
   );
 };
@@ -1192,12 +1200,12 @@ const ServerRow = ({
       <TableCell className="min-w-[200px] px-2.5">
         <DetailView node={node} />
       </TableCell>
-      <TableCell className="w-44 px-2">
+      <TableCell className="w-52 px-2.5">
         <div className="flex items-center gap-1.5 flex-nowrap">
           {node.ipv4 ? (
             <div
               onClick={() => copy(node.ipv4!)}
-              className="inline-flex items-center justify-between gap-1 group bg-muted/60 hover:bg-muted/90 px-1.5 py-0.5 rounded border border-border/50 text-foreground/90 w-[128px] shrink-0 cursor-pointer transition-colors shadow-2xs select-none"
+              className="inline-flex items-center justify-between gap-1 group bg-muted/60 hover:bg-muted/90 px-1.5 py-0.5 rounded border border-border/50 text-foreground/90 w-[140px] shrink-0 cursor-pointer transition-colors shadow-2xs select-none"
               title={`${node.ipv4} (点击复制)`}
             >
               <span className="font-mono text-xs truncate">
@@ -1208,7 +1216,7 @@ const ServerRow = ({
           ) : null}
           {node.ipv6 ? (
             <div
-              className="inline-flex items-center justify-center gap-1 group bg-muted/40 hover:bg-muted/70 px-1.5 py-0.5 rounded border border-border/40 text-[10px] text-muted-foreground transition-colors cursor-pointer select-none shrink-0 w-[42px]"
+              className="inline-flex items-center justify-center gap-1 group bg-muted/40 hover:bg-muted/70 px-1.5 py-0.5 rounded border border-border/40 text-[10px] text-muted-foreground transition-colors cursor-pointer select-none shrink-0 w-[44px]"
               onClick={() => copy(node.ipv6!)}
               title={`${node.ipv6} (点击复制)`}
             >
@@ -1410,7 +1418,7 @@ const NodeTable = ({
               </TableHead>
               <TableHead
                 onClick={() => onSort("ip")}
-                className="w-44 px-2 text-left cursor-pointer select-none group hover:text-foreground transition-colors"
+                className="w-52 px-2.5 text-left cursor-pointer select-none group hover:text-foreground transition-colors"
               >
                 <span className="inline-flex items-center">
                   <span>{t("admin.nodeDetail.ipAddress")}</span>
