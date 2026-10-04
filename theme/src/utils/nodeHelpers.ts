@@ -1,5 +1,4 @@
 import type { NodeData, TrafficLimitType } from '@/stores/nodes'
-import { getNodePremiumInfo } from '@/utils/financeHelper'
 import { formatDateTime } from '@/utils/helper'
 import { formatPriceWithCycle, getDaysUntilExpired, getExpireStatus, getExpireTextClass, parseTags } from '@/utils/tagHelper'
 

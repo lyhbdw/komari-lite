@@ -1624,5 +1624,3 @@ export function getRegionCode(regionEmoji: string): string {
 export function getFlagSrc(region: string): string {
   return `/assets/flags/${getRegionCode(region)}.svg`
 }
-
-

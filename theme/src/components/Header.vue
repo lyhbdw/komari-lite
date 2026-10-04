@@ -61,7 +61,9 @@ const sitename = computed(() => {
       <div class="flex items-center gap-3 cursor-pointer" @click="router.push('/')">
         <Avatar class="size-7.5 rounded-lg select-none shadow-2xs">
           <AvatarImage :src="siteFavicon" :alt="sitename" class="rounded-lg object-contain" />
-          <AvatarFallback class="rounded-lg">{{ sitename.slice(0, 1) }}</AvatarFallback>
+          <AvatarFallback class="rounded-lg">
+            {{ sitename.slice(0, 1) }}
+          </AvatarFallback>
         </Avatar>
         <h3 class="m-0 text-lg font-semibold">
           {{ sitename }}

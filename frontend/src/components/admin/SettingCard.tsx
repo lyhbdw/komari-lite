@@ -180,7 +180,7 @@ export function SettingCardButton({
         <Flex>
           <Flex direction="row" gap="2" align="center">
             <Button onClick={handleClick} variant={variant} disabled={disabled}>
-              {children}
+              {children || label}
             </Button>
           </Flex>
         </Flex>

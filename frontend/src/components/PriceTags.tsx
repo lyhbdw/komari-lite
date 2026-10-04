@@ -11,8 +11,6 @@ const PriceTags = ({
   price?: number;
   billing_cycle?: number;
   currency?: string;
-  tags?: string;
-  showTags?: boolean;
   hidden?: boolean;
   [key: string]: any;
 }) => {

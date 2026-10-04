@@ -47,6 +47,7 @@ const getCountryCodeFromFlagEmoji = (emoji: string): string | null => {
 };
 
 const Flag = React.memo(({ flag, size, className }: FlagProps) => {
+  const { t } = useTranslation();
   let imgSrc: string;
   let altText: string;
   let resolvedFlagFileName: string; // 最终用于构建文件名的字符串 (例如 "SG", "UN")
@@ -75,7 +76,6 @@ const Flag = React.memo(({ flag, size, className }: FlagProps) => {
   // 构建本地图片路径
   imgSrc = `/assets/flags/${resolvedFlagFileName}.svg`;
   // 构建 alt 文本和 aria-label
-  const { t } = useTranslation();
   altText = t("common.region_flag_alt", { name: resolvedFlagFileName });
 
   return (

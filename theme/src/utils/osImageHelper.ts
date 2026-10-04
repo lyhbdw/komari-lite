@@ -238,4 +238,3 @@ export function getOSName(osString: string): string {
   const parts = osString.trim().split(OS_NAME_SPLIT_REGEX)
   return parts[0] || 'Unknown'
 }
-

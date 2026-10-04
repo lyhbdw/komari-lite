@@ -321,5 +321,3 @@ export function formatPriceWithCycle(
   const cycleText = getBillingCycleText(billingCycle, lang)
   return price > 0 ? `${priceText}/${cycleText}` : priceText
 }
-
-

@@ -9,7 +9,9 @@ export const getStoredThemeMode = (): ThemeMode => {
     if (stored === 'light' || stored === 'dark' || stored === 'auto') {
       return stored;
     }
-  } catch {}
+  } catch {
+    /* ignore */
+  }
   return 'auto';
 };
 
@@ -89,7 +91,9 @@ export const useThemeMode = () => {
       const resolved = getResolvedTheme(mode);
       document.documentElement.classList.toggle('dark', resolved === 'dark');
       setThemeModeState(mode);
-    } catch {}
+    } catch {
+      /* ignore */
+    }
   }, []);
 
   const toggleThemeMode = useCallback(() => {

@@ -242,7 +242,8 @@ export function formatUptimeWithFormat(seconds: number, format: UptimeFormat = '
 
 /**
  * 计算占用百分比
-/** 状态阈值配置 */
+/** 状态阈值配置
+ */
 const STATUS_THRESHOLDS = {
   success: 60,
   warning: 80,

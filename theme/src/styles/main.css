@@ -41,10 +41,9 @@
   --chart-5: #d6d3d1;
   --radius: 0.5rem;
   --font-sans:
-    'Microsoft YaHei', 'PingFang SC', 'Hiragino Sans GB', -apple-system, BlinkMacSystemFont,
-    'Segoe UI', 'Noto Sans SC', system-ui, sans-serif;
-  --font-mono:
-    'Consolas', 'JetBrains Mono', 'Courier New', 'Microsoft YaHei', ui-monospace, monospace;
+    'Microsoft YaHei', 'PingFang SC', 'Hiragino Sans GB', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans SC',
+    system-ui, sans-serif;
+  --font-mono: 'Consolas', 'JetBrains Mono', 'Courier New', 'Microsoft YaHei', ui-monospace, monospace;
 }
 
 .dark {
