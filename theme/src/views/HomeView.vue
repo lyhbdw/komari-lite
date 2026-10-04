@@ -140,7 +140,7 @@ function getNodeItemTransitionStyle(index: number): Record<string, string> {
 </script>
 
 <template>
-  <div class="home-view">
+  <div class="home-view pb-20">
     <div v-if="appStore.connectionError" class="alert px-4">
       <Alert
         variant="destructive"

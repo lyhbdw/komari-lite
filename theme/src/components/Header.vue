@@ -14,34 +14,8 @@ const isScrolled = inject<ReturnType<typeof ref<boolean>>>('isScrolled', ref(fal
 
 const siteFavicon = ref('/favicon.svg?v=4')
 
-const actionButtons = computed(() => {
-  const buttons = [
-    {
-      title: appStore.themeMode === 'auto' ? '自动主题' : appStore.themeMode === 'light' ? '浅色主题' : '深色主题',
-      icon: appStore.themeMode === 'auto' ? 'icon-park-outline:dark-mode' : appStore.themeMode === 'light' ? 'icon-park-outline:sun-one' : 'icon-park-outline:moon',
-      action: 'toggleTheme',
-    },
-  ]
-
-  if (appStore.isLoggedIn) {
-    buttons.push({
-      title: '后台管理',
-      icon: 'icon-park-outline:setting',
-      action: 'jumpToSetting',
-    })
-  }
-  return buttons
-})
-
-function handleButtonClick(action: string) {
-  switch (action) {
-    case 'toggleTheme':
-      appStore.updateThemeMode()
-      break
-    case 'jumpToSetting':
-      location.href = '/admin'
-      break
-  }
+function handleAdminClick() {
+  location.href = '/admin'
 }
 
 function getInitialSitename() {
@@ -94,9 +68,15 @@ const sitename = computed(() => {
         </h3>
       </div>
       <div class="flex items-center gap-2">
-        <DataTooltip v-for="button in actionButtons" :key="button.action" :content="button.title" placement="left" content-class="whitespace-nowrap text-[11px] px-2">
-          <Button variant="ghost" size="icon-sm" @click="handleButtonClick(button.action)">
-            <Icon :icon="button.icon" :width="18" :height="18" />
+        <DataTooltip :content="appStore.isLoggedIn ? '进入管理后台' : '管理员登录'" placement="left" content-class="whitespace-nowrap text-[11px] px-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            class="h-8 px-2.5 rounded-lg border border-border/60 hover:bg-muted/60 text-muted-foreground hover:text-foreground text-xs font-medium inline-flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
+            @click="handleAdminClick"
+          >
+            <Icon icon="tabler:settings" :width="15" :height="15" class="opacity-75" />
+            <span>{{ appStore.isLoggedIn ? '管理后台' : '管理' }}</span>
           </Button>
         </DataTooltip>
       </div>
