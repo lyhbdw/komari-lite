@@ -15,6 +15,7 @@ export interface SettingsResponse {
   metric_rollup_minute_retention_minutes?: number;
   metric_rollup_five_minute_retention_minutes?: number;
   metric_rollup_hour_retention_hours?: number;
+  metric_rollup_day_retention_days?: number;
   CreatedAt: string;
   UpdatedAt: string;
   [key: string]: any;

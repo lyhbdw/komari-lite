@@ -19,7 +19,7 @@ const (
 	defaultRollupMinuteRetentionMinutes     = defaultRollupPointLimit
 	defaultRollupFiveMinuteRetentionMinutes = 5 * defaultRollupPointLimit
 	defaultRollupHourRetentionHours         = defaultRollupPointLimit
-	defaultRollupDayRetentionDays           = 100 * 365
+	defaultRollupDayRetentionDays           = 2 * 365
 )
 
 // MetricStoreConfig 保存 metric store 配置。
@@ -38,6 +38,9 @@ type MetricStoreConfig struct {
 	RollupFiveMinuteRetentionMinutes int `json:"metric_rollup_five_minute_retention_minutes" default:"3000"`
 	// RollupHourRetentionHours controls the persisted 1-hour bucket window.
 	RollupHourRetentionHours int `json:"metric_rollup_hour_retention_hours" default:"600"`
+	// RollupDayRetentionDays controls the persisted 1-day bucket window
+	// (terminal tier). 0 means unset and falls back to the default.
+	RollupDayRetentionDays int `json:"metric_rollup_day_retention_days" default:"730"`
 }
 
 // MetricStoreConfigKeys 配置键
@@ -50,6 +53,7 @@ const (
 	MetricRollupMinuteRetentionMinutesKey     = "metric_rollup_minute_retention_minutes"
 	MetricRollupFiveMinuteRetentionMinutesKey = "metric_rollup_five_minute_retention_minutes"
 	MetricRollupHourRetentionHoursKey         = "metric_rollup_hour_retention_hours"
+	MetricRollupDayRetentionDaysKey           = "metric_rollup_day_retention_days"
 )
 
 func buildMetricConfig(cfg *MetricStoreConfig, autoMigrate bool) (metric.Config, error) {
@@ -118,7 +122,11 @@ func rollupPolicyFromConfig(cfg *MetricStoreConfig) (metric.RollupPolicy, error)
 	if hourRetention == 0 {
 		hourRetention = defaultRollupHourRetentionHours
 	}
-	if minuteRetention < 0 || fiveMinuteRetention < 0 || hourRetention < 0 {
+	dayRetention := cfg.RollupDayRetentionDays
+	if dayRetention == 0 {
+		dayRetention = defaultRollupDayRetentionDays
+	}
+	if minuteRetention < 0 || fiveMinuteRetention < 0 || hourRetention < 0 || dayRetention < 0 {
 		return metric.RollupPolicy{}, fmt.Errorf("metric rollup retention values must be positive integers")
 	}
 
@@ -135,14 +143,19 @@ func rollupPolicyFromConfig(cfg *MetricStoreConfig) (metric.RollupPolicy, error)
 		return metric.RollupPolicy{}, err
 	}
 
-	policy := rollupPolicyFromDurations(minuteDuration, fiveMinuteDuration, hourDuration)
+	dayDuration, err := rollupDuration(dayRetention, 24*time.Hour)
+	if err != nil {
+		return metric.RollupPolicy{}, err
+	}
+
+	policy := rollupPolicyFromDurations(minuteDuration, fiveMinuteDuration, hourDuration, dayDuration)
 	if err := policy.Validate(); err != nil {
 		return metric.RollupPolicy{}, fmt.Errorf("invalid metric rollup retention policy: %w", err)
 	}
 	return policy, nil
 }
 
-func rollupPolicyFromDurations(minuteRetention, fiveMinuteRetention, hourRetention time.Duration) metric.RollupPolicy {
+func rollupPolicyFromDurations(minuteRetention, fiveMinuteRetention, hourRetention, dayRetention time.Duration) metric.RollupPolicy {
 	return metric.RollupPolicy{
 		RawRetention: DefaultRollupRawRetention,
 		Tiers: []metric.RollupTier{
@@ -150,8 +163,8 @@ func rollupPolicyFromDurations(minuteRetention, fiveMinuteRetention, hourRetenti
 			{Interval: 5 * time.Minute, Retention: fiveMinuteRetention},
 			{Interval: time.Hour, Retention: hourRetention},
 			// Daily buckets form the terminal tier. They remain available until
-			// the metric's own retention policy removes them.
-			{Interval: 24 * time.Hour, Retention: time.Duration(defaultRollupDayRetentionDays) * 24 * time.Hour},
+			// the tier retention (default 2 years) removes them.
+			{Interval: 24 * time.Hour, Retention: dayRetention},
 		},
 		Compression: 30,
 	}

@@ -25,7 +25,7 @@ func TestDefaultRollupPolicy(t *testing.T) {
 	}
 
 	wantIntervals := []time.Duration{time.Minute, 5 * time.Minute, time.Hour, 24 * time.Hour}
-	wantRetentions := []time.Duration{600 * time.Minute, 600 * 5 * time.Minute, 600 * time.Hour, 100 * 365 * 24 * time.Hour}
+	wantRetentions := []time.Duration{600 * time.Minute, 600 * 5 * time.Minute, 600 * time.Hour, 2 * 365 * 24 * time.Hour}
 	for i := range wantIntervals {
 		if policy.Tiers[i].Interval != wantIntervals[i] {
 			t.Fatalf("tier %d interval = %s, want %s", i, policy.Tiers[i].Interval, wantIntervals[i])
@@ -76,7 +76,7 @@ func TestBuildMetricConfigLeavesFinalRetentionToMetricDefinition(t *testing.T) {
 	if err != nil {
 		t.Fatalf("build metric config: %v", err)
 	}
-	wantRollupRetention := 100 * 365 * 24 * time.Hour
+	wantRollupRetention := 2 * 365 * 24 * time.Hour
 	lastTier := cfg.RollupPolicy.Tiers[len(cfg.RollupPolicy.Tiers)-1]
 	if lastTier.Retention != wantRollupRetention {
 		t.Fatalf("rollup retention = %s, want %s", lastTier.Retention, wantRollupRetention)
@@ -90,12 +90,13 @@ func TestBuildMetricConfigUsesCustomRollupRetention(t *testing.T) {
 		RollupMinuteRetentionMinutes:     30,
 		RollupFiveMinuteRetentionMinutes: 150,
 		RollupHourRetentionHours:         300,
+		RollupDayRetentionDays:           365,
 	}, false)
 	if err != nil {
 		t.Fatalf("build metric config: %v", err)
 	}
 
-	want := []time.Duration{30 * time.Minute, 150 * time.Minute, 300 * time.Hour}
+	want := []time.Duration{30 * time.Minute, 150 * time.Minute, 300 * time.Hour, 365 * 24 * time.Hour}
 	if len(cfg.RollupPolicy.Tiers) != 4 {
 		t.Fatalf("tier count = %d, want 4", len(cfg.RollupPolicy.Tiers))
 	}
