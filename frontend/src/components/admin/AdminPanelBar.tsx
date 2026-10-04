@@ -224,15 +224,9 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
           >
             <TablerMenu2 />
           </IconButton>
-          <Link to="/admin/servers" className="flex items-center gap-2.5 group">
-            <div className="w-6 h-6 rounded-md bg-foreground text-background flex items-center justify-center font-bold text-xs tracking-tighter shadow-2xs group-hover:opacity-90 transition-opacity select-none">
-              K
-            </div>
-            <span className="text-sm font-semibold tracking-tight text-foreground">
-              Komari
-            </span>
-            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-md bg-muted text-muted-foreground border border-border/60 uppercase font-medium">
-              Lite
+          <Link to="/admin/servers" className="flex items-center gap-2 group">
+            <span className="text-sm sm:text-base font-bold tracking-tight text-foreground group-hover:opacity-85 transition-opacity">
+              Monitor
             </span>
           </Link>
           {(publicInfo?.version || versionInfo?.version) && (
