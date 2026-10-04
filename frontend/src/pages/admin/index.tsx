@@ -40,6 +40,8 @@ import {
   X,
   Layers,
   GripVertical,
+  ChevronDown,
+  Check,
 } from "lucide-react";
 import {
   DndContext,
@@ -1121,21 +1123,42 @@ const FilterToolbar = ({
       </div>
 
       {availableGroups.length > 0 && (
-        <div className="flex items-center gap-1.5 text-xs">
-          <span className="text-[11px] text-muted-foreground font-medium">分组:</span>
-          <select
-            value={selectedGroup}
-            onChange={(e) => setSelectedGroup(e.target.value)}
-            className="h-7 px-2.5 text-[11px] font-medium rounded-lg border border-border/70 bg-card text-foreground outline-none focus:border-foreground/40 cursor-pointer shadow-2xs transition-colors hover:bg-muted/30"
-          >
-            <option value="all">全部分组 ({totalNodes})</option>
+        <DropdownMenu.Root>
+          <DropdownMenu.Trigger>
+            <button
+              type="button"
+              className="h-7 px-2.5 rounded-lg border border-border/70 bg-card hover:bg-muted/40 text-foreground text-[11px] font-medium inline-flex items-center gap-1.5 shadow-2xs cursor-pointer transition-colors"
+            >
+              <Layers size={12} className="text-muted-foreground/70" />
+              <span>{selectedGroup === "all" ? `全部分组 (${totalNodes})` : selectedGroup}</span>
+              <ChevronDown size={11} className="text-muted-foreground/60 ml-0.5" />
+            </button>
+          </DropdownMenu.Trigger>
+          <DropdownMenu.Content align="end" className="min-w-[150px]">
+            <DropdownMenu.Item
+              onClick={() => setSelectedGroup("all")}
+              className={`flex items-center justify-between cursor-pointer ${
+                selectedGroup === "all" ? "bg-muted/70 font-semibold" : ""
+              }`}
+            >
+              <span>全部分组 ({totalNodes})</span>
+              {selectedGroup === "all" && <Check size={13} className="text-primary ml-2" />}
+            </DropdownMenu.Item>
+            <DropdownMenu.Separator />
             {availableGroups.map((g) => (
-              <option key={g} value={g}>
-                {g}
-              </option>
+              <DropdownMenu.Item
+                key={g}
+                onClick={() => setSelectedGroup(g)}
+                className={`flex items-center justify-between cursor-pointer ${
+                  selectedGroup === g ? "bg-muted/70 font-semibold" : ""
+                }`}
+              >
+                <span>{g}</span>
+                {selectedGroup === g && <Check size={13} className="text-primary ml-2" />}
+              </DropdownMenu.Item>
             ))}
-          </select>
-        </div>
+          </DropdownMenu.Content>
+        </DropdownMenu.Root>
       )}
     </div>
   );
