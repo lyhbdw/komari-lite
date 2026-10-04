@@ -242,16 +242,6 @@ export function formatUptimeWithFormat(seconds: number, format: UptimeFormat = '
 
 /**
  * 计算占用百分比
- * @param used 已使用量
- * @param total 总量
- * @returns 百分比（0-100）
- */
-export function calcPercentage(used: number, total: number): number {
-  if (total === 0)
-    return 0
-  return (used / total) * 100
-}
-
 /** 状态阈值配置 */
 const STATUS_THRESHOLDS = {
   success: 60,

@@ -434,13 +434,6 @@ export async function initApp(): Promise<void> {
 }
 
 /**
- * 获取初始化管理器实例
- */
-export function getInitManager(): InitManager | null {
-  return initManager
-}
-
-/**
  * 销毁初始化管理器
  */
 export function destroyInitManager(): void {

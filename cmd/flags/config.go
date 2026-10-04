@@ -27,10 +27,6 @@ func ApplyDatabaseTypeNormalization() string {
 	return DatabaseType
 }
 
-func IsSQLite() bool {
-	return NormalizeDatabaseType(DatabaseType) == DatabaseTypeSQLite
-}
-
 func SupportedDatabaseTypes() string {
 	return DatabaseTypeSQLite
 }

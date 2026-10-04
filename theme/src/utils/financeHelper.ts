@@ -258,10 +258,6 @@ export function getNodePremiumInfo(node: NodeData): NodePremiumInfo {
   }
 }
 
-export function getNodePremium(node: NodeData): number {
-  return getNodePremiumInfo(node).amount
-}
-
 export function getNodePremiumCNY(node: NodeData, exchangeRates: ExchangeRates): number {
   const { amount, currency } = getNodePremiumInfo(node)
   if (amount <= 0)
@@ -299,35 +295,6 @@ export function calculateTotalRemainingValueCNY(
 
     return sum + calculateRemainingValueCNY(node, exchangeRates, now)
   }, 0)
-}
-
-export function calculateTotalValueCNY(
-  nodes: NodeData[],
-  exchangeRates: ExchangeRates,
-  excludeFreeTags = true,
-): number {
-  return nodes.reduce((sum, node) => {
-    if (excludeFreeTags && isFreeNode(node))
-      return sum
-
-    return sum + calculateValueCNY(node, exchangeRates)
-  }, 0)
-}
-
-export function calculateValueCNY(
-  node: NodeData,
-  exchangeRates: ExchangeRates,
-): number {
-  // 节点的周期续费价格（不含一次性溢价）
-  return getPriceCNY(node, exchangeRates)
-}
-
-export function calculateTotalCostCNY(
-  node: NodeData,
-  exchangeRates: ExchangeRates,
-): number {
-  // 节点的总资产投入成本（周期续费价格 + 购入溢价）
-  return getPriceCNY(node, exchangeRates) + getNodePremiumCNY(node, exchangeRates)
 }
 
 export function calculateTotalMonthlyAverageCostCNY(

@@ -214,47 +214,6 @@ export function getExpireTextClass(expiredAt: string | number | undefined): stri
 }
 
 /**
- * 获取过期状态的显示颜色（Naive UI 颜色类型）
- * @param status 过期状态
- * @returns Naive UI 颜色类型
- */
-export function getExpireStatusColor(status: ExpireStatus): 'error' | 'warning' | 'success' | 'default' {
-  switch (status) {
-    case 'expired':
-    case 'critical':
-      return 'error'
-    case 'warning':
-      return 'warning'
-    case 'normal':
-    case 'long_term':
-      return 'success'
-    default:
-      return 'default'
-  }
-}
-
-/**
- * 获取过期状态的 HEX 颜色值
- * @param status 过期状态
- * @returns HEX 颜色值
- */
-export function getExpireStatusHexColor(status: ExpireStatus): string {
-  switch (status) {
-    case 'expired':
-    case 'critical':
-      return TAG_COLOR_HEX_MAP.tomato
-    case 'warning':
-      return TAG_COLOR_HEX_MAP.orange
-    case 'normal':
-      return TAG_COLOR_HEX_MAP.green
-    case 'long_term':
-      return TAG_COLOR_HEX_MAP.gray
-    default:
-      return TAG_COLOR_HEX_MAP.gray
-  }
-}
-
-/**
  * 获取过期时间的显示文本
  * @param expiredAt 过期时间
  * @param lang 语言
@@ -363,16 +322,4 @@ export function formatPriceWithCycle(
   return price > 0 ? `${priceText}/${cycleText}` : priceText
 }
 
-/**
- * 检查是否有 IPv4
- */
-export function hasIPv4(ipv4: string | undefined | null): boolean {
-  return !!ipv4 && ipv4.trim() !== ''
-}
 
-/**
- * 检查是否有 IPv6
- */
-export function hasIPv6(ipv6: string | undefined | null): boolean {
-  return !!ipv6 && ipv6.trim() !== ''
-}
