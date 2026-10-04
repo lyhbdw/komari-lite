@@ -28,8 +28,6 @@ import {
   Search,
   Trash2Icon,
   ArrowUpCircle,
-  MoreHorizontal,
-  Key,
   AlertTriangle,
   CalendarClock,
   CalendarCheck,
@@ -1274,7 +1272,7 @@ const ServerRow = ({
           tags={node.tags || ""}
         />
       </TableCell>
-      <TableCell className="w-20 px-1 text-center whitespace-nowrap">
+      <TableCell className="w-44 px-2 text-center whitespace-nowrap">
         <ActionButtons
           node={node}
           settings={settings}
@@ -1464,7 +1462,7 @@ const NodeTable = ({
                   {renderSortIcon("billing")}
                 </span>
               </TableHead>
-              <TableHead className="w-20 px-1 text-center">
+              <TableHead className="w-44 px-2 text-center">
                 {t("common.actions", "操作")}
               </TableHead>
             </TableRow>
@@ -1508,69 +1506,56 @@ const ActionButtons = ({
 
   const cycleDays = Number(node.billing_cycle) > 0 ? Number(node.billing_cycle) : 30;
 
-  const copyToken = () => {
-    navigator.clipboard.writeText(node.token);
-    toast.success(t("admin.nodeTable.tokenCopied", "Token 已复制到剪贴板"));
-  };
-
   return (
     <div className="flex items-center justify-center gap-1">
-      {/* 临期快速续费按钮：当机器处于待续费状态时直接外显 */}
-      {isExpiring && (
-        <button
-          type="button"
-          onClick={() => setRenewOpen(true)}
-          className="h-7 px-2 text-[11px] font-medium rounded-md bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/25 active:scale-[0.98] transition-all flex items-center gap-1 cursor-pointer shrink-0 shadow-2xs"
-          title={`已续费？点击按计费周期顺延 +${cycleDays}天`}
-        >
-          <CalendarCheck size={12} className="text-emerald-600 dark:text-emerald-400" />
-          <span>已续费</span>
-        </button>
-      )}
+      {/* 1. 续费按钮 */}
+      <button
+        type="button"
+        onClick={() => setRenewOpen(true)}
+        className={`w-7 h-7 rounded-md flex items-center justify-center transition-colors cursor-pointer ${
+          isExpiring
+            ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/25"
+            : "text-muted-foreground hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-muted/70"
+        }`}
+        title={t("admin.nodeTable.renewOneCycle", `续费周期 (+${cycleDays}天)`)}
+      >
+        <CalendarCheck size={13} />
+      </button>
 
-      {/* 常用高频操作：编辑信息 */}
+      {/* 2. 账单管理 */}
+      <button
+        type="button"
+        onClick={() => setBillingOpen(true)}
+        className="w-7 h-7 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/70 flex items-center justify-center transition-colors cursor-pointer"
+        title={t("admin.nodeTable.billing", "账单管理")}
+      >
+        <CircleDollarSign size={13} />
+      </button>
+
+      {/* 3. 编辑信息 */}
       <EditButton node={node} />
 
-      {/* 更多操作下拉菜单：收纳续费、账单、部署指令、复制 Token 与删除 */}
-      <DropdownMenu.Root>
-        <DropdownMenu.Trigger>
-          <button
-            type="button"
-            className="w-7 h-7 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/70 flex items-center justify-center transition-colors cursor-pointer"
-            title={t("common.more_actions", "更多操作")}
-          >
-            <MoreHorizontal size={14} />
-          </button>
-        </DropdownMenu.Trigger>
-        <DropdownMenu.Content align="end" className="min-w-[150px]">
-          <DropdownMenu.Item onClick={() => setRenewOpen(true)}>
-            <CalendarCheck size={14} className="mr-2 text-emerald-600 dark:text-emerald-400" />
-            <span>{t("admin.nodeTable.renewOneCycle", `续费周期 (+${cycleDays}天)`)}</span>
-          </DropdownMenu.Item>
-          <DropdownMenu.Item onClick={() => setBillingOpen(true)}>
-            <CircleDollarSign size={14} className="mr-2 opacity-70" />
-            <span>{t("admin.nodeTable.billing", "账单管理")}</span>
-          </DropdownMenu.Item>
-          <DropdownMenu.Item onClick={() => setInstallOpen(true)}>
-            <Download size={14} className="mr-2 opacity-70" />
-            <span>{t("admin.nodeTable.installCommand", "安装指令")}</span>
-          </DropdownMenu.Item>
-          <DropdownMenu.Item onClick={copyToken}>
-            <Key size={14} className="mr-2 opacity-70" />
-            <span>{t("admin.nodeTable.copyToken", "复制 Token")}</span>
-          </DropdownMenu.Item>
-          <DropdownMenu.Separator />
-          <DropdownMenu.Item
-            color="red"
-            onClick={() => setDeleteOpen(true)}
-            className="text-destructive focus:bg-destructive/10"
-          >
-            <Trash2Icon size={14} className="mr-2" />
-            <span>{t("common.delete", "删除节点")}</span>
-          </DropdownMenu.Item>
-        </DropdownMenu.Content>
-      </DropdownMenu.Root>
+      {/* 4. 安装指令 */}
+      <button
+        type="button"
+        onClick={() => setInstallOpen(true)}
+        className="w-7 h-7 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/70 flex items-center justify-center transition-colors cursor-pointer"
+        title={t("admin.nodeTable.installCommand", "安装指令")}
+      >
+        <Download size={13} />
+      </button>
 
+      {/* 5. 删除节点 */}
+      <button
+        type="button"
+        onClick={() => setDeleteOpen(true)}
+        className="w-7 h-7 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 flex items-center justify-center transition-colors cursor-pointer"
+        title={t("common.delete", "删除节点")}
+      >
+        <Trash2Icon size={13} />
+      </button>
+
+      {/* 弹窗部分 */}
       <RenewDialog
         node={node}
         open={renewOpen}
