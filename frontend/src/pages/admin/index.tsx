@@ -1152,13 +1152,14 @@ const ServerRow = ({
   handleSelectNode: (uuid: string, checked: boolean) => void;
   settings: any;
 }) => {
-  const { attributes, listeners, setNodeRef, transform, transition } =
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: node.uuid });
   const { t } = useTranslation();
   const isMobile = useIsMobile();
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
+    zIndex: isDragging ? 10 : undefined,
   };
   function copy(text: string) {
     navigator.clipboard.writeText(text);
@@ -1168,13 +1169,17 @@ const ServerRow = ({
     <TableRow
       ref={setNodeRef}
       style={style}
-      className="hover:bg-muted/40 transition-colors h-[52px]"
+      className={`transition-colors h-[52px] ${
+        isDragging
+          ? "bg-muted/70 shadow-md opacity-90 relative"
+          : "hover:bg-muted/40"
+      }`}
     >
       <TableCell className="w-8 pl-2.5 pr-0 text-center">
         <div
           {...attributes}
           {...listeners}
-          className={`cursor-grab p-1 rounded hover:bg-muted text-muted-foreground/35 hover:text-foreground transition-colors inline-flex items-center justify-center ${
+          className={`cursor-row-resize active:cursor-row-resize p-1 rounded hover:bg-muted text-muted-foreground/35 hover:text-foreground transition-colors inline-flex items-center justify-center ${
             isMobile ? "touch-manipulation select-none" : ""
           }`}
           style={{
@@ -1380,7 +1385,7 @@ const NodeTable = ({
   return (
     <div
       className={`rounded-lg border border-border bg-card overflow-hidden ${
-        isDragging ? "select-none" : ""
+        isDragging ? "select-none [&_*]:!cursor-row-resize" : ""
       }`}
     >
       <DndContext
