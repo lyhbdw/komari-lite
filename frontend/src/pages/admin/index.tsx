@@ -2219,7 +2219,7 @@ function DetailView({ node }: { node: NodeDetail }) {
           </div>
           <div className="flex flex-col min-w-0">
             <div className="flex items-center gap-1.5 min-w-0">
-              <span className="font-semibold text-sm text-foreground group-hover:text-primary transition-colors truncate max-w-[220px] lg:max-w-[320px]" title={node.name}>
+              <span className="font-semibold text-sm text-foreground group-hover:text-primary transition-colors truncate max-w-[380px] 2xl:max-w-[500px]" title={node.name}>
                 {node.name}
               </span>
               {node.remark && (
