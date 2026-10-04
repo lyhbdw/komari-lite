@@ -68,6 +68,23 @@ const sitename = computed(() => {
         </h3>
       </div>
       <div class="flex items-center gap-2">
+        <!-- 主题切换按钮 -->
+        <DataTooltip
+          :content="appStore.isDark ? '切换为浅色主题' : '切换为深色主题'"
+          placement="left"
+          content-class="whitespace-nowrap text-[11px] px-2"
+        >
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            class="size-8 rounded-lg border border-border/60 hover:bg-muted/60 text-muted-foreground hover:text-foreground inline-flex items-center justify-center transition-colors cursor-pointer shadow-2xs"
+            @click="appStore.updateThemeMode(appStore.isDark ? 'light' : 'dark')"
+          >
+            <Icon :icon="appStore.isDark ? 'tabler:sun' : 'tabler:moon'" :width="16" :height="16" class="opacity-80" />
+          </Button>
+        </DataTooltip>
+
+        <!-- 管理后台入口 -->
         <DataTooltip :content="appStore.isLoggedIn ? '进入管理后台' : '管理员登录'" placement="left" content-class="whitespace-nowrap text-[11px] px-2">
           <Button
             variant="ghost"
