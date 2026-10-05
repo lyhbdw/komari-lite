@@ -5,7 +5,7 @@ import { NODE_PING_BAR_COUNT, useNodePingStats } from '@/composables/useNodePing
 import { useAppStore } from '@/stores/app'
 import { formatDateTime } from '@/utils/helper'
 
-export type NodePingMetric = 'latency' | 'loss'
+type NodePingMetric = 'latency' | 'loss'
 
 // getRecords 在新版主控中返回的是近期可用样本，不保证覆盖完整 1 小时。
 const RECENT_PING_RECORDS_QUERY_HOURS = 1
@@ -13,13 +13,13 @@ const RECENT_PING_RECORDS_QUERY_HOURS = 1
 // 三网延迟固定展示的记录数量
 const PING_NETWORK_DISPLAY_COUNT = 3
 
-export interface NodePingBar {
+interface NodePingBar {
   key: string
   className: string
   tooltip: string
 }
 
-export interface NodePingNetworkDisplay {
+interface NodePingNetworkDisplay {
   name: string
   shortName: string
   latency: string

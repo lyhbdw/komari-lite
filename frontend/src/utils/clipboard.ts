@@ -1,4 +1,3 @@
-import { useCallback, useState } from "react";
 import { toast } from "sonner";
 
 export async function copyToClipboard(
@@ -30,22 +29,4 @@ export async function copyToClipboard(
     toast.error(options?.errorMessage ?? "复制失败，请手动复制");
     return false;
   }
-}
-
-export function useClipboard(timeout = 2000) {
-  const [copiedId, setCopiedId] = useState<string | null>(null);
-
-  const copy = useCallback(
-    async (text: string, id: string = text, successMessage?: string) => {
-      const ok = await copyToClipboard(text, { successMessage });
-      if (ok) {
-        setCopiedId(id);
-        setTimeout(() => setCopiedId(null), timeout);
-      }
-      return ok;
-    },
-    [timeout]
-  );
-
-  return { copiedId, isCopied: (id: string) => copiedId === id, copy };
 }

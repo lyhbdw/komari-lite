@@ -72,8 +72,8 @@ export const DISPLAY_FINANCE_CURRENCIES = [
   'UAH',
   'CHF',
 ] as const satisfies readonly CurrencyCode[]
-export type ExchangeRates = Record<CurrencyCode, number>
-export type ExchangeRateSource = 'cache' | 'network' | 'stale-cache' | 'default'
+type ExchangeRates = Record<CurrencyCode, number>
+type ExchangeRateSource = 'cache' | 'network' | 'stale-cache' | 'default'
 
 interface ExchangeRatesCache {
   base: 'CNY'

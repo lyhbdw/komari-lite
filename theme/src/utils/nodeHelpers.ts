@@ -2,7 +2,7 @@ import type { NodeData, TrafficLimitType } from '@/stores/nodes'
 import { formatDateTime } from '@/utils/helper'
 import { formatPriceWithCycle, getDaysUntilExpired, getExpireStatus, getExpireTextClass, parseTags } from '@/utils/tagHelper'
 
-export interface PriceTagItem {
+interface PriceTagItem {
   text: string
   highlight?: boolean
 }

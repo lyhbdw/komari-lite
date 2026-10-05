@@ -8,13 +8,13 @@ import {
 } from '@/utils/pingTaskOrder'
 import { getSharedRpc } from '@/utils/rpc'
 
-export interface NodePingHistoryPoint {
+interface NodePingHistoryPoint {
   time: string
   latency: number | null
   loss: number | null
 }
 
-export interface NodePingStatsState {
+interface NodePingStatsState {
   avgLatency: number
   avgLoss: number
   avgVolatility: number

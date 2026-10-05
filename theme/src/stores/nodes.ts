@@ -64,7 +64,7 @@ export interface NodeData {
 }
 
 /** WebSocket 连接状态 */
-export type WsConnectionState = 'disconnected' | 'connecting' | 'connected' | 'reconnecting'
+type WsConnectionState = 'disconnected' | 'connecting' | 'connected' | 'reconnecting'
 
 /** 状态数据（用于更新） */
 interface StatusData {

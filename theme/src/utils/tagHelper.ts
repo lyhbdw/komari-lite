@@ -2,13 +2,13 @@ import dayjs from 'dayjs'
 import { CURRENCY_SYMBOLS, normalizeCurrency } from '@/utils/financeHelper'
 
 /** 计费周期类型 */
-export type BillingCycleType = 'monthly' | 'quarterly' | 'semi_annual' | 'annual' | 'biennial' | 'triennial' | 'quinquennial' | 'once' | 'custom'
+type BillingCycleType = 'monthly' | 'quarterly' | 'semi_annual' | 'annual' | 'biennial' | 'triennial' | 'quinquennial' | 'once' | 'custom'
 
 /** 过期状态类型 */
-export type ExpireStatus = 'expired' | 'critical' | 'warning' | 'normal' | 'long_term'
+type ExpireStatus = 'expired' | 'critical' | 'warning' | 'normal' | 'long_term'
 
 /** 支持的标签颜色 */
-export type TagColor
+type TagColor
   = | 'ruby'
     | 'gray'
     | 'gold'

@@ -14,7 +14,7 @@ interface ApiResponse<T = unknown> {
 }
 
 /** 用户信息 */
-export interface MeInfo {
+interface MeInfo {
   'logged_in': boolean
   'username': string
   '2fa_enabled'?: boolean

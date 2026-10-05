@@ -28,7 +28,7 @@ use([
   CanvasRenderer,
 ])
 
-export interface ChartThemeColors {
+interface ChartThemeColors {
   text: string
   textSecondary: string
   textTertiary: string
