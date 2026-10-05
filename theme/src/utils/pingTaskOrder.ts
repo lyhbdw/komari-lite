@@ -14,7 +14,7 @@ export interface PublicPingTaskOrderItem {
  * 优先使用 publicTasks 数组下标（接口已按 weight/id 排好）；
  * 否则回退到 weight、再 id。
  */
-export function comparePingTaskOrder(
+function comparePingTaskOrder(
   leftId: number,
   rightId: number,
   publicTasks: ReadonlyArray<PublicPingTaskOrderItem>,

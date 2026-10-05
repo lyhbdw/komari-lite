@@ -1607,7 +1607,7 @@ export function getRegionDisplayName(regionEmoji: string, language: 'en' | 'zh' 
  * @param regionEmoji 地区emoji
  * @returns 地区代码（如：HK, CN, US）
  */
-export function getRegionCode(regionEmoji: string): string {
+function getRegionCode(regionEmoji: string): string {
   const regionInfo = emojiToRegionMap[regionEmoji]
   if (!regionInfo) {
     return regionEmoji

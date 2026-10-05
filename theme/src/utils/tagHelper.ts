@@ -122,7 +122,7 @@ const TAG_COLOR_SUFFIX_REMOVE_REGEX = /<\w+>$/
  * @param billingCycle 计费周期（天）
  * @returns 计费周期类型
  */
-export function parseBillingCycleType(billingCycle: number): BillingCycleType {
+function parseBillingCycleType(billingCycle: number): BillingCycleType {
   if (billingCycle === -1)
     return 'once'
 
@@ -141,7 +141,7 @@ export function parseBillingCycleType(billingCycle: number): BillingCycleType {
  * @param lang 语言
  * @returns 显示文本
  */
-export function getBillingCycleText(billingCycle: number, lang: 'zh-CN' | 'en-US' = 'zh-CN'): string {
+function getBillingCycleText(billingCycle: number, lang: 'zh-CN' | 'en-US' = 'zh-CN'): string {
   const type = parseBillingCycleType(billingCycle)
 
   const texts: Record<BillingCycleType, Record<'zh-CN' | 'en-US', string>> = {
@@ -242,7 +242,7 @@ export function getExpireText(expiredAt: string | number | undefined, lang: 'zh-
  * @param tag 标签字符串，支持格式 "文本<颜色>"
  * @returns 解析后的标签对象
  */
-export function parseTagWithColor(tag: string): { text: string, color: TagColor | null } {
+function parseTagWithColor(tag: string): { text: string, color: TagColor | null } {
   const colorMatch = tag.match(TAG_COLOR_SUFFIX_REGEX)
   if (colorMatch && colorMatch[1]) {
     const colorCandidate = colorMatch[1].toLowerCase()
@@ -259,7 +259,7 @@ export function parseTagWithColor(tag: string): { text: string, color: TagColor 
  * @param color 标签颜色
  * @returns HEX 颜色值
  */
-export function getTagColorHex(color: TagColor): string {
+function getTagColorHex(color: TagColor): string {
   return TAG_COLOR_HEX_MAP[color]
 }
 
@@ -293,7 +293,7 @@ export function parseTags(tags: string | undefined): Array<{ text: string, color
  * @param lang 语言
  * @returns 价格显示文本
  */
-export function formatPrice(price: number, currency: string = 'CNY', lang: 'zh-CN' | 'en-US' = 'zh-CN'): string {
+function formatPrice(price: number, currency: string = 'CNY', lang: 'zh-CN' | 'en-US' = 'zh-CN'): string {
   if (price === 0)
     return lang === 'zh-CN' ? '免费' : 'Free'
   if (price === -1)
