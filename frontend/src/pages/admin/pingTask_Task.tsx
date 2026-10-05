@@ -7,7 +7,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useIsMobile } from "@/hooks/use-mobile";
 import { useNodeDetails } from "@/contexts/useNodeDetails";
 import { usePingTask } from "@/contexts/usePingTask";
 import type { PingTask } from "@/contexts/ping-task-context";
@@ -29,14 +28,11 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import {
   Button,
-  Checkbox,
   Dialog,
   Flex,
-  IconButton,
   Select,
-  TextField,
 } from "@radix-ui/themes";
-import { MenuIcon, MoreHorizontal, Pencil, Trash } from "lucide-react";
+import { GripVertical, Pencil, Settings2, Trash2 } from "lucide-react";
 import React from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -45,6 +41,29 @@ const getTaskSortableId = (task: { id?: number; name?: string; target?: string }
   task.id !== undefined
     ? `id-${task.id}`
     : `tmp-${task.name ?? ""}-${task.target ?? ""}`;
+
+function ProtocolBadge({ type }: { type: string }) {
+  const norm = (type || "").toLowerCase();
+  if (norm === "tcp") {
+    return (
+      <span className="px-1.5 py-0.2 text-[10px] font-mono font-medium rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 uppercase">
+        TCP
+      </span>
+    );
+  }
+  if (norm === "http" || norm === "https") {
+    return (
+      <span className="px-1.5 py-0.2 text-[10px] font-mono font-medium rounded bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 uppercase">
+        HTTP
+      </span>
+    );
+  }
+  return (
+    <span className="px-1.5 py-0.2 text-[10px] font-mono font-medium rounded bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20 uppercase">
+      ICMP
+    </span>
+  );
+}
 
 export const TaskView = ({ pingTasks }: { pingTasks: PingTask[] }) => {
   const { t } = useTranslation();
@@ -65,13 +84,8 @@ export const TaskView = ({ pingTasks }: { pingTasks: PingTask[] }) => {
     useSensor(KeyboardSensor, {})
   );
 
-  // 过滤已删除的节点
   const processedTasks = React.useMemo(() => {
-    if (!pingTasks)
-      return [] as (PingTask & {
-        __allClientsDeleted?: boolean;
-        __originalCount?: number;
-      })[];
+    if (!pingTasks) return [];
     const nodeUuidSet = new Set(nodeDetail.map((n) => n.uuid));
     return pingTasks.map((task) => {
       const original = task.clients || [];
@@ -137,17 +151,17 @@ export const TaskView = ({ pingTasks }: { pingTasks: PingTask[] }) => {
   };
 
   return (
-    <div className="km-page-admin-pingtask-task km-pingtask-task-table rounded-lg border border-border bg-card overflow-hidden shadow-2xs">
+    <div className="rounded-xl border border-border/70 bg-card overflow-hidden shadow-2xs">
       <Table>
         <TableHeader>
-          <TableRow className="bg-muted/40 border-b border-border/80 text-[11px]">
-            <TableHead className="w-10" aria-label={t("common.sort")}></TableHead>
-            <TableHead>{t("common.name")}</TableHead>
-            <TableHead>{t("common.server")}</TableHead>
-            <TableHead>{t("ping.target")}</TableHead>
-            <TableHead>{t("common.type")}</TableHead>
-            <TableHead>{t("ping.interval")}</TableHead>
-            <TableHead className="text-right pr-4">{t("common.action")}</TableHead>
+          <TableRow className="bg-muted/40 border-b border-border/80 text-[11px] text-muted-foreground">
+            <TableHead className="w-10 text-center"></TableHead>
+            <TableHead className="w-36">{t("ping.col_name", "任务名称")}</TableHead>
+            <TableHead className="w-56 font-mono">{t("ping.col_target", "探测目标")}</TableHead>
+            <TableHead className="w-20 text-center">{t("ping.col_type", "协议")}</TableHead>
+            <TableHead className="w-24 font-mono">{t("ping.col_interval", "探测间隔")}</TableHead>
+            <TableHead>{t("ping.col_server", "执行节点")}</TableHead>
+            <TableHead className="w-24 text-right pr-4">{t("ping.col_action", "操作")}</TableHead>
           </TableRow>
         </TableHeader>
         <DndContext
@@ -160,9 +174,17 @@ export const TaskView = ({ pingTasks }: { pingTasks: PingTask[] }) => {
             strategy={verticalListSortingStrategy}
           >
             <TableBody>
-              {localTasks.map((task) => (
-                <Row key={getTaskSortableId(task)} task={task} />
-              ))}
+              {localTasks.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="h-32 text-center text-xs text-muted-foreground">
+                    {t("ping.empty", "暂无网络探测任务，点击右上角添加。")}
+                  </TableCell>
+                </TableRow>
+              ) : (
+                localTasks.map((task) => (
+                  <Row key={getTaskSortableId(task)} task={task} />
+                ))
+              )}
             </TableBody>
           </SortableContext>
         </DndContext>
@@ -178,14 +200,13 @@ const Row = ({
 }) => {
   const { t } = useTranslation();
   const { refresh } = usePingTask();
-  const { nodeDetail } = useNodeDetails();
-  const isMobile = useIsMobile();
   const sortableId = getTaskSortableId(task);
-  const { attributes, listeners, setNodeRef, transform, transition } =
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: sortableId });
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
+    zIndex: isDragging ? 10 : undefined,
   };
   const [editOpen, setEditOpen] = React.useState(false);
   const [editSaving, setEditSaving] = React.useState(false);
@@ -202,7 +223,7 @@ const Row = ({
 
   const submitEdit = (newForm: typeof form) => {
     if (!newForm.default_on && newForm.clients.length === 0) {
-      toast.error(t("ping.default_on_description"));
+      toast.error(t("ping.default_on_description", "请至少勾选默认全网开启或指定执行节点"));
       return;
     }
     setEditSaving(true);
@@ -223,17 +244,13 @@ const Row = ({
         ],
       }),
     })
-      .then((res) => {
+      .then(async (res) => {
         if (!res.ok) {
-          return res.json().then((data) => {
-            throw new Error(data?.message || t("common.error"));
-          });
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data?.message || t("common.error"));
         }
-        return res.json();
-      })
-      .then(() => {
         setEditOpen(false);
-        toast.success(t("common.updated_successfully"));
+        toast.success(t("common.updated_successfully", "更新成功"));
         refresh();
       })
       .catch((error) => {
@@ -242,13 +259,11 @@ const Row = ({
       .finally(() => setEditSaving(false));
   };
 
-  // 编辑提交
   const handleEdit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     submitEdit(form);
   };
 
-  // 删除
   const handleDelete = () => {
     setDeleteLoading(true);
     fetch("/api/admin/ping/delete", {
@@ -256,17 +271,13 @@ const Row = ({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id: [task.id] }),
     })
-      .then((res) => {
+      .then(async (res) => {
         if (!res.ok) {
-          return res.json().then((data) => {
-            throw new Error(data?.message || t("common.error"));
-          });
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data?.message || t("common.error"));
         }
-        return res.json();
-      })
-      .then(() => {
         setDeleteOpen(false);
-        toast.success(t("common.deleted_successfully"));
+        toast.success(t("common.deleted_successfully", "已删除"));
         refresh();
       })
       .catch((error) => {
@@ -275,50 +286,53 @@ const Row = ({
       .finally(() => setDeleteLoading(false));
   };
 
+  const clientCount = task.clients?.length || 0;
+
   return (
-    <TableRow ref={setNodeRef} style={style}>
-      <TableCell>
+    <TableRow
+      ref={setNodeRef}
+      style={style}
+      className={`transition-colors text-xs ${
+        isDragging
+          ? "bg-muted/70 shadow-md opacity-90 relative"
+          : "hover:bg-muted/40"
+      }`}
+    >
+      <TableCell className="text-center p-2">
         <div
           {...attributes}
           {...listeners}
-          className={`cursor-move p-2 rounded hover:bg-accent-a3 transition-colors ${
-            isMobile ? "touch-manipulation select-none" : ""
-          }`}
-          style={{
-            touchAction: "none",
-            WebkitUserSelect: "none",
-            userSelect: "none",
-          }}
-          title={
-            isMobile
-              ? t("admin.nodeTable.dragToReorder", "长按拖拽重新排序")
-              : undefined
-          }
+          className="p-1.5 rounded hover:bg-muted text-muted-foreground/60 hover:text-foreground transition-colors inline-flex items-center justify-center cursor-default select-none"
+          title="拖拽上下排序"
         >
-          <MenuIcon size={isMobile ? 18 : 16} color={"var(--gray-8)"} />
+          <GripVertical size={14} />
         </div>
       </TableCell>
-      <TableCell>{task.name}</TableCell>
+      <TableCell className="font-medium text-foreground">
+        {task.name}
+      </TableCell>
+      <TableCell className="font-mono text-[11px] text-foreground">
+        {task.target}
+      </TableCell>
+      <TableCell className="text-center">
+        <ProtocolBadge type={task.type || "icmp"} />
+      </TableCell>
+      <TableCell className="font-mono text-[11px] text-muted-foreground">
+        {task.interval}s
+      </TableCell>
       <TableCell>
-        <Flex gap="2" align="center">
-          {task.clients && task.clients.length > 0
-            ? (() => {
-                const names = task.clients.map((uuid) => {
-                  const name =
-                    nodeDetail.find((node) => node.uuid === uuid)?.name || uuid;
-                  return name;
-                });
-                const joined = names.join(", ");
-                return joined.length > 40
-                  ? joined.slice(0, 40) + "..."
-                  : joined;
-              })()
-            : t("common.none")}
-          {task.default_on && (
-            <span className="text-xs text-accent-11">
-              {t("ping.default_on_short")}
+        <div className="flex items-center gap-1.5">
+          {task.default_on ? (
+            <span className="px-1.5 py-0.2 text-[10px] font-mono rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+              {t("ping.default_on_short", "默认全开")}
+            </span>
+          ) : (
+            <span className="px-1.5 py-0.2 text-[10px] font-mono rounded bg-muted text-muted-foreground border border-border">
+              已指定 {clientCount} 台
             </span>
           )}
+
+          {/* 节点分配弹窗触发 */}
           <NodeSelectorDialog
             value={form.clients ?? []}
             onChange={(uuids) => {
@@ -327,186 +341,183 @@ const Row = ({
               submitEdit(nextForm);
             }}
           >
-            <IconButton
-              variant="ghost"
-              title={t("common.select_clients", "Select clients")}
-              aria-label={t("common.select_clients", "Select clients")}
+            <button
+              type="button"
+              className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+              title="调整执行节点"
             >
-              <MoreHorizontal size="16" />
-            </IconButton>
+              <Settings2 size={13} />
+            </button>
           </NodeSelectorDialog>
-        </Flex>
+        </div>
       </TableCell>
-      <TableCell>{task.target}</TableCell>
-      <TableCell>{task.type}</TableCell>
-      <TableCell>{task.interval}</TableCell>
-      <TableCell className="flex items-center gap-2">
-        {/* 编辑按钮 */}
-        <Dialog.Root open={editOpen} onOpenChange={setEditOpen}>
-          <Dialog.Trigger>
-            <IconButton
-              variant="soft"
-              title={t("common.edit", "Edit")}
-              aria-label={t("common.edit", "Edit")}
-            >
-              <Pencil size="16" />
-            </IconButton>
-          </Dialog.Trigger>
-          <Dialog.Content className="km-pingtask-task-form">
-            <Dialog.Title>{t("common.edit")}</Dialog.Title>
-            <form onSubmit={handleEdit} className="flex flex-col gap-3 mt-1">
-              <div>
-                <label className="text-xs font-medium text-muted-foreground block mb-1">
-                  {t("common.name")}
-                </label>
-                <TextField.Root
-                  value={form.name}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, name: e.target.value }))
-                  }
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-2.5">
-                <div>
-                  <label className="text-xs font-medium text-muted-foreground block mb-1">
-                    {t("common.type")}
-                  </label>
-                  <Select.Root
-                    value={form.type}
-                    onValueChange={(v) =>
-                      setForm((f) => ({ ...f, type: v as any }))
-                    }
-                  >
-                    <Select.Trigger className="w-full" />
-                    <Select.Content>
-                      <Select.Item value="icmp">ICMP</Select.Item>
-                      <Select.Item value="tcp">TCP</Select.Item>
-                      <Select.Item value="http">HTTP</Select.Item>
-                    </Select.Content>
-                  </Select.Root>
+      <TableCell className="text-right pr-4">
+        <div className="flex items-center justify-end gap-1">
+          {/* 编辑按钮 */}
+          <Dialog.Root open={editOpen} onOpenChange={setEditOpen}>
+            <Dialog.Trigger>
+              <button
+                type="button"
+                className="size-7 rounded-md border border-border/60 hover:bg-muted text-muted-foreground hover:text-foreground inline-flex items-center justify-center transition-colors cursor-pointer shadow-2xs"
+                title="编辑探测任务"
+              >
+                <Pencil size={13} />
+              </button>
+            </Dialog.Trigger>
+            <Dialog.Content className="max-w-md">
+              <Dialog.Title>
+                <div className="flex items-center gap-2">
+                  <Pencil size={15} className="text-muted-foreground" />
+                  <span>编辑探测任务</span>
                 </div>
-                <div>
-                  <label className="text-xs font-medium text-muted-foreground block mb-1">
-                    {t("ping.interval")} ({t("time.second")})
+              </Dialog.Title>
+              <form onSubmit={handleEdit} className="flex flex-col gap-3.5 my-2 text-xs">
+                <div className="space-y-1">
+                  <label htmlFor={`edit-task-name-${task.id}`} className="text-xs font-medium text-foreground block">
+                    任务名称
                   </label>
-                  <TextField.Root
-                    type="number"
-                    min="1"
-                    value={form.interval}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, interval: Number(e.target.value) }))
-                    }
+                  <input
+                    id={`edit-task-name-${task.id}`}
+                    value={form.name}
+                    onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
                     required
+                    className="w-full h-8 px-2.5 text-xs rounded-md border border-border bg-background text-foreground outline-none focus:border-foreground/50 shadow-2xs"
                   />
                 </div>
-              </div>
 
-              <div>
-                <label className="text-xs font-medium text-muted-foreground block mb-1">
-                  {t("ping.target")}
-                </label>
-                <TextField.Root
-                  value={form.target}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, target: e.target.value }))
-                  }
-                  required
-                />
-              </div>
-
-              <div className="p-2.5 rounded-lg border border-border/60 bg-muted/20 space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-medium text-foreground">
-                    {t("common.server")}
-                  </label>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground">
-                      {t("common.selected", { count: form.clients.length })}
-                    </span>
-                    <NodeSelectorDialog
-                      value={form.clients}
-                      onChange={(v) => setForm((f) => ({ ...f, clients: v }))}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label htmlFor={`edit-task-type-${task.id}`} className="text-xs font-medium text-foreground block">
+                      协议类型
+                    </label>
+                    <Select.Root
+                      value={form.type}
+                      onValueChange={(v) => setForm((f) => ({ ...f, type: v as any }))}
+                    >
+                      <Select.Trigger id={`edit-task-type-${task.id}`} className="w-full h-8 cursor-pointer text-xs" />
+                      <Select.Content>
+                        <Select.Item value="tcp">TCP (端口握手)</Select.Item>
+                        <Select.Item value="icmp">ICMP (Ping 报文)</Select.Item>
+                        <Select.Item value="http">HTTP (网页探测)</Select.Item>
+                      </Select.Content>
+                    </Select.Root>
+                  </div>
+                  <div className="space-y-1">
+                    <label htmlFor={`edit-task-interval-${task.id}`} className="text-xs font-medium text-foreground block">
+                      探测频率 (秒/次)
+                    </label>
+                    <input
+                      id={`edit-task-interval-${task.id}`}
+                      type="number"
+                      min={1}
+                      value={form.interval}
+                      onChange={(e) => setForm((f) => ({ ...f, interval: Number(e.target.value) }))}
+                      required
+                      className="w-full h-8 px-2.5 text-xs rounded-md border border-border bg-background text-foreground outline-none focus:border-foreground/50 shadow-2xs font-mono"
                     />
                   </div>
                 </div>
-                <div className="pt-2 border-t border-border/40 flex items-start gap-2">
-                  <Checkbox
-                    id="edit_ping_default_on"
-                    checked={form.default_on}
-                    onCheckedChange={(checked) =>
-                      setForm((f) => ({ ...f, default_on: !!checked }))
-                    }
+
+                <div className="space-y-1">
+                  <label htmlFor={`edit-task-target-${task.id}`} className="text-xs font-medium text-foreground block">
+                    目标地址 (Target)
+                  </label>
+                  <input
+                    id={`edit-task-target-${task.id}`}
+                    value={form.target}
+                    onChange={(e) => setForm((f) => ({ ...f, target: e.target.value }))}
+                    required
+                    className="w-full h-8 px-2.5 text-xs rounded-md border border-border bg-background text-foreground outline-none focus:border-foreground/50 shadow-2xs font-mono"
                   />
-                  <div className="flex flex-col">
-                    <label htmlFor="edit_ping_default_on" className="text-xs font-medium text-foreground cursor-pointer">
-                      {t("ping.default_on")}
-                    </label>
-                    <span className="text-[11px] text-muted-foreground">
-                      {t("ping.default_on_description")}
+                </div>
+
+                <div className="p-3 rounded-lg border border-border/60 bg-muted/20 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-medium text-foreground">
+                      执行节点范围
                     </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground font-mono">
+                        已选 {form.clients.length} 台
+                      </span>
+                      <NodeSelectorDialog
+                        value={form.clients}
+                        onChange={(v) => setForm((f) => ({ ...f, clients: v }))}
+                      />
+                    </div>
+                  </div>
+                  <div className="pt-2 border-t border-border/40 flex items-start gap-2">
+                    <input
+                      type="checkbox"
+                      id={`edit_ping_default_on_${task.id}`}
+                      checked={form.default_on}
+                      onChange={(e) => setForm((f) => ({ ...f, default_on: e.target.checked }))}
+                      className="size-4 mt-0.5 cursor-pointer accent-foreground"
+                    />
+                    <div className="flex flex-col">
+                      <label htmlFor={`edit_ping_default_on_${task.id}`} className="text-xs font-medium text-foreground cursor-pointer">
+                        {t("ping.default_on", "默认全网开启")}
+                      </label>
+                      <span className="text-[11px] text-muted-foreground leading-relaxed">
+                        {t("ping.default_on_description", "所有现有服务器及新加入节点均会自动执行该探测任务。")}
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <Flex gap="2" justify="end" mt="2">
+                <Flex gap="2" justify="end" mt="2">
+                  <Dialog.Close>
+                    <Button variant="soft" color="gray" type="button" className="cursor-pointer">
+                      {t("common.cancel", "取消")}
+                    </Button>
+                  </Dialog.Close>
+                  <Button type="submit" disabled={editSaving} className="cursor-pointer">
+                    {editSaving ? "保存中..." : t("common.save", "保存修改")}
+                  </Button>
+                </Flex>
+              </form>
+            </Dialog.Content>
+          </Dialog.Root>
+
+          {/* 删除按钮 */}
+          <Dialog.Root open={deleteOpen} onOpenChange={setDeleteOpen}>
+            <Dialog.Trigger>
+              <button
+                type="button"
+                className="size-7 rounded-md border border-border/60 hover:bg-rose-500/10 text-muted-foreground hover:text-rose-600 dark:hover:text-rose-400 inline-flex items-center justify-center transition-colors cursor-pointer shadow-2xs"
+                title="删除探测任务"
+              >
+                <Trash2 size={13} />
+              </button>
+            </Dialog.Trigger>
+            <Dialog.Content className="max-w-sm">
+              <Dialog.Title>
+                <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400">
+                  <Trash2 size={16} />
+                  <span>确认删除探测任务</span>
+                </div>
+              </Dialog.Title>
+              <p className="text-xs text-muted-foreground my-2 leading-relaxed">
+                删除任务 <strong className="text-foreground">{task.name}</strong> 后，所有节点将停止探测且历史延迟数据将被移除。此操作不可恢复。
+              </p>
+              <Flex gap="2" justify="end" mt="4">
                 <Dialog.Close>
-                  <Button
-                    variant="soft"
-                    color="gray"
-                    type="button"
-                    onClick={() => setEditOpen(false)}
-                  >
-                    {t("common.cancel")}
+                  <Button variant="soft" color="gray" type="button" className="cursor-pointer">
+                    {t("common.cancel", "取消")}
                   </Button>
                 </Dialog.Close>
-                <Button variant="solid" type="submit" disabled={editSaving}>
-                  {t("common.save")}
+                <Button
+                  color="red"
+                  onClick={handleDelete}
+                  disabled={deleteLoading}
+                  className="cursor-pointer"
+                >
+                  {deleteLoading ? "删除中..." : t("common.delete", "确认删除")}
                 </Button>
               </Flex>
-            </form>
-          </Dialog.Content>
-        </Dialog.Root>
-        {/* 删除按钮 */}
-        <Dialog.Root open={deleteOpen} onOpenChange={setDeleteOpen}>
-          <Dialog.Trigger>
-            <IconButton
-              variant="soft"
-              color="red"
-              title={t("common.delete", "Delete")}
-              aria-label={t("common.delete", "Delete")}
-            >
-              <Trash size="16" />
-            </IconButton>
-          </Dialog.Trigger>
-          <Dialog.Content>
-            <Dialog.Title>{t("common.delete")}</Dialog.Title>
-            <Dialog.Description className="text-xs text-muted-foreground mt-1">
-              {t("common.confirm_delete")}
-            </Dialog.Description>
-            <Flex gap="2" justify="end" mt="4">
-              <Dialog.Close>
-                <Button
-                  variant="soft"
-                  color="gray"
-                  type="button"
-                  onClick={() => setDeleteOpen(false)}
-                >
-                  {t("common.cancel")}
-                </Button>
-              </Dialog.Close>
-              <Button
-                variant="solid"
-                color="red"
-                onClick={handleDelete}
-                disabled={deleteLoading}
-              >
-                {t("common.delete")}
-              </Button>
-            </Flex>
-          </Dialog.Content>
-        </Dialog.Root>
+            </Dialog.Content>
+          </Dialog.Root>
+        </div>
       </TableCell>
     </TableRow>
   );
