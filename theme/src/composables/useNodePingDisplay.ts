@@ -34,7 +34,7 @@ interface UseNodePingDisplayOptions {
   emptyPanelTooltipText?: Partial<Record<NodePingMetric, string>>
 }
 
-export function getPingToneClass(value: number): string {
+function getPingToneClass(value: number): string {
   if (!value)
     return 'text-muted-foreground'
   if (value <= 60)

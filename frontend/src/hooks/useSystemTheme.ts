@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 
 export type ThemeMode = 'auto' | 'light' | 'dark';
 
-export const getStoredThemeMode = (): ThemeMode => {
+const getStoredThemeMode = (): ThemeMode => {
   if (typeof window === 'undefined') return 'auto';
   try {
     const stored = localStorage.getItem('themeMode');
@@ -15,7 +15,7 @@ export const getStoredThemeMode = (): ThemeMode => {
   return 'auto';
 };
 
-export const getResolvedTheme = (mode: ThemeMode): 'light' | 'dark' => {
+const getResolvedTheme = (mode: ThemeMode): 'light' | 'dark' => {
   if (mode === 'light') return 'light';
   if (mode === 'dark') return 'dark';
   if (typeof window !== 'undefined' && window.matchMedia) {

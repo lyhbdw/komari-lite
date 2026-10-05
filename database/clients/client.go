@@ -170,18 +170,6 @@ func CreateClientWithName(name string) (clientUUID, token string, err error) {
 	return clientUUID, token, nil
 }
 
-/*
-// GetAllClients 获取所有客户端配置
-
-	func getAllClients() (clients []models.Client, err error) {
-		db := dbcore.GetDBInstance()
-		err = db.Find(&clients).Error
-		if err != nil {
-			return nil, err
-		}
-		return clients, nil
-	}
-*/
 func GetClientByUUID(uuid string) (client models.Client, err error) {
 	db := dbcore.GetDBInstance()
 	err = db.Where("uuid = ?", uuid).First(&client).Error
