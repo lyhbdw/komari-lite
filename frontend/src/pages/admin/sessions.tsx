@@ -1,5 +1,6 @@
 import React from "react";
 import { toast } from "sonner";
+import { copyToClipboard } from "@/utils/clipboard";
 import {
   Table,
   TableHeader,
@@ -199,8 +200,9 @@ export default function Sessions() {
                             <button
                               type="button"
                               onClick={() => {
-                                navigator.clipboard.writeText(s.id);
-                                toast.success(t("common.copied", "已复制"));
+                                copyToClipboard(s.id, {
+                                  successMessage: t("common.copied", "已复制"),
+                                });
                               }}
                               className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors shrink-0 cursor-pointer border border-border/40"
                               title={t("common.copy", "复制会话 ID")}

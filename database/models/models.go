@@ -138,3 +138,72 @@ func (sa *StringArray) Scan(value interface{}) error {
 func (sa StringArray) Value() (driver.Value, error) {
 	return json.Marshal(sa)
 }
+
+// Log records operational and system events
+type Log struct {
+	ID      uint      `json:"id,omitempty" gorm:"primaryKey;autoIncrement"`
+	IP      string    `json:"ip" gorm:"type:varchar(45);"` // IPv4 or IPv6
+	UUID    string    `json:"uuid" gorm:"type:varchar(36);"`
+	Message string    `json:"message" gorm:"type:text;not null"`
+	MsgType string    `json:"msg_type" gorm:"type:varchar(20);not null;index:idx_logs_msg_type_time,priority:1"`
+	Time    time.Time `json:"time" gorm:"autoCreateTime;not null;index:idx_logs_time;index:idx_logs_msg_type_time,priority:2"`
+}
+
+// OfflineNotification 定义了离线通知规则：按客户端记录宽限期与上次通知时间。
+type OfflineNotification struct {
+	Client          string     `json:"client" gorm:"type:varchar(36);not null;index;unique;constraint:OnDelete:CASCADE,OnUpdate:CASCADE;foreignKey:client;references:UUID"`
+	ClientInfo      Client     `json:"client_info,omitempty" gorm:"foreignKey:Client;references:UUID"`
+	Enable          bool       `json:"enable" gorm:"type:boolean;default:false"`
+	Cooldown        int        `json:"cooldown" gorm:"type:int;not null;default:1800"`    // 冷却时间（秒），默认 30 分钟；0 表示不冷却
+	GracePeriod     int        `json:"grace_period" gorm:"type:int;not null;default:180"` // 宽限期（秒），默认 3 分钟
+	LastNotified    *time.Time `json:"last_notified"`                                     // 上次通知时间
+	NotifiedOffline bool       `json:"notified_offline" gorm:"type:boolean;default:false"` // 是否处于已发送离线告警状态
+}
+
+// MessageSenderProvider 与 EventMessage 定义通知投递实体
+type MessageSenderProvider struct {
+	Name     string `json:"name" gorm:"primaryKey;unique;not null"`
+	Addition string `json:"addition" gorm:"type:longtext" default:"{}"`
+}
+
+type EventMessage struct {
+	Event   any       `json:"event"`
+	Clients []Client  `json:"clients"`
+	Time    time.Time `json:"time"`
+	Message any       `json:"message"`
+	Emoji   any       `json:"emoji"`
+}
+
+// Theme 相关元数据与配置模型
+type Theme struct {
+	Name          any           `json:"name"`
+	Short         string        `json:"short"`
+	Description   any           `json:"description"`
+	Version       string        `json:"version"`
+	Author        any           `json:"author"`
+	URL           string        `json:"url"`
+	Preview       string        `json:"preview"`
+	Configuration Configuration `json:"configuration"`
+}
+
+type Configuration struct {
+	Type string `json:"type"` // managed raw redirect
+	Icon string `json:"icon"` // 图标
+	Name any    `json:"name"`
+	Data any    `json:"data"` // 配置数据
+}
+
+type ManagedThemeConfigurationItem struct {
+	Key      string `json:"key"`
+	Name     any    `json:"name"`
+	Required bool   `json:"required"`
+	Type     string `json:"type"` // string number select switch title textbox richtext nodes pingtasks
+	Options  string `json:"options"`
+	Default  any    `json:"default"`
+	Help     any    `json:"help"`
+}
+
+type ThemeConfiguration struct {
+	Short string `json:"short" gorm:"primaryKey;unique;not null"`
+	Data  string `json:"data" gorm:"type:longtext" default:"{}"`
+}

@@ -4,6 +4,7 @@
  */
 
 import type { Client, KomariRpc, NodeStatus } from '@/utils/rpc'
+import { toast } from 'vue-sonner'
 import { useAppStore } from '@/stores/app'
 import { useNodesStore } from '@/stores/nodes'
 import { getSharedApi } from '@/utils/api'
@@ -324,7 +325,7 @@ class InitManager {
     client.close()
 
     // 显示提示
-    window.$message?.warning('WebSocket 无法连接，尝试回落 POST 模式。')
+    toast.warning('WebSocket 无法连接，尝试回落 POST 模式。')
   }
 
   private clearReconnectTimer(): void {

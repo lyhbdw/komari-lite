@@ -2,6 +2,7 @@ package notifier
 
 import (
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/lyhbdw/komari-monitor-lite/database/clients"
@@ -12,8 +13,28 @@ import (
 	"github.com/lyhbdw/komari-monitor-lite/utils/messageSender"
 )
 
-// expireCache 记录每个客户端最近一次发送到期提醒时所处的"剩余天数档位"，
-// 避免同一天内反复提醒。key: "expire:"+clientUUID, value: int 剩余天数档位
+type expireStateMap struct {
+	mu sync.Map
+}
+
+func (m *expireStateMap) markNotified(clientID string, daysLeft int) bool {
+	key := "expire:" + clientID
+	val, loaded := m.mu.LoadOrStore(key, daysLeft)
+	if !loaded {
+		return true
+	}
+	last, _ := val.(int)
+	if last == daysLeft {
+		return false
+	}
+	m.mu.Store(key, daysLeft)
+	return true
+}
+
+func (m *expireStateMap) take(clientID string) {
+	m.mu.Delete("expire:" + clientID)
+}
+
 var expireCache = expireStateMap{}
 
 const (

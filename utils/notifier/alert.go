@@ -3,6 +3,7 @@ package notifier
 import (
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/lyhbdw/komari-monitor-lite/database/clients"
@@ -26,7 +27,25 @@ const (
 const alertCooldownDefaultMinutes = 30
 
 // alertCache 记录每个客户端每项指标最近一次告警时间，用于冷却去重。
-// key: "alert:"+clientID+":"+metric, value: time.Time
+type alertStateMap struct {
+	mu sync.Map // key: "alert:"+clientID+":"+metric -> time.Time
+}
+
+func (m *alertStateMap) canNotify(clientID, metric string, cooldown time.Duration) bool {
+	key := "alert:" + clientID + ":" + metric
+	now := time.Now()
+	val, loaded := m.mu.LoadOrStore(key, now)
+	if !loaded {
+		return true
+	}
+	last, _ := val.(time.Time)
+	if now.Sub(last) < cooldown {
+		return false
+	}
+	m.mu.Store(key, now)
+	return true
+}
+
 var alertCache = alertStateMap{}
 
 // CheckAlert 检查各客户端最新上报的 CPU/内存/磁盘使用率，超过阈值时发送告警。

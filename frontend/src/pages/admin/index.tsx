@@ -1,5 +1,6 @@
 import { quoteShellArgs } from "@/utils/shellQuote";
 import { buildAgentInstallArgs } from "@/utils/agentInstallCommand";
+import { copyToClipboard } from "@/utils/clipboard";
 import React, { useEffect, useState } from "react";
 import { NodeDetailsProvider } from "@/contexts/NodeDetailsContext";
 import { useNodeDetails } from "@/contexts/useNodeDetails";
@@ -242,8 +243,9 @@ const Layout = () => {
       toast.error("未找到有效 IP");
       return;
     }
-    await navigator.clipboard.writeText(ips.join("\n"));
-    toast.success(`已复制 ${ips.length} 台服务器 IP 到剪贴板`);
+    await copyToClipboard(ips.join("\n"), {
+      successMessage: `已复制 ${ips.length} 台服务器 IP 到剪贴板`,
+    });
   };
 
   const handleBatchGroupConfirm = async (newGroup: string) => {
@@ -1176,8 +1178,9 @@ const ServerRow = ({
     zIndex: isDragging ? 10 : undefined,
   };
   function copy(text: string) {
-    navigator.clipboard.writeText(text);
-    toast.success(t("copy_success"));
+    copyToClipboard(text, {
+      successMessage: t("copy_success"),
+    });
   }
   return (
     <TableRow
@@ -1816,13 +1819,10 @@ function GenerateCommandButton({
     return `curl -fsSL ${JSON.stringify(scriptUrl)} | bash -s -- ${quoteShellArgs(args)}`;
   };
 
-  const copyToClipboard = async (text: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      toast.success(t("copy_success", "已复制到剪贴板"));
-    } catch (err) {
-      console.error("Failed to copy text: ", err);
-    }
+  const copyToClipboardHandler = async (text: string) => {
+    await copyToClipboard(text, {
+      successMessage: t("copy_success", "已复制到剪贴板"),
+    });
   };
   const { t } = useTranslation();
   return (
@@ -1967,7 +1967,7 @@ function GenerateCommandButton({
                 {t("common.close", "关闭")}
               </Button>
             </Dialog.Close>
-            <Button onClick={() => copyToClipboard(generateCommand())}>
+            <Button onClick={() => copyToClipboardHandler(generateCommand())}>
               <Copy size={14} />
               {t("common.copy")}
             </Button>
@@ -2238,7 +2238,9 @@ function DetailView({ node }: { node: NodeDetail }) {
                         className="size-5"
                         type="button"
                         onClick={() => {
-                          navigator.clipboard.writeText(node.ipv4!);
+                          copyToClipboard(node.ipv4!, {
+                            successMessage: `已复制 IPv4: ${node.ipv4}`,
+                          });
                         }}
                       >
                         <Copy size={16} />
@@ -2258,7 +2260,9 @@ function DetailView({ node }: { node: NodeDetail }) {
                         className="size-5"
                         type="button"
                         onClick={() => {
-                          navigator.clipboard.writeText(node.ipv6!);
+                          copyToClipboard(node.ipv6!, {
+                            successMessage: `已复制 IPv6: ${node.ipv6}`,
+                          });
                         }}
                       >
                         <Copy size={16} />

@@ -1,7 +1,7 @@
 import type { Client, NodeStatus, NodeStatusPing } from '@/utils/rpc'
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
-import { parseNodeGroups } from '@/utils/groupHelper'
+import { parseNodeGroups } from '@/utils/nodeHelpers'
 
 /** 流量限制类型 */
 export type TrafficLimitType = 'up' | 'down' | 'min' | 'max' | 'sum'

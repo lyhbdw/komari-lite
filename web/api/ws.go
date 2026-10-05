@@ -1,25 +1,82 @@
 package api
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/lyhbdw/komari-monitor-lite/database/accounts"
-	"github.com/lyhbdw/komari-monitor-lite/database/dbcore"
-	"github.com/lyhbdw/komari-monitor-lite/database/models"
+	"github.com/gorilla/websocket"
+	"github.com/lyhbdw/komari-monitor-lite/internal/config"
 	v2 "github.com/lyhbdw/komari-monitor-lite/protocol/v2"
 	agent_runtime "github.com/lyhbdw/komari-monitor-lite/web/agent"
+	"github.com/lyhbdw/komari-monitor-lite/web/connection"
+	"github.com/lyhbdw/komari-monitor-lite/web/security"
 )
 
+type WebSocketUpgradeOption func(*websocket.Upgrader)
+
+func IsWebSocketUpgrade(c *gin.Context) bool {
+	return websocket.IsWebSocketUpgrade(c.Request)
+}
+
+func EnableWebSocketCompression(upgrader *websocket.Upgrader) {
+	upgrader.EnableCompression = true
+}
+
+func UpgradeWebSocket(c *gin.Context, options ...WebSocketUpgradeOption) (*websocket.Conn, error) {
+	if !IsWebSocketUpgrade(c) {
+		return nil, fmt.Errorf("require websocket upgrade")
+	}
+	upgrader := websocket.Upgrader{
+		CheckOrigin: func(r *http.Request) bool {
+			return checkWebSocketOriginForContext(c, r)
+		},
+	}
+	for _, option := range options {
+		option(&upgrader)
+	}
+	return upgrader.Upgrade(c.Writer, c.Request, nil)
+}
+
+// UpgradeSafeConn upgrades the request to a WebSocket and wraps it with the
+// synchronized connection used by the Agent and JSON-RPC transports.
+func UpgradeSafeConn(c *gin.Context, options ...WebSocketUpgradeOption) (*connection.SafeConn, error) {
+	unsafeConn, err := UpgradeWebSocket(c, options...)
+	if err != nil {
+		return nil, err
+	}
+	return connection.NewSafeConn(unsafeConn), nil
+}
+
+func checkWebSocketOriginForContext(c *gin.Context, r *http.Request) bool {
+	if c != nil && r.URL.Path == "/api/clients/v2/rpc" && GetRole(c) == RoleClient && r.Header.Get("Origin") == "" {
+		return true
+	}
+	origin := r.Header.Get("Origin")
+	enabled, err := config.GetAs[bool](config.WsOriginCheckEnabledKey, true)
+	if err != nil {
+		enabled = true
+	}
+	if !enabled {
+		return true
+	}
+	if origin == "" {
+		return false
+	}
+	if security.OriginMatchesHost(origin, r.Host) {
+		return true
+	}
+	allowlist, _ := config.GetAs[string](config.WsAllowedOriginsKey, "")
+	return security.OriginInAllowlist(origin, allowlist)
+}
+
 func GetClients(c *gin.Context) {
-	// 升级到ws
 	if !IsWebSocketUpgrade(c) {
 		c.JSON(http.StatusBadRequest, gin.H{"status": "error", "error": "Require WebSocket upgrade"})
 		return
 	}
-	// Upgrade the HTTP connection to a WebSocket connection
 	conn, err := UpgradeSafeConn(c)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"status": "error", "error": "Failed to upgrade to WebSocket." + err.Error()})
@@ -29,30 +86,6 @@ func GetClients(c *gin.Context) {
 	conn.GetConn().SetReadLimit(1 << 20)
 	_ = conn.SetReadDeadline(time.Now().Add(60 * time.Second))
 
-	// 初始化用户信息
-	var (
-		isLogin    = false
-		hiddenMap  = map[string]bool{}
-		session, _ = c.Cookie("session_token")
-	)
-
-	// 登录状态检查
-	_, err = accounts.GetUserBySession(session)
-	if err == nil {
-		isLogin = true
-	}
-
-	// 仅在未登录时需要 Hidden 信息做过滤
-	if !isLogin {
-		var hiddenClients []models.Client
-		db := dbcore.GetDBInstance()
-		_ = db.Select("uuid").Where("hidden = ?", true).Find(&hiddenClients).Error
-		for _, cli := range hiddenClients {
-			hiddenMap[cli.UUID] = true
-		}
-	}
-
-	// 请求
 	for {
 		var resp struct {
 			Online []string             `json:"online"` // 已建立连接的客户端uuid列表
@@ -70,7 +103,7 @@ func GetClients(c *gin.Context) {
 		message := string(data)
 
 		uuID := ""
-		if message != "get" { // 非请求全部内容
+		if message != "get" {
 			if strings.HasPrefix(message, "get ") {
 				uuID = strings.TrimSpace(strings.TrimPrefix(message, "get "))
 			} else {
@@ -79,27 +112,19 @@ func GetClients(c *gin.Context) {
 			}
 		}
 
-		// 在线客户端uuid列表（WebSocket 与非 WebSocket）
 		for _, key := range agent_runtime.GetAllOnlineUUIDs() {
-			if !isLogin && hiddenMap[key] {
-				continue
-			}
 			if uuID != "" && key != uuID {
 				continue
 			}
 			resp.Online = append(resp.Online, key)
 		}
 
-		//过往节点数据信息
 		for key, report := range agent_runtime.GetLatestReport() {
-			if !isLogin && hiddenMap[key] {
-				continue
-			}
 			if uuID != "" && key != uuID {
 				continue
 			}
 
-			report.UUID = "" // 不暴露 uuid
+			report.UUID = ""
 			if report.CPU.Usage == 0 {
 				report.CPU.Usage = 0.01
 			}
