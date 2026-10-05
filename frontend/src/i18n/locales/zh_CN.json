@@ -274,7 +274,7 @@
   "just_now": "刚刚",
   "loading": "加载中...",
   "log": {
-    "title": "日志"
+    "title": "日志详情"
   },
   "login": {
     "desc": "登录到 Komari 控制面板。",
@@ -285,7 +285,15 @@
     "username": "用户名"
   },
   "logs": {
-    "title": "日志"
+    "col_id": "序号",
+    "col_ip": "来源 IP",
+    "col_message": "日志内容",
+    "col_time": "记录时间",
+    "col_type": "类型",
+    "description": "记录系统运行、认证鉴权与节点变动历史。",
+    "detail": "详情",
+    "empty": "暂无审计日志记录",
+    "title": "审计日志"
   },
   "network_speed": "网络速率",
   "nodeCard": {
