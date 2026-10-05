@@ -185,7 +185,7 @@ const Layout = () => {
           node.name.toLowerCase().includes(lower) ||
           (node.ipv4 && node.ipv4.includes(searchTerm)) ||
           (node.ipv6 && node.ipv6.toLowerCase().includes(lower)) ||
-          (node.remark && node.remark.toLowerCase().includes(lower)) ||
+          (node.public_remark && node.public_remark.toLowerCase().includes(lower)) ||
           (node.tags && node.tags.toLowerCase().includes(lower)) ||
           (node.group && node.group.toLowerCase().includes(lower))
         );
@@ -1986,7 +1986,6 @@ function EditButton({ node }: { node: NodeDetail }) {
   const groupRef = React.useRef<HTMLInputElement>(null);
   const tagsRef = React.useRef<HTMLInputElement>(null);
   const publicRemarkRef = React.useRef<HTMLTextAreaElement>(null);
-  const privateRemarkRef = React.useRef<HTMLTextAreaElement>(null);
   const [hidden, setHidden] = useState(false);
   const [saving, setSaving] = useState(false);
   const [traffic_limit, setTrafficLimit] = useState(0);
@@ -2005,7 +2004,6 @@ function EditButton({ node }: { node: NodeDetail }) {
         method: "POST",
         body: JSON.stringify({
           name: nameRef.current?.value,
-          remark: privateRemarkRef.current?.value,
           public_remark: publicRemarkRef.current?.value,
           group: groupRef.current?.value,
           tags: tagsRef.current?.value,
@@ -2080,21 +2078,6 @@ function EditButton({ node }: { node: NodeDetail }) {
               </label>
               <TextField.Root defaultValue={node.group} ref={groupRef} placeholder="default" />
             </div>
-          </div>
-          <div>
-            <label className="block mb-1 text-xs font-medium text-muted-foreground">
-              {t("admin.nodeEdit.remark", "私有备注")}
-            </label>
-            <TextArea
-              defaultValue={node.remark}
-              ref={privateRemarkRef}
-              resize={"vertical"}
-              style={{ minHeight: "60px" }}
-              placeholder={t(
-                "admin.nodeEdit.remarkPlaceholder",
-                "请输入私有备注"
-              )}
-            />
           </div>
           <div>
             <label className="block mb-1 text-xs font-medium text-muted-foreground">
@@ -2210,18 +2193,10 @@ function DetailView({ node }: { node: NodeDetail }) {
               <span className="font-semibold text-sm text-foreground group-hover:text-primary transition-colors truncate max-w-[380px] 2xl:max-w-[500px]" title={node.name}>
                 {node.name}
               </span>
-              {node.remark && (
+              {node.public_remark && (
                 <span
                   className="text-[10px] px-1.5 py-0.2 rounded bg-muted/70 text-muted-foreground border border-border/60 font-normal truncate max-w-[120px] shrink-0"
-                  title={`私有备注: ${node.remark}`}
-                >
-                  {node.remark}
-                </span>
-              )}
-              {node.public_remark && !node.remark && (
-                <span
-                  className="text-[10px] px-1.5 py-0.2 rounded bg-muted/70 text-muted-foreground border border-border/60 font-normal truncate max-w-[120px] shrink-0"
-                  title={`公开备注: ${node.public_remark}`}
+                  title={`备注: ${node.public_remark}`}
                 >
                   {node.public_remark}
                 </span>

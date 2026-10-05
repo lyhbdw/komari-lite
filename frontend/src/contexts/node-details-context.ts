@@ -21,7 +21,6 @@ export type NodeDetail = {
   price: number;
   premium: number;
   premium_currency?: string;
-  remark: string | undefined;
   public_remark: string;
   group: string | undefined;
   billing_cycle: number;

@@ -47,8 +47,6 @@
       "namePlaceholder": "请输入名称",
       "publicRemark": "公开备注",
       "publicRemarkPlaceholder": "请输入公开备注",
-      "remark": "私有备注",
-      "remarkPlaceholder": "请输入私有备注",
       "save": "保存",
       "saveError": "保存失败",
       "saveSuccess": "保存成功",
