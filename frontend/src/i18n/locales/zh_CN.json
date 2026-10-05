@@ -288,11 +288,6 @@
   },
   "go_to_home": "回到主页",
   "just_now": "刚刚",
-  "loadAlert": {
-    "metric": "监控项",
-    "ratio": "时间占比",
-    "title": "负载警报"
-  },
   "loading": "加载中...",
   "log": {
     "title": "日志"
@@ -365,9 +360,6 @@
       "title": "离线通知"
     },
     "title": "通知"
-  },
-  "operations": {
-    "title": "运维"
   },
   "page_not_found": "真不巧，网页被小鞠吃掉了。",
   "ping": {
