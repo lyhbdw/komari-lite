@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
 import { computed, inject, ref } from 'vue'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { DataTooltip } from '@/components/ui/data-tooltip'
 import { useAppStore } from '@/stores/app'
@@ -9,8 +8,6 @@ import { useAppStore } from '@/stores/app'
 const appStore = useAppStore()
 
 const isScrolled = inject<ReturnType<typeof ref<boolean>>>('isScrolled', ref(false))
-
-const siteFavicon = ref('/favicon.svg?v=4')
 
 function handleAdminClick() {
   location.href = '/admin'
@@ -57,12 +54,13 @@ const sitename = computed(() => {
   >
     <div class="px-4 flex-between h-14 max-w-[1280px] mx-auto">
       <div class="flex items-center gap-3 select-none">
-        <Avatar class="size-7.5 rounded-lg select-none shadow-2xs">
-          <AvatarImage :src="siteFavicon" :alt="sitename" class="rounded-lg object-contain" />
-          <AvatarFallback class="rounded-lg">
-            {{ sitename.slice(0, 1) }}
-          </AvatarFallback>
-        </Avatar>
+        <div class="size-7.5 rounded-lg select-none text-foreground shrink-0 flex items-center justify-center">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none" class="size-full">
+            <rect x="36" y="36" width="440" height="440" rx="96" stroke="currentColor" stroke-width="40" fill="none" />
+            <path d="M 148 168 L 246 256 L 148 344" stroke="currentColor" stroke-width="46" stroke-linecap="round" stroke-linejoin="round" />
+            <rect x="276" y="322" width="112" height="44" rx="12" fill="currentColor" />
+          </svg>
+        </div>
         <h3 class="m-0 text-lg font-semibold">
           {{ sitename }}
         </h3>
