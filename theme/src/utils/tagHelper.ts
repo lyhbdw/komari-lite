@@ -37,7 +37,7 @@ export type TagColor
     | 'sky'
 
 /** 所有支持的标签颜色列表 */
-export const TAG_COLORS = [
+const TAG_COLORS = [
   'ruby',
   'gray',
   'gold',
@@ -67,7 +67,7 @@ export const TAG_COLORS = [
 ] as const
 
 /** Radix Themes 颜色到 HEX 的映射（基于 light 模式的 9 色阶） */
-export const TAG_COLOR_HEX_MAP: Record<TagColor, string> = {
+const TAG_COLOR_HEX_MAP: Record<TagColor, string> = {
   ruby: '#E5484D',
   gray: '#8D8D8D',
   gold: '#E5C00D',

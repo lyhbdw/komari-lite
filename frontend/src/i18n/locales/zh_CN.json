@@ -46,7 +46,6 @@
       "publicRemark": "公开备注",
       "publicRemarkPlaceholder": "请输入公开备注",
       "save": "保存",
-      "saveError": "保存失败",
       "saveSuccess": "保存成功",
       "token": "Token 令牌",
       "tokenPlaceholder": "请输入 Token",
@@ -67,9 +66,6 @@
       "upgrading": "下发中...",
       "upgradeSuccess": "升级事件已下发（v{{version}}，{{dispatched}} 个节点）",
       "addNode": "添加节点",
-      "autoDiscovery": {
-        "title": "自动发现"
-      },
       "autoRenewal": "自动续费",
       "autoRenewalDescription": "如果服务器过期且当前在线，Komari 将自动将到期时间设置为下个自然月（年）",
       "billing": "账单",
@@ -77,7 +73,6 @@
       "billingCycleTips": "<b>计费周期规则</b><br/> <br/> <b>按预设周期 (日历续费)</b><br/> 当输入的天数与预设方案（如月付、季付、年付）的数值相近时，将按对应的 <b>日历周期</b> 续费。<br/> - 常用数值: 30 (月), 92 (季), 365 (年), 730 (两年) 等。<br/> - 示例：输入 30，服务从3月15日续费，新的到期日为 4月15日。<br/> <br/> <b>按自定义天数</b><br/> 当输入其他天数时（如 7, 45, 100），将严格按 天数 续费。<br/> - 示例：输入 45，服务从3月15日续费，新的到期日为 4月29日 (45天后)。<br/> <br/> <b>一次性付费</b><br/> 输入 -1 表示一次性付费。",
       "currency": "价格货币",
       "currencyTips": "标称价格结算币种（如 $、¥、€），默认 $",
-      "deleting": "删除中...",
       "dragToReorder": "长按拖拽重新排序",
       "emptyGuide": {
         "description": "点击右上角的“添加节点”开始，或开启自动发现批量接入服务器。",
@@ -94,7 +89,6 @@
       "invalidPremium": "溢价无效，必须为不小于 0 的数字",
       "name": "名称",
       "nameOptional": "名称 (可选)",
-      "namePlaceholder": "名称",
       "nodeList": "节点列表",
       "price": "价格",
       "priceTips": "0不显示，-1表示免费",
@@ -103,8 +97,7 @@
       "premiumCurrency": "溢价货币",
       "premiumCurrencyTips": "溢价独立结算币种（如 ¥、r、$、€ 等），默认为 ¥",
       "searchByName": "查找服务器",
-      "setToLongTerm": "设置为长期",
-      "submit": "提交"
+      "setToLongTerm": "设置为长期"
     },
     "notification": {
       "expire_enable": "是否启用过期提醒",
@@ -116,10 +109,6 @@
       "alert_title": "阈值告警",
       "alert_enable": "是否启用阈值告警",
       "alert_enable_description": "启用后，Komari将在服务器 CPU / 内存 / 磁盘使用率超过阈值时发送告警通知。",
-      "alert_cpu": "CPU 使用率阈值（%）",
-      "alert_memory": "内存使用率阈值（%）",
-      "alert_disk": "磁盘使用率阈值（%）",
-      "alert_cooldown": "告警冷却时间（分钟）",
       "alert_range_error": "请输入 0-100 之间的数值"
     }
   },
@@ -237,7 +226,6 @@
     "real_time": "实时",
     "refresh": "刷新",
     "region_flag_alt": "地区旗帜: {{name}}",
-    "remark": "备注",
     "reset": "重置",
     "retry": "重试",
     "save": "保存",
@@ -341,9 +329,6 @@
     "general": {
       "title": "通用事件"
     },
-    "load": {
-      "title": "负载通知"
-    },
     "offline": {
       "cooldown": "冷却时间",
       "cooldown_tip": "同一客户端的离线通知在该时间内不会重复发送，0 表示不冷却",
@@ -352,7 +337,6 @@
       "grace_period_tip": "低于45秒的宽限期可能会无法及时触发在线通知",
       "last_notified": "最后通知",
       "never_triggered": "从未触发",
-      "tips": "为了避免频繁发送通知，我们设置了宽限期：</br> <b>宽限期</b>：客户端离线后，如果在这段时间内没有重新上线，就会发送离线通知</br> <b>冷却时间</b>：同一客户端的离线通知在冷却时间内不会重复发送",
       "title": "离线通知"
     },
     "title": "通知"
@@ -412,10 +396,6 @@
     "title": "会话管理"
   },
   "settings": {
-    "api": {
-      "description": "使用API密钥可以访问并操作所有资源，包括不限于远程控制、修改设置和账号密码等，请谨慎保管。留空表示取消API密钥功能。",
-      "title": "API密钥"
-    },
     "general": {
       "title": "通用"
     },
@@ -445,9 +425,6 @@
       },
       "enable": "开启通知",
       "enable_description": "通过首选方式获取及时通知。",
-      "Javascript": {
-        "script": "JavaScript 代码"
-      },
       "method": "通知渠道",
       "method_description": "选择您偏好的通知平台",
       "provider_fetch_failed": "加载通知渠道信息失败",
@@ -462,16 +439,10 @@
       },
       "template": "消息通知模板",
       "template_description": "Komari 将按照消息通知模板发送通知",
-      "test_description": "发送测试消息",
-      "test_title": "发送测试消息",
       "title": "通知"
     },
     "settings_save_failed": "保存设置失败",
     "settings_saved": "设置已保存",
-    "sign_on": {
-      "disable_password": "禁止密码登录",
-      "title": "登录"
-    },
     "site": {
       "cors_allowed_origins": "API CORS 允许列表",
       "cors_origin_check_enabled": "CORS 跨域请求校验",
@@ -484,18 +455,7 @@
       "ws_allowed_origins": "WebSocket Origin 允许列表",
       "ws_origin_check_enabled": "WebSocket Origin 校验"
     },
-    "title": "设置",
-    "update_1_2_7": {
-      "before": "移除这个时间之前的数据",
-      "cleanup": "迁移前清理",
-      "example": "示例：{{example}}",
-      "overview": "待迁移数据",
-      "request_failed": "请求失败，请检查服务日志。",
-      "rows": "条",
-      "start": "开始升级",
-      "target": "目标数据库",
-      "title": "监控数据库升级"
-    }
+    "title": "设置"
   },
   "status_settings": "状态显示设置",
   "system": {

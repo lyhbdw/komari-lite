@@ -178,7 +178,7 @@ export function setStoredFinanceCurrency(currency: CurrencyCode): void {
   sharedFinanceCurrency.value = currency
 }
 
-export interface NodePremiumInfo {
+interface NodePremiumInfo {
   amount: number
   currency: CurrencyCode
   symbol: string

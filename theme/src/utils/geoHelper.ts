@@ -1,7 +1,7 @@
 import { emojiToRegionMap } from '@/utils/regionHelper'
 
 /** 国家/地区 ISO 代码 → [lat, lng] */
-export const COORD_MAP: Record<string, [number, number]> = {
+const COORD_MAP: Record<string, [number, number]> = {
   CN: [35.8617, 104.1954],
   HK: [22.3193, 114.1694],
   MO: [22.1987, 113.5439],

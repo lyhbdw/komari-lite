@@ -274,7 +274,7 @@ export interface RpcWebSocketErrorInfo {
 }
 
 /** JSON-RPC 2.0 客户端 */
-export class RpcClient {
+class RpcClient {
   private baseUrl: string
   private timeout: number
   private useWebSocket: boolean

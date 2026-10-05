@@ -70,7 +70,7 @@ export interface ApiClientOptions {
 }
 
 /** API 错误 */
-export class ApiError extends Error {
+class ApiError extends Error {
   status: string
   code?: number
 
@@ -85,7 +85,7 @@ export class ApiError extends Error {
 // ==================== API 客户端 ====================
 
 /** Komari API 客户端 */
-export class KomariApi {
+class KomariApi {
   private baseUrl: string
   private timeout: number
 

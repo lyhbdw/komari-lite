@@ -2,6 +2,7 @@ package geoip_test
 
 import (
 	"net"
+	"path/filepath"
 	"testing"
 
 	"github.com/Tumb1er1376/komari-monitor-lite/utils/geoip"
@@ -9,6 +10,9 @@ import (
 
 // 测试GeoIP数据库的初始化和更新功能
 func TestMmdb(t *testing.T) {
+	orig := geoip.GeoIpFilePath
+	geoip.GeoIpFilePath = filepath.Join(t.TempDir(), "GeoLite2-Country.mmdb")
+	defer func() { geoip.GeoIpFilePath = orig }()
 	geoip.CurrentProvider, _ = geoip.NewMaxMindGeoIPService()
 	testIpAddr(t)
 }

@@ -95,7 +95,7 @@ function isFreeNode(node: NodeDetail): boolean {
   return FREE_NODE_REGEX.test(tags);
 }
 
-export interface NodePremiumInfo {
+interface NodePremiumInfo {
   amount: number;
   currency: CurrencyCode;
   symbol: string;
