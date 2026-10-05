@@ -149,8 +149,18 @@
   --default-font-family: var(--font-sans);
 }
 
-.radix-themes {
+:root,
+.radix-themes,
+[data-radix-portal],
+[data-radix-popper-content-wrapper],
+.km-page-admin,
+.rt-Theme {
   --default-font-family: var(--font-sans) !important;
+  --heading-font-family: var(--font-sans) !important;
+  --code-font-family: var(--font-mono) !important;
+  --strong-font-family: var(--font-sans) !important;
+  --em-font-family: var(--font-sans) !important;
+  --quote-font-family: var(--font-sans) !important;
   font-family: var(--font-sans) !important;
 }
 
@@ -239,11 +249,29 @@
   body {
     @apply bg-background text-foreground antialiased;
     font-family: var(--font-sans);
-    letter-spacing: -0.011em;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
     font-feature-settings:
       'tnum' 1,
       'lnum' 1;
     font-variant-numeric: tabular-nums lining-nums;
+  }
+  input,
+  button,
+  select,
+  textarea,
+  optgroup,
+  table,
+  th,
+  td {
+    font-family: inherit;
+  }
+  code,
+  kbd,
+  samp,
+  pre,
+  .font-mono {
+    font-family: var(--font-mono) !important;
   }
 }
 
@@ -551,7 +579,6 @@ body, * {
 .rt-DialogTitle {
   font-size: 0.9375rem !important;
   font-weight: 600 !important;
-  letter-spacing: -0.015em !important;
   margin-bottom: 0.75rem !important;
   color: var(--foreground) !important;
 }

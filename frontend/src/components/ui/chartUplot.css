@@ -70,7 +70,7 @@
 .km-chart-tooltip-value {
   margin-left: auto;
   color: var(--foreground);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-family: var(--font-mono);
   font-weight: 500;
   font-variant-numeric: tabular-nums;
 }
