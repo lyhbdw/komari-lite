@@ -15,9 +15,7 @@ export default function SiteSettings() {
   const [scriptDomain, setScriptDomain] = useState("");
 
   // 安全配置
-  const [corsEnabled, setCorsEnabled] = useState(true);
   const [corsOrigins, setCorsOrigins] = useState("");
-  const [wsEnabled, setWsEnabled] = useState(true);
   const [wsOrigins, setWsOrigins] = useState("");
   const [ssrfEnabled, setSsrfEnabled] = useState(false);
 
@@ -30,9 +28,7 @@ export default function SiteSettings() {
       setDescription(settings.description || "");
       setScriptDomain(settings.script_domain || "");
 
-      setCorsEnabled(settings.cors_origin_check_enabled ?? true);
       setCorsOrigins(settings.cors_allowed_origins || "");
-      setWsEnabled(settings.ws_origin_check_enabled ?? true);
       setWsOrigins(settings.ws_allowed_origins || "");
       setSsrfEnabled(settings.ssrf_protection_enabled ?? false);
     }
@@ -60,9 +56,7 @@ export default function SiteSettings() {
     setSavingSecurity(true);
     try {
       const payload = {
-        cors_origin_check_enabled: corsEnabled,
         cors_allowed_origins: corsOrigins,
-        ws_origin_check_enabled: wsEnabled,
         ws_allowed_origins: wsOrigins,
         ssrf_protection_enabled: ssrfEnabled,
       };
@@ -201,35 +195,32 @@ export default function SiteSettings() {
         <div className="space-y-2">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div>
-              <span className="text-xs font-medium text-foreground block">
-                {t("settings.site.cors_origin_check_enabled", "CORS 跨域请求校验")}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-medium text-foreground block">
+                  {t("settings.site.cors_origin_check", "API CORS 跨域请求校验")}
+                </span>
+                <span className="px-1.5 py-0.2 text-[10px] font-mono rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                  内置强制开启
+                </span>
+              </div>
               <p className="text-[11px] text-muted-foreground mt-0.5">
-                开启后，API 接口只允许同源或下方白名单中的域名跨域调用。
+                系统安全机制强制启用，API 接口只允许同源或下方白名单中的域名跨域调用。
               </p>
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <span className="text-xs text-muted-foreground">
-                {corsEnabled ? "已开启" : "已停用"}
-              </span>
-              <Switch checked={corsEnabled} onCheckedChange={setCorsEnabled} />
             </div>
           </div>
 
-          {corsEnabled && (
-            <div className="pt-1">
-              <label className="text-[11px] text-muted-foreground block mb-1 font-mono">
-                API CORS 允许列表（每行或逗号分隔）：
-              </label>
-              <textarea
-                value={corsOrigins}
-                onChange={(e) => setCorsOrigins(e.target.value)}
-                rows={2}
-                placeholder="https://example.com"
-                className="w-full p-2 text-xs rounded-lg border border-border bg-background text-foreground outline-none focus:border-foreground/50 shadow-2xs font-mono resize-none"
-              />
-            </div>
-          )}
+          <div className="pt-1">
+            <label className="text-[11px] text-muted-foreground block mb-1 font-mono">
+              API CORS 允许列表（每行或逗号分隔）：
+            </label>
+            <textarea
+              value={corsOrigins}
+              onChange={(e) => setCorsOrigins(e.target.value)}
+              rows={2}
+              placeholder="https://example.com"
+              className="w-full p-2 text-xs rounded-lg border border-border bg-background text-foreground outline-none focus:border-foreground/50 shadow-2xs font-mono resize-none"
+            />
+          </div>
         </div>
 
         <div className="h-px bg-border/40" />
@@ -238,35 +229,32 @@ export default function SiteSettings() {
         <div className="space-y-2">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div>
-              <span className="text-xs font-medium text-foreground block">
-                {t("settings.site.ws_origin_check_enabled", "WebSocket Origin 握手校验")}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-medium text-foreground block">
+                  {t("settings.site.ws_origin_check", "WebSocket Origin 握手校验")}
+                </span>
+                <span className="px-1.5 py-0.2 text-[10px] font-mono rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                  内置强制开启
+                </span>
+              </div>
               <p className="text-[11px] text-muted-foreground mt-0.5">
-                开启后，实时数据 WebSocket 连接仅允许白名单来源建立长连接。
+                系统安全机制强制启用，实时 WebSocket 连接仅允许同源或下方白名单来源建立长连接。
               </p>
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <span className="text-xs text-muted-foreground">
-                {wsEnabled ? "已开启" : "已停用"}
-              </span>
-              <Switch checked={wsEnabled} onCheckedChange={setWsEnabled} />
             </div>
           </div>
 
-          {wsEnabled && (
-            <div className="pt-1">
-              <label className="text-[11px] text-muted-foreground block mb-1 font-mono">
-                WebSocket 允许列表（每行或逗号分隔）：
-              </label>
-              <textarea
-                value={wsOrigins}
-                onChange={(e) => setWsOrigins(e.target.value)}
-                rows={2}
-                placeholder="https://example.com"
-                className="w-full p-2 text-xs rounded-lg border border-border bg-background text-foreground outline-none focus:border-foreground/50 shadow-2xs font-mono resize-none"
-              />
-            </div>
-          )}
+          <div className="pt-1">
+            <label className="text-[11px] text-muted-foreground block mb-1 font-mono">
+              WebSocket 允许列表（每行或逗号分隔）：
+            </label>
+            <textarea
+              value={wsOrigins}
+              onChange={(e) => setWsOrigins(e.target.value)}
+              rows={2}
+              placeholder="https://example.com"
+              className="w-full p-2 text-xs rounded-lg border border-border bg-background text-foreground outline-none focus:border-foreground/50 shadow-2xs font-mono resize-none"
+            />
+          </div>
         </div>
       </div>
     </div>

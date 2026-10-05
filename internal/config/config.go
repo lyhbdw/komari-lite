@@ -618,9 +618,7 @@ type Settings struct {
 	ID                     uint   `json:"id,omitempty"`                                        // 1
 	Sitename               string `json:"sitename" default:"Komari"`                           // 站点名称，默认 "Komari"
 	Description            string `json:"description" default:"A simple server monitor tool."` // 站点描述
-	CorsOriginCheckEnabled bool   `json:"cors_origin_check_enabled" default:"true"`            // 是否启用 API CORS 跨域请求校验，默认 true
 	CorsAllowedOrigins     string `json:"cors_allowed_origins" default:""`                     // API 跨域允许列表
-	WsOriginCheckEnabled   bool   `json:"ws_origin_check_enabled" default:"true"`              // 是否校验 WebSocket Origin
 	WsAllowedOrigins       string `json:"ws_allowed_origins" default:""`                       // WebSocket Origin 允许列表
 	Theme                  string `json:"theme" default:"Lite"`                                // 主题名称，默认 Lite
 	// GeoIP 配置
@@ -649,9 +647,7 @@ type Settings struct {
 const (
 	SitenameKey               = "sitename"
 	DescriptionKey            = "description"
-	CorsOriginCheckEnabledKey = "cors_origin_check_enabled"
 	CorsAllowedOriginsKey     = "cors_allowed_origins"
-	WsOriginCheckEnabledKey   = "ws_origin_check_enabled"
 	WsAllowedOriginsKey       = "ws_allowed_origins"
 	ThemeKey                  = "theme"
 	GeoIpEnabledKey           = "geo_ip_enabled"

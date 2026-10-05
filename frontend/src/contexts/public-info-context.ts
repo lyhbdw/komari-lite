@@ -1,7 +1,6 @@
 import React from "react";
 
 export interface PublicInfo {
-  cors_origin_check_enabled: boolean;
   description: string;
   disable_password_login: boolean;
   metric_retention_days: number;

@@ -8,7 +8,6 @@ import { toast } from "sonner";
 export interface SettingsResponse {
   sitename: string;
   description: string;
-  cors_origin_check_enabled: boolean;
   geo_ip_enabled: boolean;
   geo_ip_provider: string;
   ssrf_protection_enabled: boolean;
@@ -134,7 +133,6 @@ export function useSettings() {
   const [settings, setSettings] = React.useState<SettingsResponse>({
     sitename: "",
     description: "",
-    cors_origin_check_enabled: true,
     geo_ip_enabled: false,
     geo_ip_provider: "",
     ssrf_protection_enabled: false,

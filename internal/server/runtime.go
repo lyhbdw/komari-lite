@@ -120,7 +120,7 @@ func (a *App) BuildRouter() error {
 		return fmt.Errorf("set trusted proxies: %w", err)
 	}
 	r.Use(logger.GinLogger(), logger.GinRecovery())
-	cors := security.NewCorsController(a.settings.CorsOriginCheckEnabled, a.settings.CorsAllowedOrigins)
+	cors := security.NewCorsController(a.settings.CorsAllowedOrigins)
 	r.Use(cors.Middleware(), api.IdentityMiddleware(), noStoreAPIResponses())
 
 	router.Register(r)

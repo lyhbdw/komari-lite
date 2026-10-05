@@ -445,7 +445,7 @@
     "settings_saved": "设置已保存",
     "site": {
       "cors_allowed_origins": "API CORS 允许列表",
-      "cors_origin_check_enabled": "CORS 跨域请求校验",
+      "cors_origin_check": "API CORS 跨域请求校验",
       "custom": "自定义",
       "description": "站点描述",
       "name": "站点名称",
@@ -453,7 +453,7 @@
       "ssrf_protection_enabled": "启用 SSRF 防护",
       "title": "站点",
       "ws_allowed_origins": "WebSocket Origin 允许列表",
-      "ws_origin_check_enabled": "WebSocket Origin 校验"
+      "ws_origin_check": "WebSocket Origin 握手校验"
     },
     "title": "设置"
   },

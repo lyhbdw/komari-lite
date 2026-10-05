@@ -55,13 +55,6 @@ func checkWebSocketOriginForContext(c *gin.Context, r *http.Request) bool {
 		return true
 	}
 	origin := r.Header.Get("Origin")
-	enabled, err := config.GetAs[bool](config.WsOriginCheckEnabledKey, true)
-	if err != nil {
-		enabled = true
-	}
-	if !enabled {
-		return true
-	}
 	if origin == "" {
 		return false
 	}

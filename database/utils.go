@@ -93,8 +93,8 @@ func GetPublicInfo() (map[string]interface{}, error) {
 		"description": cst.Description,
 
 		"disable_password_login":    cst.DisablePasswordLogin,
-		"cors_origin_check_enabled": cst.CorsOriginCheckEnabled,
-		"record_enabled":            retention.AllPositive, // 兼容旧版本主题
+		"cors_origin_check_enabled": true,
+		"record_enabled":            true,
 		"record_preserve_time":      retention.MaxDays * 24,
 		"ping_record_preserve_time": retention.MaxDays * 24,
 		"theme":                     cst.Theme,
