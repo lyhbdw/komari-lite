@@ -300,14 +300,6 @@ body, * {
   scrollbar-color: color-mix(in srgb, var(--muted-foreground) 25%, transparent) transparent;
 }
 
-/* Shared menu and overlay styling. */
-
-.km-ui-dropdown-content,
-.km-ui-dropdown-content ~ *,
-.z-\[100000\] {
-  z-index: 100000;
-}
-
 [data-km-toaster-portal] {
   position: fixed !important;
   inset: 0 !important;

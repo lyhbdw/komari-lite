@@ -45,11 +45,6 @@ type ReportParams struct {
 	AckEventIDs []string `json:"ack_event_ids,omitempty"`
 }
 
-type IPAddress struct {
-	Ipv4 string `json:"ipv4"`
-	Ipv6 string `json:"ipv6"`
-}
-
 type Report struct {
 	UUID        string            `json:"uuid,omitempty"`
 	CPU         CPUReport         `json:"cpu"`

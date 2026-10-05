@@ -13,7 +13,6 @@ const (
 	// window. Samples older than one minute are losslessly byte-encoded;
 	// older history is served by the persisted rollup ladder.
 	DefaultRollupRawRetention = 10 * time.Minute
-	DefaultRollupFinestTier   = time.Minute
 	defaultRollupPointLimit   = 600
 
 	defaultRollupMinuteRetentionMinutes     = defaultRollupPointLimit
@@ -42,19 +41,6 @@ type MetricStoreConfig struct {
 	// (terminal tier). 0 means unset and falls back to the default.
 	RollupDayRetentionDays int `json:"metric_rollup_day_retention_days" default:"730"`
 }
-
-// MetricStoreConfigKeys 配置键
-const (
-	MetricDBDriverKey                         = "metric_db_driver"
-	MetricDBDSNKey                            = "metric_db_dsn"
-	MetricTablePrefixKey                      = "metric_table_prefix"
-	MetricMaxOpenConnsKey                     = "metric_max_open_conns"
-	MetricMaxIdleConnsKey                     = "metric_max_idle_conns"
-	MetricRollupMinuteRetentionMinutesKey     = "metric_rollup_minute_retention_minutes"
-	MetricRollupFiveMinuteRetentionMinutesKey = "metric_rollup_five_minute_retention_minutes"
-	MetricRollupHourRetentionHoursKey         = "metric_rollup_hour_retention_hours"
-	MetricRollupDayRetentionDaysKey           = "metric_rollup_day_retention_days"
-)
 
 func buildMetricConfig(cfg *MetricStoreConfig, autoMigrate bool) (metric.Config, error) {
 	if cfg == nil {

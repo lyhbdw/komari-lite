@@ -140,23 +140,6 @@ export interface Client {
   updated_at: string
 }
 
-/** 公开站点信息 */
-export interface PublicInfo {
-  allow_cors: boolean
-  custom_body: string
-  custom_head: string
-  description: string
-  disable_password_login: boolean
-  oauth_enable: boolean
-  oauth_provider: string
-  ping_record_preserve_time: number
-  record_enabled: boolean
-  record_preserve_time: number
-  sitename: string
-  theme: string
-  theme_settings: Record<string, unknown>
-}
-
 /** 版本信息 */
 export interface VersionInfo {
   version: string

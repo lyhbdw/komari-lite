@@ -54,13 +54,6 @@ export interface PingRecord {
   value: number
 }
 
-/** Ping 任务信息 */
-export interface PingTask {
-  id: number
-  interval: number
-  name: string
-  loss: number
-}
 /** API 客户端配置 */
 export interface ApiClientOptions {
   /** 基础路径，默认 '/api' */

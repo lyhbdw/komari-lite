@@ -14,7 +14,6 @@ import type { LiveData } from "../types/LiveData";
 import { NodeGrid } from "./Node";
 const NodeTable = React.lazy(() => import("./NodeTable"));
 import { isRegionMatch } from "@/utils/regionHelper";
-import "./NodeDisplay.css";
 
 type ViewMode = "grid" | "table";
 
@@ -139,7 +138,7 @@ const NodeDisplay: React.FC<NodeDisplayProps> = ({ nodes, liveData }) => {
             <IconButton
               variant="ghost"
               size="1"
-              className="absolute right-2 h-6 w-6 search-clear-button"
+              className="absolute right-2 h-6 w-6 opacity-60 hover:opacity-100 transition-opacity cursor-pointer"
               onClick={() => {
                 setSearchTerm("");
                 searchRef.current?.focus();
@@ -161,14 +160,14 @@ const NodeDisplay: React.FC<NodeDisplayProps> = ({ nodes, liveData }) => {
             <IconButton
               variant={viewMode === "grid" ? "solid" : "soft"}
               onClick={() => setViewMode("grid")}
-              className="transition-colors view-switch-button"
+              className="transition-all duration-200 cursor-pointer"
             >
               <Grid3X3 size={16} />
             </IconButton>
             <IconButton
               variant={viewMode === "table" ? "solid" : "soft"}
               onClick={() => setViewMode("table")}
-              className="transition-colors view-switch-button"
+              className="transition-all duration-200 cursor-pointer"
             >
               <Table2 size={16} />
             </IconButton>
