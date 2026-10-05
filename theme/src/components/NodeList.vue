@@ -32,9 +32,6 @@ const emit = defineEmits<{
   pingClick: [node: NodeData]
 }>()
 
-const rowStaggerMs = 35
-const rowStaggerLimit = 12
-
 const appStore = useAppStore()
 const { pickSurfaceClass } = useBackgroundSurface()
 const { formatBytes, formatBytesPerSecond, formatUptime } = useNodeFormatters()
@@ -132,12 +129,6 @@ function openPingDialog(node: NodeData) {
 function getRowTransitionKey(node: NodeData): string {
   return props.transitionKey ? `${props.transitionKey}-${node.uuid}` : node.uuid
 }
-
-function getRowTransitionStyle(index: number): Record<string, string> {
-  return {
-    '--node-row-delay': `${Math.min(index, rowStaggerLimit) * rowStaggerMs}ms`,
-  }
-}
 </script>
 
 <template>
@@ -187,7 +178,6 @@ function getRowTransitionStyle(index: number): Record<string, string> {
             !node.online && '!border-destructive/30',
             index % 2 === 1 ? 'bg-muted/25 dark:bg-muted/15' : 'bg-card',
           ]"
-          :style="getRowTransitionStyle(index)"
           @click="handleClick(node)"
         >
           <div class="grid gap-2 items-center" :style="gridStyle">
@@ -399,29 +389,22 @@ function getRowTransitionStyle(index: number): Record<string, string> {
 .node-row-switch-enter-active,
 .node-row-switch-leave-active {
   transition:
-    opacity 170ms ease,
-    transform 210ms cubic-bezier(0.22, 1, 0.36, 1),
-    filter 170ms ease;
-}
-
-.node-row-switch-enter-active {
-  transition-delay: var(--node-row-delay, 0ms);
+    opacity 150ms ease,
+    transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .node-row-switch-move {
-  transition: transform 210ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .node-row-switch-enter-from {
   opacity: 0;
-  transform: translateY(8px);
-  filter: blur(3px);
+  transform: translateY(6px);
 }
 
 .node-row-switch-leave-to {
   opacity: 0;
-  transform: translateY(-5px);
-  filter: blur(2px);
+  transform: translateY(-4px);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -429,14 +412,12 @@ function getRowTransitionStyle(index: number): Record<string, string> {
   .node-row-switch-leave-active,
   .node-row-switch-move {
     transition: none;
-    transition-delay: 0ms;
   }
 
   .node-row-switch-enter-from,
   .node-row-switch-leave-to {
     opacity: 1;
     transform: none;
-    filter: none;
   }
 }
 </style>

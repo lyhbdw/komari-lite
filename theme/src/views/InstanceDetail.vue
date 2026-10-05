@@ -271,37 +271,11 @@ const trafficProgressStyle = computed(() => ({
         </Badge>
       </div>
 
-      <div class="px-4 grid gap-3" :class="metricCards.length <= 3 ? 'grid-cols-1 sm:grid-cols-3' : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-5'">
-        <CardX
-          v-for="item in metricCards" :key="item.label" hoverable size="small"
-          class="group h-full border border-border/80 bg-card transition-all rounded-md"
-          :class="item.cardBorderHoverClass || 'hover:border-foreground/30'"
-          content-class="h-full !p-3"
-        >
-          <div class="flex h-full min-h-10 md:min-h-18 flex-col justify-between gap-3">
-            <div class="flex items-center justify-between gap-2">
-              <span class="text-xs font-medium tracking-wider text-muted-foreground">{{ item.label }}</span>
-              <Icon
-                :icon="item.icon" :width="20" :height="20"
-                class="transition-colors"
-                :class="item.iconClass || 'text-slate-500/25 group-hover:text-slate-500'"
-              />
-            </div>
-            <div class="min-w-0 space-y-1">
-              <div
-                class="flex min-w-0 items-baseline gap-1 truncate font-semibold leading-none font-mono tabular-nums"
-                :class="item.valueClass"
-              >
-                <span class="truncate text-base sm:text-2xl">{{ item.value }}</span>
-                <span v-if="item.unit" class="shrink-0 text-[11px] font-medium text-muted-foreground sm:text-xs">
-                  {{ item.unit }}
-                </span>
-              </div>
-            </div>
-          </div>
-        </CardX>
-      </div>
+      <!-- 实时监控与负载图表前置 -->
+      <LoadChart :uuid="data.uuid" class="px-4" />
+      <PingChart :uuid="data.uuid" class="px-4" />
 
+      <!-- 硬件与系统信息网格 -->
       <div class="px-4 gap-4 grid grid-cols-1 lg:grid-cols-2">
         <CardX
           title="硬件信息" size="small"
@@ -417,8 +391,39 @@ const trafficProgressStyle = computed(() => ({
         </CardX>
       </div>
 
-      <LoadChart :uuid="data.uuid" class="px-4" />
-      <PingChart :uuid="data.uuid" class="px-4" />
+      <!-- 财务与计费属性后置 -->
+      <div v-if="metricCards.length > 0" class="px-4">
+        <div class="grid gap-3" :class="metricCards.length <= 3 ? 'grid-cols-1 sm:grid-cols-3' : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-5'">
+          <CardX
+            v-for="item in metricCards" :key="item.label" hoverable size="small"
+            class="group h-full border border-border/80 bg-card transition-all rounded-md"
+            :class="item.cardBorderHoverClass || 'hover:border-foreground/30'"
+            content-class="h-full !p-3"
+          >
+            <div class="flex h-full min-h-10 md:min-h-18 flex-col justify-between gap-3">
+              <div class="flex items-center justify-between gap-2">
+                <span class="text-xs font-medium tracking-wider text-muted-foreground">{{ item.label }}</span>
+                <Icon
+                  :icon="item.icon" :width="20" :height="20"
+                  class="transition-colors"
+                  :class="item.iconClass || 'text-slate-500/25 group-hover:text-slate-500'"
+                />
+              </div>
+              <div class="min-w-0 space-y-1">
+                <div
+                  class="flex min-w-0 items-baseline gap-1 truncate font-semibold leading-none font-mono tabular-nums"
+                  :class="item.valueClass"
+                >
+                  <span class="truncate text-base sm:text-2xl">{{ item.value }}</span>
+                  <span v-if="item.unit" class="shrink-0 text-[11px] font-medium text-muted-foreground sm:text-xs">
+                    {{ item.unit }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </CardX>
+        </div>
+      </div>
     </template>
   </div>
 </template>

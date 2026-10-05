@@ -22,9 +22,6 @@ const NodeGeneralCards = defineAsyncComponent(() => import('@/components/NodeGen
 const NodeList = defineAsyncComponent(() => import('@/components/NodeList.vue'))
 const PingChart = defineAsyncComponent(() => import('@/components/PingChart.vue'))
 
-const nodeItemStaggerMs = 35
-const nodeItemStaggerLimit = 12
-
 const appStore = useAppStore()
 const { pickSurfaceClass } = useBackgroundSurface()
 const nodesStore = useNodesStore()
@@ -131,12 +128,6 @@ function handlePingClick(node: NodeData) {
 function getNodeItemTransitionKey(node: typeof nodesStore.nodes[number]): string {
   return `${appStore.nodeSelectedGroup}-${node.uuid}`
 }
-
-function getNodeItemTransitionStyle(index: number): Record<string, string> {
-  return {
-    '--node-item-delay': `${Math.min(index, nodeItemStaggerLimit) * nodeItemStaggerMs}ms`,
-  }
-}
 </script>
 
 <template>
@@ -158,11 +149,11 @@ function getNodeItemTransitionStyle(index: number): Record<string, string> {
       :transition-key="appStore.nodeSelectedGroup"
     />
 
-    <div class="node-info p-4 pt-0 flex flex-col gap-4 relative z-1 md:pointer-events-none" :class="appStore.earthViewMode === 'hide' && 'pt-4'">
+    <div class="node-info p-4 pt-0 flex flex-col gap-4 relative z-1" :class="appStore.earthViewMode === 'hide' && 'pt-4'">
       <div class="nodes">
-        <Tabs v-model="appStore.nodeSelectedGroup" class="w-full flex-col gap-4">
-          <div class="flex gap-2 items-start flex-nowrap">
-            <div class="overflow-x-auto rounded-md md:pointer-events-auto">
+        <Tabs v-model="appStore.nodeSelectedGroup" class="w-full flex-col gap-3">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+            <div class="overflow-x-auto no-scrollbar py-0.5">
               <TabsList class="w-max h-8 p-0.5 bg-muted/80 dark:bg-muted/60 border border-border/60 rounded-md">
                 <TabsTrigger
                   v-for="g in groups" :key="g.name" :value="g.name"
@@ -172,7 +163,7 @@ function getNodeItemTransitionStyle(index: number): Record<string, string> {
                 </TabsTrigger>
               </TabsList>
             </div>
-            <div class="ml-auto search flex gap-2 items-center pointer-events-auto">
+            <div class="flex items-center gap-2 self-end sm:self-auto shrink-0">
               <div class="flex items-center p-0.5 bg-muted/80 dark:bg-muted/60 border border-border/60 rounded-md h-8">
                 <button
                   type="button"
@@ -193,10 +184,10 @@ function getNodeItemTransitionStyle(index: number): Record<string, string> {
                   <Icon icon="tabler:table" :width="14" :height="14" />
                 </button>
               </div>
-              <div class="relative z-1">
+              <div class="relative">
                 <Input
                   v-model="searchText" placeholder="搜索节点、地区、系统..."
-                  class="h-8 w-36 sm:w-48 pl-7.5 pr-2.5 rounded-md border border-border/60 bg-muted/80 dark:bg-muted/60 shadow-none text-xs transition-all placeholder:text-muted-foreground/70 focus:w-56 sm:focus:w-60 focus:bg-card focus:border-border focus:ring-1 focus:ring-foreground/20"
+                  class="h-8 w-44 sm:w-48 pl-7.5 pr-2.5 rounded-md border border-border/60 bg-muted/80 dark:bg-muted/60 shadow-none text-xs transition-all placeholder:text-muted-foreground/70 focus:w-52 sm:focus:w-56 focus:bg-card focus:border-border focus:ring-1 focus:ring-foreground/20"
                 />
                 <Icon
                   icon="tabler:search" :width="14" :height="14"
@@ -205,20 +196,18 @@ function getNodeItemTransitionStyle(index: number): Record<string, string> {
               </div>
             </div>
           </div>
-          <TabsContent :key="appStore.nodeSelectedGroup" :value="appStore.nodeSelectedGroup" class="pointer-events-auto">
+          <TabsContent :key="appStore.nodeSelectedGroup" :value="appStore.nodeSelectedGroup">
             <TransitionGroup
               v-if="nodeList.length !== 0 && appStore.nodeViewMode === 'card'"
               :appear="false"
-              :css="false"
               name="node-card-switch"
               tag="div"
               class="gap-3 grid grid-cols-1 sm:grid-cols-[repeat(auto-fill,minmax(300px,1fr))]"
             >
               <div
-                v-for="(node, index) in nodeList"
+                v-for="node in nodeList"
                 :key="getNodeItemTransitionKey(node)"
                 class="min-w-0"
-                :style="getNodeItemTransitionStyle(index)"
               >
                 <NodeCard :node="node" @click="handleNodeClick(node)" @ping-click="handlePingClick" />
               </div>
@@ -260,29 +249,22 @@ function getNodeItemTransitionStyle(index: number): Record<string, string> {
 .node-card-switch-enter-active,
 .node-card-switch-leave-active {
   transition:
-    opacity 180ms ease,
-    transform 220ms cubic-bezier(0.22, 1, 0.36, 1),
-    filter 180ms ease;
-}
-
-.node-card-switch-enter-active {
-  transition-delay: var(--node-item-delay, 0ms);
+    opacity 150ms ease,
+    transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .node-card-switch-move {
-  transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .node-card-switch-enter-from {
   opacity: 0;
-  transform: translateY(10px) scale(0.985);
-  filter: blur(3px);
+  transform: translateY(6px);
 }
 
 .node-card-switch-leave-to {
   opacity: 0;
-  transform: translateY(-6px) scale(0.99);
-  filter: blur(2px);
+  transform: translateY(-4px);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -290,14 +272,12 @@ function getNodeItemTransitionStyle(index: number): Record<string, string> {
   .node-card-switch-leave-active,
   .node-card-switch-move {
     transition: none;
-    transition-delay: 0ms;
   }
 
   .node-card-switch-enter-from,
   .node-card-switch-leave-to {
     opacity: 1;
     transform: none;
-    filter: none;
   }
 }
 </style>
