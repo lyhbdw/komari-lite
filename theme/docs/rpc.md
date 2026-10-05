@@ -326,13 +326,10 @@ rpc.close()
 ## 单例管理
 
 ```typescript
-import { getSharedRpc, resetSharedRpc } from '@/utils/rpc'
+import { getSharedRpc } from '@/utils/rpc'
 
 // 获取共享实例
 const rpc = getSharedRpc()
-
-// 重置共享实例（关闭连接并清除）
-resetSharedRpc()
 ```
 
 ## 最佳实践

@@ -258,12 +258,5 @@ export function getSharedApi(options?: ApiClientOptions): KomariApi {
   return sharedApiInstance
 }
 
-/**
- * 重置共享实例
- */
-export function resetSharedApi(): void {
-  sharedApiInstance = null
-}
-
 // 默认导出
 export default KomariApi

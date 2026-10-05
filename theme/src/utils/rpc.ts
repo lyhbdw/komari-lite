@@ -729,13 +729,3 @@ export function getSharedRpc(): KomariRpc {
   }
   return sharedRpc
 }
-
-/**
- * 重置共享实例
- */
-export function resetSharedRpc(): void {
-  if (sharedRpc) {
-    sharedRpc.close()
-    sharedRpc = null
-  }
-}
