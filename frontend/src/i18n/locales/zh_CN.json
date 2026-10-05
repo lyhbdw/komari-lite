@@ -423,23 +423,25 @@
         "use_ssl": "启用 SSL",
         "username": "用户名"
       },
-      "enable": "开启通知",
-      "enable_description": "通过首选方式获取及时通知。",
+      "enable": "开启通知推送",
+      "enable_description": "全局控制所有节点的离线、到期与告警消息对外发送。",
       "method": "通知渠道",
-      "method_description": "选择您偏好的通知平台",
+      "method_description": "选择接收系统推送通知的目标通道。",
       "provider_fetch_failed": "加载通知渠道信息失败",
-      "provider_fields": "发送设置",
-      "provider_fields_description": "详细设置您选择的信息发送渠道",
-      "provider_settings_fetch_failed": "加载通知设置失败",
+      "provider_fields": "渠道参数设置",
+      "provider_fields_description": "配置所选通知渠道的访问凭证与接收端点。",
+      "provider_settings_fetch_failed": "加载渠道配置失败",
       "telegram": {
-        "bot_token": "Telegram Bot Token",
-        "chat_id": "Chat ID",
-        "endpoint": "请求端点",
-        "endpoint_help": "Telegram Bot API 的请求端点，通常为 `https://api.telegram.org/bot`"
+        "bot_token": "Bot Token (机器人密钥)",
+        "chat_id": "Chat ID (接收群组/用户 ID)",
+        "endpoint": "API 请求端点",
+        "endpoint_help": "Telegram Bot API 请求端点，默认 https://api.telegram.org/bot",
+        "message_thread_id": "话题 ID (Thread ID)",
+        "message_thread_id_help": "选填，超级群组（开启 Topics 话题）指定发送子话题"
       },
-      "template": "消息通知模板",
-      "template_description": "Komari 将按照消息通知模板发送通知",
-      "title": "通知"
+      "template": "通知排版模板",
+      "template_description": "支持使用 {{emoji}}、{{event}}、{{client}}、{{message}}、{{time}} 占位符自定义排版格式，留空恢复默认。",
+      "title": "通知渠道"
     },
     "settings_save_failed": "保存设置失败",
     "settings_saved": "设置已保存",

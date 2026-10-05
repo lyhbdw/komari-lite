@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import Loading from "@/components/loading";
 import React from "react";
 import { renderProviderInputs } from "@/utils/renderProviders";
-import { Send } from "lucide-react";
+import { Send, Bell } from "lucide-react";
 
 const NotificationSettings = () => {
   const { t } = useTranslation();
@@ -134,8 +134,8 @@ const NotificationSettings = () => {
   }
 
   return (
-    <div className="space-y-4 max-w-4xl">
-      {/* 1. 页面头部：紧凑标题与副文本 */}
+    <div className="space-y-4 max-w-4xl km-page-admin-notification-channels">
+      {/* 1. 统一精致页头 */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 pb-2 border-b border-border/40">
         <div>
           <div className="flex items-center gap-2">
@@ -149,18 +149,20 @@ const NotificationSettings = () => {
             )}
           </div>
           <p className="text-xs text-muted-foreground mt-0.5">
-            配置警报通道，在服务器离线或临期时及时推送消息通知。
+            配置消息推送渠道与连接凭证，接收服务器离线、临期与告警消息。
           </p>
         </div>
       </div>
 
-      {/* 2. 核心控制总卡片：启用总开关 + 渠道选择下拉框（合并为单卡片） */}
+      {/* 2. 核心控制总卡片：全局开关 + 渠道选择 */}
       <div className="rounded-xl border border-border/70 bg-card p-4 sm:p-5 shadow-2xs space-y-4">
+        {/* 全局开关 */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div>
             <div className="flex items-center gap-2">
+              <Bell size={16} className="text-muted-foreground" />
               <span className="text-sm font-semibold text-foreground">
-                {t("settings.notification.enable", "开启消息通知")}
+                {t("settings.notification.enable", "开启通知推送")}
               </span>
               <span
                 className={`w-2 h-2 rounded-full ${
@@ -169,7 +171,7 @@ const NotificationSettings = () => {
               />
             </div>
             <p className="text-xs text-muted-foreground mt-0.5">
-              {t("settings.notification.enable_description", "全局控制所有节点的警报与通知推送。")}
+              {t("settings.notification.enable_description", "全局控制所有节点的离线、到期与告警消息对外发送。")}
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -185,15 +187,16 @@ const NotificationSettings = () => {
           </div>
         </div>
 
-        <div className="h-px bg-border/50" />
+        <div className="h-px bg-border/40" />
 
+        {/* 渠道选择 */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div>
-            <span className="text-sm font-semibold text-foreground">
-              {t("settings.notification.method", "通知渠道")}
+            <span className="text-xs font-medium text-foreground block">
+              {t("settings.notification.method", "当前推送渠道")}
             </span>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              {t("settings.notification.method_description", "选择接收警报通知的目标平台。")}
+            <p className="text-[11px] text-muted-foreground mt-0.5">
+              {t("settings.notification.method_description", "选择接收系统推送通知的目标通道。")}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -205,7 +208,7 @@ const NotificationSettings = () => {
                 await updateSettingsWithToast({ notification_method: val }, t);
                 setCurrentMessageSender(val);
               }}
-              className="h-8 px-3 text-xs rounded-lg border border-border bg-background text-foreground outline-none focus:border-foreground/50 cursor-pointer shadow-2xs font-medium"
+              className="h-8 px-3 text-xs rounded-lg border border-border bg-background text-foreground outline-none focus:border-foreground/50 cursor-pointer shadow-2xs font-mono font-medium"
             >
               {messageList
                 .filter((sender) => sender !== "empty")
@@ -224,10 +227,10 @@ const NotificationSettings = () => {
         <div className="flex items-center justify-between pb-2 border-b border-border/40">
           <div>
             <h2 className="text-sm font-semibold text-foreground">
-              {t("settings.notification.provider_fields", "发送设置")}
+              {t("settings.notification.provider_fields", "渠道参数设置")}
             </h2>
             <p className="text-xs text-muted-foreground mt-0.5">
-              {t("settings.notification.provider_fields_description", "详细配置当前推送渠道的连接凭证与接收端点。")}
+              {t("settings.notification.provider_fields_description", "配置所选通知渠道的访问凭证与接收端点。")}
             </p>
           </div>
           <button
@@ -255,14 +258,15 @@ const NotificationSettings = () => {
             setProviderValues: setMessageValues,
             handleSave: handleMessageSave,
             t,
+            isSaving: messageLoading,
           })
         )}
       </div>
 
       {/* 4. 消息模板：折叠收纳的高级选项 */}
       <SettingCardCollapse
-        title={t("settings.notification.template", "消息通知模板")}
-        description={t("settings.notification.template_description", "自定义通知消息的格式与占位符（高级配置）。")}
+        title={t("settings.notification.template", "通知排版模板")}
+        description={t("settings.notification.template_description", "支持使用 {{emoji}}、{{event}}、{{client}}、{{message}}、{{time}} 占位符自定义排版格式，留空恢复默认。")}
         defaultOpen={false}
       >
         <div className="pt-2">
