@@ -21,7 +21,6 @@ export interface NodeData {
   ipv4?: string
   ipv6?: string
   region: string
-  remark?: string
   public_remark: string
   mem_total: number
   swap_total: number
@@ -37,7 +36,6 @@ export interface NodeData {
   expired_at: string
   group: string
   tags: string
-  hidden: boolean
   traffic_limit: number
   traffic_limit_type: TrafficLimitType
   created_at: string
@@ -146,7 +144,6 @@ const useNodesStore = defineStore('nodes', () => {
       ipv4: client.ipv4,
       ipv6: client.ipv6,
       region: client.region,
-      remark: client.remark,
       public_remark: client.public_remark,
       mem_total: client.mem_total,
       swap_total: client.swap_total,
@@ -162,7 +159,6 @@ const useNodesStore = defineStore('nodes', () => {
       expired_at: client.expired_at,
       group: client.group,
       tags: client.tags,
-      hidden: client.hidden,
       traffic_limit: client.traffic_limit,
       traffic_limit_type: client.traffic_limit_type as TrafficLimitType,
       created_at: client.created_at,
