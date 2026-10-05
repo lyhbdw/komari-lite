@@ -1,4 +1,3 @@
-import { Cross1Icon, ExitIcon } from "@radix-ui/react-icons";
 import {
   Flex,
   IconButton,
@@ -12,14 +11,13 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import menuConfig from "../../config/menuConfig.json";
 import type { MenuItem } from "../../types/menu";
 import { iconMap } from "../../utils/iconHelper";
-import { TablerMenu2 } from "../Icones/Tabler";
 import LoginDialog from "../Login";
 import InlineSvgIcon from "../InlineSvgIcon";
 import { useAccount } from "@/contexts/useAccount";
 import { usePublicInfo } from "@/contexts/usePublicInfo";
 import { useRPC2Call } from "@/contexts/useRPC2";
 import { useThemeMode } from "@/hooks/useSystemTheme";
-import { Moon, Sun, SunMedium } from "lucide-react";
+import { Moon, Sun, SunMedium, LogOut, X, Menu } from "lucide-react";
 
 // 将JSON配置转换为类型安全的菜单项数组 (基础静态菜单)
 const baseMenuItems = (menuConfig as { menu: MenuItem[] }).menu;
@@ -194,10 +192,10 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
             className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
             style={{
               display: isMobile && sidebarOpen ? "none" : "flex",
-            }}
-          >
-            <TablerMenu2 />
-          </IconButton>
+              }}
+              >
+              <Menu size={16} />
+              </IconButton>
           <Link to="/admin/servers" className="flex items-center gap-2 group">
             <span className="text-sm sm:text-base font-bold tracking-tight text-foreground group-hover:opacity-85 transition-opacity">
               Monitor
@@ -258,7 +256,7 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
             title={t("common.logout", "Logout")}
             aria-label={t("common.logout", "Logout")}
           >
-            <ExitIcon />
+            <LogOut size={16} />
           </IconButton>
         </Flex>
       </header>
@@ -295,7 +293,7 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
                     aria-label={t("common.close_sidebar", "Close menu")}
                     onClick={() => setSidebarOpen(false)}
                   >
-                    <Cross1Icon />
+                    <X size={14} />
                   </IconButton>
                 </div>
               )}

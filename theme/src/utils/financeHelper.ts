@@ -39,7 +39,7 @@ const FINANCE_CURRENCY_CONFIG = {
 } as const
 
 export type CurrencyCode = keyof typeof FINANCE_CURRENCY_CONFIG
-export const SUPPORTED_FINANCE_CURRENCIES = Object.keys(FINANCE_CURRENCY_CONFIG) as CurrencyCode[]
+const SUPPORTED_FINANCE_CURRENCIES = Object.keys(FINANCE_CURRENCY_CONFIG) as CurrencyCode[]
 export const DISPLAY_FINANCE_CURRENCIES = [
   'CNY',
   'USD',
@@ -134,7 +134,7 @@ export function normalizeCurrency(currency: string | null | undefined): Currency
   return EXPLICIT_CURRENCY_ALIASES[value] || CURRENCY_SYMBOL_ALIASES[value] || 'CNY'
 }
 
-export function isSupportedCurrency(currency: string): currency is CurrencyCode {
+function isSupportedCurrency(currency: string): currency is CurrencyCode {
   return (SUPPORTED_FINANCE_CURRENCIES as readonly string[]).includes(currency)
 }
 
@@ -157,7 +157,7 @@ function createCurrencySymbolAliases(): Record<string, CurrencyCode> {
   }, {})
 }
 
-export function getTodayDateKey(date = new Date()): string {
+function getTodayDateKey(date = new Date()): string {
   const year = date.getFullYear()
   const month = String(date.getMonth() + 1).padStart(2, '0')
   const day = String(date.getDate()).padStart(2, '0')
@@ -187,7 +187,7 @@ export interface NodePremiumInfo {
 const FREE_NODE_REGEX = /白嫖|免费|free/i
 const NODE_PREMIUM_TAG_REGEX = /溢价\s*(\d+(?:\.\d+)?)\s*(?:rmb|cny|usd|eur|gbp|[r元$€£])?/i
 
-export function isFreeNode(node: NodeData): boolean {
+function isFreeNode(node: NodeData): boolean {
   const price = Number(node.price)
   if (price === 0 || price === -1)
     return true
@@ -196,7 +196,7 @@ export function isFreeNode(node: NodeData): boolean {
   return FREE_NODE_REGEX.test(tags)
 }
 
-export function getNodePremiumInfo(node: NodeData): NodePremiumInfo {
+function getNodePremiumInfo(node: NodeData): NodePremiumInfo {
   let tagAmount: number | null = null
   let tagCurrency: CurrencyCode | null = null
 

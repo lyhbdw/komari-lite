@@ -1,6 +1,6 @@
 import type { NodeDetail } from "@/contexts/node-details-context";
 
-export const FINANCE_CURRENCY_CONFIG = {
+const FINANCE_CURRENCY_CONFIG = {
   AUD: { rate: 0.20941, symbol: "A$" },
   BRL: { rate: 0.74734, symbol: "R$" },
   CAD: { rate: 0.20691, symbol: "C$" },
@@ -48,7 +48,7 @@ export const DEFAULT_EXCHANGE_RATES = Object.fromEntries(
   ])
 ) as ExchangeRates;
 
-export const CURRENCY_SYMBOLS = Object.fromEntries(
+const CURRENCY_SYMBOLS = Object.fromEntries(
   Object.entries(FINANCE_CURRENCY_CONFIG).map(([currency, config]) => [
     currency,
     config.symbol,
@@ -72,7 +72,7 @@ const EXPLICIT_CURRENCY_ALIASES: Record<string, CurrencyCode> = {
   "JP¥": "JPY",
 };
 
-export function normalizeCurrency(
+function normalizeCurrency(
   currency: string | null | undefined
 ): CurrencyCode {
   const value = String(currency || "CNY")
@@ -88,7 +88,7 @@ const FREE_NODE_REGEX = /白嫖|免费|free/i;
 const NODE_PREMIUM_TAG_REGEX =
   /溢价\s*(\d+(?:\.\d+)?)\s*(?:rmb|cny|usd|eur|gbp|[r元$€£])?/i;
 
-export function isFreeNode(node: NodeDetail): boolean {
+function isFreeNode(node: NodeDetail): boolean {
   const price = Number(node.price);
   if (price === 0 || price === -1) return true;
   const tags = String(node.tags || "");
@@ -101,7 +101,7 @@ export interface NodePremiumInfo {
   symbol: string;
 }
 
-export function getNodePremiumInfo(node: NodeDetail): NodePremiumInfo {
+function getNodePremiumInfo(node: NodeDetail): NodePremiumInfo {
   let tagAmount: number | null = null;
   let tagCurrency: CurrencyCode | null = null;
 
@@ -153,7 +153,7 @@ export function getNodePremiumInfo(node: NodeDetail): NodePremiumInfo {
   };
 }
 
-export function getNodePremiumCNY(
+function getNodePremiumCNY(
   node: NodeDetail,
   exchangeRates: ExchangeRates
 ): number {
@@ -164,7 +164,7 @@ export function getNodePremiumCNY(
   return amount / rate;
 }
 
-export function getPriceCNY(
+function getPriceCNY(
   node: NodeDetail,
   exchangeRates: ExchangeRates
 ): number {
@@ -176,7 +176,7 @@ export function getPriceCNY(
   return price / rate;
 }
 
-export function calculateBaseRemainingValueCNY(
+function calculateBaseRemainingValueCNY(
   node: NodeDetail,
   exchangeRates: ExchangeRates,
   now = new Date()
@@ -204,7 +204,7 @@ export function calculateBaseRemainingValueCNY(
   return 0;
 }
 
-export function calculateRemainingValueCNY(
+function calculateRemainingValueCNY(
   node: NodeDetail,
   exchangeRates: ExchangeRates,
   now = new Date()
@@ -263,7 +263,7 @@ export function calculateTotalPremiumCNY(
 
 const MONTH_DAYS = 30;
 
-export function calculateMonthlyAverageCostCNY(
+function calculateMonthlyAverageCostCNY(
   node: NodeDetail,
   exchangeRates: ExchangeRates
 ): number {

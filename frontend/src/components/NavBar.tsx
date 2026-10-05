@@ -1,6 +1,6 @@
 import LoginDialog from "./Login";
 import { IconButton } from "@radix-ui/themes";
-import { GitHubLogoIcon } from "@radix-ui/react-icons";
+import { Github } from "lucide-react";
 import { usePublicInfo } from "@/contexts/usePublicInfo";
 const NavBar = () => {
   const { publicInfo } = usePublicInfo();
@@ -31,7 +31,7 @@ const NavBar = () => {
             window.open("https://github.com/lyhbdw/komari-monitor-lite", "_blank");
           }}
         >
-          <GitHubLogoIcon />
+          <Github size={16} />
         </IconButton>
 
         <LoginDialog
