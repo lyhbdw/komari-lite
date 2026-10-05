@@ -5,8 +5,8 @@ import (
 	"sync"
 	"time"
 
-	v2 "github.com/Tumb1er1376/komari-monitor-lite/protocol/v2"
-	"github.com/Tumb1er1376/komari-monitor-lite/web/connection"
+	v2 "github.com/lyhbdw/komari-monitor-lite/protocol/v2"
+	"github.com/lyhbdw/komari-monitor-lite/web/connection"
 )
 
 var (

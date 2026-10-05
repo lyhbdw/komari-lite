@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/Tumb1er1376/komari-monitor-lite/database/accounts"
-	"github.com/Tumb1er1376/komari-monitor-lite/database/dbcore"
+	"github.com/lyhbdw/komari-monitor-lite/database/accounts"
+	"github.com/lyhbdw/komari-monitor-lite/database/dbcore"
 	"github.com/stretchr/testify/assert"
 )
 

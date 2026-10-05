@@ -11,9 +11,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
-	"github.com/Tumb1er1376/komari-monitor-lite/database/accounts"
-	"github.com/Tumb1er1376/komari-monitor-lite/pkg/rpc"
-	"github.com/Tumb1er1376/komari-monitor-lite/web/api"
+	"github.com/lyhbdw/komari-monitor-lite/database/accounts"
+	"github.com/lyhbdw/komari-monitor-lite/pkg/rpc"
+	"github.com/lyhbdw/komari-monitor-lite/web/api"
+	"github.com/lyhbdw/komari-monitor-lite/web/security"
 )
 
 const (
@@ -61,7 +62,7 @@ func dispatchWithSensitive(ctx context.Context, c *gin.Context, meta *rpc.Contex
 		rpc.IsSensitive(req.Method) && rpc.CheckPrincipal(meta.Principal, req.Method) {
 		code := extractRequestTwoFACode(req)
 		if code == "" && c != nil {
-			code = headerOrQueryTwoFACode(c)
+			code = security.ExtractTwoFACodeFromHeaderOrQuery(c)
 		}
 		if err := api.VerifySensitive2FACore(meta.Principal.UserUUID, code); err != nil {
 			return rpc.ErrorResponse(req.ID, rpc.PermissionDenied, err.Error(), nil)
@@ -76,22 +77,6 @@ func extractRequestTwoFACode(req *rpc.JsonRpcRequest) string {
 	for _, key := range []string{"2fa_code", "two_factor_code", "otp"} {
 		if v, ok := rpc.GetParamAs[string](req, key); ok && v != "" {
 			return v
-		}
-	}
-	return ""
-}
-
-// headerOrQueryTwoFACode 从请求头 / query 兜底提取 2FA code(不读取 body,避免消费请求体)。
-func headerOrQueryTwoFACode(c *gin.Context) string {
-	if code := c.GetHeader("X-2FA-Code"); code != "" {
-		return code
-	}
-	if code := c.GetHeader("X-Two-Factor-Code"); code != "" {
-		return code
-	}
-	for _, key := range []string{"2fa_code", "two_factor_code", "otp"} {
-		if code := c.Query(key); code != "" {
-			return code
 		}
 	}
 	return ""

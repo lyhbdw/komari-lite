@@ -13,11 +13,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Tumb1er1376/komari-monitor-lite/database/models"
-	"github.com/Tumb1er1376/komari-monitor-lite/database/tasks"
-	"github.com/Tumb1er1376/komari-monitor-lite/internal/metricstore"
-	"github.com/Tumb1er1376/komari-monitor-lite/pkg/metric"
-	"github.com/Tumb1er1376/komari-monitor-lite/pkg/rpc"
+	"github.com/lyhbdw/komari-monitor-lite/database/models"
+	"github.com/lyhbdw/komari-monitor-lite/database/tasks"
+	"github.com/lyhbdw/komari-monitor-lite/internal/metricstore"
+	"github.com/lyhbdw/komari-monitor-lite/pkg/metric"
+	"github.com/lyhbdw/komari-monitor-lite/pkg/rpc"
 )
 
 type publicPingMetricStatsParams struct {

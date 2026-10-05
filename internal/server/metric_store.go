@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Tumb1er1376/komari-monitor-lite/internal/config"
-	"github.com/Tumb1er1376/komari-monitor-lite/internal/metricstore"
-	logger "github.com/Tumb1er1376/komari-monitor-lite/utils/log"
+	"github.com/lyhbdw/komari-monitor-lite/internal/config"
+	"github.com/lyhbdw/komari-monitor-lite/internal/metricstore"
+	logger "github.com/lyhbdw/komari-monitor-lite/utils/log"
 )
 
 const (

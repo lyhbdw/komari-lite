@@ -7,10 +7,10 @@ import (
 	"sync"
 	"time"
 
-	logger "github.com/Tumb1er1376/komari-monitor-lite/utils/log"
+	logger "github.com/lyhbdw/komari-monitor-lite/utils/log"
 
-	"github.com/Tumb1er1376/komari-monitor-lite/internal/config"
-	"github.com/Tumb1er1376/komari-monitor-lite/pkg/metric"
+	"github.com/lyhbdw/komari-monitor-lite/internal/config"
+	"github.com/lyhbdw/komari-monitor-lite/pkg/metric"
 )
 
 var (

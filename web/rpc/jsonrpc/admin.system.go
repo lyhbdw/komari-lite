@@ -7,12 +7,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Tumb1er1376/komari-monitor-lite/database/dbcore"
-	"github.com/Tumb1er1376/komari-monitor-lite/database/models"
-	"github.com/Tumb1er1376/komari-monitor-lite/internal/config"
-	"github.com/Tumb1er1376/komari-monitor-lite/pkg/rpc"
-	"github.com/Tumb1er1376/komari-monitor-lite/utils/geoip"
-	"github.com/Tumb1er1376/komari-monitor-lite/utils/messageSender"
+	"github.com/lyhbdw/komari-monitor-lite/database/dbcore"
+	"github.com/lyhbdw/komari-monitor-lite/database/models"
+	"github.com/lyhbdw/komari-monitor-lite/internal/config"
+	"github.com/lyhbdw/komari-monitor-lite/pkg/rpc"
+	"github.com/lyhbdw/komari-monitor-lite/utils/geoip"
+	"github.com/lyhbdw/komari-monitor-lite/utils/messageSender"
 	"gorm.io/gorm"
 )
 

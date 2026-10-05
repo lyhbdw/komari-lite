@@ -52,3 +52,17 @@ export type LiveDataResponse = {
   data: LiveData;
   status: string;
 };
+
+export const DEFAULT_LIVE_RECORD: Record = {
+  cpu: { usage: 0 },
+  ram: { used: 0 },
+  swap: { used: 0 },
+  load: { load1: 0, load5: 0, load15: 0 },
+  disk: { used: 0 },
+  network: { up: 0, down: 0, totalUp: 0, totalDown: 0 },
+  connections: { tcp: 0, udp: 0 },
+  uptime: 0,
+  process: 0,
+  message: "",
+  updated_at: "",
+};

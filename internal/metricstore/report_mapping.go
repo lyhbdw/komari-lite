@@ -5,8 +5,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/Tumb1er1376/komari-monitor-lite/pkg/metric"
-	v2 "github.com/Tumb1er1376/komari-monitor-lite/protocol/v2"
+	"github.com/lyhbdw/komari-monitor-lite/pkg/metric"
+	v2 "github.com/lyhbdw/komari-monitor-lite/protocol/v2"
 )
 
 func reportMetricPoints(report v2.Report, trafficUp, trafficDown int64) []metric.Point {

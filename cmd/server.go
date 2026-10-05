@@ -1,10 +1,10 @@
 package cmd
 
 import (
-	appserver "github.com/Tumb1er1376/komari-monitor-lite/internal/server"
-	logger "github.com/Tumb1er1376/komari-monitor-lite/utils/log"
+	appserver "github.com/lyhbdw/komari-monitor-lite/internal/server"
+	logger "github.com/lyhbdw/komari-monitor-lite/utils/log"
 
-	"github.com/Tumb1er1376/komari-monitor-lite/cmd/flags"
+	"github.com/lyhbdw/komari-monitor-lite/cmd/flags"
 	"github.com/spf13/cobra"
 )
 

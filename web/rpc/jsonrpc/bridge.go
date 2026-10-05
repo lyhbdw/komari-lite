@@ -6,7 +6,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/Tumb1er1376/komari-monitor-lite/pkg/rpc"
+	"github.com/lyhbdw/komari-monitor-lite/pkg/rpc"
 )
 
 // bridge.go

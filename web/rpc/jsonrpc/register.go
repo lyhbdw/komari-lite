@@ -1,6 +1,6 @@
 package jsonrpc
 
-import "github.com/Tumb1er1376/komari-monitor-lite/pkg/rpc"
+import "github.com/lyhbdw/komari-monitor-lite/pkg/rpc"
 
 // Register 以默认分组 "common" 注册方法。
 func Register(name string, cb rpc.Handler) error {

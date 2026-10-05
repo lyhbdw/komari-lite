@@ -5,12 +5,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Tumb1er1376/komari-monitor-lite/cmd/flags"
-	"github.com/Tumb1er1376/komari-monitor-lite/database/dbcore"
-	"github.com/Tumb1er1376/komari-monitor-lite/database/models"
-	"github.com/Tumb1er1376/komari-monitor-lite/internal/config"
-	v2 "github.com/Tumb1er1376/komari-monitor-lite/protocol/v2"
-	"github.com/Tumb1er1376/komari-monitor-lite/utils/geoip"
+	"github.com/lyhbdw/komari-monitor-lite/cmd/flags"
+	"github.com/lyhbdw/komari-monitor-lite/database/dbcore"
+	"github.com/lyhbdw/komari-monitor-lite/database/models"
+	"github.com/lyhbdw/komari-monitor-lite/internal/config"
+	v2 "github.com/lyhbdw/komari-monitor-lite/protocol/v2"
+	"github.com/lyhbdw/komari-monitor-lite/utils/geoip"
 )
 
 type staticGeoIPProvider struct {

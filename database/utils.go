@@ -8,13 +8,13 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/Tumb1er1376/komari-monitor-lite/database/dbcore"
-	"github.com/Tumb1er1376/komari-monitor-lite/database/models"
-	"github.com/Tumb1er1376/komari-monitor-lite/internal/config"
-	"github.com/Tumb1er1376/komari-monitor-lite/internal/managedconfig"
-	"github.com/Tumb1er1376/komari-monitor-lite/internal/metricstore"
-	logger "github.com/Tumb1er1376/komari-monitor-lite/utils/log"
-	"github.com/Tumb1er1376/komari-monitor-lite/web/public"
+	"github.com/lyhbdw/komari-monitor-lite/database/dbcore"
+	"github.com/lyhbdw/komari-monitor-lite/database/models"
+	"github.com/lyhbdw/komari-monitor-lite/internal/config"
+	"github.com/lyhbdw/komari-monitor-lite/internal/managedconfig"
+	"github.com/lyhbdw/komari-monitor-lite/internal/metricstore"
+	logger "github.com/lyhbdw/komari-monitor-lite/utils/log"
+	"github.com/lyhbdw/komari-monitor-lite/web/public"
 )
 
 // publicInfoQueryTimeout 限制访客信息聚合查询的后台耗时，防止慢查询

@@ -114,7 +114,7 @@ cp komari-theme.json ../web/public/defaultTheme/komari-theme.json
 ```bash
 cd ..
 CGO_ENABLED=1 go build -tags nomsgpack,sqlite_omit_load_extension \
-  -ldflags "-s -w -X github.com/Tumb1er1376/komari-monitor-lite/utils.CurrentVersion=1.0.0" \
+  -ldflags "-s -w -X github.com/lyhbdw/komari-monitor-lite/utils.CurrentVersion=1.0.0" \
   -o komari .
 ```
 
@@ -131,7 +131,7 @@ CGO_ENABLED=1 go build -tags nomsgpack,sqlite_omit_load_extension \
 ```bash
 # 先按上面的步骤生成 Linux amd64 可执行文件
 CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -tags nomsgpack,sqlite_omit_load_extension \
-  -ldflags "-s -w -X github.com/Tumb1er1376/komari-monitor-lite/utils.CurrentVersion=1.0.0" \
+  -ldflags "-s -w -X github.com/lyhbdw/komari-monitor-lite/utils.CurrentVersion=1.0.0" \
   -o komari-linux-amd64 .
 
 docker build \
@@ -158,7 +158,7 @@ docker run -d \
 
 本项目源自 Komari：
 
-<https://github.com/Tumb1er1376/komari-monitor-lite>
+<https://github.com/lyhbdw/komari-monitor-lite>
 
 Lite 版本使用独立版本号和独立仓库维护，首个版本为 `1.0.0`。上游项目的版本更新不会自动合并到本项目；如需同步更新，应在测试、数据库备份和功能回归后进行。
 

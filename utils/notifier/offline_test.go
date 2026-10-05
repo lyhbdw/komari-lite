@@ -4,9 +4,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Tumb1er1376/komari-monitor-lite/database/dbcore"
-	"github.com/Tumb1er1376/komari-monitor-lite/database/models"
-	"github.com/Tumb1er1376/komari-monitor-lite/internal/config"
+	"github.com/lyhbdw/komari-monitor-lite/database/dbcore"
+	"github.com/lyhbdw/komari-monitor-lite/database/models"
+	"github.com/lyhbdw/komari-monitor-lite/internal/config"
 )
 
 func TestUpdateOnlineStateTracksConnectionBeforeNotificationsAreEnabled(t *testing.T) {

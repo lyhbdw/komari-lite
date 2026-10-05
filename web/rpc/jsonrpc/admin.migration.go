@@ -3,11 +3,11 @@ package jsonrpc
 import (
 	"context"
 
-	"github.com/Tumb1er1376/komari-monitor-lite/database/auditlog"
-	"github.com/Tumb1er1376/komari-monitor-lite/database/dbcore"
-	"github.com/Tumb1er1376/komari-monitor-lite/internal/metricstore"
-	"github.com/Tumb1er1376/komari-monitor-lite/internal/migrations"
-	"github.com/Tumb1er1376/komari-monitor-lite/pkg/rpc"
+	"github.com/lyhbdw/komari-monitor-lite/database/auditlog"
+	"github.com/lyhbdw/komari-monitor-lite/database/dbcore"
+	"github.com/lyhbdw/komari-monitor-lite/internal/metricstore"
+	"github.com/lyhbdw/komari-monitor-lite/internal/migrations"
+	"github.com/lyhbdw/komari-monitor-lite/pkg/rpc"
 )
 
 // admin.migration.go

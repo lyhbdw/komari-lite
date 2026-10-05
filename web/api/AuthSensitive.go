@@ -7,7 +7,8 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/Tumb1er1376/komari-monitor-lite/database/accounts"
+	"github.com/lyhbdw/komari-monitor-lite/database/accounts"
+	"github.com/lyhbdw/komari-monitor-lite/web/security"
 )
 
 func RequireSensitive2FA() gin.HandlerFunc {
@@ -62,16 +63,8 @@ func get2FACode(c *gin.Context) string {
 			return codeString
 		}
 	}
-	if code := c.GetHeader("X-2FA-Code"); code != "" {
+	if code := security.ExtractTwoFACodeFromHeaderOrQuery(c); code != "" {
 		return code
-	}
-	if code := c.GetHeader("X-Two-Factor-Code"); code != "" {
-		return code
-	}
-	for _, key := range []string{"2fa_code", "two_factor_code", "otp"} {
-		if code := c.Query(key); code != "" {
-			return code
-		}
 	}
 	if c.Request.Body == nil || c.Request.Method == http.MethodGet {
 		return ""

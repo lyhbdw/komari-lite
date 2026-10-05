@@ -8,6 +8,7 @@ import {
   IconButton,
 } from "@radix-ui/themes";
 import type { LiveData, Record } from "../types/LiveData";
+import { DEFAULT_LIVE_RECORD } from "../types/LiveData";
 import UsageBar from "./UsageBar";
 import Flag from "./Flag";
 import { useTranslation } from "react-i18next";
@@ -23,24 +24,11 @@ interface NodeProps {
   isMobile: boolean;
   showIpTagsInCard: boolean;
 }
-const DEFAULT_NODE_LIVE = {
-  cpu: { usage: 0 },
-  ram: { used: 0 },
-  swap: { used: 0 },
-  load: { load1: 0, load5: 0, load15: 0 },
-  disk: { used: 0 },
-  network: { up: 0, down: 0, totalUp: 0, totalDown: 0 },
-  connections: { tcp: 0, udp: 0 },
-  uptime: 0,
-  process: 0,
-  message: "",
-  updated_at: "",
-} as Record;
 
 const Node = React.memo(
   ({ basic, live, online, isMobile, showIpTagsInCard }: NodeProps) => {
   const [t] = useTranslation();
-  const liveData = live || DEFAULT_NODE_LIVE;
+  const liveData = live || DEFAULT_LIVE_RECORD;
   const osImage = React.useMemo(() => getOSImage(basic.os), [basic.os]);
   const osName = React.useMemo(() => getOSName(basic.os), [basic.os]);
 

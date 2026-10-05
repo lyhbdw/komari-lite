@@ -5,9 +5,9 @@ import (
 	"image/png"
 	"net/http"
 
-	"github.com/Tumb1er1376/komari-monitor-lite/database/accounts"
-	"github.com/Tumb1er1376/komari-monitor-lite/utils"
-	"github.com/Tumb1er1376/komari-monitor-lite/web/api"
+	"github.com/lyhbdw/komari-monitor-lite/database/accounts"
+	"github.com/lyhbdw/komari-monitor-lite/utils"
+	"github.com/lyhbdw/komari-monitor-lite/web/api"
 	"github.com/gin-gonic/gin"
 	"github.com/pquerna/otp/totp"
 )

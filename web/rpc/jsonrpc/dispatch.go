@@ -3,7 +3,7 @@ package jsonrpc
 import (
 	"context"
 
-	"github.com/Tumb1er1376/komari-monitor-lite/pkg/rpc"
+	"github.com/lyhbdw/komari-monitor-lite/pkg/rpc"
 )
 
 // Dispatch 是所有传输入口的统一分发点：权限校验 → 执行方法。

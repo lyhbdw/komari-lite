@@ -1,6 +1,6 @@
 package factory
 
-import "github.com/Tumb1er1376/komari-monitor-lite/database/models"
+import "github.com/lyhbdw/komari-monitor-lite/database/models"
 
 type IMessageSender interface {
 	GetName() string

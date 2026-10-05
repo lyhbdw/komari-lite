@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/Tumb1er1376/komari-monitor-lite/utils/geoip"
+	"github.com/lyhbdw/komari-monitor-lite/utils/geoip"
 )
 
 // 测试GeoIP数据库的初始化和更新功能

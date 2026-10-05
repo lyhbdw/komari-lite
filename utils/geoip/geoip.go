@@ -6,9 +6,9 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/Tumb1er1376/komari-monitor-lite/internal/config"
-	logger "github.com/Tumb1er1376/komari-monitor-lite/utils/log"
-	"github.com/Tumb1er1376/komari-monitor-lite/utils/ttlcache"
+	"github.com/lyhbdw/komari-monitor-lite/internal/config"
+	logger "github.com/lyhbdw/komari-monitor-lite/utils/log"
+	"github.com/lyhbdw/komari-monitor-lite/utils/ttlcache"
 )
 
 var CurrentProvider GeoIPService

@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Tumb1er1376/komari-monitor-lite/database/clients"
-	"github.com/Tumb1er1376/komari-monitor-lite/database/models"
-	messageevent "github.com/Tumb1er1376/komari-monitor-lite/database/models/messageEvent"
-	"github.com/Tumb1er1376/komari-monitor-lite/internal/config"
-	logger "github.com/Tumb1er1376/komari-monitor-lite/utils/log"
-	"github.com/Tumb1er1376/komari-monitor-lite/utils/messageSender"
+	"github.com/lyhbdw/komari-monitor-lite/database/clients"
+	"github.com/lyhbdw/komari-monitor-lite/database/models"
+	messageevent "github.com/lyhbdw/komari-monitor-lite/database/models/messageEvent"
+	"github.com/lyhbdw/komari-monitor-lite/internal/config"
+	logger "github.com/lyhbdw/komari-monitor-lite/utils/log"
+	"github.com/lyhbdw/komari-monitor-lite/utils/messageSender"
 )
 
 // expireCache 记录每个客户端最近一次发送到期提醒时所处的"剩余天数档位"，

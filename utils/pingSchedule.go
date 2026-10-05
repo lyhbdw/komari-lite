@@ -7,10 +7,10 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/Tumb1er1376/komari-monitor-lite/database/models"
-	"github.com/Tumb1er1376/komari-monitor-lite/internal/scheduler"
-	v2 "github.com/Tumb1er1376/komari-monitor-lite/protocol/v2"
-	agent_runtime "github.com/Tumb1er1376/komari-monitor-lite/web/agent"
+	"github.com/lyhbdw/komari-monitor-lite/database/models"
+	"github.com/lyhbdw/komari-monitor-lite/internal/scheduler"
+	v2 "github.com/lyhbdw/komari-monitor-lite/protocol/v2"
+	agent_runtime "github.com/lyhbdw/komari-monitor-lite/web/agent"
 )
 
 // PingTaskManager 管理定时器和任务

@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/Tumb1er1376/komari-monitor-lite/utils/messageSender/factory"
+	"github.com/lyhbdw/komari-monitor-lite/utils/messageSender/factory"
 )
 
 func LoadProvider(name string, addition string) error {

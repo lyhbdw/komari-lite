@@ -12,10 +12,10 @@ import { Spinner } from '@/components/ui/spinner'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useAppStore } from '@/stores/app'
 import { useNodesStore } from '@/stores/nodes'
+import { formatChartTimeForTooltip as formatTimeForTooltip, getChartThemeColors } from '@/utils/echarts'
 import { formatBytes, formatBytesSplit } from '@/utils/helper'
 import { fillMissingTimePoints } from '@/utils/recordHelper'
 import { getSharedRpc } from '@/utils/rpc'
-import '@/utils/echarts' // 共享 ECharts 配置
 
 const props = defineProps<{
   uuid: string
@@ -57,17 +57,7 @@ const chartColors = {
 }
 
 // 图表主题相关颜色
-const chartThemeColors = computed(() => ({
-  text: isDark.value ? 'rgba(230, 227, 223, 0.90)' : 'rgba(44, 40, 37, 0.90)',
-  textSecondary: isDark.value ? 'rgba(230, 227, 223, 0.65)' : 'rgba(44, 40, 37, 0.68)',
-  textTertiary: isDark.value ? 'rgba(230, 227, 223, 0.45)' : 'rgba(44, 40, 37, 0.45)',
-  borderColor: isDark.value ? 'rgba(230, 227, 223, 0.15)' : 'rgba(44, 40, 37, 0.12)',
-  splitLineColor: isDark.value ? 'rgba(230, 227, 223, 0.08)' : 'rgba(44, 40, 37, 0.08)',
-  tooltipBg: isDark.value ? 'rgba(26, 25, 24, 0.96)' : 'rgba(253, 252, 250, 0.96)',
-  tooltipShadow: isDark.value ? 'rgba(0, 0, 0, 0.5)' : 'rgba(0, 0, 0, 0.08)',
-  crosshairColor: isDark.value ? 'rgba(230, 227, 223, 0.2)' : 'rgba(44, 40, 37, 0.15)',
-  fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif',
-}))
+const chartThemeColors = computed(() => getChartThemeColors(isDark.value))
 
 // 通用 Tooltip 配置
 const baseTooltipConfig = computed(() => ({
@@ -310,14 +300,6 @@ function formatTime(time: string, showDate: boolean): string {
     return date.format('M/D HH:mm')
   }
   return date.format(isRealtime.value ? 'HH:mm:ss' : 'HH:mm')
-}
-
-function formatTimeForTooltip(time: string, hours: number): string {
-  const date = dayjs(time)
-  if (hours < 24) {
-    return date.format('HH:mm:ss')
-  }
-  return date.format('MM/DD HH:mm')
 }
 
 const showDateInAxis = computed(() => (selectedHours.value || 1) >= 24)

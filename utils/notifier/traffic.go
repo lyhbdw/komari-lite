@@ -6,14 +6,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Tumb1er1376/komari-monitor-lite/database/clients"
-	"github.com/Tumb1er1376/komari-monitor-lite/database/models"
-	messageevent "github.com/Tumb1er1376/komari-monitor-lite/database/models/messageEvent"
-	"github.com/Tumb1er1376/komari-monitor-lite/internal/config"
-	logger "github.com/Tumb1er1376/komari-monitor-lite/utils/log"
-	"github.com/Tumb1er1376/komari-monitor-lite/utils/messageSender"
-	"github.com/Tumb1er1376/komari-monitor-lite/utils/ttlcache"
-	agent_runtime "github.com/Tumb1er1376/komari-monitor-lite/web/agent"
+	"github.com/lyhbdw/komari-monitor-lite/database/clients"
+	"github.com/lyhbdw/komari-monitor-lite/database/models"
+	messageevent "github.com/lyhbdw/komari-monitor-lite/database/models/messageEvent"
+	"github.com/lyhbdw/komari-monitor-lite/internal/config"
+	logger "github.com/lyhbdw/komari-monitor-lite/utils/log"
+	"github.com/lyhbdw/komari-monitor-lite/utils/messageSender"
+	"github.com/lyhbdw/komari-monitor-lite/utils/ttlcache"
+	agent_runtime "github.com/lyhbdw/komari-monitor-lite/web/agent"
 )
 
 // trafficCache 用于记录每个客户端已触发的阈值步进，避免重复提醒

@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Tumb1er1376/komari-monitor-lite/web/connection"
+	"github.com/lyhbdw/komari-monitor-lite/web/connection"
 )
 
 func setupPresenceTestState(t *testing.T) {

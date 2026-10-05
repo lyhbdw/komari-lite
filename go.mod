@@ -1,4 +1,4 @@
-module github.com/Tumb1er1376/komari-monitor-lite
+module github.com/lyhbdw/komari-monitor-lite
 
 go 1.25.0
 

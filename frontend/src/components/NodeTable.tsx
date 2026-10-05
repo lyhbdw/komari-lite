@@ -13,6 +13,7 @@ import { Link } from "react-router-dom";
 import { ChevronRight, ChevronUp, ChevronDown } from "lucide-react";
 import type { NodeBasicInfo } from "@/contexts/node-list-context";
 import type { LiveData, Record } from "../types/LiveData";
+import { DEFAULT_LIVE_RECORD } from "../types/LiveData";
 import { formatUptime } from "@/utils/formatUptime";
 import { formatBytes } from "@/utils/unitHelper";
 import UsageBar from "./UsageBar";
@@ -48,20 +49,6 @@ interface SortState {
   field: SortField | null;
   order: SortOrder;
 }
-
-const DEFAULT_TABLE_LIVE = {
-  cpu: { usage: 0 },
-  ram: { used: 0 },
-  swap: { used: 0 },
-  load: { load1: 0, load5: 0, load15: 0 },
-  disk: { used: 0 },
-  network: { up: 0, down: 0, totalUp: 0, totalDown: 0 },
-  connections: { tcp: 0, udp: 0 },
-  uptime: 0,
-  process: 0,
-  message: "",
-  updated_at: "",
-} as Record;
 
 const NodeTable: React.FC<NodeTableProps> = ({ nodes, liveData, onlineSet }) => {
   const [t] = useTranslation();
@@ -121,7 +108,7 @@ const NodeTable: React.FC<NodeTableProps> = ({ nodes, liveData, onlineSet }) => 
   }, [sortState.field, sortState.order]);
 
   const getNodeData = useCallback(
-    (uuid: string): Record => liveData.data[uuid] || DEFAULT_TABLE_LIVE,
+    (uuid: string): Record => liveData.data[uuid] || DEFAULT_LIVE_RECORD,
     [liveData.data],
   );
 

@@ -1,6 +1,6 @@
 [Unit]
 Description=Komari deployment backup
-Documentation=https://github.com/Tumb1er1376/komari-monitor-lite
+Documentation=https://github.com/lyhbdw/komari-monitor-lite
 Wants=network-online.target
 After=network-online.target
 
