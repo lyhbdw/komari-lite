@@ -1986,16 +1986,14 @@ function EditButton({ node }: { node: NodeDetail }) {
   const groupRef = React.useRef<HTMLInputElement>(null);
   const tagsRef = React.useRef<HTMLInputElement>(null);
   const publicRemarkRef = React.useRef<HTMLTextAreaElement>(null);
-  const [hidden, setHidden] = useState(false);
   const [saving, setSaving] = useState(false);
   const [traffic_limit, setTrafficLimit] = useState(0);
   const [traffic_limit_type, setTrafficLimitType] = useState("sum");
 
   React.useEffect(() => {
-    setHidden(node.hidden);
     setTrafficLimit(node.traffic_limit || 0);
     setTrafficLimitType(node.traffic_limit_type || "sum");
-  }, [node.hidden, node.traffic_limit, node.traffic_limit_type]);
+  }, [node.traffic_limit, node.traffic_limit_type]);
 
   const save = async () => {
     try {
@@ -2007,7 +2005,6 @@ function EditButton({ node }: { node: NodeDetail }) {
           public_remark: publicRemarkRef.current?.value,
           group: groupRef.current?.value,
           tags: tagsRef.current?.value,
-          hidden,
           traffic_limit,
           traffic_limit_type,
         }),
@@ -2093,20 +2090,6 @@ function EditButton({ node }: { node: NodeDetail }) {
               )}
               ref={publicRemarkRef}
             />
-          </div>
-
-          <div className="pt-2 border-t border-border/60">
-            <div className="flex items-center justify-between py-1">
-              <div className="flex flex-col">
-                <span className="text-xs font-medium text-foreground">
-                  {t("admin.nodeEdit.hidden")}
-                </span>
-                <span className="text-[11px] text-muted-foreground">
-                  {t("admin.nodeEdit.hidden_description")}
-                </span>
-              </div>
-              <Switch checked={hidden} onCheckedChange={setHidden} />
-            </div>
           </div>
 
           <div className="pt-2 border-t border-border/60 space-y-2">

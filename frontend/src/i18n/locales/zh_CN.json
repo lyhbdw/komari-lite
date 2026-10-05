@@ -41,8 +41,6 @@
     },
     "nodeEdit": {
       "editInfo": "编辑信息",
-      "hidden": "隐藏节点",
-      "hidden_description": "在未登陆的情况下隐藏该节点",
       "name": "名称",
       "namePlaceholder": "请输入名称",
       "publicRemark": "公开备注",

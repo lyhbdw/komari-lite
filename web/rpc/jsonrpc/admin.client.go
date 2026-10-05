@@ -141,7 +141,6 @@ var adminEditableClientFields = map[string]bool{
 	"region":             true,
 	"group":              true,
 	"tags":               true,
-	"hidden":             true,
 	"weight":             true,
 	"price":              true,
 	"premium":            true,
