@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/table";
 import { useTranslation } from "react-i18next";
 import { Dialog, Flex, Button } from "@radix-ui/themes";
+import { Copy, Info } from "lucide-react";
 import { UserAgentHelper } from "@/utils/UserAgentHelper";
 import Loading from "@/components/loading";
 type Resp = {
@@ -167,27 +168,45 @@ export default function Sessions() {
                   <TableCell>
                     <Dialog.Root>
                       <Dialog.Trigger>
-                        <label className="hover:underline cursor-pointer">
-                          {s.id.slice(0, 8)}...
+                        <button
+                          type="button"
+                          className="hover:underline cursor-pointer inline-flex items-center gap-1.5 text-left text-xs font-mono group"
+                          title="查看会话详情"
+                        >
+                          <span>{s.id.slice(0, 8)}...</span>
+                          <Info size={13} className="text-muted-foreground/60 group-hover:text-foreground transition-colors shrink-0" />
                           {isCurrent && (
-                            <span className="ml-2 text-[11px] font-mono px-2 py-0.5 rounded-full bg-foreground text-background font-medium">
+                            <span className="ml-1 text-[11px] font-mono px-2 py-0.5 rounded-full bg-foreground text-background font-medium">
                               {t("sessions.current")}
                             </span>
                           )}
-                        </label>
+                        </button>
                       </Dialog.Trigger>
                       <Dialog.Content className="max-w-lg">
                         <Dialog.Title>
                           {t("sessions.active_sessions")}
                         </Dialog.Title>
                         <div className="flex flex-col gap-3 my-2 text-xs">
-                          <div className="p-2.5 rounded-lg border border-border/70 bg-muted/30">
-                            <span className="text-[11px] font-medium text-muted-foreground block mb-0.5">
-                              {t("sessions.session_id")}
-                            </span>
-                            <span className="font-mono text-foreground select-all break-all text-xs">
-                              {s.id}
-                            </span>
+                          <div className="p-2.5 rounded-lg border border-border/70 bg-muted/30 flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <span className="text-[11px] font-medium text-muted-foreground block mb-0.5">
+                                {t("sessions.session_id")}
+                              </span>
+                              <span className="font-mono text-foreground select-all break-all text-xs">
+                                {s.id}
+                              </span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                navigator.clipboard.writeText(s.id);
+                                toast.success(t("common.copied", "已复制"));
+                              }}
+                              className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors shrink-0 cursor-pointer border border-border/40"
+                              title={t("common.copy", "复制会话 ID")}
+                            >
+                              <Copy size={13} />
+                            </button>
                           </div>
 
                           <div className="grid grid-cols-2 gap-2.5">

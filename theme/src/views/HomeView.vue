@@ -230,14 +230,14 @@ function getNodeItemTransitionKey(node: typeof nodesStore.nodes[number]): string
     <Dialog v-model:open="pingDialogOpen">
       <DialogContent
         v-if="selectedPingNode"
-        class="max-w-6xl gap-0 overflow-hidden border border-border/80 p-0 shadow-2xl transition-all bg-card"
+        class="w-[96vw] max-w-5xl max-h-[92vh] gap-0 overflow-hidden border border-border/80 p-0 shadow-2xl transition-all bg-card rounded-xl"
       >
-        <DialogHeader class="flex h-13 flex-row items-center px-4 border-b border-border/60">
-          <DialogTitle class="truncate">
+        <DialogHeader class="flex h-12 flex-row items-center px-4 border-b border-border/60 shrink-0">
+          <DialogTitle class="truncate text-sm sm:text-base font-semibold">
             {{ selectedPingNode.name }} 延迟 / 丢包
           </DialogTitle>
         </DialogHeader>
-        <div class="max-h-[calc(90vh-4rem)] overflow-y-auto p-4 pt-0">
+        <div class="max-h-[calc(92vh-3rem)] overflow-y-auto p-3 sm:p-4">
           <PingChart :uuid="selectedPingNode.uuid" />
         </div>
       </DialogContent>

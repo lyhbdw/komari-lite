@@ -488,20 +488,20 @@ onMounted(async () => {
               </div>
             </div>
 
-            <div class="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-0.5">
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-1.5 max-h-36 overflow-y-auto pr-0.5">
               <div
                 v-for="(row, index) in exchangeRateRows"
                 :key="row.currency"
-                class="flex items-center justify-between px-3 py-2 rounded-md bg-muted/30 border border-border/50 text-xs"
+                class="flex items-center justify-between px-2.5 py-1.5 rounded-md bg-muted/30 border border-border/50 text-xs"
               >
                 <span class="font-medium text-muted-foreground flex items-center gap-1.5">
-                  <span class="w-1.5 h-1.5 rounded-full bg-foreground/40" />
+                  <span class="w-1.5 h-1.5 rounded-full bg-foreground/40 shrink-0" />
                   {{ row.currency }}
                 </span>
                 <Transition v-bind="metricSwitchTransitionProps">
                   <span
                     :key="`modal-rate-${exchangeRateBaseCurrency}-${row.currency}`"
-                    class="font-mono font-medium text-foreground"
+                    class="font-mono font-medium text-foreground text-[11px]"
                     :style="getMetricSwitchStyle(index)"
                   >
                     {{ row.targetSymbol }}{{ row.rate }}
