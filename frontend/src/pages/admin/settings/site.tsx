@@ -194,46 +194,50 @@ export default function SiteSettings() {
         {/* 访问来源白名单（双列对称网格布局） */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
           {/* 左列: CORS 白名单 */}
-          <div className="space-y-2 p-3.5 rounded-lg border border-border/60 bg-muted/20">
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-xs font-medium text-foreground block">
-                {t("settings.site.cors_origin_check", "API 跨域白名单 (CORS)")}
-              </span>
-              <span className="px-1.5 py-0.2 text-[10px] font-mono rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                内置严格校验
-              </span>
+          <div className="flex flex-col justify-between p-3.5 rounded-lg border border-border/60 bg-muted/20">
+            <div>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-medium text-foreground block">
+                  {t("settings.site.cors_origin_check", "API 跨域白名单 (CORS)")}
+                </span>
+                <span className="px-1.5 py-0.2 text-[10px] font-mono rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shrink-0">
+                  内置严格校验
+                </span>
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-1 leading-relaxed">
+                默认仅允许同源调用，额外允许的 API 来源在此填写：
+              </p>
             </div>
-            <p className="text-[11px] text-muted-foreground leading-relaxed">
-              默认仅允许同源调用。若有外部网站需调用 API，在此填写允许的来源域名：
-            </p>
             <textarea
               value={corsOrigins}
               onChange={(e) => setCorsOrigins(e.target.value)}
               rows={3}
               placeholder={"https://example.com\nhttps://sub.example.com"}
-              className="w-full p-2 text-xs rounded-md border border-border bg-background text-foreground outline-none focus:border-foreground/50 shadow-2xs font-mono resize-none"
+              className="mt-2.5 w-full p-2 text-xs rounded-md border border-border bg-background text-foreground outline-none focus:border-foreground/50 shadow-2xs font-mono resize-none"
             />
           </div>
 
           {/* 右列: WebSocket 白名单 */}
-          <div className="space-y-2 p-3.5 rounded-lg border border-border/60 bg-muted/20">
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-xs font-medium text-foreground block">
-                {t("settings.site.ws_origin_check", "WebSocket 来源白名单")}
-              </span>
-              <span className="px-1.5 py-0.2 text-[10px] font-mono rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                内置严格校验
-              </span>
+          <div className="flex flex-col justify-between p-3.5 rounded-lg border border-border/60 bg-muted/20">
+            <div>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-medium text-foreground block">
+                  {t("settings.site.ws_origin_check", "WebSocket 来源白名单")}
+                </span>
+                <span className="px-1.5 py-0.2 text-[10px] font-mono rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shrink-0">
+                  内置严格校验
+                </span>
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-1 leading-relaxed">
+                默认仅允许同源握手，额外允许的长连接来源在此填写：
+              </p>
             </div>
-            <p className="text-[11px] text-muted-foreground leading-relaxed">
-              默认仅允许同源握手。若有外部页面需建立实时数据长连接，在此填写允许的来源：
-            </p>
             <textarea
               value={wsOrigins}
               onChange={(e) => setWsOrigins(e.target.value)}
               rows={3}
               placeholder={"https://example.com\nhttps://sub.example.com"}
-              className="w-full p-2 text-xs rounded-md border border-border bg-background text-foreground outline-none focus:border-foreground/50 shadow-2xs font-mono resize-none"
+              className="mt-2.5 w-full p-2 text-xs rounded-md border border-border bg-background text-foreground outline-none focus:border-foreground/50 shadow-2xs font-mono resize-none"
             />
           </div>
         </div>
