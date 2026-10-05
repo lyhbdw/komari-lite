@@ -1059,15 +1059,25 @@ const TableToolbar = ({
       <div className="flex items-center gap-2 w-full lg:w-auto flex-wrap sm:flex-nowrap">
         <UpgradeAgentButton />
 
-        <div className="relative flex-1 sm:w-48 flex items-center">
+        <div className="relative flex-1 sm:w-52 flex items-center">
           <Search size={13} className="absolute left-2.5 text-muted-foreground pointer-events-none" />
           <input
             type="text"
             placeholder={t("admin.nodeTable.searchByName", "搜索节点、IP...")}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full h-8 pl-8 pr-3 text-xs rounded-lg border border-border/70 bg-card text-foreground placeholder:text-muted-foreground/60 outline-none focus:border-foreground/40 focus:ring-1 focus:ring-foreground/15 transition-all shadow-2xs"
+            className="w-full h-8 pl-8 pr-7 text-xs rounded-lg border border-border/70 bg-card text-foreground placeholder:text-muted-foreground/60 outline-none focus:border-foreground/40 focus:ring-1 focus:ring-foreground/15 transition-all shadow-2xs"
           />
+          {searchTerm && (
+            <button
+              type="button"
+              onClick={() => setSearchTerm("")}
+              className="absolute right-2 text-muted-foreground/60 hover:text-foreground text-xs p-0.5 rounded cursor-pointer"
+              title="清空搜索"
+            >
+              ×
+            </button>
+          )}
         </div>
 
         {availableGroups.length > 0 && (
@@ -1113,41 +1123,53 @@ const TableToolbar = ({
           <Dialog.Trigger>
             <button
               onClick={() => setDialogOpen(true)}
-              className="h-8 px-3 rounded-lg bg-stone-900 hover:bg-stone-800 dark:bg-stone-100 dark:hover:bg-stone-200 text-stone-50 dark:text-stone-900 font-medium text-xs flex items-center gap-1.5 shadow-2xs active:scale-[0.98] transition-all cursor-pointer shrink-0"
+              className="h-8 px-3 rounded-lg bg-foreground text-background font-medium text-xs flex items-center gap-1.5 shadow-2xs hover:opacity-90 active:scale-[0.98] transition-all cursor-pointer shrink-0"
             >
               <Plus size={13} strokeWidth={2.5} />
-              <span>{t("admin.nodeTable.addNode")}</span>
+              <span>{t("admin.nodeTable.addNode", "添加节点")}</span>
             </button>
           </Dialog.Trigger>
           <Dialog.Content className="max-w-md">
-            <Dialog.Title>{t("admin.nodeTable.addNode")}</Dialog.Title>
-            <div className="mt-2">
-              <label className="text-xs font-medium text-muted-foreground block mb-1.5">
-                {t("admin.nodeTable.nameOptional")}
-              </label>
-              <TextField.Root
-                ref={inputRef}
-                placeholder={t("admin.nodeTable.nameOptional")}
-                autoFocus
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    handleAddNode(inputRef.current?.value);
-                  }
-                }}
-              />
+            <Dialog.Title>
+              <div className="flex items-center gap-2">
+                <Plus size={15} className="text-muted-foreground" />
+                <span>{t("admin.nodeTable.addNode", "添加新服务器节点")}</span>
+              </div>
+            </Dialog.Title>
+            <div className="mt-2 space-y-2 text-xs">
+              <p className="text-[11px] text-muted-foreground leading-relaxed">
+                创建新节点记录。保存后将自动生成专属 Token 令牌，供一键部署脚本接入使用。
+              </p>
+              <div className="space-y-1 pt-1">
+                <label className="text-xs font-medium text-foreground block">
+                  {t("admin.nodeTable.nameOptional", "服务器名称（选填）")}
+                </label>
+                <input
+                  ref={inputRef}
+                  placeholder="例如：香港 BGP、东京 CN2..."
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleAddNode(inputRef.current?.value);
+                    }
+                  }}
+                  className="w-full h-8 px-2.5 text-xs rounded-md border border-border bg-background text-foreground outline-none focus:border-foreground/50 shadow-2xs"
+                />
+              </div>
             </div>
             <Flex justify="end" gap="2" mt="4">
               <Dialog.Close>
-                <Button variant="soft" color="gray" disabled={loading}>
-                  {t("common.cancel", "Cancel")}
+                <Button variant="soft" color="gray" disabled={loading} className="cursor-pointer">
+                  {t("common.cancel", "取消")}
                 </Button>
               </Dialog.Close>
               <Button
                 onClick={() => handleAddNode(inputRef.current?.value)}
                 disabled={loading}
+                className="cursor-pointer"
               >
-                {t("admin.nodeTable.addNode")}
+                {loading ? "添加中..." : t("common.confirm", "确认添加")}
               </Button>
             </Flex>
           </Dialog.Content>
@@ -1396,7 +1418,7 @@ const NodeTable = ({
 
   return (
     <div
-      className={`rounded-lg border border-border bg-card overflow-hidden ${
+      className={`rounded-xl border border-border/70 bg-card overflow-hidden shadow-2xs ${
         isDragging ? "select-none [&_*]:!cursor-default" : ""
       }`}
     >
@@ -1507,12 +1529,12 @@ const ActionButtons = ({
       <button
         type="button"
         onClick={() => setRenewOpen(true)}
-        className={`w-7 h-7 rounded-md flex items-center justify-center transition-colors cursor-pointer ${
+        className={`size-7 rounded-md border inline-flex items-center justify-center transition-colors cursor-pointer shadow-2xs ${
           isExpiring
-            ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/25"
-            : "text-muted-foreground hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-muted/70"
+            ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/25"
+            : "border-border/60 text-muted-foreground hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-muted"
         }`}
-        title={t("admin.nodeTable.renewOneCycle", `续费周期 (+${cycleDays}天)`)}
+        title={t("admin.nodeTable.renewOneCycle", `快捷续费 (+${cycleDays}天)`)}
       >
         <CalendarCheck size={13} />
       </button>
@@ -1521,7 +1543,7 @@ const ActionButtons = ({
       <button
         type="button"
         onClick={() => setBillingOpen(true)}
-        className="w-7 h-7 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/70 flex items-center justify-center transition-colors cursor-pointer"
+        className="size-7 rounded-md border border-border/60 text-muted-foreground hover:text-foreground hover:bg-muted inline-flex items-center justify-center transition-colors cursor-pointer shadow-2xs"
         title={t("admin.nodeTable.billing", "账单管理")}
       >
         <CircleDollarSign size={13} />
@@ -1531,7 +1553,7 @@ const ActionButtons = ({
       <button
         type="button"
         onClick={() => setInstallOpen(true)}
-        className="w-7 h-7 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/70 flex items-center justify-center transition-colors cursor-pointer"
+        className="size-7 rounded-md border border-border/60 text-muted-foreground hover:text-foreground hover:bg-muted inline-flex items-center justify-center transition-colors cursor-pointer shadow-2xs"
         title={t("admin.nodeTable.installCommand", "安装指令")}
       >
         <Download size={13} />
@@ -1541,7 +1563,7 @@ const ActionButtons = ({
       <button
         type="button"
         onClick={() => setDeleteOpen(true)}
-        className="w-7 h-7 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 flex items-center justify-center transition-colors cursor-pointer"
+        className="size-7 rounded-md border border-border/60 text-muted-foreground hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-500/10 inline-flex items-center justify-center transition-colors cursor-pointer shadow-2xs"
         title={t("common.delete", "删除节点")}
       >
         <Trash2Icon size={13} />
@@ -2026,7 +2048,7 @@ function EditButton({ node }: { node: NodeDetail }) {
       <Dialog.Trigger>
         <button
           type="button"
-          className="w-7 h-7 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/70 flex items-center justify-center transition-colors cursor-pointer"
+          className="size-7 rounded-md border border-border/60 text-muted-foreground hover:text-foreground hover:bg-muted inline-flex items-center justify-center transition-colors cursor-pointer shadow-2xs"
           title={t("admin.nodeEdit.editInfo", "编辑信息")}
         >
           <Pencil size={13} />
