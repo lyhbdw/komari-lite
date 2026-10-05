@@ -69,30 +69,30 @@ export default function SiteSettings() {
 
   return (
     <div className="space-y-4 max-w-4xl km-page-admin-settings-site">
-      {/* 1. 统一精致页头 */}
+      {/* 统一精致页头 */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 pb-2 border-b border-border/40">
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-lg sm:text-xl font-bold tracking-tight text-foreground">
-              {t("settings.site.title", "站点与系统设置")}
+              {t("settings.site.title", "站点设置")}
             </h1>
             <span className="px-2 py-0.2 text-[11px] font-mono font-medium rounded-full bg-muted text-muted-foreground border border-border">
-              {sitename || "Komari"}
+              {sitename || "Monitor"}
             </span>
           </div>
           <p className="text-xs text-muted-foreground mt-0.5">
-            配置探针站点的公开品牌信息、安装脚本连接地址与跨域安全校验。
+            管理站点公开信息、Agent 安装连接地址与跨域访问安全。
           </p>
         </div>
       </div>
 
-      {/* 卡片 1: 站点基本信息与公开显示 */}
+      {/* 卡片 1: 基本信息 */}
       <div className="rounded-xl border border-border/70 bg-card p-4 sm:p-5 shadow-2xs space-y-4">
         <div className="flex items-center justify-between pb-2 border-b border-border/40">
           <div className="flex items-center gap-2">
             <Globe size={16} className="text-muted-foreground" />
             <h2 className="text-sm font-semibold text-foreground">
-              {t("settings.site.basic_info", "基本信息与展示")}
+              {t("settings.site.basic_info", "基本信息")}
             </h2>
           </div>
           <button
@@ -118,7 +118,7 @@ export default function SiteSettings() {
               placeholder="例如：海狸の探针"
               className="w-full h-8 px-3 text-xs rounded-lg border border-border bg-background text-foreground outline-none focus:border-foreground/50 shadow-2xs"
             />
-            <p className="text-[11px] text-muted-foreground">显示在浏览器标签页与前台顶栏。</p>
+            <p className="text-[11px] text-muted-foreground">展示在前台顶栏与浏览器标签页。</p>
           </div>
 
           {/* Agent 连接地址 */}
@@ -133,7 +133,7 @@ export default function SiteSettings() {
               placeholder={window.location.origin}
               className="w-full h-8 px-3 text-xs rounded-lg border border-border bg-background text-foreground outline-none focus:border-foreground/50 shadow-2xs font-mono"
             />
-            <p className="text-[11px] text-muted-foreground">一键安装脚本所使用的面板域名，留空使用当前域名。</p>
+            <p className="text-[11px] text-muted-foreground">一键安装脚本与探针通信地址，留空使用当前域名。</p>
           </div>
         </div>
 
@@ -146,19 +146,19 @@ export default function SiteSettings() {
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={2}
-            placeholder="设置站点描述，用于 SEO 元信息及社交媒体卡片预览"
+            placeholder="站点的简要介绍，用于前台副标题与公开元信息预览"
             className="w-full p-2.5 text-xs rounded-lg border border-border bg-background text-foreground outline-none focus:border-foreground/50 shadow-2xs resize-none"
           />
         </div>
       </div>
 
-      {/* 卡片 2: 网络与访问安全防护（CORS / WS / SSRF） */}
+      {/* 卡片 2: 安全设置 */}
       <div className="rounded-xl border border-border/70 bg-card p-4 sm:p-5 shadow-2xs space-y-4">
         <div className="flex items-center justify-between pb-2 border-b border-border/40">
           <div className="flex items-center gap-2">
             <Shield size={16} className="text-muted-foreground" />
             <h2 className="text-sm font-semibold text-foreground">
-              {t("settings.site.security_title", "网络与访问安全防护")}
+              {t("settings.site.security_title", "安全设置")}
             </h2>
           </div>
           <button
@@ -175,10 +175,10 @@ export default function SiteSettings() {
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-1">
           <div>
             <span className="text-xs font-medium text-foreground block">
-              {t("settings.site.ssrf_protection_enabled", "启用 SSRF 拦截防护")}
+              {t("settings.site.ssrf_protection_enabled", "局域网请求拦截（SSRF 防护）")}
             </span>
             <p className="text-[11px] text-muted-foreground mt-0.5">
-              拦截任何针对私有局域网、本地回环等非公网地址的远程下载调用。
+              禁止面板向私有局域网及本地回环地址发起远程网络请求。
             </p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -191,68 +191,49 @@ export default function SiteSettings() {
 
         <div className="h-px bg-border/40" />
 
-        {/* CORS 校验与允许列表 */}
-        <div className="space-y-2">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-medium text-foreground block">
-                  {t("settings.site.cors_origin_check", "API CORS 跨域请求校验")}
-                </span>
-                <span className="px-1.5 py-0.2 text-[10px] font-mono rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                  内置强制开启
-                </span>
-              </div>
-              <p className="text-[11px] text-muted-foreground mt-0.5">
-                系统安全机制强制启用，API 接口只允许同源或下方白名单中的域名跨域调用。
-              </p>
+        {/* 访问来源白名单（双列对称网格布局） */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+          {/* 左列: CORS 白名单 */}
+          <div className="space-y-2 p-3.5 rounded-lg border border-border/60 bg-muted/20">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs font-medium text-foreground block">
+                {t("settings.site.cors_origin_check", "API 跨域白名单 (CORS)")}
+              </span>
+              <span className="px-1.5 py-0.2 text-[10px] font-mono rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                内置严格校验
+              </span>
             </div>
-          </div>
-
-          <div className="pt-1">
-            <label className="text-[11px] text-muted-foreground block mb-1 font-mono">
-              API CORS 允许列表（每行或逗号分隔）：
-            </label>
+            <p className="text-[11px] text-muted-foreground leading-relaxed">
+              默认仅允许同源调用。若有外部网站需调用 API，在此填写允许的来源域名：
+            </p>
             <textarea
               value={corsOrigins}
               onChange={(e) => setCorsOrigins(e.target.value)}
-              rows={2}
-              placeholder="https://example.com"
-              className="w-full p-2 text-xs rounded-lg border border-border bg-background text-foreground outline-none focus:border-foreground/50 shadow-2xs font-mono resize-none"
+              rows={3}
+              placeholder={"https://example.com\nhttps://sub.example.com"}
+              className="w-full p-2 text-xs rounded-md border border-border bg-background text-foreground outline-none focus:border-foreground/50 shadow-2xs font-mono resize-none"
             />
           </div>
-        </div>
 
-        <div className="h-px bg-border/40" />
-
-        {/* WebSocket Origin 校验与允许列表 */}
-        <div className="space-y-2">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-medium text-foreground block">
-                  {t("settings.site.ws_origin_check", "WebSocket Origin 握手校验")}
-                </span>
-                <span className="px-1.5 py-0.2 text-[10px] font-mono rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                  内置强制开启
-                </span>
-              </div>
-              <p className="text-[11px] text-muted-foreground mt-0.5">
-                系统安全机制强制启用，实时 WebSocket 连接仅允许同源或下方白名单来源建立长连接。
-              </p>
+          {/* 右列: WebSocket 白名单 */}
+          <div className="space-y-2 p-3.5 rounded-lg border border-border/60 bg-muted/20">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs font-medium text-foreground block">
+                {t("settings.site.ws_origin_check", "WebSocket 来源白名单")}
+              </span>
+              <span className="px-1.5 py-0.2 text-[10px] font-mono rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                内置严格校验
+              </span>
             </div>
-          </div>
-
-          <div className="pt-1">
-            <label className="text-[11px] text-muted-foreground block mb-1 font-mono">
-              WebSocket 允许列表（每行或逗号分隔）：
-            </label>
+            <p className="text-[11px] text-muted-foreground leading-relaxed">
+              默认仅允许同源握手。若有外部页面需建立实时数据长连接，在此填写允许的来源：
+            </p>
             <textarea
               value={wsOrigins}
               onChange={(e) => setWsOrigins(e.target.value)}
-              rows={2}
-              placeholder="https://example.com"
-              className="w-full p-2 text-xs rounded-lg border border-border bg-background text-foreground outline-none focus:border-foreground/50 shadow-2xs font-mono resize-none"
+              rows={3}
+              placeholder={"https://example.com\nhttps://sub.example.com"}
+              className="w-full p-2 text-xs rounded-md border border-border bg-background text-foreground outline-none focus:border-foreground/50 shadow-2xs font-mono resize-none"
             />
           </div>
         </div>
