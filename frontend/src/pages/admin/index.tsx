@@ -1472,7 +1472,7 @@ const NodeTable = ({
                 className="w-28 px-2 text-left cursor-pointer select-none group hover:text-foreground transition-colors"
               >
                 <span className="inline-flex items-center">
-                  <span>{t("admin.nodeTable.billing")}</span>
+                  <span>{t("admin.nodeTable.billing_col", "账单")}</span>
                   {renderSortIcon("billing")}
                 </span>
               </TableHead>
