@@ -156,8 +156,17 @@ function getRowTransitionKey(node: NodeData): string {
             ]"
           >
             {{ col.label }}
-            <span v-if="col.sortable && sortKey === col.key" class="text-primary text-[10px] font-bold">
-              {{ sortDir === 1 ? '▲' : '▼' }}
+            <span v-if="col.sortable" class="text-muted-foreground/60 transition-colors inline-flex items-center">
+              <Icon
+                v-if="sortKey === col.key"
+                :icon="sortDir === 1 ? 'tabler:arrow-narrow-up' : 'tabler:arrow-narrow-down'"
+                class="size-3.5 text-primary"
+              />
+              <Icon
+                v-else
+                icon="tabler:arrows-up-down"
+                class="size-3 opacity-35"
+              />
             </span>
           </span>
         </div>
@@ -173,21 +182,30 @@ function getRowTransitionKey(node: NodeData): string {
         <div
           v-for="(node, index) in sortedNodes"
           :key="getRowTransitionKey(node)"
-          class="relative flex min-h-[3.25rem] py-2 cursor-pointer flex-col justify-center rounded-md px-2 border border-border/70 transition-all hover:bg-muted/80 dark:hover:bg-muted/40 hover:border-foreground/35 hover:shadow-xs"
+          class="group/row relative flex min-h-[3.25rem] py-2 cursor-pointer flex-col justify-center rounded-lg px-2.5 border border-border/70 transition-all duration-150 hover:bg-muted/80 dark:hover:bg-muted/40 hover:border-foreground/35 hover:shadow-xs pl-3.5 overflow-hidden"
           :class="[
             !node.online && '!border-destructive/30',
-            index % 2 === 1 ? 'bg-muted/25 dark:bg-muted/15' : 'bg-card',
+            index % 2 === 1 ? 'bg-muted/20 dark:bg-muted/10' : 'bg-card',
           ]"
           @click="handleClick(node)"
         >
+          <!-- 左侧状态边缘线 -->
+          <span
+            class="absolute left-0 inset-y-0 w-1 transition-colors"
+            :class="node.online ? 'bg-emerald-500/80 group-hover/row:bg-emerald-500' : 'bg-rose-500/80 group-hover/row:bg-rose-500'"
+          />
           <div class="grid gap-2 items-center" :style="gridStyle">
             <template v-for="col in columns" :key="col.key">
               <!-- 在线状态指示器 -->
               <div v-if="col.key === 'status'" class="flex justify-center">
-                <div class="size-2 rounded-full relative" :class="[node.online ? 'bg-emerald-500' : 'bg-rose-500']">
-                  <div
-                    class="absolute -inset-0.5 rounded-full opacity-25"
-                    :class="[node.online ? 'bg-emerald-400' : 'bg-rose-400']"
+                <div class="relative flex size-2 items-center justify-center shrink-0">
+                  <span
+                    class="inline-flex size-2 rounded-full"
+                    :class="[
+                      node.online
+                        ? 'bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.6)]'
+                        : 'bg-rose-500 shadow-[0_0_6px_rgba(244,63,94,0.6)]'
+                    ]"
                   />
                 </div>
               </div>

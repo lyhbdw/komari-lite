@@ -65,7 +65,7 @@ export default defineConfig(({ mode }) => {
       resolve: {
         alias: [
           { find: "@", replacement: path.resolve(__dirname, "./src") },
-
+          { find: "@radix-ui/themes", replacement: path.resolve(__dirname, "./src/components/ui/radix-shim.tsx") },
       ],
     },
     build: {

@@ -2,7 +2,9 @@ import React, { useState } from "react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { useAccount } from "@/contexts/useAccount";
-import { Button, Dialog, Flex, Skeleton } from "@radix-ui/themes";
+import { Dialog } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import Loading from "@/components/loading";
 import { Eye, EyeOff, KeyRound, QrCode, Shield, ShieldCheck, User } from "lucide-react";
 
@@ -454,7 +456,7 @@ const InnerLayout = () => {
 
             <div className="flex justify-center p-3 bg-white rounded-lg border border-border/70 shadow-2xs mx-auto">
               {twoFaLoading ? (
-                <Skeleton width="180px" height="180px" />
+                <Skeleton className="size-[180px]" />
               ) : (
                 <img
                   src={qrcodeUrl || ""}
@@ -482,9 +484,9 @@ const InnerLayout = () => {
               />
             </div>
 
-            <Flex gap="2" justify="end" mt="3">
-              <Dialog.Close>
-                <Button variant="soft" color="gray" type="button" className="cursor-pointer">
+            <div className="flex justify-end gap-2 mt-4">
+              <Dialog.Close asChild>
+                <Button variant="outline" type="button" className="cursor-pointer">
                   {t("common.cancel", "取消")}
                 </Button>
               </Dialog.Close>
@@ -495,7 +497,7 @@ const InnerLayout = () => {
               >
                 {twoFaLoading ? "验证中..." : "确认绑定"}
               </Button>
-            </Flex>
+            </div>
           </form>
         </Dialog.Content>
       </Dialog.Root>
@@ -527,21 +529,21 @@ const InnerLayout = () => {
               />
             </div>
 
-            <Flex gap="2" justify="end" mt="3">
-              <Dialog.Close>
-                <Button variant="soft" color="gray" type="button" className="cursor-pointer">
+            <div className="flex justify-end gap-2 mt-4">
+              <Dialog.Close asChild>
+                <Button variant="outline" type="button" className="cursor-pointer">
                   {t("common.cancel", "取消")}
                 </Button>
               </Dialog.Close>
               <Button
                 type="submit"
-                color="red"
+                variant="destructive"
                 disabled={twoFaLoading || !otpCode.trim()}
                 className="cursor-pointer"
               >
                 {twoFaLoading ? "处理中..." : "确认停用"}
               </Button>
-            </Flex>
+            </div>
           </form>
         </Dialog.Content>
       </Dialog.Root>

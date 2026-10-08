@@ -3,6 +3,12 @@ import { Icon } from '@iconify/vue'
 import { computed, inject, ref } from 'vue'
 import { Button } from '@/components/ui/button'
 import { DataTooltip } from '@/components/ui/data-tooltip'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { useAppStore } from '@/stores/app'
 
 const appStore = useAppStore()
@@ -66,21 +72,60 @@ const sitename = computed(() => {
         </h3>
       </div>
       <div class="flex items-center gap-2">
-        <!-- 主题切换按钮 -->
-        <DataTooltip
-          :content="appStore.isDark ? '切换为浅色主题' : '切换为深色主题'"
-          placement="left"
-          content-class="whitespace-nowrap text-[11px] px-2"
-        >
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            class="size-8 rounded-lg border border-border/60 hover:bg-muted/60 text-muted-foreground hover:text-foreground inline-flex items-center justify-center transition-colors cursor-pointer shadow-2xs"
-            @click="appStore.updateThemeMode(appStore.isDark ? 'light' : 'dark')"
+        <!-- 主题切换下拉菜单 -->
+        <DropdownMenu>
+          <DataTooltip
+            content="主题外观设置"
+            placement="bottom"
+            content-class="whitespace-nowrap text-[11px] px-2"
           >
-            <Icon :icon="appStore.isDark ? 'tabler:sun' : 'tabler:moon'" :width="16" :height="16" class="opacity-80" />
-          </Button>
-        </DataTooltip>
+            <DropdownMenuTrigger as-child>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                class="size-8 rounded-lg border border-border/60 hover:bg-muted/60 text-muted-foreground hover:text-foreground inline-flex items-center justify-center transition-colors cursor-pointer shadow-2xs"
+                aria-label="切换主题"
+              >
+                <Icon
+                  :icon="appStore.themeMode === 'auto' ? 'tabler:device-desktop' : appStore.isDark ? 'tabler:moon' : 'tabler:sun'"
+                  :width="16" :height="16" class="opacity-80"
+                />
+              </Button>
+            </DropdownMenuTrigger>
+          </DataTooltip>
+          <DropdownMenuContent align="end" class="w-36">
+            <DropdownMenuItem
+              class="flex items-center justify-between"
+              @click="appStore.updateThemeMode('light')"
+            >
+              <span class="flex items-center gap-2">
+                <Icon icon="tabler:sun" :width="14" :height="14" class="opacity-70" />
+                <span>浅色模式</span>
+              </span>
+              <Icon v-if="appStore.themeMode === 'light'" icon="tabler:check" :width="14" :height="14" class="text-primary" />
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              class="flex items-center justify-between"
+              @click="appStore.updateThemeMode('dark')"
+            >
+              <span class="flex items-center gap-2">
+                <Icon icon="tabler:moon" :width="14" :height="14" class="opacity-70" />
+                <span>深色模式</span>
+              </span>
+              <Icon v-if="appStore.themeMode === 'dark'" icon="tabler:check" :width="14" :height="14" class="text-primary" />
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              class="flex items-center justify-between"
+              @click="appStore.updateThemeMode('auto')"
+            >
+              <span class="flex items-center gap-2">
+                <Icon icon="tabler:device-desktop" :width="14" :height="14" class="opacity-70" />
+                <span>跟随系统</span>
+              </span>
+              <Icon v-if="appStore.themeMode === 'auto'" icon="tabler:check" :width="14" :height="14" class="text-primary" />
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
 
         <!-- 管理后台入口 -->
         <DataTooltip :content="appStore.isLoggedIn ? '进入管理后台' : '管理员登录'" placement="left" content-class="whitespace-nowrap text-[11px] px-2">

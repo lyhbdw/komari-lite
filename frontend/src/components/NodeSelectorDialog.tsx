@@ -1,5 +1,6 @@
 import React from "react";
-import { Dialog, Button, Flex } from "@radix-ui/themes";
+import { Dialog } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import NodeSelector from "./NodeSelector";
 import { useNodeDetails } from "@/contexts/useNodeDetails";
 import { useTranslation } from "react-i18next";
@@ -67,14 +68,14 @@ const NodeSelectorDialog: React.FC<NodeSelectorDialogProps> = ({
 
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
-      <Dialog.Trigger>
-        {children ? children : <Button>{title || t("common.select")}</Button>}
+      <Dialog.Trigger asChild>
+        {children ? (typeof children === "string" ? <Button>{children}</Button> : children) : <Button>{title || t("common.select")}</Button>}
       </Dialog.Trigger>
-      <Dialog.Content style={{ maxWidth: 400 }} className="km-node-selector-dialog">
+      <Dialog.Content className="max-w-[420px] km-node-selector-dialog">
         <Dialog.Title>{title || t("common.select")}</Dialog.Title>
-        <Flex direction="column" gap="3">
-          <Flex justify="between" align="center" gap="2">
-            <label className="text-sm text-gray-600">
+        <div className="flex flex-col gap-3">
+          <div className="flex justify-between items-center gap-2">
+            <label className="text-xs text-muted-foreground">
               {t("common.selected_total", {
                 count: temp.length,
                 total: totalCount,
@@ -82,16 +83,17 @@ const NodeSelectorDialog: React.FC<NodeSelectorDialogProps> = ({
             </label>
             <Button
               type="button"
-              variant="soft"
-              size="1"
+              variant="outline"
+              size="sm"
               onClick={handleToggleAll}
               disabled={totalCount === 0}
+              className="h-7 text-xs"
             >
               {isAllSelected
                 ? t("common.deselect_all")
                 : t("common.select_all")}
             </Button>
-          </Flex>
+          </div>
           <NodeSelector
             value={temp}
             onChange={setTemp}
@@ -99,13 +101,13 @@ const NodeSelectorDialog: React.FC<NodeSelectorDialogProps> = ({
             hiddenUuidOnlyClient={hiddenUuidOnlyClient}
             hiddenDescription={hiddenDescription}
           />
-          <Flex justify="end" gap="2">
-            <Dialog.Close>
-              <Button variant="soft">{t("common.cancel")}</Button>
+          <div className="flex justify-end gap-2 mt-2">
+            <Dialog.Close asChild>
+              <Button variant="outline">{t("common.cancel")}</Button>
             </Dialog.Close>
             <Button onClick={handleOk}>{t("common.done")}</Button>
-          </Flex>
-        </Flex>
+          </div>
+        </div>
       </Dialog.Content>
     </Dialog.Root>
   );

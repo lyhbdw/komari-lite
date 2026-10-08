@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { Text, Switch } from "@radix-ui/themes";
+import { Switch } from "@/components/ui/switch";
 import { updateSettingsWithToast, useSettings } from "@/lib/api";
 import Loading from "@/components/loading";
 import { Globe, Shield } from "lucide-react";
@@ -35,7 +35,7 @@ export default function SiteSettings() {
   }, [settings]);
 
   if (loading) return <Loading />;
-  if (error) return <Text color="red">{error}</Text>;
+  if (error) return <p className="text-sm text-destructive">{error}</p>;
 
   const handleSaveBasic = async () => {
     setSavingBasic(true);

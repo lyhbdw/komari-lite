@@ -1,4 +1,3 @@
-import { Box, Flex, Text } from "@radix-ui/themes";
 import React from "react";
 
 interface UsageBarProps {
@@ -19,18 +18,9 @@ const UsageBar = React.memo(
 
     if (compact) {
       return (
-        <Box className="km-usage-bar" style={{ width: "100%" }}>
-          <Box
-            className="km-usage-bar-track"
-            style={{
-              width: "100%",
-              height: "5px",
-              backgroundColor: "var(--muted)",
-              border: "1px solid var(--border)",
-              borderRadius: "9999px",
-              overflow: "hidden",
-              marginBottom: "2px",
-            }}
+        <div className="km-usage-bar w-full">
+          <div
+            className="km-usage-bar-track w-full h-[5px] bg-muted border border-border rounded-full overflow-hidden mb-0.5"
           >
             <div
               style={{
@@ -43,34 +33,26 @@ const UsageBar = React.memo(
                 transition: "transform 0.5s ease-out",
               }}
             />
-          </Box>
-          <label color="gray" className="text-sm">
+          </div>
+          <span className="text-xs text-muted-foreground font-mono tabular-nums">
             {clampedValue.toFixed(1)}%
-          </label>
-        </Box>
+          </span>
+        </div>
       );
     }
 
     return (
-      <Flex direction="column" gap="1" className="km-usage-bar" style={{ width: "100%" }}>
-        <Flex justify="between" align="center">
-          <Text size="2" color="gray">
+      <div className="km-usage-bar w-full flex flex-col gap-1">
+        <div className="flex justify-between items-center text-xs">
+          <span className="text-muted-foreground">
             {label}
-          </Text>
-          <Text size="2" weight="medium">
+          </span>
+          <span className="font-medium font-mono tabular-nums text-foreground">
             {clampedValue.toFixed(1)}%
-          </Text>
-        </Flex>
-        <Box
-          className="km-usage-bar-track"
-          style={{
-            width: "100%",
-            height: "6px",
-            backgroundColor: "var(--muted)",
-            border: "1px solid var(--border)",
-            borderRadius: "9999px",
-            overflow: "hidden",
-          }}
+          </span>
+        </div>
+        <div
+          className="km-usage-bar-track w-full h-[6px] bg-muted border border-border rounded-full overflow-hidden"
         >
           <div
             style={{
@@ -83,8 +65,8 @@ const UsageBar = React.memo(
               transition: "transform 0.5s ease-out",
             }}
           />
-        </Box>
-      </Flex>
+        </div>
+      </div>
     );
   },
 );

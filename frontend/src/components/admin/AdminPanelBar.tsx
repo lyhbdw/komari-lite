@@ -1,7 +1,4 @@
-import {
-  Flex,
-  IconButton,
-} from "@radix-ui/themes";
+import { Button } from "@/components/ui/button";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
@@ -182,20 +179,20 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
     <div className="km-admin-layout flex flex-col h-screen w-screen overflow-hidden bg-background text-foreground">
       {/* Top Navbar */}
       <header className="km-admin-panel-topbar h-[50px] shrink-0 border-b border-border/70 bg-background/85 backdrop-blur-md px-4 flex items-center justify-between sticky top-0 z-30 transition-colors">
-        <Flex gap="3" align="center">
-          <IconButton
+        <div className="flex items-center gap-3">
+          <Button
             variant="ghost"
-            size="2"
+            size="icon"
             onClick={() => setSidebarOpen(!sidebarOpen)}
             title={t("common.menu_sidebar", "Menu")}
             aria-label={t("common.menu_sidebar", "Menu")}
-            className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+            className="size-8 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
             style={{
               display: isMobile && sidebarOpen ? "none" : "flex",
-              }}
-              >
-              <Menu size={16} />
-              </IconButton>
+            }}
+          >
+            <Menu size={16} />
+          </Button>
           <Link to="/admin/servers" className="flex items-center gap-2 group">
             <span className="text-sm sm:text-base font-bold tracking-tight text-foreground group-hover:opacity-85 transition-opacity">
               Monitor
@@ -209,9 +206,9 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
               v{publicInfo?.version || versionInfo?.version}
             </span>
           )}
-        </Flex>
+        </div>
 
-        <Flex gap="2" align="center" className="km-admin-panel-controls">
+        <div className="flex items-center gap-2 km-admin-panel-controls">
           {account && !account.logged_in && (
             <LoginDialog
               autoOpen={true}
@@ -223,10 +220,10 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
             />
           )}
 
-          <IconButton
+          <Button
             variant="ghost"
-            size="2"
-            className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+            size="icon"
+            className="size-8 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
             onClick={toggleThemeMode}
             title={
               themeMode === "auto"
@@ -244,21 +241,21 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
             ) : (
               <Moon className="w-4 h-4" />
             )}
-          </IconButton>
+          </Button>
 
           <div className="h-3.5 w-px bg-border/60 mx-1 hidden sm:block" />
 
-          <IconButton
+          <Button
             variant="ghost"
-            size="2"
-            className="km-admin-panel-account text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
+            size="icon"
+            className="size-8 km-admin-panel-account text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
             onClick={logout}
             title={t("common.logout", "Logout")}
             aria-label={t("common.logout", "Logout")}
           >
             <LogOut size={16} />
-          </IconButton>
-        </Flex>
+          </Button>
+        </div>
       </header>
 
       {/* Main Workspace (Sidebar + Content) */}
@@ -286,15 +283,16 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
               {/* Mobile Close Button */}
               {isMobile && (
                 <div className="flex justify-end pb-2 mb-2 border-b border-border/50">
-                  <IconButton
-                    variant="soft"
-                    size="1"
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-7"
                     title={t("common.close_sidebar", "Close menu")}
                     aria-label={t("common.close_sidebar", "Close menu")}
                     onClick={() => setSidebarOpen(false)}
                   >
                     <X size={14} />
-                  </IconButton>
+                  </Button>
                 </div>
               )}
 

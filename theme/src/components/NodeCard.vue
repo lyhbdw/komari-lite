@@ -119,8 +119,9 @@ function openPingDialog() {
 
 <template>
   <CardX
+    size="small"
     hoverable
-    class="node-card h-full w-full cursor-pointer border transition-all duration-150 rounded-md bg-card hover:border-foreground/35 hover:shadow-xs hover:z-1 shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
+    class="node-card h-full w-full cursor-pointer border transition-all duration-150 rounded-lg bg-card hover:border-foreground/35 hover:shadow-xs hover:z-1 shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
     :class="[
       !props.node.online ? '!border-destructive/40' : isHighLoad ? 'border-amber-500/50 bg-amber-500/[0.02] dark:border-amber-500/40' : 'border-border',
     ]"
@@ -128,19 +129,24 @@ function openPingDialog() {
   >
     <template #header>
       <div class="flex gap-2 min-w-0 items-center">
-        <div class="size-2 rounded-full relative shrink-0" :class="[props.node.online ? 'bg-emerald-500' : 'bg-rose-500']">
-          <div
-            class="absolute -inset-0.5 rounded-full opacity-25"
-            :class="[props.node.online ? 'bg-emerald-400' : 'bg-rose-400']"
+        <!-- 紧凑状态点 -->
+        <div class="relative flex size-2 items-center justify-center shrink-0">
+          <span
+            class="inline-flex size-2 rounded-full"
+            :class="[
+              props.node.online
+                ? 'bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.6)]'
+                : 'bg-rose-500 shadow-[0_0_6px_rgba(244,63,94,0.6)]'
+            ]"
           />
         </div>
-        <div class="text-md font-bold dark:font-semibold flex-1 min-w-0 truncate" :title="props.node.name">
+        <div class="text-[13px] font-semibold tracking-tight text-foreground flex-1 min-w-0 truncate" :title="props.node.name">
           {{ props.node.name }}
         </div>
         <div v-if="customTags.length > 0" class="flex shrink-0 gap-1 items-center">
           <Badge
             v-for="(tag, index) in customTags" :key="index" variant="outline"
-            class="!text-[10px] rounded font-medium text-foreground/85 dark:text-muted-foreground border-border/80 bg-muted/40 px-1.5 py-0.2"
+            class="!text-[9.5px] rounded-full font-mono font-medium text-foreground/80 dark:text-muted-foreground border-border/70 bg-muted/30 px-1.5 py-0"
           >
             {{ tag }}
           </Badge>
@@ -149,92 +155,131 @@ function openPingDialog() {
     </template>
 
     <template #header-extra>
-      <div class="flex gap-2 items-center">
-        <img :src="getOSImage(props.node.os)" :alt="getOSName(props.node.os)" class="size-4">
+      <div class="flex gap-1.5 items-center">
+        <img :src="getOSImage(props.node.os)" :alt="getOSName(props.node.os)" class="size-3.5 shrink-0 transition-opacity hover:opacity-80">
         <img
           v-if="hasRegion(props.node.region)" :src="getFlagSrc(props.node.region)"
-          :alt="getRegionDisplayName(props.node.region)" class="size-5 shrink-0"
+          :alt="getRegionDisplayName(props.node.region)" class="size-4 rounded-[2px] shrink-0 object-cover"
         >
       </div>
     </template>
 
     <template #default>
-      <div class="flex flex-col gap-3">
-        <div class="gap-x-3 gap-y-2 grid grid-cols-2">
+      <div class="flex flex-col gap-2">
+        <!-- 四大核心指标紧凑展示 -->
+        <div class="gap-x-3 gap-y-1.5 grid grid-cols-2">
           <!-- CPU -->
-          <div class="flex flex-col gap-1">
-            <div class="w-full text-xs flex flex-row justify-between items-baseline">
-              <span class="text-muted-foreground text-[11px] font-medium tracking-wide">
+          <div class="flex flex-col gap-0.5">
+            <div class="w-full text-xs flex flex-row justify-between items-baseline leading-none">
+              <span class="text-muted-foreground text-[10.5px] font-medium tracking-wide">
                 CPU
               </span>
-              <span class="font-mono tabular-nums text-xs" :class="cpuTextClass">{{ (props.node.cpu ?? 0).toFixed(1) }}%</span>
+              <span class="font-mono tabular-nums text-[11px] font-semibold" :class="cpuTextClass">{{ (props.node.cpu ?? 0).toFixed(1) }}%</span>
             </div>
-            <DataTooltip placement="top" :content="`负载均值 (1/5/15m): ${props.node.load?.toFixed(2) ?? 0}, ${props.node.load5?.toFixed(2) ?? 0}, ${props.node.load15?.toFixed(2) ?? 0} · ${props.node.cpu_cores ? `${props.node.cpu_cores} 核心` : '单核'}`">
-              <ProgressThin :percentage="props.node.cpu ?? 0" :status="cpuStatus" :height="3" class="cursor-pointer" />
+            <ProgressThin :percentage="props.node.cpu ?? 0" :status="cpuStatus" :height="3" class="my-0.5" />
+            <DataTooltip placement="top" :content="`负载均值 (1/5/15m): ${props.node.load?.toFixed(2) ?? 0}, ${props.node.load5?.toFixed(2) ?? 0}, ${props.node.load15?.toFixed(2) ?? 0}`">
+              <div class="text-[10px] text-muted-foreground truncate font-mono tabular-nums cursor-pointer leading-tight">
+                {{ props.node.cpu_cores ? `${props.node.cpu_cores} 核心` : '单核' }}
+              </div>
             </DataTooltip>
           </div>
 
           <!-- 内存 -->
-          <div class="flex flex-col gap-1">
-            <div class="w-full text-xs flex flex-row justify-between items-baseline">
-              <span class="text-muted-foreground text-[11px] font-medium tracking-wide">
+          <div class="flex flex-col gap-0.5">
+            <div class="w-full text-xs flex flex-row justify-between items-baseline leading-none">
+              <span class="text-muted-foreground text-[10.5px] font-medium tracking-wide">
                 内存
               </span>
-              <span class="font-mono tabular-nums text-xs" :class="memTextClass">{{ memPercentage.toFixed(1) }}%</span>
+              <span class="font-mono tabular-nums text-[11px] font-semibold" :class="memTextClass">{{ memPercentage.toFixed(1) }}%</span>
             </div>
-            <DataTooltip placement="top" :content="`已用: ${formatBytes(props.node.ram ?? 0)} / 总计: ${formatBytes(props.node.mem_total ?? 0)}${props.node.swap ? ` · Swap: ${formatBytes(props.node.swap)}` : ''}`">
-              <ProgressThin :percentage="memPercentage" :status="memStatus" :height="3" class="cursor-pointer" />
+            <ProgressThin :percentage="memPercentage" :status="memStatus" :height="3" class="my-0.5" />
+            <DataTooltip placement="top" class="block cursor-pointer" :content-class="[!props.node.swap && '!hidden']">
+              <div class="text-[10px] text-muted-foreground truncate font-mono tabular-nums leading-tight">
+                {{ formatBytes(props.node.ram ?? 0) }} / {{ formatBytes(props.node.mem_total ?? 0) }}
+              </div>
+              <template #content>
+                <div class="flex items-center justify-between gap-3 whitespace-nowrap font-mono tabular-nums">
+                  <span class="text-background/70">Swap</span>
+                  <span>{{ formatBytes(props.node.swap ?? 0) }}</span>
+                </div>
+              </template>
             </DataTooltip>
           </div>
 
           <!-- 硬盘 -->
-          <div class="flex flex-col gap-1">
-            <div class="w-full text-xs flex flex-row justify-between items-baseline">
-              <span class="text-muted-foreground text-[11px] font-medium tracking-wide">
+          <div class="flex flex-col gap-0.5">
+            <div class="w-full text-xs flex flex-row justify-between items-baseline leading-none">
+              <span class="text-muted-foreground text-[10.5px] font-medium tracking-wide">
                 硬盘
               </span>
-              <span class="font-mono tabular-nums text-xs" :class="diskTextClass">{{ diskPercentage.toFixed(1) }}%</span>
+              <span class="font-mono tabular-nums text-[11px] font-semibold" :class="diskTextClass">{{ diskPercentage.toFixed(1) }}%</span>
             </div>
-            <DataTooltip placement="top" :content="`已用: ${formatBytes(props.node.disk ?? 0)} / 总计: ${formatBytes(props.node.disk_total ?? 0)}`">
-              <ProgressThin :percentage="diskPercentage" :status="diskStatus" :height="3" class="cursor-pointer" />
-            </DataTooltip>
+            <ProgressThin :percentage="diskPercentage" :status="diskStatus" :height="3" class="my-0.5" />
+            <div class="text-[10px] text-muted-foreground truncate font-mono tabular-nums leading-tight">
+              {{ formatBytes(props.node.disk ?? 0) }} / {{ formatBytes(props.node.disk_total ?? 0) }}
+            </div>
           </div>
 
           <!-- 流量进度条 -->
-          <div class="flex flex-col gap-1">
-            <div class="w-full text-xs flex flex-row justify-between items-baseline">
-              <span class="text-muted-foreground text-[11px] font-medium tracking-wide">
+          <div class="flex flex-col gap-0.5">
+            <div class="w-full text-xs flex flex-row justify-between items-baseline leading-none">
+              <span class="text-muted-foreground text-[10.5px] font-medium tracking-wide">
                 流量
               </span>
-              <span class="font-mono tabular-nums text-xs">{{ trafficUsedPercentage.toFixed(1) }}%</span>
+              <span class="font-mono tabular-nums text-[11px] font-semibold">{{ trafficUsedPercentage.toFixed(1) }}%</span>
             </div>
-            <DataTooltip placement="top" :content="`已用: ${formatBytes(trafficUsed)} / 限额: ${showTrafficProgress(props.node) ? formatBytes(props.node.traffic_limit) : '∞'} · 上行: ${formatBytes(props.node.net_total_up ?? 0)} · 下行: ${formatBytes(props.node.net_total_down ?? 0)}`">
-              <ProgressThin :percentage="trafficUsedPercentage" status="success" :height="3" class="cursor-pointer" />
+            <ProgressThin :percentage="trafficUsedPercentage" status="success" :height="3" class="my-0.5" />
+            <DataTooltip placement="top" class="block cursor-pointer">
+              <div class="whitespace-pre-wrap text-[10px] text-muted-foreground truncate font-mono tabular-nums leading-tight">
+                {{ formatBytes(trafficUsed) }} /
+                <template v-if="showTrafficProgress(props.node)">
+                  {{ formatBytes(props.node.traffic_limit) }}
+                </template>
+                <template v-else>
+                  ∞
+                </template>
+              </div>
+              <template #content>
+                <div class="flex items-center justify-between gap-3 whitespace-nowrap font-mono tabular-nums">
+                  <div class="text-[11px] flex flex-col">
+                    <div class="flex flex-row items-center gap-1">
+                      <Icon icon="tabler:chevron-up" width="12" height="12" />
+                      {{ formatBytes(props.node.net_total_up ?? 0) }}
+                    </div>
+                    <div class="flex flex-row items-center gap-1">
+                      <Icon icon="tabler:chevron-down" width="12" height="12" />
+                      {{ formatBytes(props.node.net_total_down ?? 0) }}
+                    </div>
+                  </div>
+                </div>
+              </template>
             </DataTooltip>
           </div>
         </div>
-        <div class="relative text-[11px] text-muted-foreground">
+
+        <!-- 下半区（紧凑精简） -->
+        <div class="relative text-[10.5px] text-muted-foreground pt-2 border-t border-border/40">
           <div
             v-if="!props.node.online"
             class="absolute inset-0 z-10 flex flex-col items-center justify-center space-y-1"
           >
-            <span class="text-sm text-red-600">离线</span>
-            <div class="font-mono tabular-nums">
+            <span class="text-xs font-semibold text-rose-500 bg-background/90 px-2 py-0.5 rounded-full border border-rose-500/30 shadow-xs">离线</span>
+            <div class="font-mono tabular-nums text-[10px]">
               {{ offlineTime }}
             </div>
           </div>
-          <div class="flex flex-col gap-y-2" :class="[!props.node.online && 'blur-xs opacity-60 pointer-events-none']">
+          <div class="flex flex-col gap-y-1.5" :class="[!props.node.online && 'blur-xs opacity-60 pointer-events-none']">
             <div class="flex items-center justify-between">
               <span class="truncate tracking-wide text-muted-foreground">
                 速率
               </span>
-              <div class="truncate flex flex-row gap-1.5 font-mono tabular-nums">
+              <div class="truncate flex flex-row gap-2 font-mono tabular-nums text-[10.5px]">
                 <div class="text-emerald-600 dark:text-emerald-400 font-medium flex flex-row items-center gap-0.5">
-                  <Icon icon="tabler:chevron-up" width="12" height="12" class="text-emerald-500 shrink-0" />
+                  <Icon icon="tabler:chevron-up" width="11" height="11" class="text-emerald-500 shrink-0" />
                   {{ formatBytesPerSecond(props.node.net_out ?? 0) }}
                 </div>
                 <div class="text-sky-600 dark:text-sky-400 font-medium flex flex-row items-center gap-0.5">
-                  <Icon icon="tabler:chevron-down" width="12" height="12" class="text-sky-500 shrink-0" />
+                  <Icon icon="tabler:chevron-down" width="11" height="11" class="text-sky-500 shrink-0" />
                   {{ formatBytesPerSecond(props.node.net_in ?? 0) }}
                 </div>
               </div>
@@ -269,10 +314,10 @@ function openPingDialog() {
               <div v-if="topPingNetworks.length > 0" class="flex flex-row items-center gap-1.5">
                 <DataTooltip
                   v-for="net in topPingNetworks" :key="net.name" placement="top"
-                  :content="`${net.name}\n${net.latency}`" content-class="whitespace-pre-wrap w-max px-1.5 !leading-[1.2] text-[11px]"
+                  :content="`${net.name}\n${net.latency}`" content-class="whitespace-pre-wrap w-max px-1.5 !leading-[1.2] text-[10.5px]"
                 >
                   <div class="truncate flex items-center gap-0.5">
-                    <span class="text-[10px] text-muted-foreground/75 font-normal">{{ net.shortName }}</span>
+                    <span class="text-[9.5px] text-muted-foreground/75 font-normal">{{ net.shortName }}</span>
                     <span :class="net.toneClass">{{ net.latency }}</span>
                   </div>
                 </DataTooltip>
@@ -281,17 +326,17 @@ function openPingDialog() {
                 -
               </div>
             </div>
-            <div class="grid grid-cols-6 gap-x-3">
+            <div class="grid grid-cols-6 gap-x-3 pt-0.5">
               <!-- 延迟 -->
               <div
                 role="button" tabindex="0"
-                class="group/panel relative col-span-3 flex h-6 cursor-pointer flex-col gap-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                class="group/panel relative col-span-3 flex h-5 cursor-pointer flex-col gap-1 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 :title="latencyPanelTooltip" :aria-label="`${props.node.name} 延迟`" @click.stop="openPingDialog"
                 @keydown.enter.stop.prevent="openPingDialog" @keydown.space.stop.prevent="openPingDialog"
               >
-                <div class="flex items-center justify-between text-[11px] leading-none relative">
+                <div class="flex items-center justify-between text-[10px] leading-none relative">
                   <span class="text-muted-foreground">延迟</span>
-                  <span class="font-medium text-foreground/85">{{ latencyDisplay }}</span>
+                  <span class="font-medium text-foreground/85 font-mono tabular-nums">{{ latencyDisplay }}</span>
                 </div>
                 <div
                   class="grid h-full items-end gap-[1px]"
@@ -299,7 +344,7 @@ function openPingDialog() {
                 >
                   <DataTooltip
                     v-for="bar in latencyRenderBars" :key="bar.key" placement="top" :content="bar.tooltip"
-                    class="h-full w-full" content-class="whitespace-pre-wrap w-max px-1.5 !leading-[1.2] text-[11px]"
+                    class="h-full w-full" content-class="whitespace-pre-wrap w-max px-1.5 !leading-[1.2] text-[10.5px]"
                   >
                     <span
                       class="block h-full w-full rounded-[1px] transition-transform duration-150 group-hover/data-tooltip:scale-y-200"
@@ -311,13 +356,13 @@ function openPingDialog() {
               <!-- 丢包 -->
               <div
                 role="button" tabindex="0"
-                class="group/panel relative col-span-3 flex h-6 cursor-pointer flex-col gap-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                class="group/panel relative col-span-3 flex h-5 cursor-pointer flex-col gap-1 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 :title="lossPanelTooltip" :aria-label="`${props.node.name} 丢包`" @click.stop="openPingDialog"
                 @keydown.enter.stop.prevent="openPingDialog" @keydown.space.stop.prevent="openPingDialog"
               >
-                <div class="flex items-center justify-between text-[11px] leading-none">
+                <div class="flex items-center justify-between text-[10px] leading-none">
                   <span class="text-muted-foreground">丢包</span>
-                  <span class="font-medium text-foreground/85">{{ lossDisplay }}</span>
+                  <span class="font-medium text-foreground/85 font-mono tabular-nums">{{ lossDisplay }}</span>
                 </div>
                 <div
                   class="grid h-full items-end gap-[1px]"
@@ -325,7 +370,7 @@ function openPingDialog() {
                 >
                   <DataTooltip
                     v-for="bar in lossRenderBars" :key="bar.key" placement="top" :content="bar.tooltip"
-                    class="h-full w-full" content-class="whitespace-pre-wrap w-max px-1.5 !leading-[1.2] text-[11px] font-mono tabular-nums"
+                    class="h-full w-full" content-class="whitespace-pre-wrap w-max px-1.5 !leading-[1.2] text-[10.5px] font-mono tabular-nums"
                   >
                     <span
                       class="block h-full w-full rounded-[1px] transition-transform duration-150 group-hover/data-tooltip:scale-y-200"

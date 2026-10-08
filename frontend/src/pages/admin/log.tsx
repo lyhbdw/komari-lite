@@ -7,7 +7,8 @@ import {
   TableHead,
   TableCell,
 } from "@/components/ui/table";
-import { Button, Dialog, Flex } from "@radix-ui/themes";
+import { Dialog } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { useTranslation } from "react-i18next";
 import { ChevronLeft, ChevronRight, Copy, FileText } from "lucide-react";
 import Loading from "@/components/loading";
@@ -216,9 +217,8 @@ const LogPage = () => {
 
         <div className="flex items-center gap-1.5">
           <Button
-            size="1"
-            variant="soft"
-            color="gray"
+            size="icon"
+            variant="outline"
             disabled={page === 1}
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             className="cursor-pointer size-7 p-0 flex items-center justify-center disabled:opacity-40"
@@ -231,11 +231,10 @@ const LogPage = () => {
             typeof p === "number" ? (
               <Button
                 key={i}
-                size="1"
-                variant={p === page ? "solid" : "soft"}
-                color={p === page ? undefined : "gray"}
+                size="sm"
+                variant={p === page ? "default" : "outline"}
                 onClick={() => setPage(p)}
-                className="cursor-pointer min-w-7 h-7 text-xs font-mono"
+                className="cursor-pointer min-w-7 h-7 text-xs font-mono p-0"
               >
                 {p}
               </Button>
@@ -247,9 +246,8 @@ const LogPage = () => {
           )}
 
           <Button
-            size="1"
-            variant="soft"
-            color="gray"
+            size="icon"
+            variant="outline"
             disabled={page === totalPages || total === 0}
             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
             className="cursor-pointer size-7 p-0 flex items-center justify-center disabled:opacity-40"
@@ -317,13 +315,13 @@ const LogPage = () => {
             </div>
           )}
 
-          <Flex justify="end" mt="3">
-            <Dialog.Close>
-              <Button variant="soft" color="gray" className="cursor-pointer">
+          <div className="flex justify-end mt-4">
+            <Dialog.Close asChild>
+              <Button variant="outline" className="cursor-pointer">
                 {t("common.close", "关闭")}
               </Button>
             </Dialog.Close>
-          </Flex>
+          </div>
         </Dialog.Content>
       </Dialog.Root>
     </div>

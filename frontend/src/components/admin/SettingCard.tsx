@@ -1,9 +1,5 @@
-import {
-  Button,
-  Flex,
-  IconButton,
-  TextArea,
-} from "@radix-ui/themes";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import React from "react";
 import { useTranslation } from "react-i18next";
 import { ChevronDownIcon } from "lucide-react";
@@ -36,31 +32,21 @@ function SettingCard({
     (child) => !(React.isValidElement(child) && child.type === Action)
   );
 
+  const flexDir = direction === "row" ? "flex-row" : direction === "row-reverse" ? "flex-row-reverse" : direction === "column-reverse" ? "flex-col-reverse" : "flex-col";
+
   return (
-    <Flex
-      direction={direction}
-      justify="between"
-      align="center"
-      wrap="wrap"
+    <div
       className={
         bordless
-          ? "km-setting-card border-0 bg-transparent p-0 " + className
-          : "km-setting-card rounded-xl border border-border/60 bg-card p-4 sm:p-5 shadow-2xs hover:border-border/80 transition-all duration-150 " + className
+          ? "km-setting-card border-0 bg-transparent p-0 flex flex-wrap justify-between items-center " + flexDir + " " + className
+          : "km-setting-card rounded-xl border border-border/60 bg-card p-4 sm:p-5 shadow-2xs hover:border-border/80 transition-all duration-150 flex flex-wrap justify-between items-center " + flexDir + " " + className
       }
     >
-      <Flex
-        className="w-full"
-        direction="row"
-        justify="between"
-        align="center"
-        wrap="nowrap"
+      <div
+        className="w-full flex flex-row justify-between items-center flex-nowrap"
         onClick={onHeaderClick}
       >
-        <Flex
-          direction="column"
-          gap="1"
-          className="min-h-10 justify-center pr-4"
-        >
+        <div className="flex flex-col gap-1 min-h-10 justify-center pr-4">
           <label className="text-sm font-medium tracking-tight text-foreground">
             {title}
           </label>
@@ -69,11 +55,11 @@ function SettingCard({
               {description}
             </label>
           )}
-        </Flex>
+        </div>
         {actionChild}
-      </Flex>
+      </div>
       {otherChildren}
-    </Flex>
+    </div>
   );
 }
 
@@ -157,11 +143,10 @@ export function SettingCardLongTextInput({
       description={descriptionPlacement === "footer" ? undefined : description}
       bordless={bordless}
     >
-      <Flex direction="column" className="w-full mt-1" gap="2" align="start">
-        <TextArea
+      <div className="w-full mt-2 flex flex-col gap-2 items-start">
+        <Textarea
           className="w-full max-w-2xl font-mono text-xs"
           defaultValue={defaultValue}
-          resize="vertical"
           value={value}
           onChange={handleTextAreaChange}
           ref={textAreaRef}
@@ -169,12 +154,8 @@ export function SettingCardLongTextInput({
         />
         {descriptionPlacement === "footer" ? (
           showFooterDescription || showSaveButton ? (
-            <Flex
-              direction="row"
-              className="w-full"
-              align="center"
-              justify={showFooterDescription ? "between" : "end"}
-              gap="3"
+            <div
+              className={`w-full flex flex-row items-center gap-3 ${showFooterDescription ? "justify-between" : "justify-end"}`}
             >
               {showFooterDescription ? (
                 <label className="min-w-0 flex-1 text-xs text-muted-foreground">
@@ -185,27 +166,25 @@ export function SettingCardLongTextInput({
                 <Button
                   ref={buttonRef}
                   onClick={handleSave}
-                  variant="solid"
                   disabled={savingState}
                   className="cursor-pointer"
                 >
                   {resolvedLabel}
                 </Button>
               ) : null}
-            </Flex>
+            </div>
           ) : null
         ) : showSaveButton ? (
           <Button
             ref={buttonRef}
             onClick={handleSave}
-            variant="solid"
             disabled={savingState}
             className="cursor-pointer"
           >
             {resolvedLabel}
           </Button>
         ) : null}
-      </Flex>
+      </div>
     </SettingCard>
   );
 }
@@ -233,22 +212,22 @@ export function SettingCardCollapse({
       bordless={bordless}
     >
       <SettingCard.Action>
-        <IconButton
+        <Button
           variant="ghost"
-          size="2"
+          size="icon"
           onClick={() => setOpen(!open)}
           aria-expanded={open}
           aria-controls="collapsible-content"
-          className="text-muted-foreground hover:text-foreground cursor-pointer"
+          className="size-8 text-muted-foreground hover:text-foreground cursor-pointer"
         >
           <motion.div
             initial={{ rotate: 0, scale: 1 }}
             animate={{ rotate: open ? 180 : 0, scale: open ? 1.05 : 1 }}
             transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
           >
-            <ChevronDownIcon />
+            <ChevronDownIcon size={16} />
           </motion.div>
-        </IconButton>
+        </Button>
       </SettingCard.Action>
       <AnimatePresence>
         {open && (

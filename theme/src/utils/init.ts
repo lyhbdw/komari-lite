@@ -73,22 +73,18 @@ class InitManager {
     }
 
     try {
-      // 1. 测试后端服务是否正常
-      await this.healthCheck()
+      // 1. 并发执行健康检查与全部核心数据拉取，消除串行网络往返
+      await Promise.all([
+        this.healthCheck(),
+        this.fetchPublicSettings(),
+        this.fetchUserInfo(),
+        this.fetchNodesData(),
+      ])
 
-      // 2. 获取服务端公开属性
-      await this.fetchPublicSettings()
-
-      // 3. 获取用户信息
-      await this.fetchUserInfo()
-
-      // 4. 获取节点信息和最新状态
-      await this.fetchNodesData()
-
-      // 5. 解除加载状态
+      // 2. 解除加载状态
       this.appStore.loading = false
 
-      // 6. 建立 WebSocket 连接并开始轮询
+      // 3. 建立 WebSocket 连接并开始轮询
       this.startWebSocketAndPolling()
 
       this.isInitialized = true

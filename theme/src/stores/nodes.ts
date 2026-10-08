@@ -91,10 +91,41 @@ interface StatusData {
 }
 
 const EARTH_SNAPSHOT_INTERVAL_MS = 60_000
+const CACHE_KEY = 'komari_nodes_cache_v1'
+
+function loadCachedNodes(): NodeData[] {
+  if (typeof window === 'undefined')
+    return []
+  try {
+    const raw = localStorage.getItem(CACHE_KEY)
+    if (raw) {
+      const parsed = JSON.parse(raw)
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed
+      }
+    }
+  }
+  catch {}
+  return []
+}
+
+let saveTimer: ReturnType<typeof setTimeout> | null = null
+function debouncedSaveCache(data: NodeData[]): void {
+  if (typeof window === 'undefined')
+    return
+  if (saveTimer)
+    clearTimeout(saveTimer)
+  saveTimer = setTimeout(() => {
+    try {
+      localStorage.setItem(CACHE_KEY, JSON.stringify(data))
+    }
+    catch {}
+  }, 1000)
+}
 
 const useNodesStore = defineStore('nodes', () => {
   // ===== 状态 =====
-  const nodes = ref<NodeData[]>([])
+  const nodes = ref<NodeData[]>(loadCachedNodes())
   const earthNodes = ref<NodeData[]>([])
   const wsConnectionState = ref<WsConnectionState>('disconnected')
   const wsReconnectAttempts = ref<number>(0)
@@ -188,32 +219,96 @@ const useNodesStore = defineStore('nodes', () => {
   }
 
   /**
-   * 更新节点的状态数据
+   * 更新节点的状态数据（就地复用对象，细粒度响应式）
    */
-  function updateNodeStatus(node: NodeData, status: StatusData): NodeData {
-    return {
-      ...node,
-      online: status.online,
-      time: status.time,
-      cpu: status.cpu,
-      gpu: status.gpu,
-      ram: status.ram,
-      swap: status.swap,
-      load: status.load,
-      load5: status.load5,
-      load15: status.load15,
-      temp: status.temp,
-      disk: status.disk,
-      net_in: status.net_in,
-      net_out: status.net_out,
-      net_total_up: status.net_total_up,
-      net_total_down: status.net_total_down,
-      process: status.process,
-      connections: status.connections,
-      connections_udp: status.connections_udp,
-      uptime: status.uptime,
-      ping: status.ping,
+  function applyStatusToNode(node: NodeData, status: StatusData): boolean {
+    let changed = false
+    if (node.online !== status.online) {
+      node.online = status.online
+      changed = true
     }
+    if (node.time !== status.time) {
+      node.time = status.time
+      changed = true
+    }
+    if (node.cpu !== status.cpu) {
+      node.cpu = status.cpu
+      changed = true
+    }
+    if (node.gpu !== status.gpu) {
+      node.gpu = status.gpu
+      changed = true
+    }
+    if (node.ram !== status.ram) {
+      node.ram = status.ram
+      changed = true
+    }
+    if (node.swap !== status.swap) {
+      node.swap = status.swap
+      changed = true
+    }
+    if (node.load !== status.load) {
+      node.load = status.load
+      changed = true
+    }
+    if (node.load5 !== status.load5) {
+      node.load5 = status.load5
+      changed = true
+    }
+    if (node.load15 !== status.load15) {
+      node.load15 = status.load15
+      changed = true
+    }
+    if (node.temp !== status.temp) {
+      node.temp = status.temp
+      changed = true
+    }
+    if (node.disk !== status.disk) {
+      node.disk = status.disk
+      changed = true
+    }
+    if (node.net_in !== status.net_in) {
+      node.net_in = status.net_in
+      changed = true
+    }
+    if (node.net_out !== status.net_out) {
+      node.net_out = status.net_out
+      changed = true
+    }
+    if (node.net_total_up !== status.net_total_up) {
+      node.net_total_up = status.net_total_up
+      changed = true
+    }
+    if (node.net_total_down !== status.net_total_down) {
+      node.net_total_down = status.net_total_down
+      changed = true
+    }
+    if (node.process !== status.process) {
+      node.process = status.process
+      changed = true
+    }
+    if (node.connections !== status.connections) {
+      node.connections = status.connections
+      changed = true
+    }
+    if (node.connections_udp !== status.connections_udp) {
+      node.connections_udp = status.connections_udp
+      changed = true
+    }
+    if (node.uptime !== status.uptime) {
+      node.uptime = status.uptime
+      changed = true
+    }
+    if (status.ping !== undefined) {
+      node.ping = status.ping
+      changed = true
+    }
+    return changed
+  }
+
+  function updateNodeStatus(node: NodeData, status: StatusData): NodeData {
+    applyStatusToNode(node, status)
+    return node
   }
 
   /**
@@ -297,9 +392,10 @@ const useNodesStore = defineStore('nodes', () => {
       }
     }
 
-    // 按 weight 降序排序（weight 越大越靠前）
+    // 按 weight 升序排序节点（weight 越小越靠前）
     sortNodesByWeight()
     refreshEarthNodes(true)
+    debouncedSaveCache(nodes.value)
   }
 
   /**
@@ -310,7 +406,7 @@ const useNodesStore = defineStore('nodes', () => {
   }
 
   /**
-   * 更新节点状态（实时更新）
+   * 更新节点状态（实时更新，细粒度原地打补丁，杜绝无意义重绘）
    */
   function updateNodeStatuses(statuses: Record<string, NodeStatus>): void {
     let hasChanges = false
@@ -324,12 +420,15 @@ const useNodesStore = defineStore('nodes', () => {
       if (!node)
         return
 
-      nodes.value[index] = updateNodeStatus(node, extractStatusData(status))
-      hasChanges = true
+      const changed = applyStatusToNode(node, extractStatusData(status))
+      if (changed)
+        hasChanges = true
     })
 
-    if (hasChanges)
+    if (hasChanges) {
       refreshEarthNodes()
+      debouncedSaveCache(nodes.value)
+    }
   }
 
   /**

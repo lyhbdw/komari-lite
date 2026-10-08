@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { Text, Switch } from "@radix-ui/themes";
+import { Switch } from "@/components/ui/switch";
 import { updateSettingsWithToast, useSettings } from "@/lib/api";
 import Loading from "@/components/loading";
 import { toast } from "sonner";
@@ -42,7 +42,7 @@ const GeneralNotification = () => {
   }, [settings]);
 
   if (loading) return <Loading />;
-  if (error) return <Text color="red">{error}</Text>;
+  if (error) return <p className="text-sm text-destructive">{error}</p>;
 
   // 保存卡片 1：生命周期与登录通知
   const saveExpireAndLogin = async () => {

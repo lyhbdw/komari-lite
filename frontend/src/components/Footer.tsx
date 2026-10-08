@@ -1,11 +1,8 @@
-import { Flex, Text } from "@radix-ui/themes";
 import { useEffect, useState } from "react";
 import { useRPC2Call } from "@/contexts/useRPC2";
 import { usePublicInfo } from "@/contexts/usePublicInfo";
 
 const Footer = () => {
-  //const currentYear = new Date().getFullYear();
-
   // 格式化 build 时间
   const formatBuildTime = (isoString: string) => {
     const date = new Date(isoString);
@@ -31,6 +28,7 @@ const Footer = () => {
   const { call } = useRPC2Call();
   const { publicInfo } = usePublicInfo();
   const customFooterHtml = publicInfo?.theme_settings?.customFooterHtml || "";
+
   useEffect(() => {
     const fetchVersionInfo = async () => {
       try {
@@ -44,55 +42,38 @@ const Footer = () => {
   }, [call]);
 
   return (
-    <div className="km-footer footer p-2 border-t-1 border-t-[var(--gray-7)]">
-      {/* Copyright and ICP Filing */}
-
+    <footer className="km-footer footer p-3 border-t border-border/60 text-xs text-muted-foreground">
       {customFooterHtml ? (
-        <Text
-          size="1"
-          color="gray"
-          className="flex flex-col justify-center items-center"
-        >
+        <div className="flex flex-col justify-center items-center gap-1">
           <span
             dangerouslySetInnerHTML={{
               __html: customFooterHtml,
             }}
-          ></span>
-          <Text size="2" color="gray">
+          />
+          <p className="text-muted-foreground">
             Powered by Komari Monitor.
-          </Text>
-        </Text>
+          </p>
+        </div>
       ) : (
-        <Flex
-          direction={{ initial: "column", md: "row" }}
-          justify="between"
-          align={{ initial: "center", md: "start" }}
-          gap="4"
-          style={{
-            maxWidth: "1200px",
-            margin: "0 auto",
-          }}
-        >
-          <Flex
-            direction="column"
-            gap="2"
-            align={{ initial: "center", md: "start" }}
-          >
-            <Text size="2" color="gray">
+        <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center md:items-start gap-3">
+          <div className="flex flex-col gap-1 items-center md:items-start">
+            <p className="font-medium text-foreground/80">
               Powered by Komari Monitor.
-            </Text>
+            </p>
             {buildTime && (
-              <Text size="1" color="gray">
+              <p className="text-muted-foreground/70">
                 Build Time: {formatBuildTime(buildTime)}
-              </Text>
+              </p>
             )}
-            <Text size="1" color="gray">
-              {versionInfo && `${versionInfo.version} (${versionInfo.hash})`}
-            </Text>
-          </Flex>
-        </Flex>
+            {versionInfo && (
+              <p className="text-muted-foreground/70 font-mono text-[11px]">
+                {versionInfo.version} ({versionInfo.hash})
+              </p>
+            )}
+          </div>
+        </div>
       )}
-    </div>
+    </footer>
   );
 };
 

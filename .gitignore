@@ -52,3 +52,4 @@ node_modules/
 /web/public/defaultTheme/dist.tar.zst
 /web/public/defaultTheme/admin-dist.tar.zst
 /web/public/defaultTheme/preview.png
+*.zip

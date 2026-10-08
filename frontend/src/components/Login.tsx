@@ -1,9 +1,7 @@
 import * as React from "react";
-import {
-  Dialog,
-  Button,
-  IconButton,
-} from "@radix-ui/themes";
+import { Dialog } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useTranslation } from "react-i18next";
 import { Settings } from "lucide-react";
 import { AccountProvider } from "@/contexts/AccountContext";
@@ -106,23 +104,26 @@ const LoginDialog = ({ trigger, autoOpen = false, showSettings = true, info, onL
         return null;
       }
       return (
-        <a href="/admin/servers" target="_blank">
-          <IconButton
+        <a href="/admin/servers" target="_blank" rel="noreferrer">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-8"
             title={t("settings.title", "Settings")}
             aria-label={t("settings.title", "Settings")}
           >
             <Settings size={16} />
-          </IconButton>
+          </Button>
         </a>
       );
     }
 
     return (
-  <Dialog.Root open={open} onOpenChange={setOpen}>
-        <Dialog.Trigger>
-          {trigger ? trigger : <Button>{t("login.title")}</Button>}
+      <Dialog.Root open={open} onOpenChange={setOpen}>
+        <Dialog.Trigger asChild>
+          {trigger ? (typeof trigger === 'string' ? <Button>{trigger}</Button> : trigger) : <Button>{t("login.title")}</Button>}
         </Dialog.Trigger>
-        <Dialog.Content maxWidth="420px" className="km-login-dialog p-6 sm:p-7 rounded-2xl border border-border !bg-card shadow-2xl z-50">
+        <Dialog.Content className="km-login-dialog max-w-[420px] p-6 sm:p-7 rounded-2xl border border-border bg-card shadow-2xl z-50">
           <div className="flex flex-col items-center text-center mb-6">
             <div className="w-10 h-10 rounded-xl bg-foreground text-background flex items-center justify-center font-bold text-lg mb-3 shadow-sm select-none">
               K
@@ -130,7 +131,7 @@ const LoginDialog = ({ trigger, autoOpen = false, showSettings = true, info, onL
             <Dialog.Title className="text-xl font-bold tracking-tight text-foreground m-0">
               {t("login.title")}
             </Dialog.Title>
-            <Dialog.Description size="2" className="text-xs text-muted-foreground mt-1.5 m-0">
+            <Dialog.Description className="text-xs text-muted-foreground mt-1.5 m-0">
               {info || t("login.desc")}
             </Dialog.Description>
           </div>
@@ -150,8 +151,7 @@ const LoginDialog = ({ trigger, autoOpen = false, showSettings = true, info, onL
                     <label className="text-xs font-medium text-foreground block">
                       {t("login.username")}
                     </label>
-                    <input
-                      className="w-full h-10 px-3.5 text-sm rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground/60 outline-none focus:border-foreground/60 focus:ring-1 focus:ring-foreground/20 transition-all"
+                    <Input
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
                       id={`login-username-${fieldId}`}
@@ -166,8 +166,7 @@ const LoginDialog = ({ trigger, autoOpen = false, showSettings = true, info, onL
                     <label className="text-xs font-medium text-foreground block">
                       {t("login.password")}
                     </label>
-                    <input
-                      className="w-full h-10 px-3.5 text-sm rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground/60 outline-none focus:border-foreground/60 focus:ring-1 focus:ring-foreground/20 transition-all"
+                    <Input
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       id={`login-password-${fieldId}`}

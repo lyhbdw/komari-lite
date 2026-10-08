@@ -1,5 +1,5 @@
 import LoginDialog from "./Login";
-import { IconButton } from "@radix-ui/themes";
+import { Button } from "@/components/ui/button";
 import { Github } from "lucide-react";
 import { usePublicInfo } from "@/contexts/usePublicInfo";
 const NavBar = () => {
@@ -25,14 +25,17 @@ const NavBar = () => {
       </div>
 
       <div className="km-navbar-controls flex items-center gap-2 flex-shrink-0">
-        <IconButton
-          variant="soft"
+        <Button
+          variant="ghost"
+          size="icon"
+          className="size-8"
           onClick={() => {
             window.open("https://github.com/lyhbdw/komari-monitor-lite", "_blank");
           }}
+          aria-label="GitHub"
         >
           <Github size={16} />
-        </IconButton>
+        </Button>
 
         <LoginDialog
           onLoginSuccess={() => {

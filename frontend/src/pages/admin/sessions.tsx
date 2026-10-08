@@ -10,7 +10,8 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import { useTranslation } from "react-i18next";
-import { Dialog, Flex, Button } from "@radix-ui/themes";
+import { Dialog } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { Copy, Info } from "lucide-react";
 import { UserAgentHelper } from "@/utils/UserAgentHelper";
 import Loading from "@/components/loading";
@@ -137,14 +138,14 @@ export default function Sessions() {
             <Dialog.Description>
               {t("sessions.delete_all_desc")}
             </Dialog.Description>
-            <Flex gap="2" justify="end" mt="4">
-              <Dialog.Close>
-                <Button variant="soft" color="gray">{t("common.cancel")}</Button>
+            <div className="flex justify-end gap-2 mt-4">
+              <Dialog.Close asChild>
+                <Button variant="outline">{t("common.cancel")}</Button>
               </Dialog.Close>
-              <Button color="red" onClick={deleteAllSessions}>
+              <Button variant="destructive" onClick={deleteAllSessions}>
                 {t("common.delete")}
               </Button>
-            </Flex>
+            </div>
           </Dialog.Content>
         </Dialog.Root>
       </div>
@@ -284,11 +285,11 @@ export default function Sessions() {
                           </div>
                         </div>
 
-                        <Flex justify="end" mt="3">
-                          <Dialog.Close>
-                            <Button variant="soft" color="gray">{t("common.close")}</Button>
+                        <div className="flex justify-end mt-4">
+                          <Dialog.Close asChild>
+                            <Button variant="outline">{t("common.close")}</Button>
                           </Dialog.Close>
-                        </Flex>
+                        </div>
                       </Dialog.Content>
                     </Dialog.Root>
                   </TableCell>
@@ -303,8 +304,8 @@ export default function Sessions() {
                   <TableCell>
                     <Dialog.Root>
                       {!isCurrent && (
-                        <Dialog.Trigger>
-                          <Button color="red" variant="ghost">
+                        <Dialog.Trigger asChild>
+                          <Button variant="ghost" className="text-destructive hover:text-destructive hover:bg-destructive/10 h-7 px-2">
                             {t("common.delete")}
                           </Button>
                         </Dialog.Trigger>
@@ -316,19 +317,19 @@ export default function Sessions() {
                         <Dialog.Description>
                           {t("sessions.delete_one_desc")}
                         </Dialog.Description>
-                        <Flex gap="2" justify="end" mt="4">
-                          <Dialog.Close>
-                            <Button variant="soft" color="gray">
+                        <div className="flex justify-end gap-2 mt-4">
+                          <Dialog.Close asChild>
+                            <Button variant="outline">
                               {t("common.cancel")}
                             </Button>
                           </Dialog.Close>
                           <Button
-                            color="red"
+                            variant="destructive"
                             onClick={() => deleteSession(s.id)}
                           >
                             {t("common.delete")}
                           </Button>
-                        </Flex>
+                        </div>
                       </Dialog.Content>
                     </Dialog.Root>
                   </TableCell>

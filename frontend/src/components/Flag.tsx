@@ -1,5 +1,4 @@
 import * as React from "react";
-import { Box } from "@radix-ui/themes";
 import { useTranslation } from "react-i18next";
 
 interface FlagProps {
@@ -79,8 +78,7 @@ const Flag = React.memo(({ flag, size, className }: FlagProps) => {
   altText = t("common.region_flag_alt", { name: resolvedFlagFileName });
 
   return (
-    <Box
-      as="span"
+    <span
       className={`km-flag self-center ${className !== undefined ? className : "m-2"} ${size ? `w-${size} h-${size}` : "w-6 h-6"}`}
       style={{ display: "inline-flex", alignItems: "center" }}
       aria-label={altText}
@@ -90,7 +88,7 @@ const Flag = React.memo(({ flag, size, className }: FlagProps) => {
         alt={altText}
         style={{ width: "100%", height: "100%", objectFit: "contain" }}
       />
-    </Box>
+    </span>
   );
 });
 

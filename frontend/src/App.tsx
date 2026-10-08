@@ -1,6 +1,5 @@
 import React from "react";
-import { Theme } from "@radix-ui/themes";
-import "@radix-ui/themes/styles.css";
+import { Theme } from "@/components/ui/radix-shim";
 import { useSystemTheme } from "./hooks/useSystemTheme";
 import { useRoutes } from "react-router-dom";
 import { routes } from "./routes";

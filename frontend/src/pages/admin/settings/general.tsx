@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { Text, Switch } from "@radix-ui/themes";
+import { Switch } from "@/components/ui/switch";
 import { updateSettingsWithToast, useSettings } from "@/lib/api";
 import { SettingCardCollapse } from "@/components/admin/SettingCard";
 import { useState } from "react";
@@ -19,7 +19,7 @@ export default function GeneralSettings() {
     return <Loading text="" />;
   }
   if (error) {
-    return <Text color="red">{error}</Text>;
+    return <p className="text-sm text-destructive">{error}</p>;
   }
 
   const handleUpdateMmdb = async () => {

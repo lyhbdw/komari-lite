@@ -16,6 +16,7 @@ import { getTrafficUsed } from '@/utils/nodeHelpers'
 import { getOSImage, getOSName } from '@/utils/osImageHelper'
 import { getFlagSrc, getRegionDisplayName } from '@/utils/regionHelper'
 import { getExpireText, getExpireTextClass } from '@/utils/tagHelper'
+import { toast } from 'vue-sonner'
 
 const LoadChart = defineAsyncComponent(() => import('@/components/LoadChart.vue'))
 const PingChart = defineAsyncComponent(() => import('@/components/PingChart.vue'))
@@ -236,6 +237,15 @@ const trafficUsageText = computed(() => {
 const trafficProgressStyle = computed(() => ({
   width: `${trafficUsedPercentage.value}%`,
 }))
+
+function copyText(text?: string, label?: string) {
+  if (!text || text === '-') return
+  navigator.clipboard.writeText(text).then(() => {
+    toast.success(`${label || '内容'} 已复制`)
+  }).catch(() => {
+    toast.error('复制失败')
+  })
+}
 </script>
 
 <template>
@@ -274,8 +284,8 @@ const trafficProgressStyle = computed(() => ({
       <div class="px-4 grid gap-3" :class="metricCards.length <= 3 ? 'grid-cols-1 sm:grid-cols-3' : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-5'">
         <CardX
           v-for="item in metricCards" :key="item.label" hoverable size="small"
-          class="group h-full border border-border/80 bg-card transition-all rounded-md"
-          :class="item.cardBorderHoverClass || 'hover:border-foreground/30'"
+          class="group h-full border border-border/80 bg-card transition-all rounded-lg shadow-2xs"
+          :class="item.cardBorderHoverClass || 'hover:border-foreground/30 hover:shadow-xs'"
           content-class="h-full !p-3"
         >
           <div class="flex h-full min-h-10 md:min-h-18 flex-col justify-between gap-3">
@@ -305,42 +315,64 @@ const trafficProgressStyle = computed(() => ({
       <div class="px-4 gap-4 grid grid-cols-1 lg:grid-cols-2">
         <CardX
           title="硬件信息" size="small"
-          class="group h-full border border-border bg-card transition-all rounded-md hover:border-foreground/35 hover:shadow-xs shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
+          class="group h-full border border-border bg-card transition-all rounded-lg hover:border-foreground/35 hover:shadow-xs shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
         >
           <div class="gap-3 grid" :class="hardwareInfo.length <= 3 ? 'grid-cols-2' : 'grid-cols-3'">
             <div
               v-for="(item, index) in hardwareInfo" :key="item.label"
-              class="min-w-0 flex flex-col gap-1 rounded-md bg-muted/40 p-2.5 border border-border/40"
+              class="group/item min-w-0 flex flex-col justify-between gap-1 rounded-md bg-muted/40 p-2.5 border border-border/40 hover:bg-muted/60 transition-colors"
               :class="index === 0 ? (hardwareInfo.length <= 3 ? 'col-span-2' : 'col-span-3') : 'col-span-1'"
             >
-              <div class="flex gap-1 items-center text-muted-foreground">
-                <Icon v-if="item.icon" :icon="item.icon" :width="14" :height="14" />
-                <span class="text-xs sm:text-sm">{{ item.label }}</span>
+              <div class="flex items-center justify-between text-muted-foreground">
+                <div class="flex gap-1 items-center">
+                  <Icon v-if="item.icon" :icon="item.icon" :width="14" :height="14" />
+                  <span class="text-xs sm:text-sm">{{ item.label }}</span>
+                </div>
+                <button
+                  v-if="item.value && item.value !== '-'"
+                  type="button"
+                  class="opacity-0 group-hover/item:opacity-100 hover:text-foreground transition-opacity p-0.5 rounded cursor-pointer"
+                  title="复制"
+                  @click.stop="copyText(item.value, item.label)"
+                >
+                  <Icon icon="tabler:copy" :width="13" :height="13" />
+                </button>
               </div>
-              <span class="text-xs sm:text-sm break-all font-mono tabular-nums">{{ item.value }}</span>
+              <span class="text-xs sm:text-sm break-all font-mono tabular-nums text-foreground/90 font-medium">{{ item.value }}</span>
             </div>
           </div>
         </CardX>
 
         <CardX
           title="系统信息" size="small"
-          class="group h-full border border-border bg-card transition-all rounded-md hover:border-foreground/35 hover:shadow-xs shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
+          class="group h-full border border-border bg-card transition-all rounded-lg hover:border-foreground/35 hover:shadow-xs shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
         >
           <div class="gap-3 grid grid-cols-1 sm:grid-cols-2">
             <div
               v-for="item in systemInfo" :key="item.label"
-              class="min-w-0 flex flex-col gap-1 rounded-md bg-muted/40 p-2.5 border border-border/40"
+              class="group/item min-w-0 flex flex-col justify-between gap-1 rounded-md bg-muted/40 p-2.5 border border-border/40 hover:bg-muted/60 transition-colors"
             >
-              <div class="flex gap-1 items-center text-muted-foreground">
-                <Icon v-if="item.icon" :icon="item.icon" :width="14" :height="14" />
-                <span class="text-xs sm:text-sm">{{ item.label }}</span>
+              <div class="flex items-center justify-between text-muted-foreground">
+                <div class="flex gap-1 items-center">
+                  <Icon v-if="item.icon" :icon="item.icon" :width="14" :height="14" />
+                  <span class="text-xs sm:text-sm">{{ item.label }}</span>
+                </div>
+                <button
+                  v-if="item.value && item.value !== '-'"
+                  type="button"
+                  class="opacity-0 group-hover/item:opacity-100 hover:text-foreground transition-opacity p-0.5 rounded cursor-pointer"
+                  title="复制"
+                  @click.stop="copyText(item.value, item.label)"
+                >
+                  <Icon icon="tabler:copy" :width="13" :height="13" />
+                </button>
               </div>
               <div class="flex min-w-0 gap-2 items-center">
                 <img
                   v-if="item.label === '操作系统'" :src="getOSImage(data.os)" :alt="getOSName(data.os)"
                   class="size-5 shrink-0"
                 >
-                <span class="text-xs sm:text-sm break-all font-mono tabular-nums">
+                <span class="text-xs sm:text-sm break-all font-mono tabular-nums text-foreground/90 font-medium">
                   {{ item.value }}
                 </span>
               </div>
@@ -350,25 +382,36 @@ const trafficProgressStyle = computed(() => ({
 
         <CardX
           title="存储信息" size="small"
-          class="group h-full border border-border bg-card transition-all rounded-md hover:border-foreground/35 hover:shadow-xs shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
+          class="group h-full border border-border bg-card transition-all rounded-lg hover:border-foreground/35 hover:shadow-xs shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
         >
           <div class="gap-3 grid grid-cols-3">
             <div
               v-for="item in storageInfo" :key="item.label"
-              class="min-w-0 flex flex-col gap-1 rounded-md bg-muted/40 p-2.5 border border-border/40"
+              class="group/item min-w-0 flex flex-col justify-between gap-1 rounded-md bg-muted/40 p-2.5 border border-border/40 hover:bg-muted/60 transition-colors"
             >
-              <div class="flex gap-1 items-center text-muted-foreground">
-                <Icon v-if="item.icon" :icon="item.icon" :width="14" :height="14" />
-                <span class="text-xs sm:text-sm">{{ item.label }}</span>
+              <div class="flex items-center justify-between text-muted-foreground">
+                <div class="flex gap-1 items-center">
+                  <Icon v-if="item.icon" :icon="item.icon" :width="14" :height="14" />
+                  <span class="text-xs sm:text-sm">{{ item.label }}</span>
+                </div>
+                <button
+                  v-if="item.value && item.value !== '-'"
+                  type="button"
+                  class="opacity-0 group-hover/item:opacity-100 hover:text-foreground transition-opacity p-0.5 rounded cursor-pointer"
+                  title="复制"
+                  @click.stop="copyText(item.value, item.label)"
+                >
+                  <Icon icon="tabler:copy" :width="13" :height="13" />
+                </button>
               </div>
-              <span class="text-xs sm:text-sm break-all font-mono tabular-nums">{{ item.value }}</span>
+              <span class="text-xs sm:text-sm break-all font-mono tabular-nums text-foreground/90 font-medium">{{ item.value }}</span>
             </div>
           </div>
         </CardX>
 
         <CardX
           title="网络信息" size="small"
-          class="group h-full border border-border bg-card transition-all rounded-md hover:border-foreground/35 hover:shadow-xs shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
+          class="group h-full border border-border bg-card transition-all rounded-lg hover:border-foreground/35 hover:shadow-xs shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
           content-class="pt-0"
         >
           <div class="gap-3 grid grid-cols-2">

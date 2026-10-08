@@ -6,6 +6,7 @@ import { useIntervalFn } from '@vueuse/core'
 import dayjs from 'dayjs'
 import { computed, onMounted, ref, shallowRef, watch } from 'vue'
 import VChart from 'vue-echarts'
+import ChartSkeleton from '@/components/ChartSkeleton.vue'
 import { CardX } from '@/components/ui/card-x'
 import { Empty } from '@/components/ui/empty'
 import { Spinner } from '@/components/ui/spinner'
@@ -882,22 +883,21 @@ onMounted(() => {
     </Tabs>
 
     <!-- 内容区域 -->
-    <Spinner :show="loading" class="min-h-[320px]">
-      <div v-if="error" class="text-red-500 py-8 text-center">
-        {{ error }}
-      </div>
-      <div v-else-if="remoteData.length === 0 && !loading" class="py-8">
-        <Empty description="暂无负载数据" />
-      </div>
-      <div v-else-if="remoteData.length === 0 && loading" class="h-64 w-full" />
+    <ChartSkeleton v-if="loading && remoteData.length === 0" :count="3" />
+    <div v-else-if="error" class="text-destructive py-8 text-center text-sm font-medium">
+      {{ error }}
+    </div>
+    <div v-else-if="remoteData.length === 0 && !loading" class="py-8">
+      <Empty description="暂无负载数据" />
+    </div>
 
-      <!-- 图表网格 -->
-      <div v-else class="gap-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
-        <!-- CPU 卡片 -->
-        <CardX
-          size="small"
-          class="border border-border/80 rounded-md bg-card hover:border-foreground/30 transition-all"
-        >
+    <!-- 图表网格 -->
+    <div v-else class="gap-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
+      <!-- CPU 卡片 -->
+      <CardX
+        size="small"
+        class="border border-border/80 rounded-lg bg-card hover:border-foreground/30 hover:shadow-xs transition-all shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
+      >
           <template #header>
             <div class="flex items-center justify-between">
               <span class="text-base font-bold">CPU</span>
@@ -1041,6 +1041,5 @@ onMounted(() => {
           </div>
         </CardX>
       </div>
-    </Spinner>
   </div>
 </template>

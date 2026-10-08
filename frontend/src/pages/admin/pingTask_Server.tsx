@@ -9,7 +9,8 @@ import {
 import { useNodeDetails } from "@/contexts/useNodeDetails";
 import { usePingTask } from "@/contexts/usePingTask";
 import type { PingTask } from "@/contexts/ping-task-context";
-import { Button, Dialog, Flex } from "@radix-ui/themes";
+import { Dialog } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { Server, Settings2 } from "lucide-react";
 import React from "react";
 import { useTranslation } from "react-i18next";
@@ -201,7 +202,7 @@ const ServerRow: React.FC<{
               <Settings2 size={13} />
             </button>
           </Dialog.Trigger>
-          <Dialog.Content maxWidth="450px" className="km-pingtask-server-form">
+          <Dialog.Content className="max-w-md km-pingtask-server-form">
             <Dialog.Title>
               <div className="flex items-center gap-2">
                 <Server size={16} className="text-muted-foreground" />
@@ -234,11 +235,10 @@ const ServerRow: React.FC<{
                 }
               />
             </div>
-            <Flex gap="2" justify="end" className="mt-4">
-              <Dialog.Close>
+            <div className="flex justify-end gap-2 mt-4">
+              <Dialog.Close asChild>
                 <Button
-                  variant="soft"
-                  color="gray"
+                  variant="outline"
                   type="button"
                   onClick={() => setOpen(false)}
                   className="cursor-pointer"
@@ -253,7 +253,7 @@ const ServerRow: React.FC<{
               >
                 {saving ? "保存中..." : t("common.save", "保存修改")}
               </Button>
-            </Flex>
+            </div>
           </Dialog.Content>
         </Dialog.Root>
       </TableCell>

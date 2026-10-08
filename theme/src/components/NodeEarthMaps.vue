@@ -10,7 +10,13 @@ import { useNodesStore } from '@/stores/nodes'
 import { ensureWorldMapRegistered } from '@/utils/echartsWorldMap'
 import { getCoordByCode, getCountryCodeFromRegion } from '@/utils/geoHelper'
 import { getRegionDisplayName } from '@/utils/regionHelper'
+import { MapChart, ScatterChart } from 'echarts/charts'
+import { GeoComponent } from 'echarts/components'
+import { use } from 'echarts/core'
 import '@/utils/echarts'
+
+// 仅在地图组件内按需注册地理与散点组件
+use([MapChart, ScatterChart, GeoComponent])
 
 interface EarthMapPoint {
   code: string

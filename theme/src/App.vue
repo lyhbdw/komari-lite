@@ -31,9 +31,8 @@ onUnmounted(() => {
 
 <template>
   <Provider>
-    <LoadingCover v-if="appStore.loading" />
     <Header />
-    <main v-if="!appStore.loading" class="flex-1">
+    <main class="flex-1">
       <div class="max-w-[1280px] mx-auto">
         <RouterView v-slot="{ Component }">
           <KeepAlive :include="['HomeView']">
@@ -42,7 +41,7 @@ onUnmounted(() => {
         </RouterView>
       </div>
     </main>
-    <Footer v-if="!appStore.loading" />
+    <Footer />
     <Toaster rich-colors close-button position="top-center" />
   </Provider>
 </template>

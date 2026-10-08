@@ -17,8 +17,11 @@ import { isRegionMatch } from '@/utils/regionHelper'
 
 defineOptions({ name: 'HomeView' })
 
-const NodeCard = defineAsyncComponent(() => import('@/components/NodeCard.vue'))
-const NodeGeneralCards = defineAsyncComponent(() => import('@/components/NodeGeneralCards.vue'))
+import NodeCard from '@/components/NodeCard.vue'
+import NodeCardSkeleton from '@/components/NodeCardSkeleton.vue'
+import NodeGeneralCards from '@/components/NodeGeneralCards.vue'
+import NodeGeneralCardsSkeleton from '@/components/NodeGeneralCardsSkeleton.vue'
+
 const NodeList = defineAsyncComponent(() => import('@/components/NodeList.vue'))
 const PingChart = defineAsyncComponent(() => import('@/components/PingChart.vue'))
 
@@ -142,8 +145,9 @@ function getNodeItemTransitionKey(node: typeof nodesStore.nodes[number]): string
       </Alert>
     </div>
 
+    <NodeGeneralCardsSkeleton v-if="appStore.loading && nodesStore.nodes.length === 0 && appStore.earthViewMode !== 'hide'" />
     <NodeGeneralCards
-      v-if="appStore.earthViewMode !== 'hide'"
+      v-else-if="appStore.earthViewMode !== 'hide'"
       :nodes="groupNodeList"
       :globe-nodes="sampledGroupNodeList"
       :transition-key="appStore.nodeSelectedGroup"
@@ -197,8 +201,17 @@ function getNodeItemTransitionKey(node: typeof nodesStore.nodes[number]): string
             </div>
           </div>
           <TabsContent :key="appStore.nodeSelectedGroup" :value="appStore.nodeSelectedGroup">
+            <!-- 骨架屏加载态 -->
+            <div
+              v-if="appStore.loading && nodesStore.nodes.length === 0"
+              class="gap-3 grid grid-cols-1 sm:grid-cols-[repeat(auto-fill,minmax(300px,1fr))]"
+            >
+              <NodeCardSkeleton v-for="i in 6" :key="i" />
+            </div>
+
+            <!-- 正常卡片视图 -->
             <TransitionGroup
-              v-if="nodeList.length !== 0 && appStore.nodeViewMode === 'card'"
+              v-else-if="nodeList.length !== 0 && appStore.nodeViewMode === 'card'"
               :appear="false"
               name="node-card-switch"
               tag="div"
@@ -212,6 +225,8 @@ function getNodeItemTransitionKey(node: typeof nodesStore.nodes[number]): string
                 <NodeCard :node="node" @click="handleNodeClick(node)" @ping-click="handlePingClick" />
               </div>
             </TransitionGroup>
+
+            <!-- 列表视图 -->
             <NodeList
               v-else-if="nodeList.length !== 0 && appStore.nodeViewMode === 'list'"
               :nodes="nodeList"

@@ -4,9 +4,8 @@ import dayjs from 'dayjs'
  *
  * 统一注册所有图表组件，避免在各个组件中重复注册
  */
-import { LineChart, MapChart, ScatterChart } from 'echarts/charts'
+import { LineChart } from 'echarts/charts'
 import {
-  GeoComponent,
   GridComponent,
   LegendComponent,
   MarkLineComponent,
@@ -15,13 +14,10 @@ import {
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
 
-// 一次性注册所有需要的 ECharts 组件
+// 仅注册通用折线图与指标图表所需的轻量组件
 use([
   LineChart,
-  MapChart,
-  ScatterChart,
   GridComponent,
-  GeoComponent,
   TooltipComponent,
   LegendComponent,
   MarkLineComponent,

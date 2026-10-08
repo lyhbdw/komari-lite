@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Card, Switch } from "@radix-ui/themes";
+import { Switch } from "@/components/ui/switch";
 import { useTranslation } from "react-i18next";
 import Loading from "@/components/loading";
 import UplotChart from "@/components/ui/chartUplot";
@@ -228,9 +228,9 @@ const MiniPingChart = ({
   ];
 
   return (
-    <Card
+    <div
       style={{ width, height }}
-      className="km-mini-ping-chart flex min-h-0 flex-col gap-2 overflow-hidden"
+      className="km-mini-ping-chart rounded-xl border border-border/70 bg-card p-4 shadow-2xs flex min-h-0 flex-col gap-2 overflow-hidden"
     >
       {loading && (
         <div className="flex min-h-0 flex-1 items-center justify-center">
@@ -337,7 +337,6 @@ const MiniPingChart = ({
 
           <div className="flex shrink-0 items-center gap-2">
             <Switch
-              size="1"
               checked={ewmaEnabled}
               onCheckedChange={setEwmaEnabled}
               aria-label="EWMA"
@@ -351,7 +350,7 @@ const MiniPingChart = ({
           </div>
         </>
       )}
-    </Card>
+    </div>
   );
 };
 

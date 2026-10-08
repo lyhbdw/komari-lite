@@ -3,7 +3,6 @@ import type { NodeData } from '@/stores/nodes'
 import type { CurrencyCode } from '@/utils/financeHelper'
 import { Icon } from '@iconify/vue'
 import { computed, defineAsyncComponent, onMounted, ref } from 'vue'
-import NodeEarthGlobe from '@/components/NodeEarthGlobe.vue'
 import { CardX } from '@/components/ui/card-x'
 import { DataTooltip } from '@/components/ui/data-tooltip'
 import {
@@ -24,6 +23,7 @@ const props = defineProps<{
   transitionKey?: string
 }>()
 
+const NodeEarthGlobe = defineAsyncComponent(() => import('@/components/NodeEarthGlobe.vue'))
 const NodeEarthMaps = defineAsyncComponent(() => import('@/components/NodeEarthMaps.vue'))
 
 const appStore = useAppStore()
@@ -211,7 +211,7 @@ onMounted(async () => {
     <div :class="cardGridClass">
       <CardX
         hoverable
-        class="group h-full border border-border bg-card hover:border-foreground/35 hover:shadow-xs rounded-md transition-all shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
+        class="group h-full border border-border bg-card hover:border-foreground/35 hover:shadow-xs rounded-lg transition-all duration-150 shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
         :class="[
           showVisualPanel ? 'col-span-4 row-span-1 col-start-1 row-start-1' : 'col-span-1 row-start-1 col-start-1 min-h-18 md:min-h-24 md:row-start-1 md:col-start-1',
         ]"
@@ -242,7 +242,7 @@ onMounted(async () => {
       </CardX>
       <CardX
         hoverable
-        class="group h-full border border-border bg-card hover:border-foreground/35 hover:shadow-xs rounded-md transition-all shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
+        class="group h-full border border-border bg-card hover:border-foreground/35 hover:shadow-xs rounded-lg transition-all duration-150 shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
         :class="[
           showVisualPanel ? 'col-span-4 row-span-1 col-start-1 row-start-2' : 'col-span-1 row-start-2 col-start-1 min-h-18 md:min-h-24 md:row-start-1 md:col-start-2',
         ]"
@@ -277,7 +277,7 @@ onMounted(async () => {
       >
         <CardX
           hoverable
-          class="group h-full border border-border bg-card hover:border-foreground/35 hover:shadow-xs rounded-md transition-all cursor-pointer shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
+          class="group h-full border border-border bg-card hover:border-foreground/35 hover:shadow-xs rounded-lg transition-all cursor-pointer shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
           content-class="h-full !p-3" @click="openFinanceDialog = true"
         >
           <div class="flex h-full flex-col justify-between gap-1">
@@ -315,7 +315,7 @@ onMounted(async () => {
       </div>
       <CardX
         hoverable
-        class="group h-full border border-border bg-card hover:border-foreground/35 hover:shadow-xs rounded-md transition-all shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
+        class="group h-full border border-border bg-card hover:border-foreground/35 hover:shadow-xs rounded-lg transition-all shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
         :class="[
           showVisualPanel ? 'col-span-4 row-span-1 col-start-5 row-start-2' : 'col-span-1 row-start-2 col-start-2 min-h-18 md:min-h-24 md:row-start-1 md:col-start-4',
         ]"
@@ -353,7 +353,7 @@ onMounted(async () => {
 
       <CardX
         hoverable
-        class="group h-full border border-border bg-card hover:border-foreground/35 hover:shadow-xs rounded-md transition-all shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
+        class="group h-full border border-border bg-card hover:border-foreground/35 hover:shadow-xs rounded-lg transition-all shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
         :class="[
           showVisualPanel ? 'col-span-4 row-span-1 col-start-9 row-start-1' : 'col-span-1 row-start-1 col-start-3 min-h-18 md:min-h-24 md:row-start-1 md:col-start-5',
         ]"

@@ -112,11 +112,16 @@ export default defineConfig({
         defaultHandler(warning)
       },
       output: {
-        manualChunks: {
-          'vue-vendor': ['vue', 'vue-router', 'pinia'],
-          'echarts': ['echarts', 'vue-echarts'],
-          'reka-ui': ['reka-ui'],
-          'vueuse': ['@vueuse/core'],
+        manualChunks(id) {
+          if (id.includes('node_modules/vue/') || id.includes('node_modules/vue-router/') || id.includes('node_modules/pinia/')) {
+            return 'vue-vendor'
+          }
+          if (id.includes('node_modules/reka-ui/')) {
+            return 'reka-ui'
+          }
+          if (id.includes('node_modules/@vueuse/')) {
+            return 'vueuse'
+          }
         },
       },
     },
