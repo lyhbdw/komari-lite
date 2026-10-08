@@ -598,7 +598,7 @@ log_info "Detected OS: ${GREEN}$os_name${NC}, Architecture: ${GREEN}$arch${NC}"
 file_name="komari-agent-${os_name}-${arch}"
 
 resolve_snapshot_version() {
-    snapshot_api_url="https://api.github.com/repos/Tumb1er1376/komari-agent-lite/releases?per_page=100"
+    snapshot_api_url="https://api.github.com/repos/lyhbdw/komari-lite/releases?per_page=100"
     if ! releases_json=$(curl -fsSL --connect-timeout 15 \
         -H "Accept: application/vnd.github+json" \
         -H "User-Agent: komari-agent-installer" \
@@ -653,7 +653,7 @@ else
     else
         download_path="download/${version_to_install}"
     fi
-    download_url="https://github.com/Tumb1er1376/komari-agent-lite/releases/${download_path}/${file_name}"
+    download_url="https://github.com/lyhbdw/komari-lite/releases/${download_path}/${file_name}"
 fi
 
 log_step "Creating installation directory: ${GREEN}$target_dir${NC}"

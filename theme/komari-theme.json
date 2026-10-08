@@ -4,7 +4,7 @@
   "description": "Modern lightweight theme for Komari Lite",
   "version": "1.1.0",
   "author": "lyhbdw",
-  "url": "https://github.com/lyhbdw/komari-monitor-lite",
+  "url": "https://github.com/lyhbdw/komari-lite",
   "preview": "preview.png",
   "configuration": {
     "type": "managed",

@@ -35,7 +35,7 @@ const formattedServerVersion = computed(() => serverVersion.value?.version ?? nu
           :content="formattedServerVersion ?? ''"
         >
           <a
-            href="https://github.com/lyhbdw/komari-monitor-lite" target="_blank" rel="noopener noreferrer"
+            href="https://github.com/lyhbdw/komari-lite" target="_blank" rel="noopener noreferrer"
             class="transition-opacity hover:opacity-80"
           >
             <span class="font-semibold text-foreground/90 hover:text-foreground">Komari Lite</span>

@@ -1,6 +1,10 @@
-# Komari Monitor Lite
+# Komari Lite
 
-Komari Monitor Lite 是一个面向个人服务器和小型基础设施的自托管监控面板。它基于 Komari 的监控能力维护，专注于节点状态、历史指标、Ping 质量和通知，不包含远程控制类功能。
+Komari Lite 是一个面向个人服务器和小型基础设施的自托管监控面板与轻量探针单体仓库（Monorepo）。它基于 Komari 的监控能力维护，专注于节点状态、历史指标、Ping 质量和通知，不包含任何远程控制类危险功能。
+
+本仓库整合了：
+- **服务端面板（Server）**：轻量级 Web 面板、REST/RPC 接口、SQLite 降采样存储与通知告警。
+- **客户端探针（Agent，位于 `agent/` 目录）**：纯 Go 静态编译、无 CGO 依赖的极轻量系统监控采集器。
 
 当前首个独立版本：`1.0.0`
 
@@ -158,7 +162,7 @@ docker run -d \
 
 本项目源自 Komari：
 
-<https://github.com/lyhbdw/komari-monitor-lite>
+<https://github.com/lyhbdw/komari-lite>
 
 Lite 版本使用独立版本号和独立仓库维护，首个版本为 `1.0.0`。上游项目的版本更新不会自动合并到本项目；如需同步更新，应在测试、数据库备份和功能回归后进行。
 
