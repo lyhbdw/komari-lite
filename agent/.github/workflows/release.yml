@@ -1,0 +1,51 @@
+name: Release Binaries
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-attach:
+    if: ${{ !github.event.release.prerelease }}
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+          - goos: linux
+            goarch: arm64
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Build binary
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: 0
+          VERSION: ${{ github.event.release.tag_name }}
+        run: |
+          BINARY_NAME=komari-agent-linux-${{ matrix.goarch }}
+          go build -trimpath -ldflags="-X github.com/Tumb1er1376/komari-agent-lite/version.Current=${VERSION}" -o $BINARY_NAME
+
+      - name: Generate checksum
+        run: sha256sum komari-agent-linux-${{ matrix.goarch }} > komari-agent-linux-${{ matrix.goarch }}.sha256
+
+      - name: Upload binary to release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BINARY_NAME=komari-agent-linux-${{ matrix.goarch }}
+          gh release upload ${{ github.event.release.tag_name }} $BINARY_NAME "$BINARY_NAME.sha256" --repo ${{ github.repository }}
+        shell: bash
