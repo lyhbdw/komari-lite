@@ -7,7 +7,7 @@
 
 ## 说明
 
-本项目为 [Komari Lite](https://github.com/lyhbdw/komari-monitor-lite) 的独立专属前台监控主题，针对轻量服务器监控、多币种资产价值展示、暗色/亮色适配以及模态弹窗体验进行了深度定制与优化。
+本项目为 [Komari Lite](https://github.com/lyhbdw/komari-lite) 的独立专属前台监控主题，针对轻量服务器监控、多币种资产价值展示、暗色/亮色适配以及模态弹窗体验进行了深度定制与优化。
 
 ## 环境要求
 
@@ -56,7 +56,7 @@ npm run preview
 ## 鸣谢与渊源
 
 - 基于 [Tokinx/komari-theme-emerald](https://github.com/Tokinx/komari-theme-emerald) 与 [Komari Naive](https://github.com/lyimoexiao/komari-theme-naive) 衍生定制
-- [Komari Lite](https://github.com/lyhbdw/komari-monitor-lite)
+- [Komari Lite](https://github.com/lyhbdw/komari-lite)
 
 ## License
 

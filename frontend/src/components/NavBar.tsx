@@ -30,7 +30,7 @@ const NavBar = () => {
           size="icon"
           className="size-8"
           onClick={() => {
-            window.open("https://github.com/lyhbdw/komari-monitor-lite", "_blank");
+            window.open("https://github.com/lyhbdw/komari-lite", "_blank");
           }}
           aria-label="GitHub"
         >

@@ -6,7 +6,7 @@ WORKDIR /app
 ARG TARGETOS
 ARG TARGETARCH
 ARG OCI_REVISION=
-ARG OCI_SOURCE=https://github.com/lyhbdw/komari-monitor-lite
+ARG OCI_SOURCE=https://github.com/lyhbdw/komari-lite
 ARG OCI_VERSION=
 
 RUN test -n "$OCI_REVISION" && test "$OCI_REVISION" != unknown && test -n "$OCI_VERSION" && test "$OCI_VERSION" != unknown
