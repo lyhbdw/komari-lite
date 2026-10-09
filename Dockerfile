@@ -1,4 +1,5 @@
-FROM alpine:3.21
+ARG BASE_IMAGE=mirror.gcr.io/library/alpine:3.21
+FROM ${BASE_IMAGE}
 
 WORKDIR /app
 
