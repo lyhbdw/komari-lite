@@ -332,16 +332,41 @@ class InitManager {
   }
 
   /**
-   * 开始轮询
+   * 开始轮询（集成浏览器标签页前后台可见性感知，后台自动降频省电省流量）
    */
   private startPolling(): void {
     if (this.pollTimer) {
       clearInterval(this.pollTimer)
     }
 
+    const interval = this.getEffectivePollInterval()
     this.pollTimer = setInterval(() => {
       this.poll()
-    }, this.getPollInterval())
+    }, interval)
+
+    // 绑定 visibilitychange 事件（单例绑定）
+    if (typeof document !== 'undefined' && !(this as any)._visibilityListenerBound) {
+      (this as any)._visibilityListenerBound = true
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) {
+          // 切回前台：立即执行一次刷新，并恢复前台高频轮询
+          this.poll()
+          this.startPolling()
+        } else {
+          // 切换到后台：平滑调整为后台降频轮询
+          this.startPolling()
+        }
+      })
+    }
+  }
+
+  private getEffectivePollInterval(): number {
+    const normal = this.getPollInterval()
+    if (typeof document !== 'undefined' && document.hidden) {
+      // 页面在后台时降频至 15 秒，避免无效消耗客户端与服务端资源
+      return Math.max(normal, 15000)
+    }
+    return normal
   }
 
   /**

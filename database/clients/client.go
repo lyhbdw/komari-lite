@@ -5,6 +5,7 @@ import (
 	"fmt"
 	logger "github.com/lyhbdw/komari-monitor-lite/utils/log"
 	"math"
+	"sync"
 	"time"
 
 	"github.com/lyhbdw/komari-monitor-lite/database/dbcore"
@@ -15,7 +16,21 @@ import (
 	"github.com/google/uuid"
 )
 
+var (
+	clientsCacheMu   sync.RWMutex
+	cachedClients    []models.Client
+	clientsCachedAt  time.Time
+	clientsCacheTTL  = 3 * time.Second
+)
+
+func InvalidateClientsCache() {
+	clientsCacheMu.Lock()
+	cachedClients = nil
+	clientsCacheMu.Unlock()
+}
+
 func DeleteClient(clientUuid string) error {
+	InvalidateClientsCache()
 	db := dbcore.GetDBInstance()
 	err := db.Delete(&models.Client{}, "uuid = ?", clientUuid).Error
 	if err != nil {
@@ -114,6 +129,7 @@ func SaveClientInfo(update map[string]interface{}) error {
 		return err
 	}
 
+	InvalidateClientsCache()
 	err := db.Model(&models.Client{}).Where("uuid = ?", clientUUID).Updates(update).Error
 	if err != nil {
 		return err
@@ -135,6 +151,7 @@ func CreateClient() (clientUUID, token string, err error) {
 		UpdatedAt: time.Now().UTC(),
 	}
 
+	InvalidateClientsCache()
 	err = db.Create(&client).Error
 	if err != nil {
 		return "", "", err
@@ -160,6 +177,7 @@ func CreateClientWithName(name string) (clientUUID, token string, err error) {
 		UpdatedAt: time.Now().UTC(),
 	}
 
+	InvalidateClientsCache()
 	err = db.Create(&client).Error
 	if err != nil {
 		return "", "", err
@@ -190,11 +208,27 @@ func GetClientTokenByUUID(uuid string) (token string, err error) {
 }
 
 func GetAllClientBasicInfo() (clients []models.Client, err error) {
+	clientsCacheMu.RLock()
+	if cachedClients != nil && time.Since(clientsCachedAt) < clientsCacheTTL {
+		result := make([]models.Client, len(cachedClients))
+		copy(result, cachedClients)
+		clientsCacheMu.RUnlock()
+		return result, nil
+	}
+	clientsCacheMu.RUnlock()
+
 	db := dbcore.GetDBInstance()
 	err = db.Find(&clients).Error
 	if err != nil {
 		return nil, err
 	}
+
+	clientsCacheMu.Lock()
+	cachedClients = make([]models.Client, len(clients))
+	copy(cachedClients, clients)
+	clientsCachedAt = time.Now()
+	clientsCacheMu.Unlock()
+
 	return clients, nil
 }
 
@@ -242,6 +276,7 @@ func SaveClient(updates map[string]interface{}) error {
 
 	updates["updated_at"] = time.Now().UTC()
 
+	InvalidateClientsCache()
 	err := db.Model(&models.Client{}).Where("uuid = ?", clientUUID).Updates(updates).Error
 	if err != nil {
 		return err
