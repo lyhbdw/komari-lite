@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	AgentAssetVersion = "1.0.9"
+	AgentAssetVersion = "1.1.0"
 	agentAssetDirEnv  = "KOMARI_AGENT_ASSET_DIR"
 	defaultAssetDir   = "/app/agent-assets"
 )
@@ -21,16 +21,23 @@ var allowedAgentAssets = map[string]string{
 	"komari-agent-linux-arm64.sha256": "text/plain; charset=utf-8",
 }
 
+func isValidVersion(v string) bool {
+	if len(v) == 0 || len(v) > 32 {
+		return false
+	}
+	for _, r := range v {
+		if (r < '0' || r > '9') && r != '.' && r != '-' && r != '_' {
+			return false
+		}
+	}
+	return true
+}
+
 // ServeAgentAsset serves only the pinned Agent Lite release files mounted by
 // the operator. It deliberately does not proxy GitHub or accept arbitrary
 // paths, versions, or filenames.
 func ServeAgentAsset(c *gin.Context) {
 	reqVersion := c.Param("version")
-	if reqVersion != AgentAssetVersion && reqVersion != "latest" {
-		c.Status(http.StatusNotFound)
-		return
-	}
-
 	asset := c.Param("asset")
 	contentType, allowed := allowedAgentAssets[asset]
 	if !allowed {
@@ -38,11 +45,21 @@ func ServeAgentAsset(c *gin.Context) {
 		return
 	}
 
+	targetVersion := reqVersion
+	if reqVersion == "latest" {
+		targetVersion = AgentAssetVersion
+	} else if reqVersion != AgentAssetVersion {
+		if !isValidVersion(reqVersion) {
+			c.Status(http.StatusNotFound)
+			return
+		}
+	}
+
 	assetDir := os.Getenv(agentAssetDirEnv)
 	if assetDir == "" {
 		assetDir = defaultAssetDir
 	}
-	assetPath := filepath.Join(assetDir, AgentAssetVersion, asset)
+	assetPath := filepath.Join(assetDir, targetVersion, asset)
 	info, err := os.Lstat(assetPath)
 	if err != nil || !info.Mode().IsRegular() {
 		c.Status(http.StatusNotFound)
