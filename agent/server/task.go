@@ -9,6 +9,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -16,7 +17,9 @@ import (
 	"github.com/lyhbdw/komari-lite/agent/protocol/transport"
 	v2 "github.com/lyhbdw/komari-lite/agent/protocol/v2"
 	"github.com/lyhbdw/komari-lite/agent/ws"
-	ping "github.com/prometheus-community/pro-bing"
+	"golang.org/x/net/icmp"
+	"golang.org/x/net/ipv4"
+	"golang.org/x/net/ipv6"
 )
 
 // resolveIP 解析域名到 IP 地址，排除 DNS 查询时间，遵循自定义 DNS 及 IPv4/IPv6 偏好配置
@@ -39,44 +42,101 @@ func icmpPing(target string, timeout time.Duration) (int64, error) {
 	if err != nil {
 		host = target
 	}
-	// For ICMP, we only need the host/IP, port is irrelevant.
-	// If the host is an IPv6 literal, it might be wrapped in brackets.
 	host = strings.Trim(host, "[]")
 
-	// 先解析 IP 地址
-	ip, err := resolveIP(host)
+	ipStr, err := resolveIP(host)
+	if err != nil {
+		return -1, err
+	}
+	dstIP := net.ParseIP(ipStr)
+	if dstIP == nil {
+		return -1, errors.New("invalid IP address")
+	}
+
+	isIPv4 := dstIP.To4() != nil
+	network := "udp4"
+	listenAddr := "0.0.0.0"
+	if !isIPv4 {
+		network = "udp6"
+		listenAddr = "::"
+	}
+
+	c, err := icmp.ListenPacket(network, listenAddr)
+	if err != nil {
+		if isIPv4 {
+			c, err = icmp.ListenPacket("ip4:icmp", "0.0.0.0")
+		} else {
+			c, err = icmp.ListenPacket("ip6:ipv6-icmp", "::")
+		}
+		if err != nil {
+			return -1, err
+		}
+	}
+	defer c.Close()
+
+	_ = c.SetDeadline(time.Now().Add(timeout))
+
+	var msg icmp.Message
+	if isIPv4 {
+		msg = icmp.Message{
+			Type: ipv4.ICMPTypeEcho,
+			Code: 0,
+			Body: &icmp.Echo{
+				ID:   os.Getpid() & 0xffff,
+				Seq:  1,
+				Data: []byte("KOMARI"),
+			},
+		}
+	} else {
+		msg = icmp.Message{
+			Type: ipv6.ICMPTypeEchoRequest,
+			Code: 0,
+			Body: &icmp.Echo{
+				ID:   os.Getpid() & 0xffff,
+				Seq:  1,
+				Data: []byte("KOMARI"),
+			},
+		}
+	}
+
+	wb, err := msg.Marshal(nil)
 	if err != nil {
 		return -1, err
 	}
 
-	pinger, err := ping.NewPinger(ip)
-	if err != nil {
+	var dst net.Addr
+	if _, ok := c.LocalAddr().(*net.IPAddr); ok {
+		dst = &net.IPAddr{IP: dstIP}
+	} else {
+		dst = &net.UDPAddr{IP: dstIP}
+	}
+
+	start := time.Now()
+	if _, err := c.WriteTo(wb, dst); err != nil {
 		return -1, err
 	}
-	pinger.Count = 1
-	pinger.Timeout = timeout
-	pinger.SetPrivileged(false)
-	err = pinger.Run()
-	if err != nil {
-		// 非特权 ping 在缺少 ping_group_range 的环境中可能失败，尝试特权模式
-		if pingerPriv, errPriv := ping.NewPinger(ip); errPriv == nil {
-			pingerPriv.Count = 1
-			pingerPriv.Timeout = timeout
-			pingerPriv.SetPrivileged(true)
-			if errPrivRun := pingerPriv.Run(); errPrivRun == nil {
-				stats := pingerPriv.Statistics()
-				if stats.PacketsRecv > 0 {
-					return stats.AvgRtt.Milliseconds(), nil
-				}
-			}
+
+	rb := make([]byte, 1500)
+	proto := 1
+	if !isIPv4 {
+		proto = 58
+	}
+	for {
+		n, _, err := c.ReadFrom(rb)
+		if err != nil {
+			return -1, err
 		}
-		return -1, err
+		rtt := time.Since(start).Milliseconds()
+
+		rm, err := icmp.ParseMessage(proto, rb[:n])
+		if err != nil {
+			continue
+		}
+		switch rm.Type {
+		case ipv4.ICMPTypeEchoReply, ipv6.ICMPTypeEchoReply:
+			return rtt, nil
+		}
 	}
-	stats := pinger.Statistics()
-	if stats.PacketsRecv == 0 {
-		return -1, errors.New("no packets received")
-	}
-	return stats.AvgRtt.Milliseconds(), nil
 }
 
 func tcpPing(target string, timeout time.Duration) (int64, error) {

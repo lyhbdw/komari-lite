@@ -1,7 +1,8 @@
 package monitoring
 
 import (
-	"github.com/shirou/gopsutil/v4/load"
+	"fmt"
+	"os"
 )
 
 type LoadInfo struct {
@@ -11,15 +12,11 @@ type LoadInfo struct {
 }
 
 func Load() LoadInfo {
-
-	avg, err := load.Avg()
-	if err != nil {
-		return LoadInfo{Load1: 0, Load5: 0, Load15: 0}
+	if data, err := os.ReadFile("/proc/loadavg"); err == nil {
+		var l1, l5, l15 float64
+		if _, err := fmt.Sscanf(string(data), "%f %f %f", &l1, &l5, &l15); err == nil {
+			return LoadInfo{Load1: l1, Load5: l5, Load15: l15}
+		}
 	}
-	return LoadInfo{
-		Load1:  avg.Load1,
-		Load5:  avg.Load5,
-		Load15: avg.Load15,
-	}
-
+	return LoadInfo{Load1: 0, Load5: 0, Load15: 0}
 }

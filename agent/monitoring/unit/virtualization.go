@@ -5,8 +5,6 @@ import (
 	"os/exec"
 	"regexp"
 	"strings"
-
-	cpuid "github.com/klauspost/cpuid/v2"
 )
 
 func Virtualized() string {
@@ -27,37 +25,56 @@ func Virtualized() string {
 	return detectByCPUID()
 }
 
-// detectByCPUID uses cpuid to check if running under a hypervisor and maps vendor to a common name.
+// detectByCPUID 在不依赖外部指令集大库的情况下，结合 Linux DMI 与内核标记精准判定虚拟化环境
 func detectByCPUID() string {
-	if !cpuid.CPU.VM() {
-		// Align with systemd-detect-virt for bare metal.
+	dmiPaths := []string{
+		"/sys/class/dmi/id/sys_vendor",
+		"/sys/class/dmi/id/product_name",
+		"/sys/class/dmi/id/bios_vendor",
+	}
+	var dmiCombined string
+	for _, p := range dmiPaths {
+		if data, err := os.ReadFile(p); err == nil {
+			dmiCombined += " " + strings.ToLower(string(data))
+		}
+	}
+
+	hasHypervisorFlag := false
+	if data, err := os.ReadFile("/proc/cpuinfo"); err == nil {
+		content := string(data)
+		if strings.Contains(content, "hypervisor") {
+			hasHypervisorFlag = true
+		}
+	}
+
+	if !hasHypervisorFlag && strings.TrimSpace(dmiCombined) == "" {
 		return "none"
 	}
-	vendor := strings.ToLower(cpuid.CPU.HypervisorVendorString)
 
 	vendorMap := map[string][]string{
-		"kvm":       {"kvm"},
-		"microsoft": {"microsoft", "hyper-v", "msvm", "mshyperv"},
-		"vmware":    {"vmware"},
-		"xen":       {"xen"},
-		"bhyve":     {"bhyve"},
-		"qemu":      {"qemu"},
-		"parallels": {"parallels"},
-		"oracle":    {"oracle", "virtualbox", "vbox"},
-		"acrn":      {"acrn"},
+		"kvm":        {"kvm", "qemu", "bochs"},
+		"vmware":     {"vmware"},
+		"virtualbox": {"virtualbox", "innotek", "vbox"},
+		"microsoft":  {"microsoft", "hyper-v", "msvm", "mshyperv"},
+		"xen":        {"xen"},
+		"bhyve":      {"bhyve"},
+		"parallels":  {"parallels"},
+		"acrn":       {"acrn"},
 	}
 
 	for name, keys := range vendorMap {
 		for _, key := range keys {
-			if vendor == key || strings.Contains(vendor, key) {
+			if strings.Contains(dmiCombined, key) {
 				return name
 			}
 		}
 	}
-	if vendor != "" {
-		return vendor
+
+	if hasHypervisorFlag {
+		return "kvm" // 现代主流 Linux 云主机缺省大多基于 KVM
 	}
-	return "virtualized"
+
+	return "none"
 }
 
 // detectContainer attempts to detect common Linux container environments when systemd isn't available.

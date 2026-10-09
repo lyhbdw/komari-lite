@@ -1,11 +1,18 @@
 package monitoring
 
 import (
-	"github.com/shirou/gopsutil/v4/host"
+	"fmt"
+	"os"
 )
 
 func Uptime() (uint64, error) {
-
-	return host.Uptime()
-
+	data, err := os.ReadFile("/proc/uptime")
+	if err != nil {
+		return 0, err
+	}
+	var up float64
+	if _, err := fmt.Sscanf(string(data), "%f", &up); err != nil {
+		return 0, err
+	}
+	return uint64(up), nil
 }
