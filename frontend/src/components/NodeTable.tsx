@@ -7,7 +7,8 @@ import {
   TableHeader,
   TableRow,
 } from "./ui/table";
-import { Badge, Flex, IconButton } from "@radix-ui/themes";
+import { Badge } from "@/components/ui/badge";
+import { Flex, IconButton } from "@/components/ui/radix-shim";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { ChevronRight, ChevronUp, ChevronDown } from "lucide-react";

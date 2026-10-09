@@ -6,7 +6,8 @@ import {
   Badge,
   Separator,
   IconButton,
-} from "@radix-ui/themes";
+  Box,
+} from "@/components/ui/radix-shim";
 import type { LiveData, Record } from "../types/LiveData";
 import { DEFAULT_LIVE_RECORD } from "../types/LiveData";
 import UsageBar from "./UsageBar";
@@ -267,7 +268,7 @@ type NodeGridProps = {
   onlineSet: ReadonlySet<string>;
 };
 
-import { Box } from "@radix-ui/themes";
+// Node.tsx
 import { Link } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
 import type { NodeBasicInfo } from "@/contexts/node-list-context";

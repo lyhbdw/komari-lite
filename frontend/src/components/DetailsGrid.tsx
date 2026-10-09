@@ -5,7 +5,8 @@ import { useLiveData } from "@/contexts/useLiveData";
 import type { NodeBasicInfo } from "@/contexts/node-list-context";
 import { formatUptime } from "@/utils/formatUptime";
 import { formatBytes } from "@/utils/unitHelper";
-import { Flex, Text, Card } from "@radix-ui/themes";
+import { Flex, Text } from "@/components/ui/radix-shim";
+import { Card } from "@/components/ui/card";
 import type { Record as LiveRecord } from "@/types/LiveData";
 
 type DetailsGridProps = {

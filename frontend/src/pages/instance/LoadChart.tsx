@@ -8,7 +8,7 @@ import {
   Select,
   Switch,
   TextField,
-} from "@radix-ui/themes";
+} from "@/components/ui/radix-shim";
 import {
   DndContext,
   KeyboardSensor,

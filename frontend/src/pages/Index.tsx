@@ -6,7 +6,7 @@ import {
   Popover,
   IconButton,
   Switch,
-} from "@radix-ui/themes";
+} from "@/components/ui/radix-shim";
 import { useTranslation } from "react-i18next";
 import React, { useCallback, useEffect, useMemo, Suspense } from "react";
 const NodeDisplay = React.lazy(() => import("../components/NodeDisplay"));

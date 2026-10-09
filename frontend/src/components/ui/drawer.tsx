@@ -4,7 +4,7 @@ import * as React from "react";
 import { Drawer as DrawerPrimitive } from "vaul";
 
 import { cn } from "@/lib/utils";
-import { Theme } from "@radix-ui/themes";
+import { Theme } from "@/components/ui/radix-shim";
 import { useSystemTheme } from "@/hooks/useSystemTheme";
 function Drawer({
   ...props

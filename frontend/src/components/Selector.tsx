@@ -1,5 +1,6 @@
 import React from "react";
-import { Checkbox, TextField } from "@radix-ui/themes";
+import { Checkbox } from "@/components/ui/checkbox";
+import { TextField } from "@/components/ui/radix-shim";
 import { Search } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import {

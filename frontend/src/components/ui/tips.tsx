@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Info } from "lucide-react";
-import { Popover, Dialog, Box } from "@radix-ui/themes";
+import { Popover, Dialog, Box } from "@/components/ui/radix-shim";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 interface TipsProps {

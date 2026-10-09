@@ -1,6 +1,6 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
-import { TextField } from "@radix-ui/themes";
+import { TextField } from "@/components/ui/radix-shim";
 
 type Primitive = string | number;
 

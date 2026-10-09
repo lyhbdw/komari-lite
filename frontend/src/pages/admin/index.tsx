@@ -18,7 +18,7 @@ import {
   Select,
   Switch,
   DropdownMenu,
-} from "@radix-ui/themes";
+} from "@/components/ui/radix-shim";
 import {
   CircleDollarSign,
   Copy,

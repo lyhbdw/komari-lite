@@ -5,7 +5,7 @@ import {
   IconButton,
   TextField,
   SegmentedControl,
-} from "@radix-ui/themes";
+} from "@/components/ui/radix-shim";
 import { Search, Grid3X3, Table2, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useLocalStorage } from "@/hooks/useLocalStorage";

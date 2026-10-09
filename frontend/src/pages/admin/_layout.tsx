@@ -3,7 +3,8 @@ import { Outlet } from "react-router-dom";
 import AdminPanelBar from "../../components/admin/AdminPanelBar";
 import { AccountProvider } from "@/contexts/AccountContext";
 import { updateSettingsWithToast, useSettings } from "@/lib/api";
-import { Button, Dialog } from "@radix-ui/themes";
+import { Button } from "@/components/ui/button";
+import { Dialog } from "@/components/ui/dialog";
 import { useEffect, useState } from "react";
 import { getEula } from "@/utils/eula";
 

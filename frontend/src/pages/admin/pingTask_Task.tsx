@@ -31,7 +31,7 @@ import {
   Dialog,
   Flex,
   Select,
-} from "@radix-ui/themes";
+} from "@/components/ui/radix-shim";
 import { GripVertical, Pencil, Settings2, Trash2 } from "lucide-react";
 import React from "react";
 import { useTranslation } from "react-i18next";

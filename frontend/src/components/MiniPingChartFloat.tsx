@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from "react";
-import { Popover } from "@radix-ui/themes";
+import { Popover } from "@/components/ui/radix-shim";
 import MiniPingChart from "./MiniPingChart";
 
 interface FloatMiniPingChartProps {

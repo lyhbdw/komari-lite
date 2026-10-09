@@ -9,7 +9,7 @@ import {
   Dialog,
   Flex,
   Select,
-} from "@radix-ui/themes";
+} from "@/components/ui/radix-shim";
 import React from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
