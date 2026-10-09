@@ -4,9 +4,11 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"hash/fnv"
 	"os"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -170,37 +172,40 @@ func NetworkSpeed() (totalUp, totalDown, upSpeed, downSpeed uint64, err error) {
 }
 
 func getNetworkSpeedFallback(includeNics, excludeNics map[string]struct{}) (totalUp, totalDown, upSpeed, downSpeed uint64, err error) {
-	totalUp, totalDown, err = collectNetworkTotals(includeNics, excludeNics)
+	totalUp, totalDown, countedNics, err := collectNetworkTotals(includeNics, excludeNics)
 	if err != nil {
 		return 0, 0, 0, 0, err
 	}
 
-	upSpeed, downSpeed = updateNetworkSpeedSample(totalUp, totalDown, time.Now())
+	epoch := calcNicEpoch(getSystemBootID(), countedNics)
+	upSpeed, downSpeed = updateNetworkSpeedSample(totalUp, totalDown, epoch, time.Now())
 	return totalUp, totalDown, upSpeed, downSpeed, nil
 }
 
-func collectNetworkTotals(includeNics, excludeNics map[string]struct{}) (totalUp, totalDown uint64, err error) {
+func collectNetworkTotals(includeNics, excludeNics map[string]struct{}) (totalUp, totalDown uint64, countedNics []string, err error) {
 	ioCounters, err := net.IOCounters(true)
 	if err != nil {
-		return 0, 0, fmt.Errorf("failed to get network IO counters: %w", err)
+		return 0, 0, nil, fmt.Errorf("failed to get network IO counters: %w", err)
 	}
 
 	if len(ioCounters) == 0 {
-		return 0, 0, fmt.Errorf("no network interfaces found")
+		return 0, 0, nil, fmt.Errorf("no network interfaces found")
 	}
 
 	for _, interfaceStats := range ioCounters {
 		if shouldInclude(interfaceStats.Name, includeNics, excludeNics) {
 			totalUp += interfaceStats.BytesSent
 			totalDown += interfaceStats.BytesRecv
+			countedNics = append(countedNics, interfaceStats.Name)
 		}
 	}
 
-	return totalUp, totalDown, nil
+	return totalUp, totalDown, countedNics, nil
 }
 
 type networkSpeedState struct {
 	sync.Mutex
+	epoch     string
 	totalUp   uint64
 	totalDown uint64
 	sampledAt time.Time
@@ -208,11 +213,27 @@ type networkSpeedState struct {
 
 var networkSpeedSample networkSpeedState
 
-func updateNetworkSpeedSample(totalUp, totalDown uint64, now time.Time) (upSpeed, downSpeed uint64) {
+// calcNicEpoch 组合 Linux 系统 boot_id 和当前统计网卡集合摘要，
+// 当机器发生重启或网卡变动时触发基线重新对齐，杜绝历史计数器突变导致的流量暴增
+func calcNicEpoch(bootID string, nics []string) string {
+	sortedNics := make([]string, len(nics))
+	copy(sortedNics, nics)
+	sort.Strings(sortedNics)
+	h := fnv.New64a()
+	for _, n := range sortedNics {
+		_, _ = h.Write([]byte(n))
+		_, _ = h.Write([]byte{'\n'})
+	}
+	return fmt.Sprintf("%s/%016x", bootID, h.Sum64())
+}
+
+func updateNetworkSpeedSample(totalUp, totalDown uint64, epoch string, now time.Time) (upSpeed, downSpeed uint64) {
 	networkSpeedSample.Lock()
 	defer networkSpeedSample.Unlock()
 
-	if networkSpeedSample.sampledAt.IsZero() {
+	// 首次采样，或检测到系统重启/网卡集合变动 (epoch 改变)：重置基准线 (Re-baseline)，不将既往累计误当作本周期流量
+	if networkSpeedSample.sampledAt.IsZero() || networkSpeedSample.epoch != epoch {
+		networkSpeedSample.epoch = epoch
 		networkSpeedSample.totalUp = totalUp
 		networkSpeedSample.totalDown = totalDown
 		networkSpeedSample.sampledAt = now
@@ -269,28 +290,42 @@ func parseNics(nics string) map[string]struct{} {
 }
 
 func shouldInclude(nicName string, includeNics, excludeNics map[string]struct{}) bool {
-	// 默认排除回环接口
+	// 无论如何，回环接口与常见虚拟回环必须排除（即使出现在 includeNics 中）
+	if nicName == "lo" || strings.HasPrefix(nicName, "lo:") {
+		return false
+	}
 	for loopbackName := range loopbackNames {
 		if strings.HasPrefix(nicName, loopbackName) {
 			return false
 		}
 	}
 
-	// 如果定义了白名单，则只包括白名单中的接口
+	// 如果定义了白名单，包含白名单中的接口
 	for pattern := range includeNics {
 		if matched, _ := filepath.Match(pattern, nicName); matched {
 			return true
 		}
 	}
 
-	// 如果定义了黑名单，则排除黑名单中的接口
+	// 如果定义了黑名单，排除黑名单中的接口
 	for pattern := range excludeNics {
 		if matched, _ := filepath.Match(pattern, nicName); matched {
 			return false
 		}
 	}
 
-	return len(includeNics) == 0 // 如果没有定义白名单，则默认包含所有非回环接口
+	// 如果定义了白名单但未能匹配，则不包含
+	if len(includeNics) > 0 {
+		return false
+	}
+
+	// Linux 内核级拓扑判定：自动排除上层叠加网卡 (拥有 lower_* 链路的 bond/bridge/vlan/macvlan)
+	// 以及挂载在网桥后的虚拟从属端口 (brport/master)，避免 Docker、虚拟机、网桥环境下流量重复统计
+	if isCountedElsewhere(nicName) {
+		return false
+	}
+
+	return true
 }
 
 func InterfaceList() ([]string, error) {
