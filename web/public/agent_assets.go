@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	AgentAssetVersion = "v1.1.1"
+	AgentAssetVersion = "v1.1.2"
 	agentAssetDirEnv  = "KOMARI_AGENT_ASSET_DIR"
 	defaultAssetDir   = "/app/agent-assets"
 )

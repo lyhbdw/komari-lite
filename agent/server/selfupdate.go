@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strconv"
@@ -177,6 +178,16 @@ func performSelfUpdate(targetVersion, expectedSHA string) {
 		log.Printf("selfupdate: %v", err)
 		return
 	}
+
+	// 升级预检（Smoke Test）：在执行真正替换前，启动临时文件做一次健康探测
+	// 验证目标环境对该二进制的架构、链接器（glibc/musl）、UPX 解压以及执行权限是否正常支持
+	// 若探活失败，保留旧版本继续运行，杜绝节点因异常二进制而失联
+	if err := smokeTestBinary(tmpName); err != nil {
+		os.Remove(tmpName)
+		log.Printf("selfupdate: pre-flight smoke test failed (%v), aborting update to protect agent", err)
+		return
+	}
+
 	if err := os.Rename(tmpName, exePath); err != nil {
 		os.Remove(tmpName)
 		log.Printf("selfupdate: %v", err)
@@ -187,6 +198,20 @@ func performSelfUpdate(targetVersion, expectedSHA string) {
 	// 交给 init 系统重启。非 systemd/upstart 环境（前台运行）下进程退出，
 	// 用户需自行重启；install.sh 安装的服务均有 Restart=always / respawn。
 	os.Exit(0)
+}
+
+// smokeTestBinary 执行短生命周期探活，确保下载的文件能在当前机器上真正执行
+func smokeTestBinary(path string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, path, "--help")
+	cmd.Env = append(os.Environ(), "KOMARI_SMOKE_TEST=1")
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("exit error: %w, output: %s", err, strings.TrimSpace(string(out)))
+	}
+	return nil
 }
 
 // updateHTTPClient 返回升级下载专用 client：走 dnsresolver 的 IP 偏好栈
