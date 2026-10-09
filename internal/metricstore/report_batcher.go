@@ -346,6 +346,10 @@ func writePendingReports(ctx context.Context, pending *[]v2.Report) error {
 		}
 		*pending = (*pending)[batchSize:]
 	}
+	// 当所有待落盘指标已写完时，重置底层切片容量，主动协助 Go GC 回收长生命周期的切片堆内存
+	if len(*pending) == 0 && cap(*pending) > 256 {
+		*pending = nil
+	}
 	return nil
 }
 
@@ -362,6 +366,10 @@ func writePendingPingRecords(ctx context.Context, pending *[]models.PingRecord) 
 			return err
 		}
 		*pending = (*pending)[batchSize:]
+	}
+	// 当所有待落盘探测记录已写完时，重置底层切片容量，主动协助 Go GC 回收堆内存
+	if len(*pending) == 0 && cap(*pending) > 256 {
+		*pending = nil
 	}
 	return nil
 }
