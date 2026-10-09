@@ -3,8 +3,16 @@ package monitoring
 import (
 	"fmt"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/shirou/gopsutil/v4/disk"
+)
+
+var (
+	partitionsCacheMu  sync.RWMutex
+	cachedPhysicalParts []disk.PartitionStat
+	partitionsCachedAt time.Time
 )
 
 type DiskInfo struct {
@@ -14,55 +22,69 @@ type DiskInfo struct {
 
 func Disk() DiskInfo {
 	diskinfo := DiskInfo{}
-	// 获取所有分区，使用 true 避免物理磁盘被 gopsutil 错误排除
-	usage, err := disk.Partitions(true)
-	if err != nil {
-		diskinfo.Total = 0
-		diskinfo.Used = 0
-	} else {
-		// 如果指定了自定义挂载点，只统计指定的挂载点
-		if flags.IncludeMountpoints != "" {
-			includeMounts := strings.Split(flags.IncludeMountpoints, ";")
-			for _, mountpoint := range includeMounts {
-				mountpoint = strings.TrimSpace(mountpoint)
-				if mountpoint != "" {
-					u, err := disk.Usage(mountpoint)
-					if err != nil {
-						continue
-					} else {
-						diskinfo.Total += u.Total
-						diskinfo.Used += u.Used
-					}
+	// 如果指定了自定义挂载点，只统计指定的挂载点
+	if flags.IncludeMountpoints != "" {
+		includeMounts := strings.Split(flags.IncludeMountpoints, ";")
+		for _, mountpoint := range includeMounts {
+			mountpoint = strings.TrimSpace(mountpoint)
+			if mountpoint != "" {
+				u, err := disk.Usage(mountpoint)
+				if err != nil {
+					continue
+				} else {
+					diskinfo.Total += u.Total
+					diskinfo.Used += u.Used
 				}
 			}
-		} else {
-			// 使用默认逻辑，排除临时文件系统和网络驱动器
+		}
+		return diskinfo
+	}
+
+	// 使用默认逻辑，排除临时文件系统和网络驱动器（缓存物理分区列表 15 秒）
+	var physicalParts []disk.PartitionStat
+			partitionsCacheMu.RLock()
+			if cachedPhysicalParts != nil && time.Since(partitionsCachedAt) < 15*time.Second {
+				physicalParts = cachedPhysicalParts
+				partitionsCacheMu.RUnlock()
+			} else {
+				partitionsCacheMu.RUnlock()
+				usage, err := disk.Partitions(true)
+				if err == nil {
+					for _, part := range usage {
+						if isPhysicalDisk(part) {
+							physicalParts = append(physicalParts, part)
+						}
+					}
+					partitionsCacheMu.Lock()
+					cachedPhysicalParts = physicalParts
+					partitionsCachedAt = time.Now()
+					partitionsCacheMu.Unlock()
+				}
+			}
+
 			deviceMap := make(map[string]*disk.UsageStat)
+			for _, part := range physicalParts {
+				u, err := disk.Usage(part.Mountpoint)
+				if err != nil {
+					continue
+				}
 
-			for _, part := range usage {
-				if isPhysicalDisk(part) {
-					u, err := disk.Usage(part.Mountpoint)
-					if err != nil {
-						continue
+				deviceID := part.Device
+				// ZFS去重: 基于 pool 名称 (例如 pool/dataset -> pool)
+				if strings.ToLower(part.Fstype) == "zfs" {
+					if idx := strings.Index(deviceID, "/"); idx != -1 {
+						deviceID = deviceID[:idx]
 					}
+				}
 
-					deviceID := part.Device
-					// ZFS去重: 基于 pool 名称 (例如 pool/dataset -> pool)
-					if strings.ToLower(part.Fstype) == "zfs" {
-						if idx := strings.Index(deviceID, "/"); idx != -1 {
-							deviceID = deviceID[:idx]
-						}
-					}
-
-					// 如果该设备已存在，且当前挂载点的 Total 更大，则替换（处理 quota 等情况）
-					// 否则保留现有的（通常我们希望统计物理 pool 的总量）
-					if existing, ok := deviceMap[deviceID]; ok {
-						if u.Total > existing.Total {
-							deviceMap[deviceID] = u
-						}
-					} else {
+				// 如果该设备已存在，且当前挂载点的 Total 更大，则替换（处理 quota 等情况）
+				// 否则保留现有的（通常我们希望统计物理 pool 的总量）
+				if existing, ok := deviceMap[deviceID]; ok {
+					if u.Total > existing.Total {
 						deviceMap[deviceID] = u
 					}
+				} else {
+					deviceMap[deviceID] = u
 				}
 			}
 
@@ -70,8 +92,6 @@ func Disk() DiskInfo {
 				diskinfo.Total += u.Total
 				diskinfo.Used += u.Used
 			}
-		}
-	}
 	return diskinfo
 }
 
@@ -151,9 +171,11 @@ func isPhysicalDisk(part disk.PartitionStat) bool {
 	}
 	// Windows 网络驱动器通常是映射盘符，但不容易通过fstype判断
 	// 可以通过opts判断，Windows网络驱动通常有相关选项
-	optsStr := strings.ToLower(strings.Join(part.Opts, ","))
-	if strings.Contains(optsStr, "remote") || strings.Contains(optsStr, "network") {
-		return false
+	for _, opt := range part.Opts {
+		optLower := strings.ToLower(opt)
+		if strings.Contains(optLower, "remote") || strings.Contains(optLower, "network") {
+			return false
+		}
 	}
 
 	// 虚拟内存

@@ -3,6 +3,7 @@ package server
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"log"
@@ -11,25 +12,26 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Tumb1er1376/komari-agent-lite/dnsresolver"
-	"github.com/Tumb1er1376/komari-agent-lite/protocol/transport"
-	v2 "github.com/Tumb1er1376/komari-agent-lite/protocol/v2"
-	"github.com/Tumb1er1376/komari-agent-lite/ws"
+	"github.com/lyhbdw/komari-lite/agent/dnsresolver"
+	"github.com/lyhbdw/komari-lite/agent/protocol/transport"
+	v2 "github.com/lyhbdw/komari-lite/agent/protocol/v2"
+	"github.com/lyhbdw/komari-lite/agent/ws"
 	ping "github.com/prometheus-community/pro-bing"
 )
 
-// resolveIP 解析域名到 IP 地址，排除 DNS 查询时间
+// resolveIP 解析域名到 IP 地址，排除 DNS 查询时间，遵循自定义 DNS 及 IPv4/IPv6 偏好配置
 func resolveIP(target string) (string, error) {
 	// 如果已经是 IP 地址，直接返回
 	if ip := net.ParseIP(target); ip != nil {
 		return target, nil
 	}
-	// 解析域名到 IP
-	addrs, err := net.LookupHost(target)
-	if err != nil || len(addrs) == 0 {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	ips, err := dnsresolver.ResolveHostWithPreference(ctx, target, flags.PreferIPVersion)
+	if err != nil || len(ips) == 0 {
 		return "", errors.New("failed to resolve target")
 	}
-	return addrs[0], nil // 返回第一个解析的 IP
+	return ips[0], nil
 }
 
 func icmpPing(target string, timeout time.Duration) (int64, error) {
@@ -56,6 +58,18 @@ func icmpPing(target string, timeout time.Duration) (int64, error) {
 	pinger.SetPrivileged(false)
 	err = pinger.Run()
 	if err != nil {
+		// 非特权 ping 在缺少 ping_group_range 的环境中可能失败，尝试特权模式
+		if pingerPriv, errPriv := ping.NewPinger(ip); errPriv == nil {
+			pingerPriv.Count = 1
+			pingerPriv.Timeout = timeout
+			pingerPriv.SetPrivileged(true)
+			if errPrivRun := pingerPriv.Run(); errPrivRun == nil {
+				stats := pingerPriv.Statistics()
+				if stats.PacketsRecv > 0 {
+					return stats.AvgRtt.Milliseconds(), nil
+				}
+			}
+		}
 		return -1, err
 	}
 	stats := pinger.Statistics()
@@ -106,6 +120,7 @@ func httpPing(target string, timeout time.Duration) (int64, error) {
 
 	transport := &http.Transport{
 		DisableKeepAlives: true,
+		TLSClientConfig:   &tls.Config{InsecureSkipVerify: flags.IgnoreUnsafeCert},
 		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
 			// 在 Dial 之前解析 IP，排除 DNS 时间
 			host, port, err := net.SplitHostPort(addr)
@@ -146,10 +161,8 @@ func NewPingTask(conn *ws.SafeConn, taskID uint, pingType, pingTarget string) {
 	var err error = nil
 	var latency int64
 	pingResult := -1
-	timeout := 3 * time.Second           // 默认超时时间
-	const highLatencyThreshold = 1000    // ms 阈值
-	const retryDropThresholdTcping = 800 // ms 重试中延迟降低超过此值则基本认为发生重传
-	// 800ms = SYN/SYN-ACK 首次超时重传 1000ms - 防误判容许 200ms 延迟抖动
+	timeout := 3 * time.Second        // 默认超时时间
+	const highLatencyThreshold = 1000 // ms 阈值
 
 	measure := func() (int64, error) {
 		switch pingType {
@@ -163,28 +176,19 @@ func NewPingTask(conn *ws.SafeConn, taskID uint, pingType, pingTarget string) {
 			return -1, errors.New("unsupported ping type")
 		}
 	}
-	PingHighLatencyRetries := 3
+
 	// 首次测量
 	if latency, err = measure(); err == nil {
-		firstLatency := latency
-		if latency > int64(highLatencyThreshold) && PingHighLatencyRetries > 0 {
-			attempts := PingHighLatencyRetries
-			for i := 0; i < attempts; i++ {
+		// 若初次测量延迟偏高（> 1000ms），可能受冷启动或偶发握手抖动影响，进行复测以获取更准确的稳定值
+		if latency > int64(highLatencyThreshold) {
+			for i := 0; i < 2; i++ {
 				if second, err2 := measure(); err2 == nil {
-					if second <= int64(highLatencyThreshold) {
-						if pingType == "tcp" && firstLatency-second > int64(retryDropThresholdTcping) {
-							err = errors.New("suspicious retransmission detected in tcp handshake")
-							break
-						}
+					if second < latency {
 						latency = second
+					}
+					if latency <= int64(highLatencyThreshold) {
 						break
 					}
-					if i == attempts-1 { // 最后一次仍高
-						err = errors.New("latency remains high after retries")
-					}
-				} else {
-					err = err2
-					break
 				}
 			}
 		}

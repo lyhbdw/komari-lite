@@ -23,18 +23,19 @@ func GpuName() string {
 	return "None"
 }
 
+var lspciExcludeRegexps = []*regexp.Regexp{
+	regexp.MustCompile(`^1111`),
+	regexp.MustCompile(`(?i)^cirrus logic (cl[-\s]?)?gd 5`),
+	regexp.MustCompile(`(?i)virtio`),
+	regexp.MustCompile(`(?i)vmware`),
+	regexp.MustCompile(`(?i)qxl`),
+	regexp.MustCompile(`(?i)hyper-v`),
+}
+
 func getFromLspci() string {
 	out, err := exec.Command("lspci").Output()
 	if err != nil {
 		return "None"
-	}
-	excludePatterns := []string{
-		"^1111",                             // 1111 (rev 02)
-		`(?i)^cirrus logic (cl[-\s]?)?gd 5`, // CL-GD 系列 1990 年代中期的产物, 现常用于虚拟机
-		"(?i)virtio",
-		"(?i)vmware",
-		`(?i)qxl`, // SPICE 虚拟显卡
-		`(?i)hyper-v`,
 	}
 
 	lines := strings.Split(string(out), "\n")
@@ -42,8 +43,8 @@ func getFromLspci() string {
 	priorityVendors := []string{"nvidia", "amd", "radeon", "intel", "arc", "snap", "qualcomm", "snapdragon"}
 
 	isExcludedGPUName := func(name string) bool {
-		for _, pattern := range excludePatterns {
-			if matched, _ := regexp.MatchString(pattern, name); matched {
+		for _, re := range lspciExcludeRegexps {
+			if re.MatchString(name) {
 				return true
 			}
 		}

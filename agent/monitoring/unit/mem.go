@@ -6,9 +6,17 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"sync"
+	"time"
 
-	pkg_flags "github.com/Tumb1er1376/komari-agent-lite/cmd/flags"
+	pkg_flags "github.com/lyhbdw/komari-lite/agent/cmd/flags"
 	"github.com/shirou/gopsutil/v4/mem"
+)
+
+var (
+	procMemMu       sync.RWMutex
+	procMemCached   *ProcMemInfo
+	procMemCachedAt time.Time
 )
 
 type RamInfo struct {
@@ -34,6 +42,14 @@ type ProcMemInfo struct {
 
 // readProcMeminfo reads /proc/meminfo and returns a filled ProcMemInfo struct
 func ReadProcMeminfo() (*ProcMemInfo, error) {
+	procMemMu.RLock()
+	if procMemCached != nil && time.Since(procMemCachedAt) < 500*time.Millisecond {
+		info := *procMemCached
+		procMemMu.RUnlock()
+		return &info, nil
+	}
+	procMemMu.RUnlock()
+
 	file, err := os.Open("/proc/meminfo")
 	if err != nil {
 		return nil, err
@@ -44,13 +60,15 @@ func ReadProcMeminfo() (*ProcMemInfo, error) {
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		line := scanner.Text()
-		parts := strings.Fields(line)
-		if len(parts) < 2 {
+		colonIdx := strings.IndexByte(line, ':')
+		if colonIdx == -1 {
 			continue
 		}
-
-		key := strings.TrimSuffix(parts[0], ":")
-		valStr := parts[1]
+		key := line[:colonIdx]
+		valStr := strings.TrimSpace(line[colonIdx+1:])
+		if spIdx := strings.IndexByte(valStr, ' '); spIdx != -1 {
+			valStr = valStr[:spIdx]
+		}
 		val, err := strconv.ParseUint(valStr, 10, 64)
 		if err != nil {
 			continue
@@ -84,7 +102,17 @@ func ReadProcMeminfo() (*ProcMemInfo, error) {
 			info.Zswapped = val
 		}
 	}
-	return info, scanner.Err()
+	if err := scanner.Err(); err != nil {
+		return nil, err
+	}
+
+	procMemMu.Lock()
+	copied := *info
+	procMemCached = &copied
+	procMemCachedAt = time.Now()
+	procMemMu.Unlock()
+
+	return info, nil
 }
 
 func GetMemHtopLike() RamInfo {

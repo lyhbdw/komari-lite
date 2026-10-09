@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	pkg_flags "github.com/Tumb1er1376/komari-agent-lite/cmd/flags"
-	v2 "github.com/Tumb1er1376/komari-agent-lite/protocol/v2"
+	pkg_flags "github.com/lyhbdw/komari-lite/agent/cmd/flags"
+	v2 "github.com/lyhbdw/komari-lite/agent/protocol/v2"
 )
 
 func TestReadBoundedBodyTruncatesLargeSuccessAndErrorResponses(t *testing.T) {

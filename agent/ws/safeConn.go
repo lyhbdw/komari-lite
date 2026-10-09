@@ -49,3 +49,15 @@ func (sc *SafeConn) Close() error {
 func (sc *SafeConn) ReadMessage() (int, []byte, error) {
 	return sc.conn.ReadMessage()
 }
+
+func (sc *SafeConn) SetReadDeadline(t time.Time) error {
+	sc.mu.Lock()
+	defer sc.mu.Unlock()
+	return sc.conn.SetReadDeadline(t)
+}
+
+func (sc *SafeConn) SetPongHandler(h func(string) error) {
+	sc.mu.Lock()
+	defer sc.mu.Unlock()
+	sc.conn.SetPongHandler(h)
+}

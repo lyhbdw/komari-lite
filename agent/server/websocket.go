@@ -13,11 +13,11 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/Tumb1er1376/komari-agent-lite/dnsresolver"
-	"github.com/Tumb1er1376/komari-agent-lite/monitoring"
-	v2 "github.com/Tumb1er1376/komari-agent-lite/protocol/v2"
-	"github.com/Tumb1er1376/komari-agent-lite/utils"
-	"github.com/Tumb1er1376/komari-agent-lite/ws"
+	"github.com/lyhbdw/komari-lite/agent/dnsresolver"
+	"github.com/lyhbdw/komari-lite/agent/monitoring"
+	v2 "github.com/lyhbdw/komari-lite/agent/protocol/v2"
+	"github.com/lyhbdw/komari-lite/agent/utils"
+	"github.com/lyhbdw/komari-lite/agent/ws"
 )
 
 var (
@@ -29,6 +29,8 @@ var (
 const (
 	v2SeenEventTTL   = 10 * time.Minute
 	v2SeenEventLimit = 4096
+	pongWait         = 60 * time.Second
+	pingPeriod       = 25 * time.Second
 )
 
 func EstablishWebSocketConnection() {
@@ -48,7 +50,7 @@ func EstablishWebSocketConnection() {
 	reportInterval := time.Duration(interval * float64(time.Second))
 	nextReportAt := time.Now()
 
-	heartbeatTicker := time.NewTicker(30 * time.Second)
+	heartbeatTicker := time.NewTicker(pingPeriod)
 	defer heartbeatTicker.Stop()
 
 	var readDone <-chan struct{}
@@ -313,7 +315,14 @@ func connectWebSocket(websocketEndpoint string) (*ws.SafeConn, error) {
 		return nil, err
 	}
 
-	return ws.NewSafeConn(conn), nil
+	safe := ws.NewSafeConn(conn)
+	_ = safe.SetReadDeadline(time.Now().Add(pongWait))
+	safe.SetPongHandler(func(string) error {
+		_ = safe.SetReadDeadline(time.Now().Add(pongWait))
+		return nil
+	})
+
+	return safe, nil
 }
 
 func handleWebSocketMessages(conn *ws.SafeConn, done chan<- struct{}) {

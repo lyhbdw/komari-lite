@@ -2,6 +2,7 @@ package monitoring
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -10,8 +11,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Tumb1er1376/komari-agent-lite/monitoring/netstatic"
-	"github.com/Tumb1er1376/komari-agent-lite/utils"
+	"github.com/lyhbdw/komari-lite/agent/monitoring/netstatic"
+	"github.com/lyhbdw/komari-lite/agent/utils"
 	"github.com/shirou/gopsutil/v4/net"
 )
 
@@ -104,7 +105,7 @@ func countProcNetFile(path string) (int, error) {
 			header = false
 			continue
 		}
-		if strings.TrimSpace(scanner.Text()) != "" {
+		if len(bytes.TrimSpace(scanner.Bytes())) > 0 {
 			count++
 		}
 	}
@@ -240,14 +241,30 @@ func safeCounterDelta(current, previous uint64) uint64 {
 	return 0
 }
 
+var (
+	nicsCacheMu sync.RWMutex
+	nicsCache   = make(map[string]map[string]struct{})
+)
+
 func parseNics(nics string) map[string]struct{} {
 	if nics == "" {
 		return nil
 	}
+	nicsCacheMu.RLock()
+	if set, ok := nicsCache[nics]; ok {
+		nicsCacheMu.RUnlock()
+		return set
+	}
+	nicsCacheMu.RUnlock()
+
 	nicSet := make(map[string]struct{})
 	for _, nic := range strings.Split(nics, ",") {
 		nicSet[strings.TrimSpace(nic)] = struct{}{}
 	}
+
+	nicsCacheMu.Lock()
+	nicsCache[nics] = nicSet
+	nicsCacheMu.Unlock()
 	return nicSet
 }
 

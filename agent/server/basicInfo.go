@@ -8,11 +8,11 @@ import (
 	"strings"
 	"time"
 
-	monitoring "github.com/Tumb1er1376/komari-agent-lite/monitoring/unit"
-	v2 "github.com/Tumb1er1376/komari-agent-lite/protocol/v2"
-	"github.com/Tumb1er1376/komari-agent-lite/version"
+	monitoring "github.com/lyhbdw/komari-lite/agent/monitoring/unit"
+	v2 "github.com/lyhbdw/komari-lite/agent/protocol/v2"
+	"github.com/lyhbdw/komari-lite/agent/version"
 
-	pkg_flags "github.com/Tumb1er1376/komari-agent-lite/cmd/flags"
+	pkg_flags "github.com/lyhbdw/komari-lite/agent/cmd/flags"
 )
 
 var flags = pkg_flags.GlobalConfig

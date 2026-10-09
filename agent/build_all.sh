@@ -8,8 +8,12 @@ for GOARCH in amd64 arm64; do
   echo "Building for linux/$GOARCH..."
   GOOS=linux GOARCH="$GOARCH" CGO_ENABLED=0 \
     go build -trimpath \
-      -ldflags="-X github.com/Tumb1er1376/komari-agent-lite/version.Current=${VERSION}" \
+      -ldflags="-s -w -X github.com/lyhbdw/komari-lite/agent/version.Current=${VERSION}" \
       -o "./build/komari-agent-linux-${GOARCH}"
+  if command -v upx >/dev/null 2>&1; then
+    echo "Compressing with UPX for linux/$GOARCH..."
+    upx --lzma "./build/komari-agent-linux-${GOARCH}" || true
+  fi
 done
 
 printf '%s\n' "Binaries are in ./build"

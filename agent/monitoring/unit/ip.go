@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Tumb1er1376/komari-agent-lite/dnsresolver"
+	"github.com/lyhbdw/komari-lite/agent/dnsresolver"
 )
 
 var (
@@ -66,17 +66,21 @@ func GetIPv4Address() (string, error) {
 
 	for _, api := range webAPIs {
 		// get ipv4
-		req, err := http.NewRequest("GET", api, nil)
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		req, err := http.NewRequestWithContext(ctx, "GET", api, nil)
 		if err != nil {
+			cancel()
 			continue
 		}
 		req.Header.Set("User-Agent", userAgent)
 		resp, err := ipv4HTTPClient.Do(req)
 		if err != nil {
+			cancel()
 			continue
 		}
 		body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 		_ = resp.Body.Close() // 获取后立即关闭防止堵塞
+		cancel()
 		if err != nil {
 			continue
 		}
@@ -101,17 +105,21 @@ func GetIPv6Address() (string, error) {
 
 	for _, api := range webAPIs {
 		// get ipv6
-		req, err := http.NewRequest("GET", api, nil)
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		req, err := http.NewRequestWithContext(ctx, "GET", api, nil)
 		if err != nil {
+			cancel()
 			continue
 		}
 		req.Header.Set("User-Agent", userAgent)
 		resp, err := ipv6HTTPClient.Do(req)
 		if err != nil {
+			cancel()
 			continue
 		}
 		body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 		_ = resp.Body.Close() // 获取后立即关闭防止堵塞
+		cancel()
 		if err != nil {
 			continue
 		}
@@ -184,25 +192,37 @@ func getIPAddressUncached() (ipv4, ipv6 string, err error) {
 		}
 	}
 
-	if flags.CustomIpv4 != "" {
-		ipv4 = flags.CustomIpv4
-	} else {
-		ipv4, err = GetIPv4Address()
-		if err != nil {
-			log.Printf("Get IPV4 Error: %v", err)
-			ipv4 = ""
+	var wg sync.WaitGroup
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		if flags.CustomIpv4 != "" {
+			ipv4 = flags.CustomIpv4
+		} else {
+			var errV4 error
+			ipv4, errV4 = GetIPv4Address()
+			if errV4 != nil {
+				log.Printf("Get IPV4 Error: %v", errV4)
+				ipv4 = ""
+			}
 		}
-	}
-	if flags.CustomIpv6 != "" {
-		ipv6 = flags.CustomIpv6
-	} else {
-		ipv6, err = GetIPv6Address()
-		if err != nil {
-			log.Printf("Get IPV6 Error: %v", err)
-			ipv6 = ""
-		}
-	}
+	}()
 
+	go func() {
+		defer wg.Done()
+		if flags.CustomIpv6 != "" {
+			ipv6 = flags.CustomIpv6
+		} else {
+			var errV6 error
+			ipv6, errV6 = GetIPv6Address()
+			if errV6 != nil {
+				log.Printf("Get IPV6 Error: %v", errV6)
+				ipv6 = ""
+			}
+		}
+	}()
+
+	wg.Wait()
 	return ipv4, ipv6, nil
 }
 

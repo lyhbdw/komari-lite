@@ -95,23 +95,22 @@ func fileExists(p string) bool {
 	return false
 }
 
+// Patterns target leaf elements referencing container IDs instead of any occurrence of runtime name to reduce false positives.
+var (
+	dockerIDPattern    = regexp.MustCompile(`(?m)/(?:docker|cri-containerd)[/-]([0-9a-f]{12,64})(?:\.scope)?$`)
+	dockerScopePattern = regexp.MustCompile(`(?m)/docker-[0-9a-f]{12,64}\.scope$`)
+	kubePattern        = regexp.MustCompile(`(?m)/kubepods[/.].*([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}).*`) // pod UID
+	podmanPattern      = regexp.MustCompile(`(?m)/(?:libpod|podman)[-_]([0-9a-f]{12,64})(?:\.scope)?$`)
+	lxcPattern         = regexp.MustCompile(`(?m)/lxc/[^/]+$`)
+	crioPattern        = regexp.MustCompile(`(?m)/crio-[0-9a-f]{12,64}\.scope$`)
+)
+
 func parseCgroupForContainer() string {
 	data, err := os.ReadFile("/proc/self/cgroup")
 	if err != nil {
 		return ""
 	}
 	lower := strings.ToLower(string(data))
-
-	// Precompile (once) regex patterns for common container runtimes.
-	// Patterns target leaf elements referencing container IDs instead of any occurrence of runtime name to reduce false positives.
-	var (
-		dockerIDPattern    = regexp.MustCompile(`(?m)/(?:docker|cri-containerd)[/-]([0-9a-f]{12,64})(?:\.scope)?$`)
-		dockerScopePattern = regexp.MustCompile(`(?m)/docker-[0-9a-f]{12,64}\.scope$`)
-		kubePattern        = regexp.MustCompile(`(?m)/kubepods[/.].*([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}).*`) // pod UID
-		podmanPattern      = regexp.MustCompile(`(?m)/(?:libpod|podman)[-_]([0-9a-f]{12,64})(?:\.scope)?$`)
-		lxcPattern         = regexp.MustCompile(`(?m)/lxc/[^/]+$`)
-		crioPattern        = regexp.MustCompile(`(?m)/crio-[0-9a-f]{12,64}\.scope$`)
-	)
 
 	// Order: specific runtime before generic container.
 	if dockerIDPattern.FindStringIndex(lower) != nil || dockerScopePattern.FindStringIndex(lower) != nil {

@@ -5,12 +5,18 @@ import (
 	"os"
 	"runtime"
 	"strings"
+	"sync"
 
-	pkg_flags "github.com/Tumb1er1376/komari-agent-lite/cmd/flags"
+	pkg_flags "github.com/lyhbdw/komari-lite/agent/cmd/flags"
 	"github.com/shirou/gopsutil/v4/cpu"
 )
 
 var flags = pkg_flags.GlobalConfig
+
+var (
+	cachedCPUStatic     CpuInfo
+	cachedCPUStaticOnce sync.Once
+)
 
 type CpuInfo struct {
 	CPUName          string  `json:"cpu_name"`
@@ -21,7 +27,7 @@ type CpuInfo struct {
 }
 
 func Cpu() CpuInfo {
-	cpuinfo := CpuStaticInfo()
+	cpuinfo := getCachedCPUStaticInfo()
 
 	percentages, err := cpu.Percent(0, false)
 	if err == nil && len(percentages) > 0 {
@@ -29,6 +35,13 @@ func Cpu() CpuInfo {
 	}
 
 	return cpuinfo
+}
+
+func getCachedCPUStaticInfo() CpuInfo {
+	cachedCPUStaticOnce.Do(func() {
+		cachedCPUStatic = CpuStaticInfo()
+	})
+	return cachedCPUStatic
 }
 
 func CpuStaticInfo() CpuInfo {

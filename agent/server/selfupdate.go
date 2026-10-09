@@ -16,9 +16,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Tumb1er1376/komari-agent-lite/dnsresolver"
-	v2 "github.com/Tumb1er1376/komari-agent-lite/protocol/v2"
-	"github.com/Tumb1er1376/komari-agent-lite/version"
+	"github.com/lyhbdw/komari-lite/agent/dnsresolver"
+	v2 "github.com/lyhbdw/komari-lite/agent/protocol/v2"
+	"github.com/lyhbdw/komari-lite/agent/version"
 )
 
 // selfUpdateMu 防止并发自升级。
@@ -276,5 +276,6 @@ func downloadBinary(url string) ([]byte, error) {
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("download: status %d", resp.StatusCode)
 	}
-	return io.ReadAll(resp.Body)
+	// 限制最大下载 100MB，防止异常响应打满内存
+	return io.ReadAll(io.LimitReader(resp.Body, 100<<20))
 }

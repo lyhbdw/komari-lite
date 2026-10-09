@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	pkg_flags "github.com/Tumb1er1376/komari-agent-lite/cmd/flags"
+	pkg_flags "github.com/lyhbdw/komari-lite/agent/cmd/flags"
 )
 
 var flags = pkg_flags.GlobalConfig
@@ -257,6 +257,10 @@ func normalizeIPVersionPreference(preferIPVersion string) string {
 	return ""
 }
 
+func SortIPsByPreference(ips []string, preferIPVersion string) {
+	sortIPsByPreference(ips, preferIPVersion)
+}
+
 func sortIPsByPreference(ips []string, preferIPVersion string) {
 	preferIPVersion = normalizeIPVersionPreference(preferIPVersion)
 	if preferIPVersion == "" {
@@ -313,4 +317,53 @@ func preferIPv4First() bool {
 		hasIPv4 = false
 	})
 	return hasIPv4
+}
+
+type hostCacheEntry struct {
+	ips       []string
+	expiresAt time.Time
+}
+
+var (
+	hostCacheMu sync.RWMutex
+	hostCache   = make(map[string]hostCacheEntry)
+)
+
+// ResolveHostWithPreference 使用自定义解析器解析 host，根据 preferIPVersion 排序，并带有 60 秒短期缓存
+func ResolveHostWithPreference(ctx context.Context, host, preferIPVersion string) ([]string, error) {
+	if ip := net.ParseIP(host); ip != nil {
+		return []string{host}, nil
+	}
+
+	cacheKey := fmt.Sprintf("%s|%s", host, preferIPVersion)
+	hostCacheMu.RLock()
+	if entry, ok := hostCache[cacheKey]; ok && time.Now().Before(entry.expiresAt) {
+		hostCacheMu.RUnlock()
+		res := make([]string, len(entry.ips))
+		copy(res, entry.ips)
+		return res, nil
+	}
+	hostCacheMu.RUnlock()
+
+	resolver := GetCustomResolver()
+	ips, err := resolver.LookupHost(ctx, host)
+	if err != nil {
+		return nil, err
+	}
+	if len(ips) == 0 {
+		return nil, fmt.Errorf("no IP resolved for host: %s", host)
+	}
+
+	SortIPsByPreference(ips, preferIPVersion)
+
+	hostCacheMu.Lock()
+	hostCache[cacheKey] = hostCacheEntry{
+		ips:       ips,
+		expiresAt: time.Now().Add(60 * time.Second),
+	}
+	hostCacheMu.Unlock()
+
+	res := make([]string, len(ips))
+	copy(res, ips)
+	return res, nil
 }

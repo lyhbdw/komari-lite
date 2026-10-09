@@ -6,7 +6,7 @@ import (
 	"io"
 	"net/http"
 
-	v2 "github.com/Tumb1er1376/komari-agent-lite/protocol/v2"
+	v2 "github.com/lyhbdw/komari-lite/agent/protocol/v2"
 )
 
 const maxAgentResponseBytes = 1 << 20

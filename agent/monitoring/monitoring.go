@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"log"
 
-	pkg_flags "github.com/Tumb1er1376/komari-agent-lite/cmd/flags"
-	unit "github.com/Tumb1er1376/komari-agent-lite/monitoring/unit"
+	pkg_flags "github.com/lyhbdw/komari-lite/agent/cmd/flags"
+	unit "github.com/lyhbdw/komari-lite/agent/monitoring/unit"
 )
 
 var flags = pkg_flags.GlobalConfig

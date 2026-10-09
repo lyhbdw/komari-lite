@@ -296,6 +296,11 @@ func isAndroidSystem() bool {
 
 // KernelVersion returns the kernel version on Linux systems
 func KernelVersion() string {
+	if data, err := os.ReadFile("/proc/sys/kernel/osrelease"); err == nil {
+		if ver := strings.TrimSpace(string(data)); ver != "" {
+			return ver
+		}
+	}
 	out, err := exec.Command("uname", "-r").Output()
 	if err != nil {
 		return "Unknown"
