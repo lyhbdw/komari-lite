@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	AgentAssetVersion = "1.1.0"
+	AgentAssetVersion = "v1.1.0"
 	agentAssetDirEnv  = "KOMARI_AGENT_ASSET_DIR"
 	defaultAssetDir   = "/app/agent-assets"
 )
@@ -26,7 +26,7 @@ func isValidVersion(v string) bool {
 		return false
 	}
 	for _, r := range v {
-		if (r < '0' || r > '9') && r != '.' && r != '-' && r != '_' {
+		if (r < '0' || r > '9') && r != '.' && r != '-' && r != '_' && r != 'v' && r != 'V' {
 			return false
 		}
 	}

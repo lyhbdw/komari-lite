@@ -14,6 +14,7 @@ for GOARCH in amd64 arm64; do
     echo "Compressing with UPX for linux/$GOARCH..."
     upx --lzma "./build/komari-agent-linux-${GOARCH}" || true
   fi
+  (cd ./build && sha256sum "komari-agent-linux-${GOARCH}" > "komari-agent-linux-${GOARCH}.sha256")
 done
 
 printf '%s\n' "Binaries are in ./build"

@@ -45,6 +45,10 @@ func versionLess(a, b string) bool {
 	ai, aok := parseVersion(a)
 	bi, bok := parseVersion(b)
 	if !aok || !bok {
+		// 当前运行快照/开发版本，而目标版本是正式点分版本时，正式版本始终被视为更新（不小于当前）
+		if aok && !bok && strings.HasPrefix(strings.ToLower(b), "snapshot") {
+			return false
+		}
 		return a < b
 	}
 	for i := 0; i < len(ai) && i < len(bi); i++ {
