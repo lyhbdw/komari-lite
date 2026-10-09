@@ -273,7 +273,7 @@ export const TextArea = React.forwardRef<HTMLTextAreaElement, any>(
     <textarea
       ref={ref}
       className={cn(
-        "w-full min-h-[80px] rounded-lg border border-border bg-background px-3 py-2 text-sm shadow-2xs placeholder:text-muted-foreground outline-none focus:border-foreground/50 transition-colors",
+        "w-full min-h-[80px] rounded-lg border border-input bg-transparent px-3 py-2 text-sm shadow-xs placeholder:text-muted-foreground outline-none transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50",
         className
       )}
       {...props}
@@ -289,7 +289,8 @@ export const TextField = {
         return (
           <div
             className={cn(
-              "relative flex items-center w-full h-9 rounded-lg border border-border bg-background px-2.5 shadow-2xs focus-within:border-foreground/50 transition-colors",
+              "relative flex items-center w-full h-9 rounded-lg border border-input bg-transparent px-2.5 shadow-xs transition-colors focus-within:border-ring focus-within:ring-1 focus-within:ring-ring",
+              disabled && "cursor-not-allowed opacity-50 bg-muted/30",
               className
             )}
           >
@@ -304,7 +305,7 @@ export const TextField = {
               name={name}
               disabled={disabled}
               autoFocus={autoFocus}
-              className="w-full h-full bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none border-none p-0"
+              className="w-full h-full bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none border-none p-0 focus:outline-none"
               {...props}
             />
             {children}
@@ -324,7 +325,7 @@ export const TextField = {
           disabled={disabled}
           autoFocus={autoFocus}
           className={cn(
-            "w-full h-9 rounded-lg border border-border bg-background px-3 text-sm text-foreground shadow-2xs placeholder:text-muted-foreground outline-none focus:border-foreground/50 transition-colors",
+            "w-full h-9 rounded-lg border border-input bg-transparent px-3 text-sm text-foreground shadow-xs placeholder:text-muted-foreground outline-none transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50",
             className
           )}
           {...props}
