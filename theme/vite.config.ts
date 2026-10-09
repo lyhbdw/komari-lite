@@ -122,6 +122,12 @@ export default defineConfig({
           if (id.includes('node_modules/@vueuse/')) {
             return 'vueuse'
           }
+          if (id.includes('node_modules/echarts/') || id.includes('node_modules/zrender/')) {
+            return 'echarts'
+          }
+          if (id.includes('node_modules/cobe/')) {
+            return 'cobe'
+          }
         },
       },
     },
