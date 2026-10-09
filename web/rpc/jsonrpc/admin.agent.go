@@ -2,6 +2,7 @@ package jsonrpc
 
 import (
 	"context"
+	"strings"
 
 	"github.com/lyhbdw/komari-monitor-lite/database/auditlog"
 	"github.com/lyhbdw/komari-monitor-lite/database/clients"

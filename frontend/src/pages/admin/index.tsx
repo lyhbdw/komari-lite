@@ -864,15 +864,20 @@ const UpgradeAgentButton = () => {
       }
       const dispatched =
         data?.data?.dispatched ?? data?.result?.dispatched ?? data?.dispatched;
-      const version =
+      const rawVersion =
         data?.data?.version ??
         data?.result?.version ??
         data?.version ??
         upgradeVersion;
+      const formattedVersion = rawVersion
+        ? rawVersion.startsWith("v")
+          ? rawVersion
+          : `v${rawVersion}`
+        : "";
       toast.success(
         t("admin.nodeTable.upgradeSuccess", {
-          defaultValue: `升级事件已下发（v${version}，${dispatched} 个节点）`,
-          version,
+          defaultValue: `升级事件已下发（${formattedVersion}，${dispatched} 个节点）`,
+          version: formattedVersion,
           dispatched,
         })
       );
@@ -911,7 +916,7 @@ const UpgradeAgentButton = () => {
           })}
           {upgradeVersion ? (
             <div className="mt-2 font-mono text-foreground">
-              {t("admin.nodeTable.upgradeTargetVersion")}: v{upgradeVersion}
+              {t("admin.nodeTable.upgradeTargetVersion")}: {upgradeVersion.startsWith("v") ? upgradeVersion : `v${upgradeVersion}`}
             </div>
           ) : null}
         </div>
