@@ -38,7 +38,9 @@ func init() {
 }
 
 func adminGetAgentAssetVersion(_ context.Context, _ *rpc.JsonRpcRequest) (any, *rpc.JsonRpcError) {
-	return map[string]any{"version": public.AgentAssetVersion}, nil
+	// 前端 UI 在展示时会自动加 "v"（如 v{upgradeVersion}），因此这里剥离可能携带的 "v" 前缀，避免展示为 "vv1.1.2"
+	cleanVersion := strings.TrimPrefix(public.AgentAssetVersion, "v")
+	return map[string]any{"version": cleanVersion}, nil
 }
 
 func adminUpgradeAgents(ctx context.Context, req *rpc.JsonRpcRequest) (any, *rpc.JsonRpcError) {
@@ -48,11 +50,12 @@ func adminUpgradeAgents(ctx context.Context, req *rpc.JsonRpcRequest) (any, *rpc
 	}
 	req.BindParams(&params)
 
-	// 未指定版本时使用面板当前托管版本。
+	// 目标版本：若未指定则使用面板当前托管版本
 	version := params.Version
 	if version == "" {
 		version = public.AgentAssetVersion
 	}
+	version = strings.TrimPrefix(version, "v")
 
 	// 目标节点集合：空表示全部。
 	targets := params.UUIDs
