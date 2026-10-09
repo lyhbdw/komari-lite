@@ -383,12 +383,12 @@ export const Select = {
         value={value}
         onChange={(e) => onValueChange?.(e.target.value)}
         className={cn(
-          "w-full h-8 px-2.5 rounded-lg border border-border bg-background text-foreground text-xs shadow-2xs outline-none focus:border-foreground/50 transition-colors cursor-pointer",
+          "w-full h-8 px-2.5 rounded-lg border border-input bg-transparent text-foreground text-xs shadow-xs outline-none transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer dark:bg-muted/20",
           className
         )}
       >
         {items.map((item) => (
-          <option key={item.value} value={item.value}>
+          <option key={item.value} value={item.value} className="bg-popover text-popover-foreground">
             {typeof item.label === "string" ? item.label : item.value}
           </option>
         ))}
@@ -445,7 +445,7 @@ export const DropdownMenu = {
     return (
       <div
         className={cn(
-          "absolute z-50 mt-1 min-w-[160px] rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-lg animate-in fade-in-0 zoom-in-95",
+          "absolute z-50 mt-1.5 min-w-[160px] rounded-xl border border-border/80 bg-popover/95 p-1 text-popover-foreground shadow-xl backdrop-blur-md animate-in fade-in-0 zoom-in-95 duration-150",
           align === "end" ? "right-0" : "left-0",
           className
         )}
@@ -520,7 +520,7 @@ export const Popover = {
       <div
         style={{ width: width || "auto" }}
         className={cn(
-          "absolute z-50 mt-1.5 rounded-xl border border-border bg-popover p-3 text-popover-foreground shadow-xl animate-in fade-in-0 zoom-in-95",
+          "absolute z-50 mt-1.5 rounded-xl border border-border/80 bg-popover/95 p-3 text-popover-foreground shadow-xl backdrop-blur-md animate-in fade-in-0 zoom-in-95 duration-150",
           className
         )}
         {...props}
