@@ -16,26 +16,21 @@ command -v sqlite3 >/dev/null 2>&1 || { printf 'sqlite3 is required\n' >&2; exit
 mkdir -p "$KOMARI_BACKUP_DIR"
 lock_file="${KOMARI_BACKUP_DIR}/.lock"
 exec 9>"$lock_file"
-flock -n 9 || { printf 'another backup is already running\n' >&2; exit 1; }
+flock -n 9 || { printf 'another backup or restore is already running\n' >&2; exit 1; }
 
 stamp="$(date -u +%Y%m%dT%H%M%SZ)"
-work_dir="$(mktemp -d "${KOMARI_BACKUP_DIR}/.${stamp}.XXXXXX")"
+work_dir="$(mktemp -d "${KOMARI_BACKUP_DIR}/.backup-staging-${stamp}.XXXXXX")"
 target_dir="${KOMARI_BACKUP_DIR}/${stamp}"
 cleanup() { rm -rf "$work_dir"; }
 trap cleanup EXIT
 mkdir -p "$work_dir"
 
-# A previous run that died hard (SIGKILL, host power loss) leaves its hidden
-# staging directory behind. They are harmless to delete: the backup they were
-# building was never published, and a published snapshot is always a
-# timestamp-named directory. Match every hidden directory that is not our own
-# current staging dir or the lock file, not just this run's stamp prefix.
-for stale_work in "${KOMARI_BACKUP_DIR}"/.*; do
-  # Skip glob literals and the parent directory: never operate on . or ..
-  [[ -d "$stale_work" ]] || continue
-  case "$stale_work" in */"."|*/"..") continue ;; esac
+# Only this script's staging namespace belongs to us. Legacy hidden directories,
+# .restore-* unpacking dirs, manual snapshots and pre-restore-* are not ours.
+# The shared lock guarantees no live backup is using this namespace.
+for stale_work in "${KOMARI_BACKUP_DIR}"/.backup-staging-*; do
+  [[ -d "$stale_work" && ! -L "$stale_work" ]] || continue
   [[ "$stale_work" == "$work_dir" ]] && continue
-  [[ -f "${KOMARI_BACKUP_DIR}/.lock" && "$stale_work" == "${KOMARI_BACKUP_DIR}/.lock" ]] && continue
   printf 'removing stale staging directory from an interrupted run: %s\n' "$stale_work" >&2
   rm -rf -- "$stale_work"
 done
@@ -71,7 +66,13 @@ files=(komari.db metrics.db backup.info)
 [[ -f "${work_dir}/theme.tar.gz" ]] && files+=(theme.tar.gz)
 (cd "$work_dir" && sha256sum -- "${files[@]}") > "${work_dir}/SHA256SUMS"
 
-mv -- "$work_dir" "$target_dir"
+# Same-second reruns must never nest staging inside an existing snapshot or
+# overwrite an archive. Leave the earlier valid backup intact.
+[[ ! -e "$target_dir" && ! -e "${target_dir}.tar.zst" ]] || {
+  printf 'snapshot already exists; retry after one second: %s\n' "$target_dir" >&2
+  exit 1
+}
+mv -T -- "$work_dir" "$target_dir"
 trap - EXIT
 
 mapfile -t old_dirs < <(find "$KOMARI_BACKUP_DIR" -mindepth 1 -maxdepth 1 -type d -regextype posix-extended -regex '.*/[0-9]{8}T[0-9]{6}Z' -printf '%p\n' | sort -r)
@@ -81,20 +82,8 @@ if (( ${#old_dirs[@]} > RETENTION_COUNT )); then
   done
 fi
 
-# Prune directories this script does not produce. Retention above only counts
-# timestamp-named snapshots, so ad-hoc snapshots (pre-*, retention*-*, etc.)
-# used to accumulate forever and are never rotated away. A directory that is
-# not a timestamp-named snapshot and not hidden (hidden names are this script's
-# own staging dirs, already handled above) is an abandoned snapshot.
-mapfile -t foreign_dirs < <(find "$KOMARI_BACKUP_DIR" -mindepth 1 -maxdepth 1 \
-  -type d -regextype posix-extended \
-  ! -regex '.*/[0-9]{8}T[0-9]{6}Z' ! -name '.*' -printf '%p\n' | sort -r)
-if (( ${#foreign_dirs[@]} > 0 )); then
-  for foreign in "${foreign_dirs[@]}"; do
-    printf 'pruning unmanaged backup dir: %s\n' "$foreign" >&2
-    rm -rf -- "$foreign"
-  done
-fi
+# Manual snapshots and rollback copies have a separate retention contract;
+# never apply RETENTION_COUNT to anything outside timestamped backups.
 # Compress snapshots beyond the newest one into single-file zstd archives.
 # metrics.db is high-entropy float data: measured ratio is ~56%, not 5:1.
 # The newest snapshot stays a plain directory so the common restore path

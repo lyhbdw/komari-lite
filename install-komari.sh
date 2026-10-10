@@ -48,9 +48,10 @@ log_step() {
 }
 
 # Global variables
-INSTALL_DIR="/opt/komari"
-DATA_DIR="/opt/komari"
-SERVICE_NAME="komari"
+INSTALL_DIR="${KOMARI_INSTALL_DIR:-/opt/komari}"
+DATA_DIR="${KOMARI_ROOT:-/opt/komari}"
+SERVICE_NAME="${KOMARI_SERVICE_NAME:-komari}"
+SYSTEMD_DIR="${KOMARI_SYSTEMD_DIR:-/etc/systemd/system}"
 BINARY_PATH="$INSTALL_DIR/komari"
 BACKUP_DIR="$INSTALL_DIR/backup"
 DATA_BACKUP_DIR="$DATA_DIR/data/backup"
@@ -855,7 +856,7 @@ get_download_url() {
     if [ "$CHANNEL" = "snapshot" ]; then
         # 获取最新的 snapshot 预发布版本
         log_info "$(msg fetch_snapshot)" >&2
-        local latest_snapshot=$(curl -s "https://api.github.com/repos/${REPO}/releases" | grep '"tag_name"' | grep 'Snapshot-' | head -1 | sed -e 's/.*"tag_name": *"//' -e 's/".*//')
+        local latest_snapshot=$(curl -fsSL --proto '=https' --proto-redir '=https' --tlsv1.2 --connect-timeout 10 --max-time 30 "https://api.github.com/repos/${REPO}/releases" | grep '"tag_name"' | grep 'Snapshot-' | head -1 | sed -e 's/.*"tag_name": *"//' -e 's/".*//')
 
         if [ -z "$latest_snapshot" ]; then
             log_error "$(msg snapshot_not_found)" >&2
@@ -897,7 +898,7 @@ format_bytes() {
 # the server did not provide a usable total size.
 get_remote_size() {
     local url="$1"
-    curl -fsSLI --max-time 30 "$url" 2>/dev/null | awk '
+    curl -fsSLI --proto '=https' --proto-redir '=https' --tlsv1.2 --connect-timeout 10 --max-time 30 "$url" 2>/dev/null | awk '
         BEGIN { IGNORECASE = 1 }
         /^content-length:/ {
             value = $2
@@ -977,58 +978,139 @@ print_download_progress() {
 
 # Download silently with curl while the shell owns the visible progress line.
 download_file() {
-    local url="$1"
-    local target="$2"
-    local label="$3"
-    local total_bytes
+    local url="$1" target="$2" label="$3"
+    local total_bytes downloaded_bytes=0 download_status=0
     total_bytes=$(get_remote_size "$url")
-    if ! [[ "$total_bytes" =~ ^[0-9]+$ ]]; then
-        total_bytes=0
-    fi
-
+    [[ "$total_bytes" =~ ^[0-9]+$ ]] || total_bytes=0
     : > "$target" || return 1
-    curl -fsSL -o "$target" "$url" &
-    local download_pid=$!
-    local downloaded_bytes=0
-
+    curl -fsSL --proto '=https' --proto-redir '=https' --tlsv1.2 \
+        --connect-timeout 10 --max-time 120 --speed-limit 1024 --speed-time 15 \
+        -o "$target" "$url" &
+    download_pid=$!
     while kill -0 "$download_pid" 2>/dev/null; do
-        if [ -f "$target" ]; then
-            downloaded_bytes=$(stat -c '%s' "$target" 2>/dev/null || printf '0')
-        fi
+        downloaded_bytes=$(stat -c '%s' "$target" 2>/dev/null || printf '0')
         print_download_progress "$label" "$downloaded_bytes" "$total_bytes"
         sleep 0.2
     done
-
-    wait "$download_pid"
-    local download_status=$?
-    if [ -f "$target" ]; then
-        downloaded_bytes=$(stat -c '%s' "$target" 2>/dev/null || printf '0')
-    fi
+    wait "$download_pid" || download_status=$?
+    download_pid=""
+    downloaded_bytes=$(stat -c '%s' "$target" 2>/dev/null || printf '0')
     print_download_progress "$label" "$downloaded_bytes" "$total_bytes" 1
-    if [ "$download_status" -ne 0 ]; then
-        return "$download_status"
-    fi
+    (( download_status == 0 )) && [[ -s "$target" ]] || return 1
 
-    local expected_checksum
-    expected_checksum=$(curl -fsSL --max-time 30 "${url}.sha256" 2>/dev/null | awk 'NF { print $1; exit }') || return 1
-    if ! [[ "$expected_checksum" =~ ^[0-9a-fA-F]{64}$ ]]; then
+    # Download the manifest separately: a failed curl must not be masked by awk.
+    local checksum_file="${target}.sha256" expected_checksum actual_checksum
+    if ! curl -fsSL --proto '=https' --proto-redir '=https' --tlsv1.2 \
+        --connect-timeout 10 --max-time 30 -o "$checksum_file" "${url}.sha256"; then
+        rm -f -- "$checksum_file"
         return 1
     fi
-    local actual_checksum
+    expected_checksum=$(awk 'NF {print $1; exit}' "$checksum_file")
+    rm -f -- "$checksum_file"
+    [[ "$expected_checksum" =~ ^[0-9a-fA-F]{64}$ ]] || return 1
     actual_checksum=$(sha256sum "$target" | awk '{print $1}') || return 1
-    if [ "${actual_checksum,,}" != "${expected_checksum,,}" ]; then
-        return 1
-    fi
-    return 0
+    [[ "${actual_checksum,,}" == "${expected_checksum,,}" ]]
 }
+
+# Stage on the destination filesystem; nothing at the final path is executable
+# until hash verification and a bounded loader/architecture preflight succeed.
+stage_binary() {
+    local url="$1"
+    command -v timeout >/dev/null 2>&1 || { log_error "timeout is required for preflight"; return 1; }
+    command -v sha256sum >/dev/null 2>&1 || return 1
+    staged_binary=$(mktemp "${INSTALL_DIR}/.komari-download.XXXXXX") || return 1
+    download_file "$url" "$staged_binary" "$EDITION_NAME" || return 1
+    chmod 0755 "$staged_binary" || return 1
+    timeout -k 2 10 "$staged_binary" --help >/dev/null 2>&1 || {
+        log_error "Binary --help preflight failed; existing installation was not changed"
+        return 1
+    }
+}
+
+# Derive a loopback probe from the existing installer-managed unit. An explicit
+# URL may be supplied for customized units; never guess a port and mark success.
+resolve_health_url() {
+    if [[ -n "${KOMARI_HEALTH_URL:-}" ]]; then
+        health_url="$KOMARI_HEALTH_URL"
+        return 0
+    fi
+    local unit="${SYSTEMD_DIR}/${SERVICE_NAME}.service" line address port
+    if [[ -r "$unit" ]]; then
+        while IFS= read -r line; do
+            [[ "$line" == ExecStart=* ]] || continue
+            if [[ "$line" =~ [[:space:]](-l|--listen)([[:space:]]+|=)([^[:space:]]+) ]]; then
+                address="${BASH_REMATCH[3]}"
+                port="${address##*:}"
+                [[ "$port" =~ ^[0-9]+$ ]] || continue
+                if [[ "$address" == \[* ]]; then
+                    health_url="http://[::1]:${port}/api/version"
+                else
+                    health_url="http://127.0.0.1:${port}/api/version"
+                fi
+                return 0
+            fi
+        done < "$unit"
+    fi
+    log_error "Cannot determine a health URL; set KOMARI_HEALTH_URL for this unit"
+    return 1
+}
+
+# Check both supervisor return/status and the public API before committing.
+start_verified() {
+    systemctl start "${SERVICE_NAME}.service" || return 1
+    local attempt
+    for attempt in 1 2 3 4 5; do
+        if systemctl is-active --quiet "${SERVICE_NAME}.service"; then
+            sleep 1
+            if systemctl is-active --quiet "${SERVICE_NAME}.service" &&
+                curl -fsS --noproxy '*' --connect-timeout 1 --max-time 2 -o /dev/null "$health_url"; then
+                return 0
+            fi
+        fi
+        sleep 1
+    done
+    return 1
+}
+
 
 # ==========================================================
 # 业务操作
 # ==========================================================
 
 # Binary installation
-install_binary() {
+install_binary() (
     progress_reset
+    umask 077
+    local staged_binary="" download_pid="" binary_published=false service_created=false committed=false
+    local service_file="${SYSTEMD_DIR}/${SERVICE_NAME}.service"
+    local unit_snapshot="" unit_existed=false
+    cleanup_install() {
+        local status=$?
+        trap - EXIT INT TERM
+        if [[ -n "$download_pid" ]]; then
+            kill "$download_pid" 2>/dev/null || true
+            wait "$download_pid" 2>/dev/null || true
+        fi
+        if [[ "$committed" != true ]]; then
+            if [[ "$service_created" == true ]]; then
+                systemctl stop "${SERVICE_NAME}.service" || true
+                systemctl disable "${SERVICE_NAME}.service" || true
+                if [[ "$unit_existed" == true ]]; then
+                    mv -f -- "$unit_snapshot" "$service_file" || log_error "Could not restore original unit: $unit_snapshot"
+                else
+                    rm -f -- "$service_file"
+                fi
+                systemctl daemon-reload || true
+            fi
+            if [[ "$binary_published" == true ]]; then rm -f -- "$BINARY_PATH"; fi
+        fi
+        [[ -z "$staged_binary" ]] || rm -f -- "$staged_binary" "${staged_binary}.sha256"
+        [[ -z "$unit_snapshot" || "$unit_existed" == true && "$committed" != true ]] || rm -f -- "$unit_snapshot"
+        exit "$status"
+    }
+    trap cleanup_install EXIT
+    trap 'exit 130' INT
+    trap 'exit 143' TERM
 
     if is_installed; then
         ui_msgbox "$(msg title_notice)" "$(msg already_installed)"
@@ -1080,8 +1162,8 @@ install_binary() {
     mkdir -p "$DATA_DIR/data"
     chown -R komari:komari "$DATA_DIR/data"
 
-    local download_url=$(get_download_url "$arch")
-    if [ $? -ne 0 ]; then
+    local download_url
+    if ! download_url=$(get_download_url "$arch"); then
         ui_msgbox "$(msg title_error)" "$(msg download_url_failed)"
         return 1
     fi
@@ -1090,47 +1172,50 @@ install_binary() {
     log_step "$(msg download_binary "$EDITION_NAME")"
     log_info "$(msg download_url "$download_url")"
 
-    if ! download_file "$download_url" "$BINARY_PATH" "$EDITION_NAME"; then
+    if ! stage_binary "$download_url"; then
         ui_msgbox "$(msg title_error)" "$(msg download_failed)"
         return 1
     fi
-
-    chmod +x "$BINARY_PATH"
-    log_success "$(msg binary_installed "$EDITION_NAME" "$BINARY_PATH")"
+    mv -f -- "$staged_binary" "$BINARY_PATH" || return 1
+    binary_published=true
 
     if ! check_systemd; then
+        committed=true
         progress_add "$(msg progress_complete)"
         local content
         content=$(msg no_systemd_manual "$EDITION_NAME" "$BINARY_PATH" "$LISTEN_PORT")
-        content="$(printf '%s\n\n%s' "$(msg sponsor_info)" "$content")"
         ui_msgbox "$(msg title_install_complete)" "$content"
-        return
+        return 0
     fi
 
+    # Preserve a preexisting unit even on a first binary install.
+    if [[ -e "$service_file" ]]; then
+        unit_snapshot=$(mktemp "${INSTALL_DIR}/.komari-unit.XXXXXX") || return 1
+        cp -p -- "$service_file" "$unit_snapshot" || return 1
+        unit_existed=true
+    fi
+    service_created=true
     progress_add "$(msg progress_service)"
-    create_systemd_service "$LISTEN_PORT"
-
-    systemctl daemon-reload
-    systemctl enable ${SERVICE_NAME}.service
-    systemctl start ${SERVICE_NAME}.service
-
-    if systemctl is-active --quiet ${SERVICE_NAME}.service; then
-        log_success "$(msg service_started)"
-
-        progress_add "$(msg progress_complete)"
-        show_access_info "$LISTEN_PORT"
-    else
+    create_systemd_service "$LISTEN_PORT" || return 1
+    resolve_health_url || return 1
+    if ! systemctl daemon-reload || ! systemctl enable "${SERVICE_NAME}.service" || ! start_verified; then
         ui_msgbox "$(msg title_error)" "$(msg service_start_failed "$SERVICE_NAME")"
         return 1
     fi
-}
+    committed=true
+    log_success "$(msg service_started)"
+    progress_add "$(msg progress_complete)"
+    show_access_info "$LISTEN_PORT"
+)
+
 
 # Create systemd service file
 create_systemd_service() {
     local port="$1"
     log_step "$(msg systemd_start)"
 
-    local service_file="/etc/systemd/system/${SERVICE_NAME}.service"
+    local service_file="${SYSTEMD_DIR}/${SERVICE_NAME}.service"
+    mkdir -p "$SYSTEMD_DIR" || return 1
     cat > "$service_file" << EOF
 [Unit]
 Description=Komari Monitor Service
@@ -1193,73 +1278,66 @@ cleanup_backups() {
 }
 
 # Upgrade function
-upgrade_komari() {
+upgrade_komari() (
     progress_reset
     log_step "$(msg upgrade_start)"
-
-    if ! is_installed; then
-        ui_msgbox "$(msg title_error)" "$(msg not_installed)"
-        return 1
-    fi
-
-    if ! check_systemd; then
-        ui_msgbox "$(msg title_error)" "$(msg systemd_required)"
-        return 1
-    fi
-
-    # 选择发行版本和发布通道
+    is_installed || { ui_msgbox "$(msg title_error)" "$(msg not_installed)"; return 1; }
+    check_systemd || { ui_msgbox "$(msg title_error)" "$(msg systemd_required)"; return 1; }
     select_edition
     select_channel
+    local staged_binary="" download_pid="" backup_path=""
+    local service_stopped=false binary_swapped=false committed=false
+    cleanup_upgrade() {
+        local status=$?
+        trap - EXIT INT TERM
+        if [[ -n "$download_pid" ]]; then
+            kill "$download_pid" 2>/dev/null || true
+            wait "$download_pid" 2>/dev/null || true
+        fi
+        if [[ "$committed" != true && "$service_stopped" == true ]]; then
+            systemctl stop "${SERVICE_NAME}.service" || true
+            if [[ "$binary_swapped" == true ]]; then
+                if ! mv -f -- "$backup_path" "$BINARY_PATH"; then
+                    log_error "ROLLBACK FAILED: old binary remains at $backup_path"
+                fi
+            fi
+            start_verified || log_error "ROLLBACK FAILED: old service did not become active"
+        fi
+        [[ -z "$staged_binary" ]] || rm -f -- "$staged_binary" "${staged_binary}.sha256"
+        exit "$status"
+    }
+    trap cleanup_upgrade EXIT
+    trap 'exit 130' INT
+    trap 'exit 143' TERM
 
-    log_step "$(msg stopping_service)"
-    systemctl stop ${SERVICE_NAME}.service
-
-    log_step "$(msg clearing_backups)"
-    rm -f -- "${BINARY_PATH}.backup."*
-
-    local backup_path="${BINARY_PATH}.backup.$(date +%Y%m%d_%H%M%S)"
-    progress_add "$(msg progress_backup)"
-    log_step "$(msg backing_up)"
-    if ! cp "$BINARY_PATH" "$backup_path"; then
-        log_error "$(msg backup_failed_log)"
-        systemctl start ${SERVICE_NAME}.service
-        ui_msgbox "$(msg title_error)" "$(msg backup_failed)"
-        return 1
-    fi
-
-    local arch=$(detect_arch)
-    local download_url=$(get_download_url "$arch")
-    if [ $? -ne 0 ]; then
-        log_error "$(msg download_url_failed_log)"
-        mv "$backup_path" "$BINARY_PATH"
-        systemctl start ${SERVICE_NAME}.service
-        ui_msgbox "$(msg title_error)" "$(msg download_url_failed_restore)"
-        return 1
-    fi
-
+    local arch download_url
+    arch=$(detect_arch) || return 1
+    download_url=$(get_download_url "$arch") || return 1
     progress_add "$(msg progress_download)"
     log_step "$(msg downloading_latest "$EDITION_NAME")"
-    if ! download_file "$download_url" "$BINARY_PATH" "$EDITION_NAME"; then
-        log_error "$(msg download_failed_log)"
-        mv "$backup_path" "$BINARY_PATH"
-        systemctl start ${SERVICE_NAME}.service
-        ui_msgbox "$(msg title_error)" "$(msg download_failed_restore)"
+    stage_binary "$download_url" || { ui_msgbox "$(msg title_error)" "$(msg download_failed)"; return 1; }
+    resolve_health_url || return 1
+
+    # The only downtime starts here, after all network and preflight work.
+    log_step "$(msg stopping_service)"
+    if ! systemctl stop "${SERVICE_NAME}.service"; then
+        start_verified || log_error "Could not recover service after a failed stop"
         return 1
     fi
-
-    chmod +x "$BINARY_PATH"
-
-    progress_add "$(msg progress_restart)"
-    log_step "$(msg restart_start)"
-    systemctl start ${SERVICE_NAME}.service
-
-    if systemctl is-active --quiet ${SERVICE_NAME}.service; then
-        progress_add "$(msg progress_complete)"
-        ui_msgbox "$(msg title_upgrade_complete)" "$(msg upgrade_success "$EDITION_NAME" "$CHANNEL_NAME")"
-    else
+    service_stopped=true
+    backup_path=$(mktemp "${BINARY_PATH}.backup.$(date -u +%Y%m%dT%H%M%SZ).XXXXXX") || return 1
+    cp -p -- "$BINARY_PATH" "$backup_path" || return 1
+    mv -f -- "$staged_binary" "$BINARY_PATH" || return 1
+    binary_swapped=true
+    if ! start_verified; then
         ui_msgbox "$(msg title_error)" "$(msg upgrade_start_failed)"
+        return 1
     fi
-}
+    committed=true
+    progress_add "$(msg progress_complete)"
+    ui_msgbox "$(msg title_upgrade_complete)" "$(msg upgrade_success "$EDITION_NAME" "$CHANNEL_NAME")"
+)
+
 
 # Uninstall function
 uninstall_komari() {

@@ -18,13 +18,16 @@ set -Eeuo pipefail
 #   5. Restore komari.db / metrics.db (+ theme/ if archived) into KOMARI_DATA_DIR.
 #   6. Start the container again.
 #
-# The pre-restore copy is kept (never auto-deleted) so the restore itself is
-# reversible.
+# Rollbacks live separately from ordinary snapshots. ROLLBACK_RETENTION_COUNT=0
+# (default) keeps every rollback for manual recovery; positive values prune
+# only this restore script's pre-restore-* copies after a successful restore.
 
 KOMARI_ROOT="${KOMARI_ROOT:-/opt/komari}"
 KOMARI_DATA_DIR="${KOMARI_DATA_DIR:-${KOMARI_ROOT}/data}"
 KOMARI_BACKUP_DIR="${KOMARI_BACKUP_DIR:-${KOMARI_ROOT}/backups/database}"
 KOMARI_COMPOSE_FILE="${KOMARI_COMPOSE_FILE:-${KOMARI_ROOT}/docker-compose.yml}"
+KOMARI_ROLLBACK_DIR="${KOMARI_ROLLBACK_DIR:-${KOMARI_ROOT}/backups/rollbacks}"
+ROLLBACK_RETENTION_COUNT="${ROLLBACK_RETENTION_COUNT:-0}"
 CONTAINER_NAME="${KOMARI_CONTAINER_NAME:-komari}"
 
 log()  { printf '[restore] %s\n' "$*"; }
@@ -34,6 +37,14 @@ die()  { printf '[restore] ERROR: %s\n' "$*" >&2; exit 1; }
 backup_dir="$1"
 assume_yes=false
 [[ "${2:-}" == "--yes" ]] && assume_yes=true
+
+umask 077
+[[ "$ROLLBACK_RETENTION_COUNT" =~ ^[0-9]+$ ]] || die "ROLLBACK_RETENTION_COUNT must be a non-negative integer (0 keeps all)"
+mkdir -p "$KOMARI_BACKUP_DIR"
+command -v flock >/dev/null 2>&1 || die "flock is required"
+exec 9>"${KOMARI_BACKUP_DIR}/.lock"
+flock -n 9 || die "another backup or restore is already running"
+# Hold this lock across unpacking, verification, stop, rollback and start.
 
 # Resolve relative paths against the backup root for convenience. Accepts
 # either a plain snapshot directory or a compressed <stamp>.tar.zst archive
@@ -106,8 +117,8 @@ compose_down
 
 # 4. Side-aside copy of current data (never auto-deleted).
 stamp="$(date -u +%Y%m%dT%H%M%SZ)"
-pre_restore="${KOMARI_BACKUP_DIR}/pre-restore-${stamp}"
-mkdir -p "$pre_restore"
+mkdir -p "$KOMARI_ROLLBACK_DIR"
+pre_restore="$(mktemp -d "${KOMARI_ROLLBACK_DIR}/pre-restore-${stamp}.XXXXXX")"
 for f in komari.db metrics.db; do
   if [[ -f "$KOMARI_DATA_DIR/$f" ]]; then
     cp -- "$KOMARI_DATA_DIR/$f" "$pre_restore/$f"
@@ -134,3 +145,14 @@ log "starting container $CONTAINER_NAME"
 compose_up
 
 log "done. rollback copy: $pre_restore"
+
+if (( ROLLBACK_RETENTION_COUNT > 0 )); then
+  # Reserve one slot for the rollback just created: random suffix order is
+  # not creation order when two restores occur in the same second.
+  mapfile -t rollbacks < <(find "$KOMARI_ROLLBACK_DIR" -mindepth 1 -maxdepth 1 -type d \
+    -regextype posix-extended -regex '.*/pre-restore-[0-9]{8}T[0-9]{6}Z\.[[:alnum:]]{6}' \
+    ! -path "$pre_restore" -printf '%T@ %p\n' | sort -nr | cut -d ' ' -f 2-)
+  for old_rollback in "${rollbacks[@]:ROLLBACK_RETENTION_COUNT-1}"; do
+    rm -rf -- "$old_rollback"
+  done
+fi
