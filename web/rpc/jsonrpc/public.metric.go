@@ -579,16 +579,6 @@ func metricQueryTimeOrDefault(value *time.Time, fallback time.Time) time.Time {
 	return value.UTC()
 }
 
-func metricQueryHours(hours float64) time.Duration {
-	if hours <= 0 {
-		return 4 * time.Hour
-	}
-	if hours > maxPublicMetricQueryHours {
-		hours = maxPublicMetricQueryHours
-	}
-	return time.Duration(hours * float64(time.Hour))
-}
-
 func resolveMetricMaxPoints(metricKey string, params publicMetricQueryParams) (int, error) {
 	maxPoints := params.MaxPoints
 	if maxPoints == 0 {

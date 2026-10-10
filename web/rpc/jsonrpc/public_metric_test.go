@@ -45,8 +45,13 @@ func TestMetricQueryParamsRequireRFC3339Time(t *testing.T) {
 }
 
 func TestPublicMetricQueryLimitsHoursAndPoints(t *testing.T) {
-	if got := metricQueryHours(10_000).Hours(); got > maxPublicMetricQueryHours {
-		t.Fatalf("hours = %v, want <= %v", got, maxPublicMetricQueryHours)
+	now := time.Now().UTC()
+	start, end, winErr := historyQueryWindow(nil, nil, 10_000, 4, now)
+	if winErr != nil {
+		t.Fatalf("unexpected historyQueryWindow error: %v", winErr)
+	}
+	if gotHours := end.Sub(start).Hours(); gotHours > maxPublicMetricQueryHours {
+		t.Fatalf("hours = %v, want <= %v", gotHours, maxPublicMetricQueryHours)
 	}
 	params := publicMetricQueryParams{MaxPoints: 10_000}
 	points, err := resolveMetricMaxPoints("cpu.usage", params)

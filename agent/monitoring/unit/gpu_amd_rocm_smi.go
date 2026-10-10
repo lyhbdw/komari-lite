@@ -29,17 +29,6 @@ type AMDGPUInfo struct {
 	Temperature uint64  // 温度 (摄氏度)
 }
 
-// ROCmSMI JSON响应结构
-type ROCmResponse map[string]ROCmGPUInfo
-
-type ROCmGPUInfo struct {
-	CardSeries          string `json:"Card series"`
-	GPUUsage            string `json:"GPU use (%)"`
-	VRAMTotalMemory     string `json:"VRAM Total Memory (B)"`
-	VRAMTotalUsedMemory string `json:"VRAM Total Used Memory (B)"`
-	TemperatureJunction string `json:"Temperature (Sensor junction) (C)"`
-}
-
 func (rsmi *ROCmSMI) GatherModel() ([]string, error) {
 	return rsmi.gatherModel()
 }

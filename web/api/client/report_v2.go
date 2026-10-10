@@ -165,7 +165,7 @@ func WebSocketV2RPC(c *gin.Context) {
 	// WS takeover：关闭旧连接并登记新连接必须原子完成，
 	// 否则两个并发的新连接会互相踢掉对方。
 	takeoverMu.Lock()
-	if oldConn, exists := agent_runtime.GetConnectedClients()[uuid]; exists {
+	if oldConn := agent_runtime.GetConnectedClient(uuid); oldConn != nil {
 		go oldConn.Close()
 	}
 	agent_runtime.SetConnectedClients(uuid, conn)
