@@ -503,8 +503,11 @@ if [ -n "$download_base" ]; then
             exit 1
             ;;
     esac
-    download_url="${download_base%/}/${file_name}.bin"
-    download_url_fallback="${download_base%/}/${file_name}"
+    cache_qs="?t=$(date +%s)"
+    download_url="${download_base%/}/${file_name}.bin${cache_qs}"
+    download_url_fallback="${download_base%/}/${file_name}${cache_qs}"
+    checksum_url="${download_base%/}/${file_name}.bin.sha256${cache_qs}"
+    checksum_url_fallback="${download_base%/}/${file_name}.sha256${cache_qs}"
 else
     if [ "$version_to_install" = "latest" ]; then
         download_path="latest/download"
@@ -513,6 +516,8 @@ else
     fi
     download_url="https://github.com/lyhbdw/komari-lite/releases/${download_path}/${file_name}"
     download_url_fallback=""
+    checksum_url="${download_url}.sha256"
+    checksum_url_fallback=""
 fi
 
 log_step "Creating installation directory: ${GREEN}$target_dir${NC}"
@@ -596,13 +601,11 @@ else
 fi
 
 if [ -z "$sha256_expected" ]; then
-    checksum_url="${download_url}.sha256"
     checksum_tmp=$(mktemp "${target_dir}/.agent-checksum.XXXXXX")
     if ! curl --fail --location --proto '=https' --proto-redir '=https' --tlsv1.2 --connect-timeout 10 --max-time 30 \
         -o "$checksum_tmp" "$checksum_url" || [ ! -s "$checksum_tmp" ]; then
-        fallback_checksum="${download_url%.bin}.sha256"
-        if [ "$fallback_checksum" != "$checksum_url" ] && curl --fail --location --proto '=https' --proto-redir '=https' --tlsv1.2 --connect-timeout 10 --max-time 30 \
-            -o "$checksum_tmp" "$fallback_checksum" && [ -s "$checksum_tmp" ]; then
+        if [ -n "${checksum_url_fallback:-}" ] && curl --fail --location --proto '=https' --proto-redir '=https' --tlsv1.2 --connect-timeout 10 --max-time 30 \
+            -o "$checksum_tmp" "$checksum_url_fallback" && [ -s "$checksum_tmp" ]; then
             :
         else
             rm -f "$checksum_tmp"
@@ -625,8 +628,41 @@ if [ "${#sha256_expected}" -ne 64 ]; then
 fi
 sha256_actual=$(sha256sum "$download_tmp" | awk '{print $1}')
 if [ "$(printf '%s' "$sha256_actual" | tr '[:upper:]' '[:lower:]')" != "$(printf '%s' "$sha256_expected" | tr '[:upper:]' '[:lower:]')" ]; then
-    log_error "SHA256 verification failed"
-    exit 1
+    log_warning "Primary download SHA256 mismatch ($sha256_actual != $sha256_expected), attempting verified GitHub mirror fallback..."
+    mirror_verified=false
+    for mirror in "https://ghfast.top" "https://ghproxy.net" ""; do
+        mirror_path="download/${version_to_install}"
+        [ "$version_to_install" = "latest" ] && mirror_path="latest/download"
+        if [ -n "$mirror" ]; then
+            m_bin="${mirror}/https://github.com/lyhbdw/komari-lite/releases/${mirror_path}/${file_name}"
+        else
+            m_bin="https://github.com/lyhbdw/komari-lite/releases/${mirror_path}/${file_name}"
+        fi
+        m_chk="${m_bin}.sha256"
+        m_chk_tmp=$(mktemp "${target_dir}/.agent-checksum.XXXXXX")
+        if curl --fail --location --proto '=https' --proto-redir '=https' --tlsv1.2 --connect-timeout 10 --max-time 30 \
+            -o "$m_chk_tmp" "$m_chk" && [ -s "$m_chk_tmp" ]; then
+            m_exp=$(awk 'NF {print $1; exit}' "$m_chk_tmp")
+            rm -f "$m_chk_tmp"
+            if curl --fail --location --proto '=https' --proto-redir '=https' --tlsv1.2 --connect-timeout 10 --max-time 30 \
+                -o "$download_tmp" "$m_bin" && [ -s "$download_tmp" ]; then
+                m_act=$(sha256sum "$download_tmp" | awk '{print $1}')
+                if [ "$(printf '%s' "$m_act" | tr '[:upper:]' '[:lower:]')" = "$(printf '%s' "$m_exp" | tr '[:upper:]' '[:lower:]')" ]; then
+                    sha256_expected="$m_exp"
+                    sha256_actual="$m_act"
+                    mirror_verified=true
+                    log_success "Verified mirror download successful"
+                    break
+                fi
+            fi
+        else
+            rm -f "$m_chk_tmp"
+        fi
+    done
+    if [ "$mirror_verified" != true ]; then
+        log_error "SHA256 verification failed"
+        exit 1
+    fi
 fi
 
 # Execute the verified, staged file before touching the old binary or service.
