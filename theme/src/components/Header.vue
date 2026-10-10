@@ -58,7 +58,7 @@ const sitename = computed(() => {
     class="transition-all duration-200 top-0 sticky z-30 border-b"
     :class="isScrolled ? 'backdrop-blur-md bg-background/80 border-border/80 shadow-xs' : 'bg-transparent border-transparent'"
   >
-    <div class="px-4 flex-between h-14 max-w-[1280px] mx-auto">
+    <div class="px-4 flex items-center justify-between h-14 max-w-[1280px] mx-auto">
       <div class="flex items-center gap-3 select-none">
         <div class="size-7.5 rounded-lg select-none text-foreground shrink-0 flex items-center justify-center">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none" class="size-full">
