@@ -415,9 +415,9 @@ onMounted(() => {
   browser.value = client.browser
   visitTime.value = formatVisitTime(new Date())
   location.value = '网络访客'
-  ip.value = '点击展开'
+  ip.value = '加载中...'
   isp.value = ''
-  loading.value = false
+  void ensureGeoLoaded()
 })
 </script>
 

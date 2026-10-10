@@ -103,7 +103,7 @@ const useAppStore = defineStore('app', () => {
     if (settings && typeof settings.visitorInfoCardEnabled === 'boolean') {
       return settings.visitorInfoCardEnabled
     }
-    return false
+    return true
   })
 
   const visitorCountryCode = ref<string | null>(null)
