@@ -9,8 +9,10 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/lyhbdw/komari-lite/agent/dnsresolver"
@@ -22,17 +24,54 @@ import (
 	"golang.org/x/net/ipv6"
 )
 
-// resolveIP 解析域名到 IP 地址，排除 DNS 查询时间，遵循自定义 DNS 及 IPv4/IPv6 偏好配置
-func resolveIP(target string) (string, error) {
+// HandshakeDeadline 对应 monitor-probe 的 HANDSHAKE_DEADLINE (900ms)。
+// 故意设计在 Linux 内核初始 SYN 重传定时器 (1秒) 之内。
+// Linux 初始 SYN 计时器约为 1 秒，若超时长于 1 秒，会把丢弃的 SYN 变成迟到的成功，
+// 将重传定时器加上 RTT 当作延迟上报（往往表现为 1200ms、3200ms 等非真实链路延迟）。
+// 严格控制在 900ms 内截断，可确保每次有效采样都对应首个 SYN 握手完成；超时的首包直接记为 -1 丢包。
+const HandshakeDeadline = 900 * time.Millisecond
+
+// MaxPingAddrs 单次探测尝试的最大候选 IP 数量（对应 monitor-probe 的 MAX_PING_ADDRS = 3）。
+// 每个地址独立分配一个 HandshakeDeadline 计时，顺序尝试直至成功或全部失败。
+const MaxPingAddrs = 3
+
+// ErrDNSOverrun 表示 DNS 解析耗时超过 HandshakeDeadline。
+// monitor-probe 规则：DNS 解析超时属于“未采集到样本”，若报告为 -1 会让慢解析在网络未丢包时误绘出虚假丢包。
+// 因此解析超时不生成丢包样本，跳过当轮上报。
+var ErrDNSOverrun = errors.New("name resolution overrun")
+
+var dnsOverrunSaid sync.Map
+
+// resolveCandidateIPs 解析域名获取最多 MaxPingAddrs 个候选 IP 地址，遵循 IPv4/IPv6 偏好配置。
+// 当 DNS 解析超时（> HandshakeDeadline）时返回 ErrDNSOverrun。
+func resolveCandidateIPs(target string, deadline time.Duration) ([]string, error) {
 	// 如果已经是 IP 地址，直接返回
 	if ip := net.ParseIP(target); ip != nil {
-		return target, nil
+		return []string{target}, nil
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), deadline)
 	defer cancel()
 	ips, err := dnsresolver.ResolveHostWithPreference(ctx, target, flags.PreferIPVersion)
-	if err != nil || len(ips) == 0 {
-		return "", errors.New("failed to resolve target")
+	if err != nil {
+		if errors.Is(ctx.Err(), context.DeadlineExceeded) || errors.Is(err, context.DeadlineExceeded) || os.IsTimeout(err) {
+			return nil, ErrDNSOverrun
+		}
+		return nil, err
+	}
+	if len(ips) == 0 {
+		return nil, errors.New("failed to resolve target")
+	}
+	if len(ips) > MaxPingAddrs {
+		ips = ips[:MaxPingAddrs]
+	}
+	return ips, nil
+}
+
+// resolveIP 保留对旧调用的兼容，返回候选首个 IP
+func resolveIP(target string) (string, error) {
+	ips, err := resolveCandidateIPs(target, 5*time.Second)
+	if err != nil {
+		return "", err
 	}
 	return ips[0], nil
 }
@@ -44,10 +83,21 @@ func icmpPing(target string, timeout time.Duration) (int64, error) {
 	}
 	host = strings.Trim(host, "[]")
 
-	ipStr, err := resolveIP(host)
+	ips, err := resolveCandidateIPs(host, timeout)
 	if err != nil {
 		return -1, err
 	}
+
+	for _, ipStr := range ips {
+		rtt, err := icmpPingSingle(ipStr, timeout)
+		if err == nil {
+			return rtt, nil
+		}
+	}
+	return -1, errors.New("all addresses failed")
+}
+
+func icmpPingSingle(ipStr string, timeout time.Duration) (int64, error) {
 	dstIP := net.ParseIP(ipStr)
 	if dstIP == nil {
 		return -1, errors.New("invalid IP address")
@@ -142,33 +192,39 @@ func icmpPing(target string, timeout time.Duration) (int64, error) {
 func tcpPing(target string, timeout time.Duration) (int64, error) {
 	host, port, err := net.SplitHostPort(target)
 	if err != nil {
-		// No port, assume port 80
 		host = target
 		port = "80"
 	}
-
-	// If the host is an IPv6 literal, it might be wrapped in brackets.
 	host = strings.Trim(host, "[]")
 
-	ip, err := resolveIP(host)
+	ips, err := resolveCandidateIPs(host, timeout)
 	if err != nil {
 		return -1, err
 	}
 
-	targetAddr := net.JoinHostPort(ip, port)
-	start := time.Now()
-	conn, err := net.DialTimeout("tcp", targetAddr, timeout)
-	if err != nil {
-		return -1, err
+	return tcpHandshake(ips, port, timeout)
+}
+
+// tcpHandshake 顺序尝试最多 MaxPingAddrs 个候选 IP，每个 IP 独立分配 timeout。
+// 计时在每个地址拨号前重置，故障地址不累计到最终耗时中。
+func tcpHandshake(ips []string, port string, timeout time.Duration) (int64, error) {
+	if len(ips) > MaxPingAddrs {
+		ips = ips[:MaxPingAddrs]
 	}
-	defer conn.Close()
-	return time.Since(start).Milliseconds(), nil
+	for _, ip := range ips {
+		targetAddr := net.JoinHostPort(ip, port)
+		start := time.Now()
+		conn, err := net.DialTimeout("tcp", targetAddr, timeout)
+		if err == nil {
+			_ = conn.Close()
+			return time.Since(start).Milliseconds(), nil
+		}
+	}
+	return -1, errors.New("all addresses failed")
 }
 
 func httpPing(target string, timeout time.Duration) (int64, error) {
-	// Handle raw IPv6 address for URL
 	if strings.Contains(target, ":") && !strings.Contains(target, "[") {
-		// check if it's a valid IP to avoid wrapping hostnames
 		if ip := net.ParseIP(target); ip != nil && ip.To4() == nil {
 			target = "[" + target + "]"
 		}
@@ -178,26 +234,44 @@ func httpPing(target string, timeout time.Duration) (int64, error) {
 		target = "http://" + target
 	}
 
+	parsedURL, err := url.Parse(target)
+	if err != nil {
+		return -1, err
+	}
+
+	host := parsedURL.Hostname()
+	port := parsedURL.Port()
+	if port == "" {
+		if strings.EqualFold(parsedURL.Scheme, "https") {
+			port = "443"
+		} else {
+			port = "80"
+		}
+	}
+
+	ips, err := resolveCandidateIPs(host, timeout)
+	if err != nil {
+		return -1, err
+	}
+
 	transport := &http.Transport{
 		DisableKeepAlives: true,
 		TLSClientConfig:   &tls.Config{InsecureSkipVerify: flags.IgnoreUnsafeCert},
 		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
-			// 在 Dial 之前解析 IP，排除 DNS 时间
-			host, port, err := net.SplitHostPort(addr)
-			if err != nil {
-				return nil, err
+			for _, ip := range ips {
+				d := net.Dialer{Timeout: timeout}
+				conn, dialErr := d.DialContext(ctx, network, net.JoinHostPort(ip, port))
+				if dialErr == nil {
+					return conn, nil
+				}
 			}
-			ip, err := resolveIP(host)
-			if err != nil {
-				return nil, err
-			}
-			return net.DialTimeout(network, net.JoinHostPort(ip, port), timeout)
+			return nil, errors.New("all addresses failed")
 		},
 	}
 	defer transport.CloseIdleConnections()
 
 	client := &http.Client{
-		Timeout:   timeout,
+		Timeout:   timeout*time.Duration(len(ips)) + 500*time.Millisecond,
 		Transport: transport,
 	}
 	start := time.Now()
@@ -221,8 +295,7 @@ func NewPingTask(conn *ws.SafeConn, taskID uint, pingType, pingTarget string) {
 	var err error = nil
 	var latency int64
 	pingResult := -1
-	timeout := 3 * time.Second        // 默认超时时间
-	const highLatencyThreshold = 1000 // ms 阈值
+	timeout := HandshakeDeadline
 
 	measure := func() (int64, error) {
 		switch pingType {
@@ -237,36 +310,26 @@ func NewPingTask(conn *ws.SafeConn, taskID uint, pingType, pingTarget string) {
 		}
 	}
 
-	// 首次测量
-	if latency, err = measure(); err == nil {
-		// 若初次测量延迟偏高（> 1000ms），可能受冷启动或偶发握手抖动影响，进行复测以获取更准确的稳定值
-		if latency > int64(highLatencyThreshold) {
-			for i := 0; i < 2; i++ {
-				if second, err2 := measure(); err2 == nil {
-					if second < latency {
-						latency = second
-					}
-					if latency <= int64(highLatencyThreshold) {
-						break
-					}
-				}
-			}
-		}
-	}
-
+	latency, err = measure()
 	if err != nil {
+		// monitor-probe 规则：DNS 解析超时属于样本未采集（sample not taken），
+		// 不向服务端上报 -1 丢包，避免 slow resolver 造成虚假丢包。
+		if errors.Is(err, ErrDNSOverrun) {
+			if _, loaded := dnsOverrunSaid.LoadOrStore(pingTarget, true); !loaded {
+				log.Printf("%s: name resolution runs past %v, so these rounds report no sample rather than a loss",
+					pingTarget, HandshakeDeadline)
+			}
+			return
+		}
+
 		log.Printf("Ping task %d failed: %v", taskID, err)
-		pingResult = -1 // 如果有错误，设置结果为 -1
+		pingResult = -1 // 真正无法连通、握手超时或域名不可解析，上报 -1 丢包
 	} else {
 		pingResult = int(latency)
 	}
+
 	finishedAt := time.Now()
 	wsPayload := v2.BuildPingResultPayload(taskID, pingType, pingResult, finishedAt)
-	// https://github.com/komari-monitor/komari/commit/eb87a4fc330b7d1c407fa4ff70177615a4f50a1f
-	// -1 代表丢包，服务端计算
-	//if pingResult == -1 {
-	//	return
-	//}
 	if conn == nil {
 		if err := postV2RPC(wsPayload); err != nil {
 			log.Printf("Failed to upload ping result over POST: %v", err)
@@ -276,7 +339,6 @@ func NewPingTask(conn *ws.SafeConn, taskID uint, pingType, pingTarget string) {
 	if err := conn.WriteJSON(wsPayload); err != nil {
 		log.Printf("Failed to write JSON to WebSocket: %v", err)
 	}
-
 }
 
 func postV2RPC(payload interface{}) error {
