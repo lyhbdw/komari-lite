@@ -1,8 +1,9 @@
 package monitoring
 
 import (
-	"fmt"
 	"os"
+	"strconv"
+	"strings"
 )
 
 func Uptime() (uint64, error) {
@@ -10,8 +11,12 @@ func Uptime() (uint64, error) {
 	if err != nil {
 		return 0, err
 	}
-	var up float64
-	if _, err := fmt.Sscanf(string(data), "%f", &up); err != nil {
+	fields := strings.Fields(string(data))
+	if len(fields) == 0 {
+		return 0, os.ErrInvalid
+	}
+	up, err := strconv.ParseFloat(fields[0], 64)
+	if err != nil {
 		return 0, err
 	}
 	return uint64(up), nil

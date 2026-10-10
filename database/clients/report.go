@@ -19,6 +19,23 @@ func GetClientUUIDByToken(token string) (clientUUID string, err error) {
 	return client.UUID, nil
 }
 
+func checkFloat64(name string, val float64) error {
+	if math.IsNaN(val) || math.IsInf(val, 0) || val > math.MaxFloat64-1 || val < -math.MaxFloat64+1 {
+		return fmt.Errorf("%s value exceeds float64 range: %g", name, val)
+	}
+	return nil
+}
+
+func checkInt64(name string, val int64) error {
+	if val < 0 {
+		return fmt.Errorf("%s must be non-negative, got %d", name, val)
+	}
+	if val > math.MaxInt64-1 {
+		return fmt.Errorf("%s exceeds int64 max limit: %d", name, val)
+	}
+	return nil
+}
+
 // 检查数据防止异常数据导致数据库损坏
 func ReportVerify(report v2.Report) error {
 	// 防止输入不合理范围
@@ -30,29 +47,12 @@ func ReportVerify(report v2.Report) error {
 		return fmt.Errorf("Load.Load1 must be non-negative, got %.2f", report.Load.Load1)
 	}
 
-	checkFloat64 := func(name string, val float64) error {
-		if val > math.MaxFloat64-1 || val < -math.MaxFloat64+1 {
-			return fmt.Errorf("%s value exceeds float64 range: %g", name, val)
-		}
-		return nil
-	}
-
 	// [float64] 防止数据溢出
 	if err := checkFloat64("CPU.Usage", report.CPU.Usage); err != nil {
 		return err
 	}
 	if err := checkFloat64("Load.Load1", report.Load.Load1); err != nil {
 		return err
-	}
-
-	checkInt64 := func(name string, val int64) error {
-		if val < 0 {
-			return fmt.Errorf("%s must be non-negative, got %d", name, val)
-		}
-		if val > math.MaxInt64-1 {
-			return fmt.Errorf("%s exceeds int64 max limit: %d", name, val)
-		}
-		return nil
 	}
 
 	// [int64] 防止数据溢出

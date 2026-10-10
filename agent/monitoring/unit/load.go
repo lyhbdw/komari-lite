@@ -1,8 +1,9 @@
 package monitoring
 
 import (
-	"fmt"
 	"os"
+	"strconv"
+	"strings"
 )
 
 type LoadInfo struct {
@@ -13,9 +14,14 @@ type LoadInfo struct {
 
 func Load() LoadInfo {
 	if data, err := os.ReadFile("/proc/loadavg"); err == nil {
-		var l1, l5, l15 float64
-		if _, err := fmt.Sscanf(string(data), "%f %f %f", &l1, &l5, &l15); err == nil {
-			return LoadInfo{Load1: l1, Load5: l5, Load15: l15}
+		fields := strings.Fields(string(data))
+		if len(fields) >= 3 {
+			l1, e1 := strconv.ParseFloat(fields[0], 64)
+			l5, e5 := strconv.ParseFloat(fields[1], 64)
+			l15, e15 := strconv.ParseFloat(fields[2], 64)
+			if e1 == nil && e5 == nil && e15 == nil {
+				return LoadInfo{Load1: l1, Load5: l5, Load15: l15}
+			}
 		}
 	}
 	return LoadInfo{Load1: 0, Load5: 0, Load15: 0}
