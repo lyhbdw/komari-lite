@@ -5,13 +5,6 @@ import (
 	"testing"
 )
 
-// helper to fetch handler (test only)
-func getHandler(name string) Handler {
-	muHandlers.RLock()
-	defer muHandlers.RUnlock()
-	return handlers[name]
-}
-
 // 重复注册
 func TestRegisterDuplicateAndReserved(t *testing.T) {
 	name := "sample.method"

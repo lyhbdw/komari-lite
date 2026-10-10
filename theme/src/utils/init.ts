@@ -282,11 +282,6 @@ class InitManager {
       return
     }
 
-    // 首次失败时显示提示
-    // if (attempts === 0) {
-    //   window.$message?.error('WebSocket 建立失败，正在尝试重连。')
-    // }
-
     this.nodesStore.updateWsState('reconnecting', attempts + 1)
 
     this.reconnectTimer = setTimeout(async () => {

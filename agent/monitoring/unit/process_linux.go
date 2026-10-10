@@ -52,7 +52,6 @@ func processCountLinux() (count int) {
 
 	for _, entry := range entries {
 		if _, err := strconv.ParseInt(entry.Name(), 10, 64); err == nil {
-			//if _, err := filepath.ParseInt(entry.Name(), 10, 64); err == nil {
 			count++
 		}
 	}

@@ -44,7 +44,6 @@ const Node = React.memo(
   const downloadSpeed = formatBytes(liveData.network.down);
   const totalUpload = formatBytes(liveData.network.totalUp);
   const totalDownload = formatBytes(liveData.network.totalDown);
-  //const totalTraffic = formatBytes(liveData.network.totalUp + liveData.network.totalDown);
   return (
     <Card
       style={{

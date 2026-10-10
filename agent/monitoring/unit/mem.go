@@ -132,13 +132,6 @@ func GetMemHtopLike() RamInfo {
 			}
 			raminfo.Used += info.Shmem
 
-			//if info.Zswap > 0 || info.Zswapped > 0 {
-			//	if raminfo.Used > info.Zswap {
-			//		raminfo.Used -= info.Zswap
-			//	} else {
-			//		raminfo.Used = 0
-			//	}
-			//}
 			return raminfo
 		}
 	}
