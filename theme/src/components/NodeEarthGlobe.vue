@@ -512,10 +512,6 @@ function formatRate(bytesPerSec: number): string {
         <span class="inline-block size-1.5 rounded-full bg-yellow-600 animate-pulse" />
         <span class="text-yellow-600">{{ offlineServers }}</span>
       </div>
-      <!-- <div v-if="totalServers > 0" class="flex items-center gap-1">
-        <span class="inline-block size-1.5 rounded-full bg-blue-600 animate-pulse" />
-        <span class="text-blue-600">{{ totalServers }}</span>
-      </div> -->
     </div>
   </div>
 </template>

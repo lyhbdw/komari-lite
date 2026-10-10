@@ -50,7 +50,6 @@ const Tips: React.FC<TipsProps & React.HTMLAttributes<HTMLDivElement>> = ({
           </Dialog.Trigger>
           <Dialog.Content>
             <div className="flex flex-col gap-2">
-              {/* <label className="text-xl font-bold">Tips</label> */}
               <div>{children}</div>
             </div>
           </Dialog.Content>

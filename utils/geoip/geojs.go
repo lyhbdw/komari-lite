@@ -19,9 +19,6 @@ type GeoJSService struct {
 type geoJSResponse struct {
 	Country     string `json:"country"`
 	CountryCode string `json:"country_code"`
-	// 可以根据需要添加其他字段，例如:
-	// City    string `json:"city"`
-	// Region  string `json:"region"`
 }
 
 // NewGeoJSService 创建并返回一个 GeoJSService 的新实例。

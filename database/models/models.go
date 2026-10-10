@@ -98,7 +98,6 @@ type Record struct {
 	Process        int       `json:"process"`
 	Connections    int       `json:"connections"`
 	ConnectionsUdp int       `json:"connections_udp"`
-	//Uptime         int64     `json:"uptime" gorm:"type:bigint"`
 }
 
 // GPURecord logs individual GPU metrics over time
