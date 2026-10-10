@@ -147,15 +147,6 @@ export function formatBytesPerSecondSplit(bytes: number, config?: ByteDecimalsCo
 }
 
 /**
- * 格式化字节速率为可读单位
- * @param bytes 字节速率
- * @returns 格式化后的字符串，如 "1.5 GB/s"
- */
-export function formatBytesPerSecond(bytes: number): string {
-  return `${formatBytes(bytes)}/s`
-}
-
-/**
  * 格式化字节速率为可读单位（支持自定义精度配置）
  * @param bytes 字节速率
  * @param config 精度配置
@@ -163,29 +154,6 @@ export function formatBytesPerSecond(bytes: number): string {
  */
 export function formatBytesPerSecondWithConfig(bytes: number, config?: ByteDecimalsConfig): string {
   return `${formatBytesWithConfig(bytes, config)}/s`
-}
-
-/**
- * 格式化运行时间
- * @param seconds 秒数
- * @returns 格式化后的字符串，如 "2 天 3 小时 15 分钟"
- */
-export function formatUptime(seconds: number): string {
-  if (!seconds || seconds <= 0)
-    return '0 秒'
-
-  const parts: string[] = []
-  let remaining = seconds
-
-  for (const { value, label } of TIME_UNITS) {
-    const amount = Math.floor(remaining / value)
-    if (amount > 0) {
-      parts.push(`${amount} ${label}`)
-      remaining %= value
-    }
-  }
-
-  return parts.length > 0 ? parts.join(' ') : '0 秒'
 }
 
 /**

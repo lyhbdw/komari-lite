@@ -47,12 +47,6 @@ export interface VersionInfo {
   hash: string
   version: string
 }
-/** Ping 历史记录 */
-export interface PingRecord {
-  task_id: number
-  time: string
-  value: number
-}
 
 /** API 客户端配置 */
 export interface ApiClientOptions {

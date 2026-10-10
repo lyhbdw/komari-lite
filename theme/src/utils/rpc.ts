@@ -216,14 +216,6 @@ export interface StatusRecord {
   connections_udp: number
 }
 
-/** Ping 记录 */
-export interface PingRecord {
-  client: string
-  task_id: number
-  time: string
-  value: number
-}
-
 /** RPC 错误 */
 export class RpcError extends Error {
   code: number
