@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 
-VERSION=$(git describe --tags --abbrev=0 2>/dev/null || printf '%s' dev)
+VERSION="${1:-$(git describe --tags --abbrev=0 2>/dev/null || printf '%s' dev)}"
 mkdir -p ./build
 
 for GOARCH in amd64 arm64; do

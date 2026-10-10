@@ -77,7 +77,7 @@ var showHelp bool
 
 func init() {
 	fs.SetOutput(os.Stderr)
-	regBool(&showHelp, "help", "", false, "Show help message")
+	regBool(&showHelp, "help", "h", false, "Show help message")
 	regString(&flags.Token, "token", "t", "", "API token")
 	regString(&flags.Endpoint, "endpoint", "e", "", "API endpoint")
 	regFloat64(&flags.Interval, "interval", "i", 3.0, "Interval in seconds")
