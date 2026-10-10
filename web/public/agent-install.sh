@@ -476,12 +476,12 @@ else
     log_step "Downloading $file_name ..."
     log_info "URL: ${CYAN}$download_url${NC}"
     download_ok=false
-    if curl --fail --location --proto '=https' --tlsv1.2 --connect-timeout 15 \
+    if curl --fail --location --proto '=https' --tlsv1.2 --connect-timeout 10 --max-time 30 --speed-limit 51200 --speed-time 8 \
         -o "$download_tmp" "$download_url" && [ -s "$download_tmp" ]; then
         download_ok=true
     elif [ -n "${download_url_fallback:-}" ]; then
         log_info "Retrying with fallback URL: ${CYAN}$download_url_fallback${NC}"
-        if curl --fail --location --proto '=https' --tlsv1.2 --connect-timeout 15 \
+        if curl --fail --location --proto '=https' --tlsv1.2 --connect-timeout 10 --max-time 30 --speed-limit 51200 --speed-time 8 \
             -o "$download_tmp" "$download_url_fallback" && [ -s "$download_tmp" ]; then
             download_ok=true
             download_url="$download_url_fallback"
