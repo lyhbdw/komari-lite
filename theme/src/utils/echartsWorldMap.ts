@@ -8,10 +8,8 @@ type WorldGeoJson = Exclude<
 >
 
 const WORLD_MAP_NAME = 'komari-world'
-// 世界地图数据源：优先直连本地同源站点静态资源，外网 CDN 作为冗余兜底
+// 世界地图数据源：按需从全球 CDN 拉取，避免将 1MB 轮廓文件打包进常驻静态包
 const WORLD_GEO_JSON_URLS = [
-  './world.json',
-  '/world.json',
   'https://cdn.jsdelivr.net/gh/apache/echarts-www@master/asset/map/json/world.json',
   'https://fastly.jsdelivr.net/gh/apache/echarts-www@master/asset/map/json/world.json',
   'https://gcore.jsdelivr.net/gh/apache/echarts-www@master/asset/map/json/world.json',

@@ -19,6 +19,7 @@ COPY --chmod=755 komari-${TARGETOS}-${TARGETARCH} /app/komari
 ENV GIN_MODE=release
 ENV KOMARI_LISTEN=0.0.0.0:25774
 ENV SQLITE_TMPDIR=/app/data/.sqlite-tmp
+ENV GOMEMLIMIT=200MiB
 
 LABEL org.opencontainers.image.revision="$OCI_REVISION" \
       org.opencontainers.image.source="$OCI_SOURCE" \
