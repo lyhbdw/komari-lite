@@ -84,11 +84,12 @@ function getNetworkShortName(name: string): string {
 }
 
 function toNetworkDisplay(stat: NodePingPerTaskStat): NodePingNetworkDisplay {
+  const isBlocked = stat.loss >= 99 || stat.avgLatency < 0 || (stat.avgLatency === 0 && stat.loss > 0)
   return {
     name: stat.name,
     shortName: getNetworkShortName(stat.name),
-    latency: stat.avgLatency >= 0 ? `${Math.round(stat.avgLatency)}ms` : '--',
-    toneClass: stat.avgLatency >= 0 ? getPingToneClass(stat.avgLatency) : 'text-rose-500',
+    latency: isBlocked ? '--' : `${Math.round(stat.avgLatency)}ms`,
+    toneClass: isBlocked ? 'text-rose-500/75 font-mono' : getPingToneClass(stat.avgLatency),
   }
 }
 
@@ -138,7 +139,7 @@ export function useNodePingDisplay(
 
   const effectiveAvgLatency = computed(() => {
     if (hasRealtimePing.value) {
-      const valid = realtimePerTaskStats.value.filter(s => s.avgLatency >= 0)
+      const valid = realtimePerTaskStats.value.filter(s => s.avgLatency > 0 && s.loss < 99)
       if (valid.length === 0)
         return -1
       return valid.reduce((sum, s) => sum + s.avgLatency, 0) / valid.length
@@ -154,6 +155,13 @@ export function useNodePingDisplay(
       return stats.reduce((sum, s) => sum + s.loss, 0) / stats.length
     }
     return pingStats.avgLoss.value
+  })
+
+  const isAllBlocked = computed(() => {
+    const stats = effectivePerTaskStats.value
+    if (stats.length === 0)
+      return false
+    return stats.every(s => s.loss >= 99 || (s.avgLatency <= 0 && s.loss > 0))
   })
 
   function buildPingBars(metric: NodePingMetric): NodePingBar[] {
@@ -181,19 +189,29 @@ export function useNodePingDisplay(
   }
 
   function buildEmptyPingBars(metric: NodePingMetric): NodePingBar[] {
-    const tooltip = pingStats.loading.value
-      ? '加载中'
-      : pingStats.error.value
-        ? '加载失败'
-        : !pingStatsEnabled.value
-            ? '未启用记录'
-            : metric === 'latency'
-              ? 'N/A'
+    const isBlocked = isAllBlocked.value
+    const isZh = appStore.lang === 'zh-CN'
+    const tooltip = isBlocked
+      ? metric === 'loss'
+        ? (isZh ? '国内阻断 · 100% 丢包' : 'Blocked · 100% Loss')
+        : (isZh ? '国内阻断 · 无法连通' : 'Blocked · Unreachable')
+      : pingStats.loading.value
+        ? '加载中'
+        : pingStats.error.value
+          ? '加载失败'
+          : !pingStatsEnabled.value
+              ? '未启用记录'
               : 'N/A'
+
+    const className = isBlocked
+      ? metric === 'loss'
+        ? 'bg-rose-500/35 dark:bg-rose-500/30'
+        : 'bg-muted-foreground/15'
+      : 'bg-muted-foreground/10'
 
     return Array.from({ length: NODE_PING_BAR_COUNT }, (_, index) => ({
       key: `${metric}-empty-${index}`,
-      className: 'bg-muted-foreground/10',
+      className,
       tooltip,
     }))
   }
@@ -204,6 +222,8 @@ export function useNodePingDisplay(
   const lossRenderBars = computed(() => lossBars.value.length ? lossBars.value : buildEmptyPingBars('loss'))
 
   const latencyDisplay = computed(() => {
+    if (isAllBlocked.value)
+      return '--'
     if (hasRealtimePing.value) {
       const lat = effectiveAvgLatency.value
       return lat >= 0 ? `${Math.round(lat)} ms` : '--'
@@ -216,6 +236,8 @@ export function useNodePingDisplay(
   })
 
   const lossDisplay = computed(() => {
+    if (isAllBlocked.value)
+      return '100%'
     if (hasRealtimePing.value)
       return `${effectiveAvgLoss.value.toFixed(1)}%`
     if (pingStats.hasData.value)
@@ -226,6 +248,11 @@ export function useNodePingDisplay(
   })
 
   const latencyPanelTooltip = computed(() => {
+    if (isAllBlocked.value) {
+      return appStore.lang === 'zh-CN'
+        ? '国内探测点全量丢包（IP 可能已被墙或未开放 ICMP）'
+        : '100% packet loss from mainland China probes'
+    }
     if (hasRealtimePing.value) {
       const lat = effectiveAvgLatency.value
       return lat >= 0 ? `平均延迟 ${Math.round(lat)} ms` : '暂无延迟数据'
@@ -239,6 +266,11 @@ export function useNodePingDisplay(
   })
 
   const lossPanelTooltip = computed(() => {
+    if (isAllBlocked.value) {
+      return appStore.lang === 'zh-CN'
+        ? '平均丢包 100%（国内探测点全部超时）'
+        : 'Average packet loss: 100% (all probe targets timed out)'
+    }
     if (hasRealtimePing.value) {
       return `平均丢包 ${effectiveAvgLoss.value.toFixed(1)}%`
     }
@@ -302,5 +334,6 @@ export function useNodePingDisplay(
     lossPanelTooltip,
     perTaskStats: pingStats.perTaskStats,
     topPingNetworks,
+    isAllBlocked,
   }
 }
