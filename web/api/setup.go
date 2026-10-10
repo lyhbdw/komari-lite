@@ -11,11 +11,15 @@ import (
 	"github.com/lyhbdw/komari-lite/database/accounts"
 	"github.com/lyhbdw/komari-lite/database/dbcore"
 	"github.com/lyhbdw/komari-lite/database/models"
+	"github.com/lyhbdw/komari-lite/utils/attemptlimit"
 )
 
 const (
-	setupMaxBodyBytes = 16 << 10
-	setupMinPassword  = 8
+	setupMaxBodyBytes      = 16 << 10
+	setupMinPassword       = 8
+	setupWindow            = 5 * time.Minute
+	setupMaxAttempts       = 8
+	setupLimiterMaxEntries = 4096
 )
 
 var setupLimiter = struct {
@@ -26,20 +30,7 @@ var setupLimiter = struct {
 func setupAllowed(key string, now time.Time) bool {
 	setupLimiter.Lock()
 	defer setupLimiter.Unlock()
-	cutoff := now.Add(-5 * time.Minute)
-	if entries := setupLimiter.attempts[key]; len(entries) >= 8 {
-		setupLimiter.attempts[key] = entries
-		return false
-	}
-	entries := setupLimiter.attempts[key]
-	for _, at := range entries {
-		if at.After(cutoff) {
-			entries = append(entries, at)
-		}
-	}
-	entries = append(entries, now)
-	setupLimiter.attempts[key] = entries
-	return true
+	return attemptlimit.Allow(setupLimiter.attempts, key, now, setupWindow, setupMaxAttempts, setupLimiterMaxEntries)
 }
 
 // accountCount returns the number of existing accounts.

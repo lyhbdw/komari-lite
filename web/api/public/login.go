@@ -11,6 +11,7 @@ import (
 	"github.com/lyhbdw/komari-lite/database/auditlog"
 	"github.com/lyhbdw/komari-lite/internal/config"
 	"github.com/lyhbdw/komari-lite/utils"
+	"github.com/lyhbdw/komari-lite/utils/attemptlimit"
 	"github.com/lyhbdw/komari-lite/web/api"
 
 	"github.com/gin-gonic/gin"
@@ -39,39 +40,7 @@ var loginLimiter = struct {
 func loginAllowed(key string, now time.Time) bool {
 	loginLimiter.Lock()
 	defer loginLimiter.Unlock()
-	cutoff := now.Add(-loginWindow)
-	for existingKey, oldEntries := range loginLimiter.attempts {
-		entries := oldEntries[:0]
-		for _, at := range oldEntries {
-			if at.After(cutoff) {
-				entries = append(entries, at)
-			}
-		}
-		if len(entries) == 0 {
-			delete(loginLimiter.attempts, existingKey)
-		} else {
-			loginLimiter.attempts[existingKey] = entries
-		}
-	}
-	entries := loginLimiter.attempts[key]
-	if len(entries) >= loginMaxAttempts {
-		loginLimiter.attempts[key] = entries
-		return false
-	}
-	loginLimiter.attempts[key] = append(entries, now)
-	if len(loginLimiter.attempts) > loginLimiterMaxEntries {
-		oldestKey := ""
-		var oldest time.Time
-		for candidate, candidateEntries := range loginLimiter.attempts {
-			if len(candidateEntries) > 0 && (oldestKey == "" || candidateEntries[len(candidateEntries)-1].Before(oldest)) {
-				oldestKey, oldest = candidate, candidateEntries[len(candidateEntries)-1]
-			}
-		}
-		if oldestKey != "" {
-			delete(loginLimiter.attempts, oldestKey)
-		}
-	}
-	return true
+	return attemptlimit.Allow(loginLimiter.attempts, key, now, loginWindow, loginMaxAttempts, loginLimiterMaxEntries)
 }
 
 func setSessionCookie(c *gin.Context, value string, maxAge int) {
