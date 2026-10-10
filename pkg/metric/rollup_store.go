@@ -261,16 +261,6 @@ func (s *Store) readRollupBucketsBatchTx(ctx context.Context, metricName string,
 	return out, rows.Err()
 }
 
-// writeRollupBucketsTx is retained for package callers and tests. It uses the
-// same merge-safe path as normal sealed-minute writes.
-func (s *Store) writeRollupBucketsTx(ctx context.Context, metricName string, interval time.Duration, buckets map[rollupKey]*rollupBucket, tx *sql.Tx) (int, error) {
-	return s.mergeRollupBucketsWithDictionaryTx(ctx, metricName, interval, buckets, newRollupDictionaryCache(), tx)
-}
-
-func (s *Store) scanRollupRows(ctx context.Context, q querier, metricName string, interval time.Duration) ([]storedRollup, error) {
-	return s.scanRollupRowsBetweenWith(ctx, q, metricName, "", nil, interval, -1<<62, 1<<62, true)
-}
-
 func sortRollupKeys(keys []rollupKey) {
 	sort.Slice(keys, func(i, j int) bool {
 		if keys[i].bucket != keys[j].bucket {

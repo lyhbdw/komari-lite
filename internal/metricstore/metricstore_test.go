@@ -12,6 +12,17 @@ import (
 	v2 "github.com/lyhbdw/komari-lite/protocol/v2"
 )
 
+func createMetricDefinitions(ctx context.Context, s *metric.Store) error {
+	return createMetricDefinitionsWithDefaultRetention(ctx, s, defaultBuiltinMetricRetentionDays)
+}
+
+func createMetricDefinitionsWithDefaultRetention(ctx context.Context, s *metric.Store, defaultRetentionDays int) error {
+	if defaultRetentionDays < defaultBuiltinMetricRetentionDays {
+		defaultRetentionDays = defaultBuiltinMetricRetentionDays
+	}
+	return createBuiltinMetricDefinitions(ctx, s, defaultRetentionDays, false)
+}
+
 func TestDefaultRollupPolicy(t *testing.T) {
 	policy := mustDefaultPolicy(t)
 	if err := policy.Validate(); err != nil {

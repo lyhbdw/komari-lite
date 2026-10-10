@@ -9,6 +9,10 @@ import (
 	"github.com/lyhbdw/komari-lite/database/models"
 )
 
+func newPingGroupRunner(tasks []models.PingTask, execute func(context.Context, models.PingTask)) func(context.Context) {
+	return newPingGroupRunnerWithGate(tasks, execute, &atomic.Bool{})
+}
+
 func TestPingGroupHoldsGateUntilEveryTaskReturns(t *testing.T) {
 	started := make(chan struct{}, 2)
 	release := make(chan struct{})

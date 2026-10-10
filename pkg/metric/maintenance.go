@@ -232,11 +232,4 @@ func maintenanceActionFor(driver Driver) MaintenanceAction {
 	return ""
 }
 
-func managedReclaimQuery(driver Driver, _ tables) (string, error) {
-	if driver == DriverSQLite {
-		return sqliteVacuumSQL, nil
-	}
-	return "", fmt.Errorf("%w: reclaim query is unavailable for driver %q", ErrInvalidArgument, driver)
-}
-
 

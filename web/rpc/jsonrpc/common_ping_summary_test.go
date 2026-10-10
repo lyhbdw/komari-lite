@@ -12,6 +12,10 @@ import (
 	"github.com/lyhbdw/komari-lite/internal/metricstore"
 )
 
+func getPingStatsForNode(uuid string, pingTasks []models.PingTask) map[string]pingStat {
+	return getPingStatsForNodeContext(context.Background(), uuid, pingTasks)
+}
+
 func preparePingSummaryStore(t *testing.T) {
 	t.Helper()
 	db := dbcore.OpenTestDB(t)

@@ -17,25 +17,6 @@ func Pxx(p float64) Aggregation {
 	return Aggregation("p" + s)
 }
 
-// percentileSorted returns the p-th percentile of pre-sorted values using
-// linear interpolation.
-func percentileSorted(values []float64, p float64) float64 {
-	if len(values) == 0 {
-		return 0
-	}
-	if len(values) == 1 {
-		return values[0]
-	}
-	rank := p * float64(len(values)-1)
-	lo := int(rank)
-	hi := lo + 1
-	if hi >= len(values) {
-		return values[len(values)-1]
-	}
-	frac := rank - float64(lo)
-	return values[lo]*(1-frac) + values[hi]*frac
-}
-
 // parsePercentile reports whether agg names a percentile and, if so, returns
 // the corresponding fraction in [0,1]. "p99.9" -> 0.999. Out-of-range
 // percentages (<=0 or >=100) are rejected so validation can reject them.

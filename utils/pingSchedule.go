@@ -68,10 +68,6 @@ func (m *PingTaskManager) Reload(pingTasks []models.PingTask) error {
 	return nil
 }
 
-func newPingGroupRunner(tasks []models.PingTask, execute func(context.Context, models.PingTask)) func(context.Context) {
-	return newPingGroupRunnerWithGate(tasks, execute, &atomic.Bool{})
-}
-
 func newPingGroupRunnerWithGate(tasks []models.PingTask, execute func(context.Context, models.PingTask), gate *atomic.Bool) func(context.Context) {
 	return func(ctx context.Context) {
 		if ctx.Err() != nil || !gate.CompareAndSwap(false, true) {

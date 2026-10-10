@@ -46,24 +46,12 @@ func summarizeRetentionDefinitions(defs []metric.Definition) RetentionSummary {
 	return summary
 }
 
-// createMetricDefinitions creates built-in definitions with explicit policies.
-func createMetricDefinitions(ctx context.Context, s *metric.Store) error {
-	return createMetricDefinitionsWithDefaultRetention(ctx, s, defaultBuiltinMetricRetentionDays)
-}
-
 // EnsureBuiltinMetricDefinitions registers definitions for the server's
 // built-in report and ping writers before a standalone Store receives points.
 // Migration only fills missing definitions; it must not change an existing
 // explicit profile or per-metric policy. Missing definitions use legacy 90d.
 func EnsureBuiltinMetricDefinitions(ctx context.Context, s *metric.Store) error {
 	return createBuiltinMetricDefinitions(ctx, s, defaultBuiltinMetricRetentionDays, true)
-}
-
-func createMetricDefinitionsWithDefaultRetention(ctx context.Context, s *metric.Store, defaultRetentionDays int) error {
-	if defaultRetentionDays < defaultBuiltinMetricRetentionDays {
-		defaultRetentionDays = defaultBuiltinMetricRetentionDays
-	}
-	return createBuiltinMetricDefinitions(ctx, s, defaultRetentionDays, false)
 }
 
 func createBuiltinMetricDefinitions(ctx context.Context, s *metric.Store, defaultRetentionDays int, preserveRetention bool) error {

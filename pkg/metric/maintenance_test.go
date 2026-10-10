@@ -127,12 +127,8 @@ func TestMaintenanceMappings(t *testing.T) {
 	if got := maintenanceActionFor(DriverSQLite); got != MaintenanceVacuum {
 		t.Fatalf("maintenanceActionFor(sqlite) = %q, want %q", got, MaintenanceVacuum)
 	}
-	gotReclaim, err := managedReclaimQuery(DriverSQLite, tables{})
-	if err != nil {
-		t.Fatalf("managedReclaimQuery(sqlite): %v", err)
-	}
-	if gotReclaim != "VACUUM" {
-		t.Fatalf("managedReclaimQuery(sqlite) = %q, want VACUUM", gotReclaim)
+	if sqliteVacuumSQL != "VACUUM" {
+		t.Fatalf("sqliteVacuumSQL = %q, want VACUUM", sqliteVacuumSQL)
 	}
 }
 

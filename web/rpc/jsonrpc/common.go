@@ -58,11 +58,6 @@ type cachedPingSummary struct {
 	Stats       map[string]pingStat
 }
 
-// getPingStatsForNode keeps the old internal helper for compatibility tests.
-func getPingStatsForNode(uuid string, pingTasks []models.PingTask) map[string]pingStat {
-	return getPingStatsForNodeContext(context.Background(), uuid, pingTasks)
-}
-
 func getPingStatsForNodeContext(ctx context.Context, uuid string, pingTasks []models.PingTask) map[string]pingStat {
 	if ctx.Err() != nil {
 		return map[string]pingStat{}
