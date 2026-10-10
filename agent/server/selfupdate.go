@@ -132,7 +132,6 @@ func performSelfUpdate(targetVersion, expectedSHA string) {
 
 	base := strings.TrimSuffix(flags.Endpoint, "/")
 	asset := assetName()
-	binURL := fmt.Sprintf("%s/download/agent/%s/%s", base, targetVersion, asset)
 
 	// sha256：优先用事件内嵌值，否则从面板取 .sha256 文件。
 	if expectedSHA == "" {
@@ -143,7 +142,7 @@ func performSelfUpdate(targetVersion, expectedSHA string) {
 		}
 	}
 
-	tmpName, err := downloadBinaryWithRetry(binURL, filepath.Dir(exePath), expectedSHA)
+	tmpName, err := downloadBinaryWithRetry(base, targetVersion, asset, filepath.Dir(exePath), expectedSHA)
 	if err != nil {
 		log.Printf("selfupdate: %v", err)
 		return
@@ -198,39 +197,68 @@ func fetchSHA256WithRetry(base, targetVersion, asset string) (string, error) {
 	return "", lastErr
 }
 
-// downloadBinaryWithRetry 在网络抖动下重试下载（约 8MB，弱网节点
-// 一次 TLS 握手超时很常见）。
-func downloadBinaryWithRetry(url, dir, expectedSHA string) (string, error) {
-	// 优先尝试 .bin 后缀以命中 Cloudflare/CDN 边缘节点缓存
-	if !strings.HasSuffix(url, ".bin") {
-		binURL := url + ".bin"
-		if bin, err := downloadBinary(binURL, dir, expectedSHA); err == nil {
-			return bin, nil
-		}
+// downloadCandidateURLs 构造多源下载候选列表：
+// 1. 面板 CDN .bin 别名（优先命中 Cloudflare/CDN 缓存）
+// 2. 面板直连原始路径
+// 3. 加速国内 GitHub 镜像（ghfast.top, ghproxy.net）
+// 4. GitHub Release 官方直链
+func downloadCandidateURLs(base, targetVersion, asset string) []string {
+	cleanVersion := strings.TrimPrefix(targetVersion, "v")
+	urls := []string{
+		fmt.Sprintf("%s/download/agent/%s/%s.bin", base, targetVersion, asset),
+		fmt.Sprintf("%s/download/agent/%s/%s", base, targetVersion, asset),
 	}
+	for _, mirror := range []string{"https://ghfast.top", "https://ghproxy.net"} {
+		urls = append(urls,
+			fmt.Sprintf("%s/https://github.com/lyhbdw/komari-lite/releases/download/%s/%s", mirror, cleanVersion, asset),
+			fmt.Sprintf("%s/https://github.com/lyhbdw/komari-lite/releases/download/v%s/%s", mirror, cleanVersion, asset),
+		)
+	}
+	urls = append(urls,
+		fmt.Sprintf("https://github.com/lyhbdw/komari-lite/releases/download/%s/%s", cleanVersion, asset),
+		fmt.Sprintf("https://github.com/lyhbdw/komari-lite/releases/download/v%s/%s", cleanVersion, asset),
+	)
+	return urls
+}
+
+// downloadBinaryWithRetry 在网络抖动下尝试多源下载（面板 CDN、面板直连、国内加速镜像）。
+func downloadBinaryWithRetry(base, targetVersion, asset, dir, expectedSHA string) (string, error) {
+	candidates := downloadCandidateURLs(base, targetVersion, asset)
 	var lastErr error
-	for attempt := 1; attempt <= 3; attempt++ {
-		bin, err := downloadBinary(url, dir, expectedSHA)
+	for _, candidateURL := range candidates {
+		bin, err := downloadBinary(candidateURL, dir, expectedSHA)
 		if err == nil {
 			return bin, nil
 		}
 		lastErr = err
-		log.Printf("selfupdate: download attempt %d failed: %v", attempt, err)
-		if attempt < 3 {
-			time.Sleep(time.Duration(attempt) * 5 * time.Second)
-		}
+		log.Printf("selfupdate: download from %s failed: %v", candidateURL, err)
 	}
 	return "", lastErr
 }
 
-// fetchSHA256 从面板下载 sha256 文件并解析出十六进制摘要，优先尝试 .bin.sha256。
+// fetchSHA256 从面板或国内镜像多源获取 sha256 校验值。
 func fetchSHA256(base, targetVersion, asset string) (string, error) {
-	binURL := fmt.Sprintf("%s/download/agent/%s/%s.bin.sha256", base, targetVersion, asset)
-	if sum, err := fetchSingleSHA256(binURL); err == nil {
-		return sum, nil
+	cleanVersion := strings.TrimPrefix(targetVersion, "v")
+	urls := []string{
+		fmt.Sprintf("%s/download/agent/%s/%s.bin.sha256", base, targetVersion, asset),
+		fmt.Sprintf("%s/download/agent/%s/%s.sha256", base, targetVersion, asset),
 	}
-	stdURL := fmt.Sprintf("%s/download/agent/%s/%s.sha256", base, targetVersion, asset)
-	return fetchSingleSHA256(stdURL)
+	for _, mirror := range []string{"https://ghfast.top", "https://ghproxy.net"} {
+		urls = append(urls,
+			fmt.Sprintf("%s/https://github.com/lyhbdw/komari-lite/releases/download/%s/%s.sha256", mirror, cleanVersion, asset),
+			fmt.Sprintf("%s/https://github.com/lyhbdw/komari-lite/releases/download/v%s/%s.sha256", mirror, cleanVersion, asset),
+		)
+	}
+	urls = append(urls,
+		fmt.Sprintf("https://github.com/lyhbdw/komari-lite/releases/download/%s/%s.sha256", cleanVersion, asset),
+		fmt.Sprintf("https://github.com/lyhbdw/komari-lite/releases/download/v%s/%s.sha256", cleanVersion, asset),
+	)
+	for _, u := range urls {
+		if sum, err := fetchSingleSHA256(u); err == nil {
+			return sum, nil
+		}
+	}
+	return "", fmt.Errorf("failed to fetch sha256 from controller or mirrors")
 }
 
 func fetchSingleSHA256(url string) (string, error) {
