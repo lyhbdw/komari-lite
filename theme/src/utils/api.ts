@@ -165,51 +165,6 @@ class KomariApi {
     }
   }
 
-  /**
-   * 发送 POST 请求
-   */
-  private async post<T>(path: string, body?: unknown): Promise<T> {
-    const url = `${this.baseUrl}${path}`
-
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), this.timeout)
-
-    try {
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: body ? JSON.stringify(body) : undefined,
-        signal: controller.signal,
-      })
-
-      clearTimeout(timeoutId)
-
-      const result = await response.json()
-
-      // 登录接口返回 set-cookie 特殊结构
-      if (result['set-cookie']) {
-        return result as T
-      }
-
-      // 检查 API 响应状态
-      const apiResult: ApiResponse<T> = result
-      if (apiResult.status === 'error') {
-        throw new ApiError(apiResult.message || 'Unknown error', 'error', response.status)
-      }
-
-      return apiResult.data
-    }
-    catch (error) {
-      clearTimeout(timeoutId)
-      if (error instanceof ApiError)
-        throw error
-      throw new ApiError(`Network error: ${error instanceof Error ? error.message : String(error)}`, 'error')
-    }
-  }
-
   // ===== 用户信息接口 =====
 
   /**
