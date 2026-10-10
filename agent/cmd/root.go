@@ -217,7 +217,6 @@ func run() error {
 	}
 	go server.DoUploadBasicInfoWorks()
 	for {
-		server.UpdateBasicInfo()
 		server.EstablishWebSocketConnection()
 	}
 }

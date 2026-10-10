@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	gnet "github.com/shirou/gopsutil/v4/net"
+	"github.com/lyhbdw/komari-lite/agent/internal/netsample"
 )
 
 /*
@@ -55,11 +55,10 @@ type TrafficData struct {
 }
 
 var (
-	mu           sync.RWMutex
-	running      bool
-	detectTicker *time.Ticker
-	saveTicker   *time.Ticker
-	stopCh       chan struct{}
+	mu          sync.RWMutex
+	lifecycleMu sync.Mutex // Serializes transitions, never used by collectors.
+	running     bool
+	generation  *collectorGeneration
 
 	// 内存持久区（与文件内容一致，但仅在启动、保存、停止时与磁盘交互）
 	store NetStatic
@@ -102,6 +101,7 @@ func ensureInitLocked() {
 }
 
 func loadFromFileLocked() error {
+	invalidateRangeLocked()
 	// 不存在则用默认配置
 	f, err := os.Open(SaveFilePath)
 	if err != nil {
@@ -171,6 +171,7 @@ func configOrDefault(c NetStaticConfig) NetStaticConfig {
 }
 
 func purgeExpiredLocked() {
+	invalidateRangeLocked()
 	// 根据 DataPreserveDay 删除过期数据
 	ttl := time.Duration(config.DataPreserveDay * 24 * float64(time.Hour))
 	cutoff := uint64(time.Now().Add(-ttl).Unix())
@@ -199,7 +200,7 @@ func safeDelta(cur, prev uint64) uint64 {
 }
 
 func sampleOnceLocked() {
-	ios, err := gnet.IOCounters(true)
+	ios, err := netsample.Counters()
 	if err != nil {
 		return
 	}
@@ -218,7 +219,7 @@ func sampleOnceLocked() {
 			drx := safeDelta(curRx, prev.Rx)
 			// 首次采样不记录
 			if dtx > 0 || drx > 0 {
-				staticCache[name] = append(staticCache[name], TrafficData{Timestamp: ts, Tx: dtx, Rx: drx})
+				appendTrafficLocked(name, TrafficData{Timestamp: ts, Tx: dtx, Rx: drx})
 			} else {
 				// 即便为 0，也可以记录，但为了降低噪音与占用，这里忽略 0
 			}
@@ -228,6 +229,8 @@ func sampleOnceLocked() {
 }
 
 func flushCacheLocked(ts uint64) {
+	// Persisted bins retain their existing save-time timestamps.
+	invalidateRangeLocked()
 	if len(staticCache) == 0 {
 		return
 	}
@@ -245,191 +248,166 @@ func flushCacheLocked(ts uint64) {
 	staticCache = make(map[string][]TrafficData)
 }
 
-// startGoroutinesLocked 启动采集和保存的 goroutines（调用前必须已持有锁）
+type collectorGeneration struct {
+	detect, save *time.Ticker
+	stop         chan struct{}
+	workers      sync.WaitGroup
+}
+
+// Each worker captures its own generation. Transitions wait outside mu.
 func startGoroutinesLocked() {
-	// 采集 goroutine
+	g := &collectorGeneration{
+		detect: time.NewTicker(time.Duration(config.DetectInterval * float64(time.Second))),
+		save:   time.NewTicker(time.Duration(config.SaveInterval * float64(time.Second))),
+		stop:   make(chan struct{}),
+	}
+	generation = g
+	g.workers.Add(2)
 	go func() {
+		defer g.workers.Done()
 		for {
 			select {
-			case <-detectTicker.C:
+			case <-g.stop:
+				return
+			case <-g.detect.C:
 				mu.Lock()
+				select {
+				case <-g.stop:
+					mu.Unlock()
+					return
+				default:
+				}
 				sampleOnceLocked()
 				mu.Unlock()
-			case <-stopCh:
-				return
 			}
 		}
 	}()
-
-	// 保存 goroutine
 	go func() {
+		defer g.workers.Done()
 		for {
 			select {
-			case t := <-saveTicker.C:
+			case <-g.stop:
+				return
+			case t := <-g.save.C:
 				mu.Lock()
+				select {
+				case <-g.stop:
+					mu.Unlock()
+					return
+				default:
+				}
 				flushCacheLocked(uint64(t.Unix()))
 				purgeExpiredLocked()
 				_ = saveToFileLocked()
 				mu.Unlock()
-			case <-stopCh:
-				return
 			}
 		}
 	}()
 }
 
-// StartOrContinue 开始或继续流量统计
+func stopGenerationLocked() *collectorGeneration {
+	g := generation
+	if g != nil {
+		g.detect.Stop()
+		g.save.Stop()
+		close(g.stop)
+		generation = nil
+	}
+	return g
+}
+
 func StartOrContinue() error {
+	lifecycleMu.Lock()
+	defer lifecycleMu.Unlock()
 	mu.Lock()
 	defer mu.Unlock()
 	if running {
 		return nil
 	}
 	ensureInitLocked()
-	// 读取历史
 	if err := loadFromFileLocked(); err != nil {
 		return err
 	}
-	// 启动 ticker
-	detectTicker = time.NewTicker(time.Duration(config.DetectInterval * float64(time.Second)))
-	saveTicker = time.NewTicker(time.Duration(config.SaveInterval * float64(time.Second)))
-	stopCh = make(chan struct{})
+	lastCounters = map[string]struct{ Tx, Rx uint64 }{} // Do not count stopped intervals as live samples.
 	running = true
-
-	// 启动 goroutines
 	startGoroutinesLocked()
 	return nil
 }
 
-// Stop 停止流量统计
 func Stop() error {
+	lifecycleMu.Lock()
+	defer lifecycleMu.Unlock()
 	mu.Lock()
 	if !running {
 		mu.Unlock()
 		return nil
 	}
 	running = false
-	if detectTicker != nil {
-		detectTicker.Stop()
+	g := stopGenerationLocked()
+	mu.Unlock()
+	if g != nil {
+		g.workers.Wait()
 	}
-	if saveTicker != nil {
-		saveTicker.Stop()
-	}
-	close(stopCh)
-	// 最后一轮 flush + 保存
+	mu.Lock()
+	defer mu.Unlock()
 	flushCacheLocked(nowUnix())
 	purgeExpiredLocked()
-	err := saveToFileLocked()
-	mu.Unlock()
-	return err
+	return saveToFileLocked()
 }
 
-// GetTotalTrafficBetween 获取指定时间段内的总流量统计数据，start和end为unix时间戳
+// GetTotalTrafficBetween preserves inclusive endpoints and returns a defensive copy.
+// An advancing end with the same start only processes new or future samples.
 func GetTotalTrafficBetween(start, end uint64) (map[string]TrafficData, error) {
-	mu.RLock()
-	defer mu.RUnlock()
-	ensureInitLocked()
-	res := map[string]TrafficData{}
-	inRange := func(ts uint64) bool { return (start == 0 || ts >= start) && (end == 0 || ts <= end) }
-	add := func(name string, tx, rx uint64) {
-		cur := res[name]
-		cur.Tx += tx
-		cur.Rx += rx
-		res[name] = cur
-	}
-	for name, arr := range store.Interfaces {
-		var tx, rx uint64
-		for _, td := range arr {
-			if inRange(td.Timestamp) {
-				tx += td.Tx
-				rx += td.Rx
-			}
-		}
-		if tx > 0 || rx > 0 {
-			add(name, tx, rx)
-		}
-	}
-	for name, arr := range staticCache {
-		var tx, rx uint64
-		for _, td := range arr {
-			if inRange(td.Timestamp) {
-				tx += td.Tx
-				rx += td.Rx
-			}
-		}
-		if tx > 0 || rx > 0 {
-			add(name, tx, rx)
-		}
-	}
-	return res, nil
-}
-
-// SetNewConfig 设置新的配置，config中的值如果为0则表示不修改对应的配置项
-func SetNewConfig(newCfg NetStaticConfig) error {
 	mu.Lock()
 	defer mu.Unlock()
 	ensureInitLocked()
-	// 合并新配置
+	return trafficRangeLocked(start, end), nil
+}
+
+// SetNewConfig keeps zero=unchanged and nil Nics=unchanged semantics.
+func SetNewConfig(newCfg NetStaticConfig) error {
+	lifecycleMu.Lock()
+	defer lifecycleMu.Unlock()
+	mu.Lock()
+	ensureInitLocked()
+	wasRunning := running
+	g := stopGenerationLocked()
+	mu.Unlock()
+	if g != nil {
+		g.workers.Wait()
+	}
+	mu.Lock()
+	defer mu.Unlock()
 	if newCfg.DataPreserveDay != 0 {
-		store.Config.DataPreserveDay = newCfg.DataPreserveDay
+		config.DataPreserveDay = newCfg.DataPreserveDay
 	}
 	if newCfg.DetectInterval != 0 {
-		store.Config.DetectInterval = newCfg.DetectInterval
+		config.DetectInterval = newCfg.DetectInterval
 	}
 	if newCfg.SaveInterval != 0 {
-		store.Config.SaveInterval = newCfg.SaveInterval
+		config.SaveInterval = newCfg.SaveInterval
 	}
-	// Nics: nil 表示不修改；非 nil 则更新（空切片表示监控所有网卡）
 	if newCfg.Nics != nil {
-		// 做一份拷贝以避免外部切片后续修改影响内部配置
-		tmp := make([]string, len(newCfg.Nics))
-		copy(tmp, newCfg.Nics)
-		store.Config.Nics = tmp
-	}
-	// 更新生效配置
-	cfg := configOrDefault(store.Config)
-	store.Config = cfg
-	config = cfg
-	// 重新配置 ticker（若运行中）
-	if running {
-		// 先停止旧的 ticker 和 goroutines
-		if detectTicker != nil {
-			detectTicker.Stop()
-		}
-		if saveTicker != nil {
-			saveTicker.Stop()
-		}
-		close(stopCh)
-
-		// 重新创建 ticker 和 channel
-		detectTicker = time.NewTicker(time.Duration(cfg.DetectInterval * float64(time.Second)))
-		saveTicker = time.NewTicker(time.Duration(cfg.SaveInterval * float64(time.Second)))
-		stopCh = make(chan struct{})
-
-		// 重新启动 goroutines
-		startGoroutinesLocked()
-
-		// 当配置了指定网卡白名单时，清理不在白名单内的缓存与上次计数，避免无用数据积累
-		if len(cfg.Nics) > 0 {
-			allowed := make(map[string]struct{}, len(cfg.Nics))
-			for _, n := range cfg.Nics {
-				allowed[n] = struct{}{}
-			}
+		config.Nics = append([]string(nil), newCfg.Nics...)
+		if len(config.Nics) > 0 {
 			for name := range lastCounters {
-				if _, ok := allowed[name]; !ok {
+				if !isNicAllowed(name) {
 					delete(lastCounters, name)
 				}
 			}
 			for name := range staticCache {
-				if _, ok := allowed[name]; !ok {
+				if !isNicAllowed(name) {
 					delete(staticCache, name)
 				}
 			}
 		}
 	}
-	// 立即写盘
-	_ = saveToFileLocked()
-	// 同时做一次过期清理
+	config = configOrDefault(config)
+	store.Config = config
+	invalidateRangeLocked()
 	purgeExpiredLocked()
-	return nil
+	if wasRunning {
+		startGoroutinesLocked()
+	}
+	return saveToFileLocked()
 }

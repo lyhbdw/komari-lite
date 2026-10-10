@@ -5,14 +5,15 @@ package monitoring
 
 import (
 	"bytes"
+	"context"
+	"github.com/lyhbdw/komari-lite/agent/internal/boundedexec"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
 )
 
-func GpuName() string {
+func readGPUName() string {
 	if name := getFromLspci(); name != "None" {
 		return name
 	}
@@ -33,7 +34,7 @@ var lspciExcludeRegexps = []*regexp.Regexp{
 }
 
 func getFromLspci() string {
-	out, err := exec.Command("lspci").Output()
+	out, err := boundedexec.Run(context.Background(), gpuCommandTimeout, gpuCommandOutputLimit, "lspci")
 	if err != nil {
 		return "None"
 	}

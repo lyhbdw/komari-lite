@@ -4,8 +4,11 @@ package monitoring
 // Original License: MIT
 
 import (
+	"context"
+
 	"encoding/xml"
 	"errors"
+	"github.com/lyhbdw/komari-lite/agent/internal/boundedexec"
 	"os"
 	"os/exec"
 	"strconv"
@@ -47,17 +50,13 @@ func (smi *NvidiaSMI) Start() error {
 		}
 		smi.BinPath = binPath
 	}
-	smi.data = smi.pollNvidiaSMI()
-	return nil
+	var err error
+	smi.data, err = smi.pollNvidiaSMI()
+	return err
 }
 
-func (smi *NvidiaSMI) pollNvidiaSMI() []byte {
-	cmd := exec.Command(smi.BinPath, "-q", "-x")
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return nil
-	}
-	return output
+func (smi *NvidiaSMI) pollNvidiaSMI() ([]byte, error) {
+	return boundedexec.Run(context.Background(), gpuCommandTimeout, gpuCommandOutputLimit, smi.BinPath, "-q", "-x")
 }
 
 func (smi *NvidiaSMI) gatherModel() ([]string, error) {

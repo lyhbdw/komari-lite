@@ -2,10 +2,12 @@ package server
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"log"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	monitoring "github.com/lyhbdw/komari-lite/agent/monitoring/unit"
@@ -17,16 +19,15 @@ import (
 
 var flags = pkg_flags.GlobalConfig
 
-// onReconnected 在 WS 重连成功后调用：作废公网 IP 缓存并立即重传
-// basicInfo。换 IP 后节点重新上线时，新 IP 随重连同步到位，而不是等
-// 5 分钟定时器 + 10 分钟 IP 缓存 TTL。
+// Reconnects refresh aged addresses, not every fresh success/negative cache entry.
 func onReconnected() {
-	monitoring.InvalidateIPCache()
+	monitoring.RefreshIPCacheOnReconnect()
 	go UpdateBasicInfo()
 }
 
 func DoUploadBasicInfoWorks() {
 	ticker := time.NewTicker(time.Duration(flags.InfoReportInterval) * time.Minute)
+	defer ticker.Stop()
 	for range ticker.C {
 		err := uploadBasicInfo()
 		if err != nil {
@@ -42,22 +43,35 @@ func UpdateBasicInfo() {
 		log.Println("Basic info uploaded successfully")
 	}
 }
-func uploadBasicInfo() error {
+
+var staticBasicInfo struct {
+	sync.Once
+	data map[string]interface{}
+}
+var basicInfoUpload struct {
+	sync.Mutex
+	lastPayload string
+	sentAt      time.Time
+}
+
+func cachedBasicInfo() map[string]interface{} {
+	staticBasicInfo.Do(func() { staticBasicInfo.data = collectStaticBasicInfo() })
+	data := make(map[string]interface{}, len(staticBasicInfo.data)+2)
+	for k, v := range staticBasicInfo.data {
+		data[k] = v
+	}
+	return data
+}
+
+func collectStaticBasicInfo() map[string]interface{} {
 	cpu := monitoring.CpuStaticInfo()
-
-	osname := monitoring.OSName()
-	kernelVersion := monitoring.KernelVersion()
-	ipv4, ipv6, _ := monitoring.GetIPAddress()
-
-	data := map[string]interface{}{
+	return map[string]interface{}{
 		"cpu_name":           cpu.CPUName,
 		"cpu_cores":          cpu.CPUCores,
 		"cpu_physical_cores": cpu.CPUPhysicalCores,
 		"arch":               cpu.CPUArchitecture,
-		"os":                 osname,
-		"kernel_version":     kernelVersion,
-		"ipv4":               ipv4,
-		"ipv6":               ipv6,
+		"os":                 monitoring.OSName(),
+		"kernel_version":     monitoring.KernelVersion(),
 		"mem_total":          monitoring.Ram().Total,
 		"swap_total":         monitoring.Swap().Total,
 		"disk_total":         monitoring.Disk().Total,
@@ -66,7 +80,27 @@ func uploadBasicInfo() error {
 		"version":            version.Current,
 	}
 
-	return tryUploadDataWithProtocol(data)
+}
+
+func uploadBasicInfo() error {
+	basicInfoUpload.Lock()
+	defer basicInfoUpload.Unlock()
+	data := cachedBasicInfo()
+	ipv4, ipv6, _ := monitoring.GetIPAddress()
+	data["ipv4"], data["ipv6"] = ipv4, ipv6
+	payload, err := json.Marshal(data)
+	if err != nil {
+		return err
+	}
+	key := flags.Endpoint + "\n" + flags.Token + "\n" + string(payload)
+	if key == basicInfoUpload.lastPayload && time.Since(basicInfoUpload.sentAt) < time.Duration(flags.InfoReportInterval)*time.Minute {
+		return nil
+	}
+	if err = tryUploadDataWithProtocol(data); err != nil {
+		return err
+	}
+	basicInfoUpload.lastPayload, basicInfoUpload.sentAt = key, time.Now()
+	return nil
 }
 
 func tryUploadDataWithProtocol(data map[string]interface{}) error {

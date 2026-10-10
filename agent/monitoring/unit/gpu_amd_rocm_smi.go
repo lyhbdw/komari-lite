@@ -4,8 +4,11 @@ package monitoring
 // Original License: MIT
 
 import (
+	"context"
+
 	"encoding/json"
 	"errors"
+	"github.com/lyhbdw/komari-lite/agent/internal/boundedexec"
 	"os"
 	"os/exec"
 	"strconv"
@@ -55,17 +58,13 @@ func (rsmi *ROCmSMI) Start() error {
 		rsmi.BinPath = binPath
 	}
 
-	rsmi.data = rsmi.pollROCmSMI()
-	return nil
+	var err error
+	rsmi.data, err = rsmi.pollROCmSMI()
+	return err
 }
 
-func (rsmi *ROCmSMI) pollROCmSMI() []byte {
-	cmd := exec.Command(rsmi.BinPath, "--showallinfo", "--json")
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return nil
-	}
-	return output
+func (rsmi *ROCmSMI) pollROCmSMI() ([]byte, error) {
+	return boundedexec.Run(context.Background(), gpuCommandTimeout, gpuCommandOutputLimit, rsmi.BinPath, "--showallinfo", "--json")
 }
 
 func (rsmi *ROCmSMI) gatherModel() ([]string, error) {

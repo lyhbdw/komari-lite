@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/lyhbdw/komari-lite/agent/internal/netsample"
 	"github.com/lyhbdw/komari-lite/agent/monitoring/netstatic"
 	"github.com/lyhbdw/komari-lite/agent/utils"
 	"github.com/shirou/gopsutil/v4/net"
@@ -245,7 +246,7 @@ func getNetworkSpeedFallback(includeNics, excludeNics map[string]struct{}) (tota
 }
 
 func collectNetworkTotals(includeNics, excludeNics map[string]struct{}) (totalUp, totalDown uint64, countedNics []string, err error) {
-	ioCounters, err := net.IOCounters(true)
+	ioCounters, err := netsample.Counters()
 	if err != nil {
 		return 0, 0, nil, fmt.Errorf("failed to get network IO counters: %w", err)
 	}
@@ -395,7 +396,7 @@ func InterfaceList() ([]string, error) {
 	excludeNics := parseNics(flags.ExcludeNics)
 	interfaces := []string{}
 
-	ioCounters, err := net.IOCounters(true)
+	ioCounters, err := netsample.Counters()
 	if err != nil {
 		return nil, err
 	}

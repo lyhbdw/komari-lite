@@ -138,11 +138,13 @@ func GetIPv6Address() (string, error) {
 // 公网 IP 缓存：basicInfo 每次重连都会重传，无缓存时重连风暴会
 // 串行打满第三方 IP API（每个 15s 超时），并拖慢重连。
 var (
-	ipCacheMu     sync.Mutex
-	ipCachev4     string
-	ipCachev6     string
-	ipCachedAt    time.Time
-	ipCacheTTL    = 10 * time.Minute
+	ipCacheMu    sync.Mutex
+	ipCachev4    string
+	ipCachev6    string
+	ipCachedAt   time.Time
+	ipCacheTTL   = 10 * time.Minute
+	ipFailedAt   time.Time
+	ipFailureTTL = 30 * time.Second
 )
 
 // InvalidateIPCache 作废公网 IP 缓存，下次 GetIPAddress 重新探测。
@@ -152,28 +154,39 @@ func InvalidateIPCache() {
 	defer ipCacheMu.Unlock()
 	ipCachev4, ipCachev6 = "", ""
 	ipCachedAt = time.Time{}
+	ipFailedAt = time.Time{}
+}
+
+// RefreshIPCacheOnReconnect allows an early refresh after a meaningful quiet period.
+// Preserve last-known success for failure fallback, plus the short negative TTL.
+func RefreshIPCacheOnReconnect() {
+	ipCacheMu.Lock()
+	defer ipCacheMu.Unlock()
+	if time.Since(ipCachedAt) >= 2*time.Minute && time.Since(ipFailedAt) >= ipFailureTTL {
+		ipCachedAt = time.Time{}
+	}
 }
 
 // GetIPAddress 返回本机公网 IPv4/IPv6，带 TTL 缓存。
 // 缓存过期或上次未取到时重新探测；取不到时返回空串（不报错，与旧行为一致）。
 func GetIPAddress() (ipv4, ipv6 string, err error) {
+	// Serialize cache misses, including negative results. Network clients already have deadlines.
 	ipCacheMu.Lock()
-	if time.Since(ipCachedAt) < ipCacheTTL && (ipCachev4 != "" || ipCachev6 != "") {
-		v4, v6 := ipCachev4, ipCachev6
-		ipCacheMu.Unlock()
-		return v4, v6, nil
+	defer ipCacheMu.Unlock()
+	if time.Since(ipFailedAt) < ipFailureTTL ||
+		(time.Since(ipCachedAt) < ipCacheTTL && (ipCachev4 != "" || ipCachev6 != "")) {
+		return ipCachev4, ipCachev6, nil
 	}
-	ipCacheMu.Unlock()
-
 	ipv4, ipv6, err = getIPAddressUncached()
-
-	ipCacheMu.Lock()
-	ipCachedAt = time.Now()
-	// 全部为空时不刷新缓存值（下次仍会重试），但记录时间避免失败风暴。
 	if ipv4 != "" || ipv6 != "" {
 		ipCachev4, ipCachev6 = ipv4, ipv6
+		ipCachedAt = time.Now()
+		ipFailedAt = time.Time{}
+	} else {
+		ipFailedAt = time.Now()
+		// Keep last-known success, but only defer retries for the short negative TTL.
+		ipv4, ipv6 = ipCachev4, ipCachev6
 	}
-	ipCacheMu.Unlock()
 	return ipv4, ipv6, err
 }
 

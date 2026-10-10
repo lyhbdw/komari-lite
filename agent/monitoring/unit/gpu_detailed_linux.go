@@ -4,6 +4,7 @@ package monitoring
 
 import (
 	"errors"
+	"sync"
 )
 
 const (
@@ -11,7 +12,18 @@ const (
 	vendorNVIDIA
 )
 
-var vendorType = getDetailedVendor()
+var (
+	vendorType       uint8
+	vendorOnce       sync.Once
+	detailedHostOnce sync.Once
+	detailedHost     []string
+	detailedHostErr  error
+)
+
+func detailedVendor() uint8 {
+	vendorOnce.Do(func() { vendorType = getDetailedVendor() })
+	return vendorType
+}
 
 // DetailedGPUInfo 详细GPU信息结构体
 type DetailedGPUInfo struct {
@@ -70,10 +82,18 @@ func getAMDDetailedHost() ([]string, error) {
 
 // GetDetailedGPUHost 获取GPU型号信息
 func GetDetailedGPUHost() ([]string, error) {
+	if !flags.EnableGPU {
+		return nil, nil
+	}
+	detailedHostOnce.Do(func() { detailedHost, detailedHostErr = readDetailedGPUHost() })
+	return append([]string(nil), detailedHost...), detailedHostErr
+}
+
+func readDetailedGPUHost() ([]string, error) {
 	var gi []string
 	var err error
 
-	switch vendorType {
+	switch detailedVendor() {
 	case vendorAMD:
 		gi, err = getAMDDetailedHost()
 	case vendorNVIDIA:
@@ -91,10 +111,13 @@ func GetDetailedGPUHost() ([]string, error) {
 
 // GetDetailedGPUInfo 获取详细GPU信息
 func GetDetailedGPUInfo() ([]DetailedGPUInfo, error) {
+	if !flags.EnableGPU {
+		return nil, nil
+	}
 	var gpuInfos []DetailedGPUInfo
 	var err error
 
-	switch vendorType {
+	switch detailedVendor() {
 	case vendorAMD:
 		gpuInfos, err = getAMDDetailedInfo()
 	case vendorNVIDIA:

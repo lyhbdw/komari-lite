@@ -9,7 +9,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strconv"
@@ -18,6 +17,7 @@ import (
 	"time"
 
 	"github.com/lyhbdw/komari-lite/agent/dnsresolver"
+	"github.com/lyhbdw/komari-lite/agent/internal/boundedexec"
 	v2 "github.com/lyhbdw/komari-lite/agent/protocol/v2"
 	"github.com/lyhbdw/komari-lite/agent/version"
 )
@@ -60,8 +60,10 @@ func versionLess(a, b string) bool {
 	return len(ai) < len(bi)
 }
 
-// parseVersion 严格解析点分数字版本号；任何一段非纯数字则 ok=false。
+// parseVersion 严格解析点分数字版本号，允许一个合法的小写 v 前缀。
+// 比较只解析版本数值，不改写下载路径中的原始版本标识。
 func parseVersion(v string) ([]int, bool) {
+	v = strings.TrimPrefix(v, "v")
 	if v == "" {
 		return nil, false
 	}
@@ -141,55 +143,17 @@ func performSelfUpdate(targetVersion, expectedSHA string) {
 		}
 	}
 
-	bin, err := downloadBinaryWithRetry(binURL)
+	tmpName, err := downloadBinaryWithRetry(binURL, filepath.Dir(exePath), expectedSHA)
 	if err != nil {
 		log.Printf("selfupdate: %v", err)
 		return
 	}
-
-	sum := sha256.Sum256(bin)
-	actual := hex.EncodeToString(sum[:])
-	if actual != expectedSHA {
-		log.Printf("selfupdate: sha256 mismatch (want %s, got %s), aborting", expectedSHA, actual)
-		return
-	}
-
-	// 写同目录临时文件 → chmod → rename 原子替换。
-	dir := filepath.Dir(exePath)
-	tmp, err := os.CreateTemp(dir, ".agent-update-*")
-	if err != nil {
-		log.Printf("selfupdate: %v", err)
-		return
-	}
-	tmpName := tmp.Name()
-	if _, err := tmp.Write(bin); err != nil {
-		tmp.Close()
-		os.Remove(tmpName)
-		log.Printf("selfupdate: %v", err)
-		return
-	}
-	if err := tmp.Close(); err != nil {
-		os.Remove(tmpName)
-		log.Printf("selfupdate: %v", err)
-		return
-	}
-	if err := os.Chmod(tmpName, 0o755); err != nil {
-		os.Remove(tmpName)
-		log.Printf("selfupdate: %v", err)
-		return
-	}
-
-	// 升级预检（Smoke Test）：在执行真正替换前，启动临时文件做一次健康探测
-	// 验证目标环境对该二进制的架构、链接器（glibc/musl）、UPX 解压以及执行权限是否正常支持
-	// 若探活失败，保留旧版本继续运行，杜绝节点因异常二进制而失联
+	defer os.Remove(tmpName)
 	if err := smokeTestBinary(tmpName); err != nil {
-		os.Remove(tmpName)
-		log.Printf("selfupdate: pre-flight smoke test failed (%v), aborting update to protect agent", err)
+		log.Printf("selfupdate: pre-flight smoke test failed (%v), keeping current agent", err)
 		return
 	}
-
 	if err := os.Rename(tmpName, exePath); err != nil {
-		os.Remove(tmpName)
 		log.Printf("selfupdate: %v", err)
 		return
 	}
@@ -200,14 +164,10 @@ func performSelfUpdate(targetVersion, expectedSHA string) {
 	os.Exit(0)
 }
 
-// smokeTestBinary 执行短生命周期探活，确保下载的文件能在当前机器上真正执行
+// smokeTestBinary executes the candidate with bounded time and output.
 func smokeTestBinary(path string) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
-
-	cmd := exec.CommandContext(ctx, path, "--help")
-	cmd.Env = append(os.Environ(), "KOMARI_SMOKE_TEST=1")
-	out, err := cmd.CombinedOutput()
+	ctx := context.Background()
+	out, err := boundedexec.Run(ctx, 3*time.Second, 64<<10, path, "--help")
 	if err != nil {
 		return fmt.Errorf("exit error: %w, output: %s", err, strings.TrimSpace(string(out)))
 	}
@@ -240,17 +200,17 @@ func fetchSHA256WithRetry(base, targetVersion, asset string) (string, error) {
 
 // downloadBinaryWithRetry 在网络抖动下重试下载（约 8MB，弱网节点
 // 一次 TLS 握手超时很常见）。
-func downloadBinaryWithRetry(url string) ([]byte, error) {
+func downloadBinaryWithRetry(url, dir, expectedSHA string) (string, error) {
 	// 优先尝试 .bin 后缀以命中 Cloudflare/CDN 边缘节点缓存
 	if !strings.HasSuffix(url, ".bin") {
 		binURL := url + ".bin"
-		if bin, err := downloadBinary(binURL); err == nil {
+		if bin, err := downloadBinary(binURL, dir, expectedSHA); err == nil {
 			return bin, nil
 		}
 	}
 	var lastErr error
 	for attempt := 1; attempt <= 3; attempt++ {
-		bin, err := downloadBinary(url)
+		bin, err := downloadBinary(url, dir, expectedSHA)
 		if err == nil {
 			return bin, nil
 		}
@@ -260,7 +220,7 @@ func downloadBinaryWithRetry(url string) ([]byte, error) {
 			time.Sleep(time.Duration(attempt) * 5 * time.Second)
 		}
 	}
-	return nil, lastErr
+	return "", lastErr
 }
 
 // fetchSHA256 从面板下载 sha256 文件并解析出十六进制摘要，优先尝试 .bin.sha256。
@@ -288,38 +248,98 @@ func fetchSingleSHA256(url string) (string, error) {
 	if resp.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("fetch sha256: status %d", resp.StatusCode)
 	}
-	body, err := io.ReadAll(io.LimitReader(resp.Body, 512))
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 513))
 	if err != nil {
 		return "", fmt.Errorf("fetch sha256: %w", err)
+	}
+	if len(body) > 512 {
+		return "", fmt.Errorf("fetch sha256: response exceeds 512 bytes")
 	}
 	// 格式：<hex>  <filename>（sha256sum 输出格式）
 	fields := strings.Fields(string(body))
 	if len(fields) == 0 {
 		return "", fmt.Errorf("fetch sha256: empty response")
 	}
-	sum := fields[0]
-	if _, err := hex.DecodeString(sum); err != nil {
-		return "", fmt.Errorf("fetch sha256: bad digest %q", sum)
-	}
-	return sum, nil
+	return validateSHA256(fields[0])
 }
 
-// downloadBinary 下载新版本二进制到内存（约 8MB）。
-func downloadBinary(url string) ([]byte, error) {
+const maxUpdateBinaryBytes int64 = 100 << 20
+
+func validateSHA256(sum string) (string, error) {
+	if len(sum) != sha256.Size*2 {
+		return "", fmt.Errorf("invalid SHA256 length")
+	}
+	if _, err := hex.DecodeString(sum); err != nil {
+		return "", fmt.Errorf("invalid SHA256: %w", err)
+	}
+	return strings.ToLower(sum), nil
+}
+
+// downloadBinary streams into a same-directory staging file, never a binary-sized heap buffer.
+func downloadBinary(url, dir, expectedSHA string) (string, error) {
+	if _, err := validateSHA256(expectedSHA); err != nil {
+		return "", err
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 	resp, err := updateHTTPClient(5 * time.Minute).Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("download: %w", err)
+		return "", fmt.Errorf("download: %w", err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("download: status %d", resp.StatusCode)
+		return "", fmt.Errorf("download: status %d", resp.StatusCode)
 	}
-	// 限制最大下载 100MB，防止异常响应打满内存
-	return io.ReadAll(io.LimitReader(resp.Body, 100<<20))
+	if resp.ContentLength > maxUpdateBinaryBytes {
+		return "", fmt.Errorf("download exceeds %d bytes", maxUpdateBinaryBytes)
+	}
+	return stageBinary(resp.Body, dir, expectedSHA, maxUpdateBinaryBytes)
+}
+
+func stageBinary(body io.Reader, dir, expectedSHA string, limit int64) (path string, err error) {
+	expectedSHA, err = validateSHA256(expectedSHA)
+	if err != nil {
+		return "", err
+	}
+	tmp, err := os.CreateTemp(dir, ".agent-update-*")
+	if err != nil {
+		return "", err
+	}
+	path = tmp.Name()
+	defer func() {
+		_ = tmp.Close()
+		if err != nil {
+			_ = os.Remove(tmp.Name())
+			path = ""
+		}
+	}()
+	hash := sha256.New()
+	n, err := io.Copy(io.MultiWriter(tmp, hash), io.LimitReader(body, limit+1))
+	if err != nil {
+		return "", fmt.Errorf("download copy: %w", err)
+	}
+	if n > limit {
+		return "", fmt.Errorf("download exceeds %d bytes", limit)
+	}
+	if n == 0 {
+		return "", fmt.Errorf("download is empty")
+	}
+	actual := hex.EncodeToString(hash.Sum(nil))
+	if actual != expectedSHA {
+		return "", fmt.Errorf("sha256 mismatch (want %s, got %s)", expectedSHA, actual)
+	}
+	if err = tmp.Chmod(0o755); err != nil {
+		return "", err
+	}
+	if err = tmp.Sync(); err != nil {
+		return "", err
+	}
+	if err = tmp.Close(); err != nil {
+		return "", err
+	}
+	return path, nil
 }

@@ -3,7 +3,18 @@ package monitoring
 import (
 	"fmt"
 	"strings"
+	"sync"
 )
+
+var gpuNameCache struct {
+	sync.Once
+	name string
+}
+
+func GpuName() string {
+	gpuNameCache.Do(func() { gpuNameCache.name = readGPUName() })
+	return gpuNameCache.name
+}
 
 func formatGPUNameList(names []string) string {
 	counts := make(map[string]int)

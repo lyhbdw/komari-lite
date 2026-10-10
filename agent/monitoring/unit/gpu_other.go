@@ -3,6 +3,6 @@
 package monitoring
 
 // GpuName returns GPU device names for non-Linux platforms
-func GpuName() string {
+func readGPUName() string {
 	return "None"
 }

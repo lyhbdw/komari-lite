@@ -1,63 +1,80 @@
 package monitoring
 
 import (
+	"errors"
+	"net/http"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 )
 
-// TestIPCacheTTL 验证缓存命中/过期/失败不覆盖的语义（不触网）。
-func TestIPCacheTTL(t *testing.T) {
+type ipRoundTripper func(*http.Request) (*http.Response, error)
+
+func (f ipRoundTripper) RoundTrip(r *http.Request) (*http.Response, error) { return f(r) }
+
+func isolatedIPCache(t *testing.T, transport http.RoundTripper) {
+	t.Helper()
+	old4, old6 := ipv4HTTPClient, ipv6HTTPClient
+	oldFlags := *flags
 	ipCacheMu.Lock()
-	savedV4, savedV6, savedAt := ipCachev4, ipCachev6, ipCachedAt
-	ipCachev4, ipCachev6, ipCachedAt = "1.2.3.4", "", time.Now()
+	savedFailed := ipFailedAt
+	ipFailedAt = time.Time{}
+	saved4, saved6, savedAt := ipCachev4, ipCachev6, ipCachedAt
+	ipCachev4, ipCachev6, ipCachedAt = "", "", time.Time{}
 	ipCacheMu.Unlock()
+	flags.GetIpAddrFromNic = false
+	flags.CustomIpv4 = ""
+	flags.CustomIpv6 = ""
+	ipv4HTTPClient = &http.Client{Transport: transport}
+	ipv6HTTPClient = ipv4HTTPClient
 	t.Cleanup(func() {
+		ipv4HTTPClient, ipv6HTTPClient = old4, old6
+		*flags = oldFlags
 		ipCacheMu.Lock()
-		ipCachev4, ipCachev6, ipCachedAt = savedV4, savedV6, savedAt
+		ipCachev4, ipCachev6, ipCachedAt = saved4, saved6, savedAt
+		ipFailedAt = savedFailed
 		ipCacheMu.Unlock()
 	})
+}
 
-	// 缓存新鲜：直接命中，不触网（getIPAddressUncached 不会被调用，
-	// 否则在没有网络的测试环境会耗时数十秒）。
-	start := time.Now()
-	v4, v6, err := GetIPAddress()
-	if err != nil {
-		t.Fatalf("GetIPAddress cached: %v", err)
-	}
-	if v4 != "1.2.3.4" || v6 != "" {
-		t.Fatalf("GetIPAddress cached = (%q, %q), want (1.2.3.4, \"\")", v4, v6)
-	}
-	if elapsed := time.Since(start); elapsed > time.Second {
-		t.Fatalf("cache hit took %v, expected instant", elapsed)
-	}
-
-	// 缓存过期：触发真实探测路径。测试环境无公网时两个都为空，
-	// 但必须不 panic 且不覆盖已有缓存值。
-	ipCacheMu.Lock()
-	ipCachedAt = time.Now().Add(-2 * ipCacheTTL)
-	ipCacheMu.Unlock()
-
-	// 用一个很短的路径验证：把 TTL 临时调大，确保探测后缓存时间被记录
-	// （探测失败时 ipCachedAt 也会更新以避免失败风暴）。
+func TestIPFailureHasNegativeCache(t *testing.T) {
+	var calls atomic.Int32
+	isolatedIPCache(t, ipRoundTripper(func(*http.Request) (*http.Response, error) { calls.Add(1); return nil, errors.New("offline") }))
 	_, _, _ = GetIPAddress()
-	ipCacheMu.Lock()
-	at := ipCachedAt
-	ipCacheMu.Unlock()
-	if time.Since(at) > 5*time.Minute {
-		t.Fatalf("ipCachedAt not refreshed after probe: %v", at)
+	before := calls.Load()
+	for i := 0; i < 3; i++ {
+		_, _, _ = GetIPAddress()
+	}
+	if before == 0 || calls.Load() != before {
+		t.Fatalf("failed probe repeated: %d -> %d", before, calls.Load())
 	}
 }
 
-// TestIPCacheConcurrent 并发调用 GetIPAddress 不产生 data race。
-func TestIPCacheConcurrent(t *testing.T) {
+func TestIPConcurrentRequestsShareOneProbe(t *testing.T) {
+	var calls atomic.Int32
+	isolatedIPCache(t, ipRoundTripper(func(*http.Request) (*http.Response, error) { calls.Add(1); return nil, errors.New("offline") }))
 	var wg sync.WaitGroup
 	for i := 0; i < 8; i++ {
 		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			GetIPAddress()
-		}()
+		go func() { defer wg.Done(); _, _, _ = GetIPAddress() }()
 	}
 	wg.Wait()
+	if got := calls.Load(); got != 11 {
+		t.Fatalf("provider requests=%d; want one IPv4+IPv6 probe (11)", got)
+	}
+}
+
+func TestIPCacheTTL(t *testing.T) {
+	isolatedIPCache(t, ipRoundTripper(func(*http.Request) (*http.Response, error) {
+		t.Error("fresh IP cache hit probed network")
+		return nil, errors.New("offline")
+	}))
+	ipCacheMu.Lock()
+	ipCachev4, ipCachev6, ipCachedAt = "192.0.2.1", "", time.Now()
+	ipCacheMu.Unlock()
+	v4, v6, err := GetIPAddress()
+	if err != nil || v4 != "192.0.2.1" || v6 != "" {
+		t.Fatalf("cached IP=(%q,%q,%v)", v4, v6, err)
+	}
 }
