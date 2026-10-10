@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -102,7 +103,7 @@ func (s *Store) internSeriesTx(ctx context.Context, metricName, entityID, tagsHa
 	}
 	if _, err := tx.ExecContext(ctx,
 		s.insertIgnoreSQL(s.tables.series, "(metric_name, entity_id, tags_hash, tags)",
-			"("+joinSQL([]string{s.dialect.placeholder(1), s.dialect.placeholder(2), s.dialect.placeholder(3), s.dialect.jsonPlaceholder(4)})+")"),
+			"("+strings.Join([]string{s.dialect.placeholder(1), s.dialect.placeholder(2), s.dialect.placeholder(3), s.dialect.jsonPlaceholder(4)}, ", ")+")"),
 		metricName, entityID, tagsHash, tagsJSON,
 	); err != nil {
 		return 0, err
@@ -145,17 +146,6 @@ func (s *Store) internResolutionTx(ctx context.Context, interval time.Duration, 
 	return id, err
 }
 
-func joinSQL(parts []string) string {
-	if len(parts) == 0 {
-		return ""
-	}
-	out := parts[0]
-	for _, part := range parts[1:] {
-		out += ", " + part
-	}
-	return out
-}
-
 func (s *Store) normalizedRollupUpsertSuffix() string {
 	return " ON CONFLICT(series_id, resolution_id, label_id, bucket_milli) DO UPDATE SET count=excluded.count, sum=excluded.sum, sum_sq=excluded.sum_sq, min_val=excluded.min_val, max_val=excluded.max_val, first_val=excluded.first_val, first_ts_milli=excluded.first_ts_milli, last_val=excluded.last_val, last_ts_milli=excluded.last_ts_milli, digest=excluded.digest, created_at_milli=excluded.created_at_milli"
 }
@@ -173,7 +163,7 @@ func (s *Store) upsertNormalizedRollupRowsTx(ctx context.Context, rows []normali
 			values[i] = s.dialect.placeholder(placeholder)
 			placeholder++
 		}
-		valueGroups = append(valueGroups, "("+joinSQL(values)+")")
+		valueGroups = append(valueGroups, "("+strings.Join(values, ", ")+")")
 		args = append(args,
 			row.seriesID, row.resolutionID, row.labelID, row.bucketMilli,
 			row.count, row.sum, row.sumSq, row.min, row.max,
@@ -182,7 +172,7 @@ func (s *Store) upsertNormalizedRollupRowsTx(ctx context.Context, rows []normali
 		)
 	}
 	_, err := tx.ExecContext(ctx, fmt.Sprintf("INSERT INTO %s %s VALUES %s%s",
-		s.tables.rollups, normalizedRollupColumns, joinSQL(valueGroups), s.normalizedRollupUpsertSuffix()), args...)
+		s.tables.rollups, normalizedRollupColumns, strings.Join(valueGroups, ", "), s.normalizedRollupUpsertSuffix()), args...)
 	return err
 }
 

@@ -17,13 +17,11 @@ func Parse(v any) []Item {
 		val = val.Elem()
 	}
 
-	var allowTypes = []string{"option", "richtext"}
-
 	var items []Item
 	for i := 0; i < val.NumField(); i++ {
 		field := val.Type().Field(i)
 		typ := field.Tag.Get("type")
-		if !contains(allowTypes, typ) {
+		if typ != "option" && typ != "richtext" {
 			typ = field.Type.Name()
 		}
 		item := Item{
@@ -40,14 +38,4 @@ func Parse(v any) []Item {
 		items = append(items, item)
 	}
 	return items
-}
-
-// contains reports whether s is present in slice.
-func contains(slice []string, s string) bool {
-	for _, v := range slice {
-		if v == s {
-			return true
-		}
-	}
-	return false
 }

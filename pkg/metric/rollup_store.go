@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"sort"
+	"strings"
 	"time"
 )
 
@@ -222,7 +223,7 @@ func (s *Store) readRollupBucketsBatchTx(ctx context.Context, metricName string,
 		WHERE s.metric_name = %s AND d.id = %s AND (s.entity_id, s.tags_hash) IN (%s) AND r.bucket_milli IN (%s)`,
 		s.tables.rollups, s.tables.series, s.tables.resolutions, s.tables.labels,
 		s.dialect.placeholder(1), s.dialect.placeholder(2),
-		joinSQL(seriesPlaceholders), joinSQL(bucketPlaceholders),
+		strings.Join(seriesPlaceholders, ", "), strings.Join(bucketPlaceholders, ", "),
 	)
 	queryArgs := append(args, bucketArgs...)
 	rows, err := tx.QueryContext(ctx, sqlText, queryArgs...)
