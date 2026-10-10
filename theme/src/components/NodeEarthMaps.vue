@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { EChartsOption } from 'echarts/types/dist/shared'
 import type { NodeData } from '@/stores/nodes'
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import VChart from 'vue-echarts'
 import { Empty } from '@/components/ui/empty'
 import { Spinner } from '@/components/ui/spinner'
@@ -37,6 +37,27 @@ const displayNodes = computed(() => props.nodes ?? nodesStore.earthNodes)
 const mapName = ref<string>()
 const loading = ref(true)
 const loadError = ref<string | null>(null)
+// 地图容器引用：world.json 约 1MB，等滚动进入视口后再下载，避免首屏浪费流量
+const containerRef = ref<HTMLElement | null>(null)
+const mapRequested = ref(false)
+
+async function loadMap() {
+  if (mapRequested.value)
+    return
+  mapRequested.value = true
+  loading.value = true
+  loadError.value = null
+
+  try {
+    mapName.value = await ensureWorldMapRegistered()
+  }
+  catch (error) {
+    loadError.value = error instanceof Error ? error.message : '地图资源加载失败'
+  }
+  finally {
+    loading.value = false
+  }
+}
 
 const regionDisplayNames = typeof Intl.DisplayNames === 'function'
   ? new Intl.DisplayNames(['zh-Hans'], { type: 'region' })
@@ -237,24 +258,26 @@ const chartOption = computed<EChartsOption>(() => ({
   ],
 }))
 
-onMounted(async () => {
-  loading.value = true
-  loadError.value = null
-
-  try {
-    mapName.value = await ensureWorldMapRegistered()
+onMounted(() => {
+  const el = containerRef.value
+  if (!el || typeof IntersectionObserver === 'undefined') {
+    loadMap()
+    return
   }
-  catch (error) {
-    loadError.value = error instanceof Error ? error.message : '地图资源加载失败'
-  }
-  finally {
-    loading.value = false
-  }
+  // 提前 200px 预加载，进入视口后只触发一次
+  const observer = new IntersectionObserver((entries) => {
+    if (entries.some(entry => entry.isIntersecting)) {
+      observer.disconnect()
+      loadMap()
+    }
+  }, { rootMargin: '200px' })
+  observer.observe(el)
+  onUnmounted(() => observer.disconnect())
 })
 </script>
 
 <template>
-  <div class="relative h-full border-none" content-class="h-full !p-0">
+  <div ref="containerRef" class="relative h-full border-none" content-class="h-full !p-0">
     <!-- 预加载国旗图片，避免 tooltip 重复请求 -->
     <div class="hidden">
       <img v-for="point in points" :key="point.code" :src="`/assets/flags/${point.code}.svg`">
