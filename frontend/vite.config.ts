@@ -1,4 +1,4 @@
-import { defineConfig } from "vite";
+import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 
@@ -7,7 +7,6 @@ import tailwindcss from "@tailwindcss/vite";
 import type { Plugin, UserConfig } from "vite";
 import * as fs from "fs";
 import * as path from "path";
-import dotenv from "dotenv";
 
 function localKomariThemePlugin(): Plugin {
   const themeRequestPath = "/themes/default/komari-theme.json";
@@ -84,26 +83,18 @@ export default defineConfig(({ mode }) => {
   };
 
   if (mode === "development") {
-    const envPath = path.resolve(process.cwd(), ".env.development");
-    if (fs.existsSync(envPath)) {
-      const envConfig = dotenv.parse(fs.readFileSync(envPath));
-      for (const k in envConfig) {
-        process.env[k] = envConfig[k];
-      }
-    }
-    if (!process.env.VITE_API_TARGET) {
-      process.env.VITE_API_TARGET = "http://127.0.0.1:25774";
-    }
+    const loadedEnv = loadEnv(mode, process.cwd(), "");
+    const apiTarget = loadedEnv.VITE_API_TARGET || process.env.VITE_API_TARGET || "http://127.0.0.1:25774";
     baseConfig.server = {
       proxy: {
         "/api": {
-          target: process.env.VITE_API_TARGET,
+          target: apiTarget,
           changeOrigin: true,
           rewriteWsOrigin: true,
           ws: true,
         },
         "/themes": {
-          target: process.env.VITE_API_TARGET,
+          target: apiTarget,
           changeOrigin: true,
         },
       },
