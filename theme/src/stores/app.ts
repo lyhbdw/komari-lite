@@ -95,7 +95,7 @@ const useAppStore = defineStore('app', () => {
     if (settings && typeof settings.earthViewMode === 'string' && isValidEarthViewMode(settings.earthViewMode)) {
       return settings.earthViewMode
     }
-    return 'cards'
+    return 'earth'
   })
 
   const visitorInfoCardEnabled = computed<boolean>(() => {

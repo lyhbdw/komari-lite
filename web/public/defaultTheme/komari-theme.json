@@ -15,7 +15,7 @@
       { "key": "rpcTransportMode", "name": "RPC 连接模式", "type": "select", "default": "websocket", "options": "websocket,http", "help": "RPC 默认连接模式，推荐使用 websocket，若您无法使用 websocket 请选择 http" },
       { "key": "defaultViewMode", "name": "默认视图模式", "type": "select", "default": "card", "options": "card,list", "help": "节点列表的默认显示模式" },
       { "name": "页面设置", "type": "title" },
-      { "key": "earthViewMode", "name": "头部展示模式", "type": "select", "default": "cards", "options": "earth,earth-stop,maps,cards,hide", "help": "earth：自转地球；earth-stop：静止地球；maps：点状地图；cards：仅显示头部卡片；hide：隐藏整个头部" },
+      { "key": "earthViewMode", "name": "头部展示模式", "type": "select", "default": "earth", "options": "earth,earth-stop,maps,cards,hide", "help": "earth：自转地球；earth-stop：静止地球；maps：点状地图；cards：仅显示头部卡片；hide：隐藏整个头部" },
       { "key": "visitorInfoCardEnabled", "name": "访客信息卡片", "type": "switch", "default": false, "help": "显示访客来源、设备和浏览器信息卡片" },
       { "key": "pingNetworkOrder", "name": "延迟节点排序", "type": "string", "default": "", "help": "自定义三网延迟显示的节点及顺序，多个节点用英文逗号分隔，固定显示 3 条。示例：上海联通,上海电信,上海移动" }
     ]
