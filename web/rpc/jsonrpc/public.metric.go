@@ -8,7 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/lyhbdw/komari-lite/database/clients"
+	"github.com/lyhbdw/komari-lite/database/dbcore"
+	"github.com/lyhbdw/komari-lite/database/models"
 	"github.com/lyhbdw/komari-lite/internal/metricstore"
 	"github.com/lyhbdw/komari-lite/pkg/metric"
 	"github.com/lyhbdw/komari-lite/pkg/rpc"
@@ -130,6 +131,11 @@ func publicListMetricDefinitions(ctx context.Context, _ *rpc.JsonRpcRequest) (an
 }
 
 func publicQueryMetrics(ctx context.Context, req *rpc.JsonRpcRequest) (any, *rpc.JsonRpcError) {
+	ctx, release, admissionErr := beginHistoryQuery(ctx)
+	if admissionErr != nil {
+		return nil, admissionErr
+	}
+	defer release()
 	var params publicMetricQueryParams
 	if err := req.BindParams(&params); err != nil {
 		return nil, rpc.MakeError(rpc.InvalidParams, "Invalid request body: "+err.Error(), nil)
@@ -144,11 +150,9 @@ func publicQueryMetrics(ctx context.Context, req *rpc.JsonRpcRequest) (any, *rpc
 	}
 
 	queryNow := time.Now().UTC()
-	end := metricQueryTimeOrDefault(firstMetricQueryTime(params.End, params.EndTime), queryNow)
-	startFallback := end.Add(-metricQueryHours(params.Hours))
-	start := metricQueryTimeOrDefault(firstMetricQueryTime(params.Start, params.StartTime), startFallback)
-	if !end.After(start) {
-		return nil, rpc.MakeError(rpc.InvalidParams, "end must be after start", nil)
+	start, end, windowErr := historyQueryWindow(firstMetricQueryTime(params.Start, params.StartTime), firstMetricQueryTime(params.End, params.EndTime), params.Hours, 4, queryNow)
+	if windowErr != nil {
+		return nil, windowErr
 	}
 
 	requestedEntityIDs := normalizeStringList(params.EntityIDs, []string{params.EntityID})
@@ -184,8 +188,24 @@ func publicQueryMetrics(ctx context.Context, req *rpc.JsonRpcRequest) (any, *rpc
 		})
 	}
 
+	pointLimits := make([]int, len(loadSpecs))
+	for i, spec := range loadSpecs {
+		pointLimits[i] = spec.maxPoints
+	}
+	if budgetErr := reserveHistoryShape(len(entityIDs), len(metricKeys), pointLimits); budgetErr != nil {
+		return nil, budgetErr
+	}
+
 	metricFillEmpty := resolveMetricFillEmpty(params)
 	useRaw := publicMetricUsesRawWindow(start, end, queryNow)
+	// Raw timestamps have millisecond precision. Only choose the unpaged raw
+	// reader when its worst-case points per series fit the requested limit.
+	// Otherwise aggregate before loading values; never select or discard samples.
+	for _, spec := range loadSpecs {
+		if end.Sub(start).Milliseconds()+1 > int64(spec.maxPoints) {
+			useRaw = false
+		}
+	}
 	var definitions map[string]metric.Definition
 	rawValues := make(map[string][]metric.Point)
 	rollupValues := make(map[string]map[metric.Aggregation][]metric.AggregatePoint)
@@ -487,7 +507,8 @@ func clonePublicMetricTags(tags map[string]string) map[string]string {
 }
 
 func publicMetricEntityIDs(ctx context.Context, requested []string) ([]string, *rpc.JsonRpcError) {
-	allClients, err := clients.GetAllClientBasicInfo()
+	var allClients []models.Client
+	err := dbcore.GetDBInstance().WithContext(ctx).Select("uuid", "hidden").Find(&allClients).Error
 	if err != nil {
 		return nil, rpc.MakeError(rpc.InternalError, "Failed to retrieve client information: "+err.Error(), nil)
 	}
@@ -506,6 +527,9 @@ func publicMetricEntityIDs(ctx context.Context, requested []string) ([]string, *
 		allVisible = append(allVisible, client.UUID)
 	}
 	if len(requested) == 0 {
+		if len(allVisible) > maxPublicMetricQueryEntities {
+			return nil, rpc.MakeError(rpc.InvalidParams, "too many entities after expansion", nil)
+		}
 		return allVisible, nil
 	}
 	out := make([]string, 0, len(requested))

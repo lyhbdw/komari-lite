@@ -34,5 +34,12 @@ func Dispatch(ctx context.Context, meta *rpc.ContextMeta, req *rpc.JsonRpcReques
 		return rpc.ErrorResponse(req.ID, rpc.PermissionDenied, "Permission denied", nil)
 	}
 
-	return rpc.CallWithContext(rpc.NewContextWithMeta(ctx, meta), req.ID, req.Method, req.Params)
+	if err := historyContextError(ctx); err != nil {
+		return err.ResponseWithID(req.ID)
+	}
+	resp := rpc.CallWithContext(rpc.NewContextWithMeta(ctx, meta), req.ID, req.Method, req.Params)
+	if err := historyContextError(ctx); err != nil {
+		return err.ResponseWithID(req.ID)
+	}
+	return resp
 }

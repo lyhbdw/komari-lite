@@ -157,7 +157,12 @@ func serveWebSocket(c *gin.Context) {
 			break
 		}
 		// 同步写：SafeConn 内部有锁，串行写避免响应乱序与并发竞态。
-		conn.WriteJSON(dispatchWithSensitive(context.Background(), c, meta, &req))
+		queryCtx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+		response := dispatchWithSensitive(queryCtx, c, meta, &req)
+		cancel()
+		if err := conn.WriteJSON(response); err != nil {
+			break
+		}
 	}
 }
 

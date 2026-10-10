@@ -32,6 +32,11 @@ const (
 )
 
 func getRecords(ctx context.Context, req *rpc.JsonRpcRequest) (any, *rpc.JsonRpcError) {
+	ctx, release, admissionErr := beginHistoryQuery(ctx)
+	if admissionErr != nil {
+		return nil, admissionErr
+	}
+	defer release()
 	meta := rpc.MetaFromContext(ctx)
 	var params struct {
 		Type     string     `json:"type"`      // "load" | "ping"; default "load"
@@ -51,38 +56,14 @@ func getRecords(ctx context.Context, req *rpc.JsonRpcRequest) (any, *rpc.JsonRpc
 	if params.Type == "" {
 		params.Type = "load"
 	}
-	// parse time window
-	var startTime, endTime time.Time
+	// Preserve the compatibility entry's one-hour partial-window default.
+	hours := float64(params.Hours)
 	if params.Start != nil || params.End != nil {
-		// allow partial: missing end means now
-		if params.End == nil {
-			endTime = time.Now().UTC()
-		} else {
-			endTime = params.End.UTC()
-		}
-		if params.Start == nil {
-			// default to 1 hour before end
-			startTime = endTime.Add(-1 * time.Hour)
-		} else {
-			startTime = params.Start.UTC()
-		}
-		// clamp the explicit window to at most one year
-		if startTime.After(endTime) {
-			startTime = endTime
-		}
-		if endTime.Sub(startTime) > maxCommonRecordsWindow {
-			startTime = endTime.Add(-maxCommonRecordsWindow)
-		}
-	} else {
-		hours := params.Hours
-		if hours <= 0 {
-			hours = 1 // default 1 hour
-		}
-		if hours > maxCommonRecordsHours {
-			hours = maxCommonRecordsHours
-		}
-		endTime = time.Now().UTC()
-		startTime = endTime.Add(-time.Duration(hours) * time.Hour)
+		hours = 1
+	}
+	startTime, endTime, windowErr := historyQueryWindow(params.Start, params.End, hours, 1, time.Now().UTC())
+	if windowErr != nil {
+		return nil, windowErr
 	}
 
 	// clamp maxCount: negative (unlimited) becomes the hard cap
@@ -109,6 +90,12 @@ func getRecords(ctx context.Context, req *rpc.JsonRpcRequest) (any, *rpc.JsonRpc
 		if params.UUID != "" && hidden[params.UUID] {
 			return nil, rpc.MakeError(rpc.InvalidParams, "UUID not found", params.UUID)
 		}
+	}
+
+	// Revalidate all-entity expansion before fetching any history.
+	requestedEntities := normalizeStringList([]string{params.UUID})
+	if _, rpcErr := publicMetricEntityIDs(ctx, requestedEntities); rpcErr != nil {
+		return nil, rpcErr
 	}
 
 	switch params.Type {

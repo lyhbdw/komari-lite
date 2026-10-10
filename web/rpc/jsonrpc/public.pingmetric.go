@@ -67,16 +67,19 @@ type publicPingMetricStatsResponse struct {
 }
 
 func publicGetPingMetricStats(ctx context.Context, req *rpc.JsonRpcRequest) (any, *rpc.JsonRpcError) {
+	ctx, release, admissionErr := beginHistoryQuery(ctx)
+	if admissionErr != nil {
+		return nil, admissionErr
+	}
+	defer release()
 	var params publicPingMetricStatsParams
 	if err := req.BindParams(&params); err != nil {
 		return nil, rpc.MakeError(rpc.InvalidParams, "Invalid request body: "+err.Error(), nil)
 	}
 
-	end := metricQueryTimeOrDefault(firstMetricQueryTime(params.End, params.EndTime), time.Now().UTC())
-	startFallback := end.Add(-metricQueryHours(params.Hours))
-	start := metricQueryTimeOrDefault(firstMetricQueryTime(params.Start, params.StartTime), startFallback)
-	if !end.After(start) {
-		return nil, rpc.MakeError(rpc.InvalidParams, "end must be after start", nil)
+	start, end, windowErr := historyQueryWindow(firstMetricQueryTime(params.Start, params.StartTime), firstMetricQueryTime(params.End, params.EndTime), params.Hours, 4, time.Now().UTC())
+	if windowErr != nil {
+		return nil, windowErr
 	}
 
 	requestedEntities := normalizeStringList(params.EntityIDs, []string{firstNonEmpty(params.EntityID, params.UUID)})
@@ -111,9 +114,9 @@ func publicGetPingMetricStats(ctx context.Context, req *rpc.JsonRpcRequest) (any
 	}
 	taskFilter := normalizePingMetricTaskIDs(params.TaskID, params.TaskIDs)
 
-	maxPoints := params.MaxPoints
-	if maxPoints <= 0 {
-		maxPoints = defaultMetricQueryPoints
+	maxPoints, pointsErr := resolveMetricMaxPoints(metricstore.MetricPingLatency, publicMetricQueryParams{MaxPoints: params.MaxPoints})
+	if pointsErr != nil {
+		return nil, rpc.MakeError(rpc.InvalidParams, pointsErr.Error(), nil)
 	}
 	now := time.Now().UTC()
 	interval := metricDownsampleInterval(end.Sub(start), maxPoints)
