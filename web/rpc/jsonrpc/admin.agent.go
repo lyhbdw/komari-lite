@@ -4,12 +4,12 @@ import (
 	"context"
 	"strings"
 
-	"github.com/lyhbdw/komari-monitor-lite/database/auditlog"
-	"github.com/lyhbdw/komari-monitor-lite/database/clients"
-	"github.com/lyhbdw/komari-monitor-lite/pkg/rpc"
-	v2 "github.com/lyhbdw/komari-monitor-lite/protocol/v2"
-	"github.com/lyhbdw/komari-monitor-lite/web/public"
-	agent_runtime "github.com/lyhbdw/komari-monitor-lite/web/agent"
+	"github.com/lyhbdw/komari-lite/database/auditlog"
+	"github.com/lyhbdw/komari-lite/database/clients"
+	"github.com/lyhbdw/komari-lite/pkg/rpc"
+	v2 "github.com/lyhbdw/komari-lite/protocol/v2"
+	"github.com/lyhbdw/komari-lite/web/public"
+	agent_runtime "github.com/lyhbdw/komari-lite/web/agent"
 )
 
 // admin.agent.go

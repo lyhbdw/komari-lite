@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/lyhbdw/komari-monitor-lite/pkg/metric"
+	"github.com/lyhbdw/komari-lite/pkg/metric"
 )
 
 const (

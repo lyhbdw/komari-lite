@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/lyhbdw/komari-monitor-lite/database/auditlog"
-	"github.com/lyhbdw/komari-monitor-lite/database/clients"
-	"github.com/lyhbdw/komari-monitor-lite/database/models"
-	messageevent "github.com/lyhbdw/komari-monitor-lite/database/models/messageEvent"
-	"github.com/lyhbdw/komari-monitor-lite/pkg/timeutil"
-	"github.com/lyhbdw/komari-monitor-lite/utils/messageSender"
-	agent_runtime "github.com/lyhbdw/komari-monitor-lite/web/agent"
+	"github.com/lyhbdw/komari-lite/database/auditlog"
+	"github.com/lyhbdw/komari-lite/database/clients"
+	"github.com/lyhbdw/komari-lite/database/models"
+	messageevent "github.com/lyhbdw/komari-lite/database/models/messageEvent"
+	"github.com/lyhbdw/komari-lite/pkg/timeutil"
+	"github.com/lyhbdw/komari-lite/utils/messageSender"
+	agent_runtime "github.com/lyhbdw/komari-lite/web/agent"
 )
 
 func CheckAndAutoRenewal(client models.Client) {

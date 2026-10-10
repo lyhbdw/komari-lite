@@ -8,10 +8,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/lyhbdw/komari-monitor-lite/database/clients"
-	"github.com/lyhbdw/komari-monitor-lite/internal/metricstore"
-	"github.com/lyhbdw/komari-monitor-lite/pkg/metric"
-	"github.com/lyhbdw/komari-monitor-lite/pkg/rpc"
+	"github.com/lyhbdw/komari-lite/database/clients"
+	"github.com/lyhbdw/komari-lite/internal/metricstore"
+	"github.com/lyhbdw/komari-lite/pkg/metric"
+	"github.com/lyhbdw/komari-lite/pkg/rpc"
 )
 
 const (

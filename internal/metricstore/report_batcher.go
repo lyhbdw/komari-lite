@@ -7,11 +7,11 @@ import (
 	"sync"
 	"time"
 
-	logger "github.com/lyhbdw/komari-monitor-lite/utils/log"
+	logger "github.com/lyhbdw/komari-lite/utils/log"
 
-	"github.com/lyhbdw/komari-monitor-lite/database/models"
-	"github.com/lyhbdw/komari-monitor-lite/pkg/metric"
-	v2 "github.com/lyhbdw/komari-monitor-lite/protocol/v2"
+	"github.com/lyhbdw/komari-lite/database/models"
+	"github.com/lyhbdw/komari-lite/pkg/metric"
+	v2 "github.com/lyhbdw/komari-lite/protocol/v2"
 )
 
 type reportTrafficState struct {

@@ -8,7 +8,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/lyhbdw/komari-monitor-lite/utils/messageSender/factory"
+	"github.com/lyhbdw/komari-lite/utils/messageSender/factory"
 )
 
 type TelegramSender struct {

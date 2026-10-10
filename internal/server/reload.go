@@ -1,9 +1,9 @@
 package server
 
 import (
-	logger "github.com/lyhbdw/komari-monitor-lite/utils/log"
+	logger "github.com/lyhbdw/komari-lite/utils/log"
 
-	"github.com/lyhbdw/komari-monitor-lite/internal/config"
+	"github.com/lyhbdw/komari-lite/internal/config"
 )
 
 // reloadHandler 是单个配置热重载处理器。

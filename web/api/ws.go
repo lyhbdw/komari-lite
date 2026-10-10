@@ -8,11 +8,11 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
-	"github.com/lyhbdw/komari-monitor-lite/internal/config"
-	v2 "github.com/lyhbdw/komari-monitor-lite/protocol/v2"
-	agent_runtime "github.com/lyhbdw/komari-monitor-lite/web/agent"
-	"github.com/lyhbdw/komari-monitor-lite/web/connection"
-	"github.com/lyhbdw/komari-monitor-lite/web/security"
+	"github.com/lyhbdw/komari-lite/internal/config"
+	v2 "github.com/lyhbdw/komari-lite/protocol/v2"
+	agent_runtime "github.com/lyhbdw/komari-lite/web/agent"
+	"github.com/lyhbdw/komari-lite/web/connection"
+	"github.com/lyhbdw/komari-lite/web/security"
 )
 
 type WebSocketUpgradeOption func(*websocket.Upgrader)

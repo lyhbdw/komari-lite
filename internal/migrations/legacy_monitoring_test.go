@@ -9,10 +9,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/lyhbdw/komari-monitor-lite/database/models"
-	appconfig "github.com/lyhbdw/komari-monitor-lite/internal/config"
-	"github.com/lyhbdw/komari-monitor-lite/internal/metricstore"
-	"github.com/lyhbdw/komari-monitor-lite/pkg/metric"
+	"github.com/lyhbdw/komari-lite/database/models"
+	appconfig "github.com/lyhbdw/komari-lite/internal/config"
+	"github.com/lyhbdw/komari-lite/internal/metricstore"
+	"github.com/lyhbdw/komari-lite/pkg/metric"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )

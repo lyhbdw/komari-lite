@@ -6,8 +6,8 @@ import (
 	"encoding/json"
 	"strings"
 
-	"github.com/lyhbdw/komari-monitor-lite/database/dbcore"
-	"github.com/lyhbdw/komari-monitor-lite/database/models"
+	"github.com/lyhbdw/komari-lite/database/dbcore"
+	"github.com/lyhbdw/komari-lite/database/models"
 )
 
 const (

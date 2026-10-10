@@ -6,13 +6,13 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/lyhbdw/komari-monitor-lite/database/auditlog"
-	"github.com/lyhbdw/komari-monitor-lite/database/clients"
-	"github.com/lyhbdw/komari-monitor-lite/database/models"
-	"github.com/lyhbdw/komari-monitor-lite/database/records"
-	"github.com/lyhbdw/komari-monitor-lite/internal/metricstore"
-	"github.com/lyhbdw/komari-monitor-lite/pkg/rpc"
-	agent_runtime "github.com/lyhbdw/komari-monitor-lite/web/agent"
+	"github.com/lyhbdw/komari-lite/database/auditlog"
+	"github.com/lyhbdw/komari-lite/database/clients"
+	"github.com/lyhbdw/komari-lite/database/models"
+	"github.com/lyhbdw/komari-lite/database/records"
+	"github.com/lyhbdw/komari-lite/internal/metricstore"
+	"github.com/lyhbdw/komari-lite/pkg/rpc"
+	agent_runtime "github.com/lyhbdw/komari-lite/web/agent"
 )
 
 // admin.client.go

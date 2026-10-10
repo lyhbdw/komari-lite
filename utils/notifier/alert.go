@@ -6,13 +6,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/lyhbdw/komari-monitor-lite/database/clients"
-	"github.com/lyhbdw/komari-monitor-lite/database/models"
-	messageevent "github.com/lyhbdw/komari-monitor-lite/database/models/messageEvent"
-	"github.com/lyhbdw/komari-monitor-lite/internal/config"
-	logger "github.com/lyhbdw/komari-monitor-lite/utils/log"
-	"github.com/lyhbdw/komari-monitor-lite/utils/messageSender"
-	agent_runtime "github.com/lyhbdw/komari-monitor-lite/web/agent"
+	"github.com/lyhbdw/komari-lite/database/clients"
+	"github.com/lyhbdw/komari-lite/database/models"
+	messageevent "github.com/lyhbdw/komari-lite/database/models/messageEvent"
+	"github.com/lyhbdw/komari-lite/internal/config"
+	logger "github.com/lyhbdw/komari-lite/utils/log"
+	"github.com/lyhbdw/komari-lite/utils/messageSender"
+	agent_runtime "github.com/lyhbdw/komari-lite/web/agent"
 )
 
 // 阈值告警配置键（存入 config 表，管理后台可改）

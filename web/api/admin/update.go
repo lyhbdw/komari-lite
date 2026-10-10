@@ -2,10 +2,10 @@ package admin
 
 import (
 	"encoding/json"
-	"github.com/lyhbdw/komari-monitor-lite/database/accounts"
-	"github.com/lyhbdw/komari-monitor-lite/database/auditlog"
-	"github.com/lyhbdw/komari-monitor-lite/utils/geoip"
-	"github.com/lyhbdw/komari-monitor-lite/web/api"
+	"github.com/lyhbdw/komari-lite/database/accounts"
+	"github.com/lyhbdw/komari-lite/database/auditlog"
+	"github.com/lyhbdw/komari-lite/utils/geoip"
+	"github.com/lyhbdw/komari-lite/web/api"
 	"github.com/gin-gonic/gin"
 )
 

@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	v2 "github.com/lyhbdw/komari-monitor-lite/protocol/v2"
+	v2 "github.com/lyhbdw/komari-lite/protocol/v2"
 )
 
 func TestGetLatestReportDeepCopiesGPU(t *testing.T) {

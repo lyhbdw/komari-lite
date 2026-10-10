@@ -1,5 +1,4 @@
 import { Button } from "@/components/ui/button";
-import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useLocation } from "react-router-dom";
@@ -81,40 +80,10 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
     return mergedBaseMenuItems.filter((item) => !item.bottom);
   }, [mergedBaseMenuItems]);
 
-  // 侧边栏动画变体
-  const sidebarVariants = {
-    open: {
-      width: isMobile ? "100vw" : "240px",
-      opacity: 1,
-      transition: {
-        type: "spring",
-        stiffness: 350,
-        damping: 32,
-      },
-    },
-    closed: {
-      width: 0,
-      opacity: isMobile ? 0 : 1,
-      transition: {
-        type: "spring",
-        stiffness: 350,
-        damping: 32,
-      },
-    },
-  };
-
-  const contentVariants = {
-    open: {
-      opacity: isMobile ? 0 : 1,
-      x: isMobile ? "100%" : 0,
-      transition: { duration: 0.2 },
-    },
-    closed: {
-      opacity: 1,
-      x: 0,
-      transition: { duration: 0.2 },
-    },
-  };
+  // 侧边栏开合：用 CSS transition 实现（替代 motion 弹簧动画）
+  const sidebarWidth = sidebarOpen ? (isMobile ? "100vw" : "240px") : 0;
+  const sidebarOpacity = sidebarOpen ? 1 : isMobile ? 0 : 1;
+  const contentOpacity = sidebarOpen ? (isMobile ? 0 : 1) : 1;
 
   function logout() {
     // CSRF 防御：登出改为 POST（服务端仅接受 POST）。
@@ -261,19 +230,16 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
       {/* Main Workspace (Sidebar + Content) */}
       <div className="flex-1 flex overflow-hidden relative">
         {/* Sidebar */}
-        <AnimatePresence>
-          <motion.aside
-            variants={sidebarVariants}
-            initial="closed"
-            animate={sidebarOpen ? "open" : "closed"}
-            exit="closed"
-            className="km-admin-panel-nav border-r border-sidebar-border/70 bg-sidebar/95 backdrop-blur-xs shrink-0"
+          <aside
+            className="km-admin-panel-nav border-r border-sidebar-border/70 bg-sidebar/95 backdrop-blur-xs shrink-0 transition-[width,opacity] duration-300 ease-out"
             style={{
               height: "100%",
               position: isMobile ? "absolute" : "relative",
               zIndex: isMobile ? 20 : 1,
               overflowY: "auto",
               overflowX: "hidden",
+              width: sidebarWidth,
+              opacity: sidebarOpacity,
             }}
           >
             <div
@@ -336,16 +302,14 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
                 </div>
               )}
             </div>
-          </motion.aside>
-        </AnimatePresence>
+          </aside>
 
         {/* Main Content Area */}
-        <motion.main
-          variants={contentVariants}
-          animate={sidebarOpen ? "open" : "closed"}
-          className="km-admin-panel-content bg-background flex-1 h-full overflow-y-auto"
+        <main
+          className="km-admin-panel-content bg-background flex-1 h-full overflow-y-auto transition-opacity duration-200"
           style={{
             display: isMobile && sidebarOpen ? "none" : "block",
+            opacity: contentOpacity,
           }}
         >
           <div className="max-w-7xl mx-auto w-full p-4 sm:p-6 lg:p-8 space-y-6">
@@ -370,7 +334,7 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
             )}
             {content}
           </div>
-        </motion.main>
+        </main>
       </div>
     </div>
   );

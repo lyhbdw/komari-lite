@@ -3,9 +3,9 @@ package jsonrpc
 import (
 	"context"
 
-	"github.com/lyhbdw/komari-monitor-lite/database/dbcore"
-	"github.com/lyhbdw/komari-monitor-lite/database/models"
-	"github.com/lyhbdw/komari-monitor-lite/pkg/rpc"
+	"github.com/lyhbdw/komari-lite/database/dbcore"
+	"github.com/lyhbdw/komari-lite/database/models"
+	"github.com/lyhbdw/komari-lite/pkg/rpc"
 
 	"gorm.io/gorm/clause"
 )

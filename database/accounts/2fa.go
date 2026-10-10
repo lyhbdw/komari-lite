@@ -3,8 +3,8 @@ package accounts
 import (
 	"image"
 
-	"github.com/lyhbdw/komari-monitor-lite/database/dbcore"
-	"github.com/lyhbdw/komari-monitor-lite/database/models"
+	"github.com/lyhbdw/komari-lite/database/dbcore"
+	"github.com/lyhbdw/komari-lite/database/models"
 	"github.com/pquerna/otp/totp"
 )
 

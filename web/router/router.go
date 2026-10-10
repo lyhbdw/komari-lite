@@ -2,12 +2,12 @@ package router
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/lyhbdw/komari-monitor-lite/web/api"
-	"github.com/lyhbdw/komari-monitor-lite/web/api/admin"
-	"github.com/lyhbdw/komari-monitor-lite/web/api/client"
-	public_api "github.com/lyhbdw/komari-monitor-lite/web/api/public"
-	"github.com/lyhbdw/komari-monitor-lite/web/public"
-	jsonRpc "github.com/lyhbdw/komari-monitor-lite/web/rpc/jsonrpc"
+	"github.com/lyhbdw/komari-lite/web/api"
+	"github.com/lyhbdw/komari-lite/web/api/admin"
+	"github.com/lyhbdw/komari-lite/web/api/client"
+	public_api "github.com/lyhbdw/komari-lite/web/api/public"
+	"github.com/lyhbdw/komari-lite/web/public"
+	jsonRpc "github.com/lyhbdw/komari-lite/web/rpc/jsonrpc"
 )
 
 // Register binds all HTTP, WebSocket, JSON-RPC and static frontend routes.

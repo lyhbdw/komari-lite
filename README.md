@@ -118,7 +118,7 @@ cp komari-theme.json ../web/public/defaultTheme/komari-theme.json
 ```bash
 cd ..
 CGO_ENABLED=1 go build -tags nomsgpack,sqlite_omit_load_extension \
-  -ldflags "-s -w -X github.com/lyhbdw/komari-monitor-lite/utils.CurrentVersion=1.0.0" \
+  -ldflags "-s -w -X github.com/lyhbdw/komari-lite/utils.CurrentVersion=1.0.0" \
   -o komari .
 ```
 
@@ -135,20 +135,20 @@ CGO_ENABLED=1 go build -tags nomsgpack,sqlite_omit_load_extension \
 ```bash
 # 先按上面的步骤生成 Linux amd64 可执行文件
 CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -tags nomsgpack,sqlite_omit_load_extension \
-  -ldflags "-s -w -X github.com/lyhbdw/komari-monitor-lite/utils.CurrentVersion=1.0.0" \
+  -ldflags "-s -w -X github.com/lyhbdw/komari-lite/utils.CurrentVersion=1.0.0" \
   -o komari-linux-amd64 .
 
 docker build \
   --build-arg TARGETOS=linux \
   --build-arg TARGETARCH=amd64 \
-  -t komari-monitor-lite:1.0.0 .
+  -t komari-lite:1.0.0 .
 
 docker run -d \
   --name komari \
   -p 25774:25774 \
   -v "$(pwd)/data:/app/data" \
   --restart unless-stopped \
-  komari-monitor-lite:1.0.0
+  komari-lite:1.0.0
 ```
 
 ## 部署建议

@@ -6,9 +6,9 @@ import (
 	"os"
 
 	"github.com/gin-gonic/gin"
-	"github.com/lyhbdw/komari-monitor-lite/database/dbcore"
-	"github.com/lyhbdw/komari-monitor-lite/internal/config"
-	"github.com/lyhbdw/komari-monitor-lite/utils"
+	"github.com/lyhbdw/komari-lite/database/dbcore"
+	"github.com/lyhbdw/komari-lite/internal/config"
+	"github.com/lyhbdw/komari-lite/utils"
 )
 
 // Bootstrap initializes the data directory, primary database, and settings.

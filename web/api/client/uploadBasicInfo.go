@@ -2,9 +2,9 @@ package client
 
 import (
 	"fmt"
-	"github.com/lyhbdw/komari-monitor-lite/database/clients"
-	"github.com/lyhbdw/komari-monitor-lite/internal/config"
-	"github.com/lyhbdw/komari-monitor-lite/utils/geoip"
+	"github.com/lyhbdw/komari-lite/database/clients"
+	"github.com/lyhbdw/komari-lite/internal/config"
+	"github.com/lyhbdw/komari-lite/utils/geoip"
 	"net"
 	"strings"
 )

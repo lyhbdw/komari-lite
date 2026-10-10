@@ -3,12 +3,12 @@ package jsonrpc
 import (
 	"context"
 
-	"github.com/lyhbdw/komari-monitor-lite/database"
-	"github.com/lyhbdw/komari-monitor-lite/database/dbcore"
-	"github.com/lyhbdw/komari-monitor-lite/database/models"
-	"github.com/lyhbdw/komari-monitor-lite/database/tasks"
-	"github.com/lyhbdw/komari-monitor-lite/pkg/rpc"
-	"github.com/lyhbdw/komari-monitor-lite/utils"
+	"github.com/lyhbdw/komari-lite/database"
+	"github.com/lyhbdw/komari-lite/database/dbcore"
+	"github.com/lyhbdw/komari-lite/database/models"
+	"github.com/lyhbdw/komari-lite/database/tasks"
+	"github.com/lyhbdw/komari-lite/pkg/rpc"
+	"github.com/lyhbdw/komari-lite/utils"
 )
 
 // public.go

@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"time"
 
-	logger "github.com/lyhbdw/komari-monitor-lite/utils/log"
+	logger "github.com/lyhbdw/komari-lite/utils/log"
 
-	"github.com/lyhbdw/komari-monitor-lite/pkg/metric"
+	"github.com/lyhbdw/komari-lite/pkg/metric"
 )
 
 // farFuture 返回一个足够远的未来时间，用于以 DeleteBefore 语义清空某指标的全部数据。

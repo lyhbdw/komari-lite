@@ -7,13 +7,13 @@ import (
 	"net"
 	"time"
 
-	"github.com/lyhbdw/komari-monitor-lite/database/dbcore"
-	"github.com/lyhbdw/komari-monitor-lite/database/models"
-	messageevent "github.com/lyhbdw/komari-monitor-lite/database/models/messageEvent"
-	"github.com/lyhbdw/komari-monitor-lite/internal/config"
-	"github.com/lyhbdw/komari-monitor-lite/utils"
-	"github.com/lyhbdw/komari-monitor-lite/utils/geoip"
-	"github.com/lyhbdw/komari-monitor-lite/utils/messageSender"
+	"github.com/lyhbdw/komari-lite/database/dbcore"
+	"github.com/lyhbdw/komari-lite/database/models"
+	messageevent "github.com/lyhbdw/komari-lite/database/models/messageEvent"
+	"github.com/lyhbdw/komari-lite/internal/config"
+	"github.com/lyhbdw/komari-lite/utils"
+	"github.com/lyhbdw/komari-lite/utils/geoip"
+	"github.com/lyhbdw/komari-lite/utils/messageSender"
 )
 
 func SessionIdentifier(session string) string {

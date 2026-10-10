@@ -3,18 +3,18 @@ package messageSender
 import (
 	"encoding/json"
 	"fmt"
-	logger "github.com/lyhbdw/komari-monitor-lite/utils/log"
+	logger "github.com/lyhbdw/komari-lite/utils/log"
 	"reflect"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/lyhbdw/komari-monitor-lite/database"
-	"github.com/lyhbdw/komari-monitor-lite/database/auditlog"
-	"github.com/lyhbdw/komari-monitor-lite/database/clients"
-	"github.com/lyhbdw/komari-monitor-lite/database/models"
-	"github.com/lyhbdw/komari-monitor-lite/internal/config"
-	"github.com/lyhbdw/komari-monitor-lite/utils/messageSender/factory"
+	"github.com/lyhbdw/komari-lite/database"
+	"github.com/lyhbdw/komari-lite/database/auditlog"
+	"github.com/lyhbdw/komari-lite/database/clients"
+	"github.com/lyhbdw/komari-lite/database/models"
+	"github.com/lyhbdw/komari-lite/internal/config"
+	"github.com/lyhbdw/komari-lite/utils/messageSender/factory"
 )
 
 var (

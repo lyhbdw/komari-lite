@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/lyhbdw/komari-monitor-lite/pkg/metric"
+	"github.com/lyhbdw/komari-lite/pkg/metric"
 )
 
 func TestInspectAndReclaimStorage(t *testing.T) {

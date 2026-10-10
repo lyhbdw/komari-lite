@@ -5,10 +5,10 @@ import (
 	"sort"
 	"time"
 
-	"github.com/lyhbdw/komari-monitor-lite/database/dbcore"
-	"github.com/lyhbdw/komari-monitor-lite/database/models"
-	"github.com/lyhbdw/komari-monitor-lite/internal/metricstore"
-	"github.com/lyhbdw/komari-monitor-lite/utils"
+	"github.com/lyhbdw/komari-lite/database/dbcore"
+	"github.com/lyhbdw/komari-lite/database/models"
+	"github.com/lyhbdw/komari-lite/internal/metricstore"
+	"github.com/lyhbdw/komari-lite/utils"
 	"gorm.io/gorm"
 )
 

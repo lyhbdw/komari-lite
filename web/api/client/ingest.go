@@ -4,12 +4,12 @@ import (
 	"context"
 	"time"
 
-	"github.com/lyhbdw/komari-monitor-lite/database/clients"
-	"github.com/lyhbdw/komari-monitor-lite/database/models"
-	"github.com/lyhbdw/komari-monitor-lite/database/tasks"
-	"github.com/lyhbdw/komari-monitor-lite/internal/metricstore"
-	v2 "github.com/lyhbdw/komari-monitor-lite/protocol/v2"
-	agent_runtime "github.com/lyhbdw/komari-monitor-lite/web/agent"
+	"github.com/lyhbdw/komari-lite/database/clients"
+	"github.com/lyhbdw/komari-lite/database/models"
+	"github.com/lyhbdw/komari-lite/database/tasks"
+	"github.com/lyhbdw/komari-lite/internal/metricstore"
+	v2 "github.com/lyhbdw/komari-lite/protocol/v2"
+	agent_runtime "github.com/lyhbdw/komari-lite/web/agent"
 )
 
 // ingest.go

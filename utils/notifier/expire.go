@@ -5,12 +5,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/lyhbdw/komari-monitor-lite/database/clients"
-	"github.com/lyhbdw/komari-monitor-lite/database/models"
-	messageevent "github.com/lyhbdw/komari-monitor-lite/database/models/messageEvent"
-	"github.com/lyhbdw/komari-monitor-lite/internal/config"
-	logger "github.com/lyhbdw/komari-monitor-lite/utils/log"
-	"github.com/lyhbdw/komari-monitor-lite/utils/messageSender"
+	"github.com/lyhbdw/komari-lite/database/clients"
+	"github.com/lyhbdw/komari-lite/database/models"
+	messageevent "github.com/lyhbdw/komari-lite/database/models/messageEvent"
+	"github.com/lyhbdw/komari-lite/internal/config"
+	logger "github.com/lyhbdw/komari-lite/utils/log"
+	"github.com/lyhbdw/komari-lite/utils/messageSender"
 )
 
 type expireStateMap struct {

@@ -7,11 +7,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/lyhbdw/komari-monitor-lite/database/accounts"
-	"github.com/lyhbdw/komari-monitor-lite/database/auditlog"
-	"github.com/lyhbdw/komari-monitor-lite/internal/config"
-	"github.com/lyhbdw/komari-monitor-lite/utils"
-	"github.com/lyhbdw/komari-monitor-lite/web/api"
+	"github.com/lyhbdw/komari-lite/database/accounts"
+	"github.com/lyhbdw/komari-lite/database/auditlog"
+	"github.com/lyhbdw/komari-lite/internal/config"
+	"github.com/lyhbdw/komari-lite/utils"
+	"github.com/lyhbdw/komari-lite/web/api"
 
 	"github.com/gin-gonic/gin"
 )

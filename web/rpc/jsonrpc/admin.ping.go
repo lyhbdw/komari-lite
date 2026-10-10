@@ -3,9 +3,9 @@ package jsonrpc
 import (
 	"context"
 
-	"github.com/lyhbdw/komari-monitor-lite/database/models"
-	"github.com/lyhbdw/komari-monitor-lite/database/tasks"
-	"github.com/lyhbdw/komari-monitor-lite/pkg/rpc"
+	"github.com/lyhbdw/komari-lite/database/models"
+	"github.com/lyhbdw/komari-lite/database/tasks"
+	"github.com/lyhbdw/komari-lite/pkg/rpc"
 )
 
 // admin.ping.go

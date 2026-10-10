@@ -4,8 +4,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/lyhbdw/komari-monitor-lite/utils/notifier"
-	agent_runtime "github.com/lyhbdw/komari-monitor-lite/web/agent"
+	"github.com/lyhbdw/komari-lite/utils/notifier"
+	agent_runtime "github.com/lyhbdw/komari-lite/web/agent"
 )
 
 const (

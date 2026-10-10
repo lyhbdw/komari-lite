@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/lyhbdw/komari-monitor-lite/database/dbcore"
-	"github.com/lyhbdw/komari-monitor-lite/database/models"
-	v2 "github.com/lyhbdw/komari-monitor-lite/protocol/v2"
+	"github.com/lyhbdw/komari-lite/database/dbcore"
+	"github.com/lyhbdw/komari-lite/database/models"
+	v2 "github.com/lyhbdw/komari-lite/protocol/v2"
 )
 
 func GetClientUUIDByToken(token string) (clientUUID string, err error) {

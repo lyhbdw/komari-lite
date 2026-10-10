@@ -3,7 +3,6 @@ import { Textarea } from "@/components/ui/textarea";
 import React from "react";
 import { useTranslation } from "react-i18next";
 import { ChevronDownIcon } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
 
 interface SettingCardProps {
   title?: string | React.ReactNode;
@@ -220,32 +219,29 @@ export function SettingCardCollapse({
           aria-controls="collapsible-content"
           className="size-8 text-muted-foreground hover:text-foreground cursor-pointer"
         >
-          <motion.div
-            initial={{ rotate: 0, scale: 1 }}
-            animate={{ rotate: open ? 180 : 0, scale: open ? 1.05 : 1 }}
-            transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+          <div
+            className={`transition-transform duration-200 ease-out ${
+              open ? "rotate-180 scale-105" : ""
+            }`}
           >
             <ChevronDownIcon size={16} />
-          </motion.div>
+          </div>
         </Button>
       </SettingCard.Action>
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            className="w-full pt-1"
-            layout
-            initial={{ height: 0, opacity: 0, y: -6 }}
-            animate={{ height: "auto", opacity: 1, y: 0 }}
-            exit={{ height: 0, opacity: 0, y: -6 }}
-            transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
-            style={{ overflow: "hidden" }}
-            id="collapsible-content"
-          >
-            <div className="border-t border-border/50 my-3" />
-            {children}
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* 折叠内容：用 CSS grid-rows 动画替代 motion 高度动画 */}
+      <div
+        className={`grid w-full pt-1 transition-all duration-200 ease-out ${
+          open
+            ? "grid-rows-[1fr] opacity-100 visible"
+            : "grid-rows-[0fr] opacity-0 invisible"
+        }`}
+        id="collapsible-content"
+      >
+        <div className="overflow-hidden">
+          <div className="border-t border-border/50 my-3" />
+          {children}
+        </div>
+      </div>
     </SettingCard>
   );
 }

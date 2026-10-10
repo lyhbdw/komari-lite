@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/lyhbdw/komari-monitor-lite/database/models"
-	"github.com/lyhbdw/komari-monitor-lite/internal/metricstore"
+	"github.com/lyhbdw/komari-lite/database/models"
+	"github.com/lyhbdw/komari-lite/internal/metricstore"
 )
 
 // 历史监控数据已完全迁移到 metric store（默认 SQLite ./data/metrics.db，或配置的

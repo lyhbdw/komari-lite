@@ -13,7 +13,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/lyhbdw/komari-monitor-lite/internal/config"
+	"github.com/lyhbdw/komari-lite/internal/config"
 )
 
 //go:embed defaultTheme/komari-theme.json

@@ -3,8 +3,8 @@ package server
 import (
 	"context"
 
-	"github.com/lyhbdw/komari-monitor-lite/utils/geoip"
-	"github.com/lyhbdw/komari-monitor-lite/utils/messageSender"
+	"github.com/lyhbdw/komari-lite/utils/geoip"
+	"github.com/lyhbdw/komari-lite/utils/messageSender"
 )
 
 // InitProviders initializes providers used by the monitoring application.

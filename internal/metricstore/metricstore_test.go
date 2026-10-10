@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/lyhbdw/komari-monitor-lite/database/models"
-	"github.com/lyhbdw/komari-monitor-lite/pkg/metric"
-	v2 "github.com/lyhbdw/komari-monitor-lite/protocol/v2"
+	"github.com/lyhbdw/komari-lite/database/models"
+	"github.com/lyhbdw/komari-lite/pkg/metric"
+	v2 "github.com/lyhbdw/komari-lite/protocol/v2"
 )
 
 func TestDefaultRollupPolicy(t *testing.T) {

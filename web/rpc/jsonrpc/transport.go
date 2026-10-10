@@ -11,10 +11,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
-	"github.com/lyhbdw/komari-monitor-lite/database/accounts"
-	"github.com/lyhbdw/komari-monitor-lite/pkg/rpc"
-	"github.com/lyhbdw/komari-monitor-lite/web/api"
-	"github.com/lyhbdw/komari-monitor-lite/web/security"
+	"github.com/lyhbdw/komari-lite/database/accounts"
+	"github.com/lyhbdw/komari-lite/pkg/rpc"
+	"github.com/lyhbdw/komari-lite/web/api"
+	"github.com/lyhbdw/komari-lite/web/security"
 )
 
 const (

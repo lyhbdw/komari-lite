@@ -51,6 +51,8 @@ type User struct {
 	UUID      string    `json:"uuid,omitempty" gorm:"type:varchar(36);primaryKey"`
 	Username  string    `json:"username" gorm:"type:varchar(50);unique;not null"`
 	Passwd    string    `json:"passwd,omitempty" gorm:"type:varchar(255);not null"` // Hashed password
+	// NOTE(Lite): SSOType/SSOID 仅为数据库兼容保留（便于从原版迁移数据），
+	// Lite 版已关闭 OAuth/OIDC 登录，业务代码中不再使用这两个字段，请勿删除。
 	SSOType   string    `json:"sso_type" gorm:"type:varchar(20)"`                   // e.g., "github", "google"
 	SSOID     string    `json:"sso_id" gorm:"type:varchar(100)"`                    // OAuth provider's user ID
 	TwoFactor string    `json:"two_factor,omitempty" gorm:"type:varchar(255)"`      // 2FA secret

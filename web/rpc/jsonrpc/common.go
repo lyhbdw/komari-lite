@@ -7,17 +7,17 @@ import (
 	"sort"
 	"time"
 
-	"github.com/lyhbdw/komari-monitor-lite/database"
-	"github.com/lyhbdw/komari-monitor-lite/database/clients"
-	"github.com/lyhbdw/komari-monitor-lite/database/dbcore"
-	"github.com/lyhbdw/komari-monitor-lite/database/models"
-	"github.com/lyhbdw/komari-monitor-lite/database/tasks"
-	"github.com/lyhbdw/komari-monitor-lite/pkg/rpc"
-	v2 "github.com/lyhbdw/komari-monitor-lite/protocol/v2"
-	"github.com/lyhbdw/komari-monitor-lite/utils"
-	agent_runtime "github.com/lyhbdw/komari-monitor-lite/web/agent"
+	"github.com/lyhbdw/komari-lite/database"
+	"github.com/lyhbdw/komari-lite/database/clients"
+	"github.com/lyhbdw/komari-lite/database/dbcore"
+	"github.com/lyhbdw/komari-lite/database/models"
+	"github.com/lyhbdw/komari-lite/database/tasks"
+	"github.com/lyhbdw/komari-lite/pkg/rpc"
+	v2 "github.com/lyhbdw/komari-lite/protocol/v2"
+	"github.com/lyhbdw/komari-lite/utils"
+	agent_runtime "github.com/lyhbdw/komari-lite/web/agent"
 
-	"github.com/lyhbdw/komari-monitor-lite/utils/ttlcache"
+	"github.com/lyhbdw/komari-lite/utils/ttlcache"
 )
 
 // pingstats:<uuid>

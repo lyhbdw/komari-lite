@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/lyhbdw/komari-monitor-lite/pkg/metric"
+	"github.com/lyhbdw/komari-lite/pkg/metric"
 )
 
 // Example_rollupTags demonstrates tagged rollups with automatic series routing.

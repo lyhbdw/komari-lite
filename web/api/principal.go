@@ -5,8 +5,8 @@ package api
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/lyhbdw/komari-monitor-lite/database/accounts"
-	"github.com/lyhbdw/komari-monitor-lite/pkg/rpc"
+	"github.com/lyhbdw/komari-lite/database/accounts"
+	"github.com/lyhbdw/komari-lite/pkg/rpc"
 )
 
 // principalContextKey 是 principal 在 gin.Context 中的存储键。
