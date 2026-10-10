@@ -128,9 +128,6 @@ const useAppStore = defineStore('app', () => {
     return names
   })
 
-  // 计算属性：离线节点后置（默认顺序下离线节点排到所有节点最后，固定默认开启）
-  const offlineNodesLast = computed<boolean>(() => true)
-
   // 当 publicSettings 加载后，如果 localStorage 没有保存过视图模式或值为非法值，使用默认值
   watch(publicSettings, (settings) => {
     if (settings && !isValidViewMode(storedViewMode.value)) {
@@ -156,8 +153,6 @@ const useAppStore = defineStore('app', () => {
     return themeMode.value === 'dark'
   })
 
-  const resolvedThemeMode = computed<'light' | 'dark'>(() => isDark.value ? 'dark' : 'light')
-
   function updateThemeMode(mode?: ThemeMode) {
     if (mode) {
       themeMode.value = isValidThemeMode(mode) ? mode : 'auto'
@@ -182,11 +177,9 @@ const useAppStore = defineStore('app', () => {
     loading,
     themeMode,
     isDark,
-    resolvedThemeMode,
     lang,
     nodeSelectedGroup,
     nodeViewMode,
-    defaultViewMode,
     rpcTransportMode,
     byteDecimals,
     earthViewMode,
@@ -194,7 +187,6 @@ const useAppStore = defineStore('app', () => {
     visitorCountryCode,
     disablePageAnimation,
     pingNetworkOrder,
-    offlineNodesLast,
     isLoggedIn,
     publicSettings,
     connectionError,
