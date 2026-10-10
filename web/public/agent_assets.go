@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 )
@@ -15,10 +16,14 @@ const (
 )
 
 var allowedAgentAssets = map[string]string{
-	"komari-agent-linux-amd64":        "application/octet-stream",
-	"komari-agent-linux-amd64.sha256": "text/plain; charset=utf-8",
-	"komari-agent-linux-arm64":        "application/octet-stream",
-	"komari-agent-linux-arm64.sha256": "text/plain; charset=utf-8",
+	"komari-agent-linux-amd64":            "application/octet-stream",
+	"komari-agent-linux-amd64.sha256":     "text/plain; charset=utf-8",
+	"komari-agent-linux-amd64.bin":        "application/octet-stream",
+	"komari-agent-linux-amd64.bin.sha256": "text/plain; charset=utf-8",
+	"komari-agent-linux-arm64":            "application/octet-stream",
+	"komari-agent-linux-arm64.sha256":     "text/plain; charset=utf-8",
+	"komari-agent-linux-arm64.bin":        "application/octet-stream",
+	"komari-agent-linux-arm64.bin.sha256": "text/plain; charset=utf-8",
 }
 
 func isValidVersion(v string) bool {
@@ -61,6 +66,13 @@ func ServeAgentAsset(c *gin.Context) {
 	}
 	assetPath := filepath.Join(assetDir, targetVersion, asset)
 	info, err := os.Lstat(assetPath)
+	if err != nil && strings.HasSuffix(asset, ".bin") {
+		assetPath = filepath.Join(assetDir, targetVersion, strings.TrimSuffix(asset, ".bin"))
+		info, err = os.Lstat(assetPath)
+	} else if err != nil && strings.HasSuffix(asset, ".bin.sha256") {
+		assetPath = filepath.Join(assetDir, targetVersion, strings.TrimSuffix(asset, ".bin.sha256")+".sha256")
+		info, err = os.Lstat(assetPath)
+	}
 	if err != nil || !info.Mode().IsRegular() {
 		c.Status(http.StatusNotFound)
 		return
@@ -74,5 +86,7 @@ func ServeAgentAsset(c *gin.Context) {
 	defer file.Close()
 
 	c.Header("Cache-Control", "public, max-age=31536000, immutable")
+	c.Header("CDN-Cache-Control", "public, max-age=31536000")
+	c.Header("Cloudflare-CDN-Cache-Control", "public, max-age=31536000")
 	c.DataFromReader(http.StatusOK, info.Size(), contentType, file, nil)
 }

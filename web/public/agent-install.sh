@@ -431,7 +431,8 @@ if [ -n "$download_base" ]; then
             exit 1
             ;;
     esac
-    download_url="${download_base%/}/${file_name}"
+    download_url="${download_base%/}/${file_name}.bin"
+    download_url_fallback="${download_base%/}/${file_name}"
 else
     if [ "$version_to_install" = "latest" ]; then
         download_path="latest/download"
@@ -439,6 +440,7 @@ else
         download_path="download/${version_to_install}"
     fi
     download_url="https://github.com/lyhbdw/komari-lite/releases/${download_path}/${file_name}"
+    download_url_fallback=""
 fi
 
 log_step "Creating installation directory: ${GREEN}$target_dir${NC}"
@@ -473,8 +475,36 @@ if [ -n "$local_binary" ]; then
 else
     log_step "Downloading $file_name ..."
     log_info "URL: ${CYAN}$download_url${NC}"
-    if ! curl --fail --location --proto '=https' --tlsv1.2 --connect-timeout 15 \
-        -o "$download_tmp" "$download_url" || [ ! -s "$download_tmp" ]; then
+    download_ok=false
+    if curl --fail --location --proto '=https' --tlsv1.2 --connect-timeout 15 \
+        -o "$download_tmp" "$download_url" && [ -s "$download_tmp" ]; then
+        download_ok=true
+    elif [ -n "${download_url_fallback:-}" ]; then
+        log_info "Retrying with fallback URL: ${CYAN}$download_url_fallback${NC}"
+        if curl --fail --location --proto '=https' --tlsv1.2 --connect-timeout 15 \
+            -o "$download_tmp" "$download_url_fallback" && [ -s "$download_tmp" ]; then
+            download_ok=true
+            download_url="$download_url_fallback"
+        fi
+    fi
+
+    if [ "$download_ok" = false ]; then
+        log_warn "Direct download failed, trying accelerated GitHub mirror fallback..."
+        for mirror in "https://ghfast.top" "https://ghproxy.net"; do
+            mirror_path="download/${version_to_install}"
+            [ "$version_to_install" = "latest" ] && mirror_path="latest/download"
+            mirror_url="${mirror}/https://github.com/lyhbdw/komari-lite/releases/${mirror_path}/${file_name}"
+            log_info "Trying mirror: ${CYAN}$mirror_url${NC}"
+            if curl --fail --location --connect-timeout 10 \
+                -o "$download_tmp" "$mirror_url" && [ -s "$download_tmp" ]; then
+                download_ok=true
+                download_url="$mirror_url"
+                break
+            fi
+        done
+    fi
+
+    if [ "$download_ok" = false ]; then
         log_error "Download failed from the configured release source"
         exit 1
     fi
@@ -484,10 +514,16 @@ if [ -z "$sha256_expected" ]; then
     checksum_url="${download_url}.sha256"
     checksum_tmp=$(mktemp "${target_dir}/.agent-checksum.XXXXXX")
     if ! curl --fail --location --proto '=https' --tlsv1.2 --connect-timeout 15 \
-        -o "$checksum_tmp" "$checksum_url"; then
-        rm -f "$checksum_tmp"
-        log_error "No usable SHA256 checksum was provided; refusing to install an unverified binary"
-        exit 1
+        -o "$checksum_tmp" "$checksum_url" || [ ! -s "$checksum_tmp" ]; then
+        fallback_checksum="${download_url%.bin}.sha256"
+        if [ "$fallback_checksum" != "$checksum_url" ] && curl --fail --location --proto '=https' --tlsv1.2 --connect-timeout 15 \
+            -o "$checksum_tmp" "$fallback_checksum" && [ -s "$checksum_tmp" ]; then
+            :
+        else
+            rm -f "$checksum_tmp"
+            log_error "No usable SHA256 checksum was provided; refusing to install an unverified binary"
+            exit 1
+        fi
     fi
     sha256_expected=$(awk 'NF {print $1; exit}' "$checksum_tmp")
     rm -f "$checksum_tmp"

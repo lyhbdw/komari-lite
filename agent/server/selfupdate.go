@@ -241,6 +241,13 @@ func fetchSHA256WithRetry(base, targetVersion, asset string) (string, error) {
 // downloadBinaryWithRetry 在网络抖动下重试下载（约 8MB，弱网节点
 // 一次 TLS 握手超时很常见）。
 func downloadBinaryWithRetry(url string) ([]byte, error) {
+	// 优先尝试 .bin 后缀以命中 Cloudflare/CDN 边缘节点缓存
+	if !strings.HasSuffix(url, ".bin") {
+		binURL := url + ".bin"
+		if bin, err := downloadBinary(binURL); err == nil {
+			return bin, nil
+		}
+	}
 	var lastErr error
 	for attempt := 1; attempt <= 3; attempt++ {
 		bin, err := downloadBinary(url)
@@ -250,15 +257,23 @@ func downloadBinaryWithRetry(url string) ([]byte, error) {
 		lastErr = err
 		log.Printf("selfupdate: download attempt %d failed: %v", attempt, err)
 		if attempt < 3 {
-			time.Sleep(time.Duration(attempt) * 10 * time.Second)
+			time.Sleep(time.Duration(attempt) * 5 * time.Second)
 		}
 	}
 	return nil, lastErr
 }
 
-// fetchSHA256 从面板下载 <asset>.sha256 文件并解析出十六进制摘要。
+// fetchSHA256 从面板下载 sha256 文件并解析出十六进制摘要，优先尝试 .bin.sha256。
 func fetchSHA256(base, targetVersion, asset string) (string, error) {
-	url := fmt.Sprintf("%s/download/agent/%s/%s.sha256", base, targetVersion, asset)
+	binURL := fmt.Sprintf("%s/download/agent/%s/%s.bin.sha256", base, targetVersion, asset)
+	if sum, err := fetchSingleSHA256(binURL); err == nil {
+		return sum, nil
+	}
+	stdURL := fmt.Sprintf("%s/download/agent/%s/%s.sha256", base, targetVersion, asset)
+	return fetchSingleSHA256(stdURL)
+}
+
+func fetchSingleSHA256(url string) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
