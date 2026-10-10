@@ -10,6 +10,7 @@ import (
 	"github.com/lyhbdw/komari-lite/database/models"
 	"github.com/lyhbdw/komari-lite/internal/scheduler"
 	v2 "github.com/lyhbdw/komari-lite/protocol/v2"
+	logger "github.com/lyhbdw/komari-lite/utils/log"
 	agent_runtime "github.com/lyhbdw/komari-lite/web/agent"
 )
 
@@ -17,14 +18,14 @@ import (
 type PingTaskManager struct {
 	mu    sync.Mutex
 	tasks map[int][]models.PingTask
-	// gates 按 interval 防止同一调度组重叠执行：
-	// 每 tick 无上限 go executePingTask 会在任务慢于 interval 时堆积。
 	gates map[int]*atomic.Bool
+	// runners retain their overlap gate until the whole group completes.
+	runners map[int]func(context.Context)
 }
 
 var manager = &PingTaskManager{
-	tasks: make(map[int][]models.PingTask),
-	gates: make(map[int]*atomic.Bool),
+	tasks:   make(map[int][]models.PingTask),
+	runners: make(map[int]func(context.Context)),
 }
 
 // Reload 重载时间表
@@ -34,7 +35,10 @@ func (m *PingTaskManager) Reload(pingTasks []models.PingTask) error {
 
 	scheduler.RemovePrefix("ping:")
 	m.tasks = make(map[int][]models.PingTask)
-	m.gates = make(map[int]*atomic.Bool)
+	m.runners = make(map[int]func(context.Context))
+	if m.gates == nil {
+		m.gates = make(map[int]*atomic.Bool)
+	}
 
 	// 按Interval分组任务
 	taskGroups := make(map[int][]models.PingTask)
@@ -50,22 +54,48 @@ func (m *PingTaskManager) Reload(pingTasks []models.PingTask) error {
 		interval := interval
 		tasks := append([]models.PingTask(nil), tasks...)
 		m.tasks[interval] = tasks
-		gate := &atomic.Bool{}
-		m.gates[interval] = gate
-		if err := scheduler.AddContextFunc(fmt.Sprintf("ping:%d", interval), scheduler.Every(time.Duration(interval)*time.Second), false, func(ctx context.Context) {
-			// 上一轮还没跑完时跳过本轮 tick，避免任务堆积。
-			if !gate.CompareAndSwap(false, true) {
-				return
-			}
-			defer gate.Store(false)
-			for _, task := range tasks {
-				go executePingTask(ctx, task)
-			}
-		}); err != nil {
+		gate := m.gates[interval]
+		if gate == nil {
+			gate = &atomic.Bool{}
+			m.gates[interval] = gate
+		}
+		runner := newPingGroupRunnerWithGate(tasks, executePingTask, gate)
+		m.runners[interval] = runner
+		if err := scheduler.AddContextFunc(fmt.Sprintf("ping:%d", interval), scheduler.Every(time.Duration(interval)*time.Second), false, runner); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+func newPingGroupRunner(tasks []models.PingTask, execute func(context.Context, models.PingTask)) func(context.Context) {
+	return newPingGroupRunnerWithGate(tasks, execute, &atomic.Bool{})
+}
+
+func newPingGroupRunnerWithGate(tasks []models.PingTask, execute func(context.Context, models.PingTask), gate *atomic.Bool) func(context.Context) {
+	return func(ctx context.Context) {
+		if ctx.Err() != nil || !gate.CompareAndSwap(false, true) {
+			return
+		}
+		defer gate.Store(false)
+		var workers sync.WaitGroup
+		for _, task := range tasks {
+			if ctx.Err() != nil {
+				break
+			}
+			workers.Add(1)
+			go func(task models.PingTask) {
+				defer workers.Done()
+				defer func() {
+					if recovered := recover(); recovered != nil {
+						logger.Errorf("scheduler", "Ping task %d panic: %v", task.Id, recovered)
+					}
+				}()
+				execute(ctx, task)
+			}(task)
+		}
+		workers.Wait()
+	}
 }
 
 // executePingTask 执行单个PingTask

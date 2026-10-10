@@ -35,6 +35,13 @@ func GetConnectedClients() map[string]*connection.SafeConn {
 	return clientsCopy
 }
 
+// GetConnectedClient reads one connection without copying the fleet map.
+func GetConnectedClient(uuid string) *connection.SafeConn {
+	mu.RLock()
+	defer mu.RUnlock()
+	return connectedClients[uuid]
+}
+
 func SetConnectedClients(uuid string, conn *connection.SafeConn) {
 	mu.Lock()
 	defer mu.Unlock()
@@ -84,6 +91,7 @@ func DeleteClientConditionally(uuid string, connToRemove *connection.SafeConn) {
 		}
 	}
 }
+
 // DeleteConnectedClients 清除一个 uuid 的全部运行时在线状态
 // （admin 删除客户端时调用）：WS 连接条目、v2 标记、POST presence 与事件队列。
 func DeleteConnectedClients(uuid string) {
@@ -211,17 +219,30 @@ func GetRecentReports(uuid string) []v2.Report {
 		return []v2.Report{}
 	}
 	recentReports[uuid] = reports
-	return append([]v2.Report(nil), reports...)
+	result := make([]v2.Report, len(reports))
+	copy(result, reports)
+	for i := range result {
+		if reports[i].GPU != nil {
+			gpu := *reports[i].GPU
+			gpu.DetailedInfo = append([]v2.GPUDeviceInfo(nil), gpu.DetailedInfo...)
+			result[i].GPU = &gpu
+		}
+	}
+	return result
 }
 
+// reportsAfter compacts only the owned runtime slice. Read APIs copy the result
+// before returning it; clearing the retired tail releases nested report data.
 func reportsAfter(reports []v2.Report, cutoff time.Time) []v2.Report {
-	first := 0
-	for first < len(reports) && reports[first].UpdatedAt.Before(cutoff) {
-		first++
+	first := sort.Search(len(reports), func(i int) bool {
+		return !reports[i].UpdatedAt.Before(cutoff)
+	})
+	if first == 0 {
+		return reports
 	}
-	out := make([]v2.Report, len(reports)-first)
-	copy(out, reports[first:])
-	return out
+	remaining := copy(reports, reports[first:])
+	clear(reports[remaining:])
+	return reports[:remaining]
 }
 
 func DeleteLatestReport(uuid string) {

@@ -2,9 +2,10 @@ package jsonrpc
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"math"
-	"sort"
+	"strconv"
 	"time"
 
 	"github.com/lyhbdw/komari-lite/database"
@@ -12,153 +13,187 @@ import (
 	"github.com/lyhbdw/komari-lite/database/dbcore"
 	"github.com/lyhbdw/komari-lite/database/models"
 	"github.com/lyhbdw/komari-lite/database/tasks"
+	"github.com/lyhbdw/komari-lite/internal/metricstore"
+	"github.com/lyhbdw/komari-lite/pkg/metric"
 	"github.com/lyhbdw/komari-lite/pkg/rpc"
 	v2 "github.com/lyhbdw/komari-lite/protocol/v2"
 	"github.com/lyhbdw/komari-lite/utils"
 	agent_runtime "github.com/lyhbdw/komari-lite/web/agent"
 
 	"github.com/lyhbdw/komari-lite/utils/ttlcache"
+	"golang.org/x/sync/singleflight"
 )
 
-// pingstats:<uuid>
-var pingStatsCache = ttlcache.New(1 * time.Minute)
+// Ping summaries are sampled once per minute, not recomputed on every status
+// tick. Task metadata participates in the key so edits revoke stale assignments.
+var pingStatsCache = ttlcache.New(time.Minute)
+var pingSummaryLoads singleflight.Group
 
 type pingStat struct {
-	Name   string  `json:"name"`
-	Latest int     `json:"latest"`
-	Avg    int     `json:"avg"`
-	Tail   float64 `json:"tail"` // (P99-P50)/P50
-	Loss   float64 `json:"loss"` // 丢包率 %
-	Min    int     `json:"min"`
-	Max    int     `json:"max"`
+	Name        string  `json:"name"`
+	Weight      int     `json:"weight"`
+	Latest      int     `json:"latest"`
+	Avg         int     `json:"avg"`
+	Tail        float64 `json:"tail"`
+	Loss        float64 `json:"loss"`
+	Min         int     `json:"min"`
+	Max         int     `json:"max"`
+	Approximate bool    `json:"approximate,omitempty"`
 }
 
-// getPingStatsForNode 计算并缓存节点最近 1 小时 ping 统计
+func (s pingStat) MarshalJSON() ([]byte, error) {
+	type plain pingStat
+	var minimum *int
+	if s.Min >= 0 {
+		minimum = &s.Min
+	}
+	return json.Marshal(struct {
+		plain
+		Minimum *int `json:"min"`
+	}{plain: plain(s), Minimum: minimum})
+}
+
+type cachedPingSummary struct {
+	Fingerprint string
+	Stats       map[string]pingStat
+}
+
+// getPingStatsForNode keeps the old internal helper for compatibility tests.
 func getPingStatsForNode(uuid string, pingTasks []models.PingTask) map[string]pingStat {
-	if uuid == "" {
+	return getPingStatsForNodeContext(context.Background(), uuid, pingTasks)
+}
+
+func getPingStatsForNodeContext(ctx context.Context, uuid string, pingTasks []models.PingTask) map[string]pingStat {
+	if ctx.Err() != nil {
 		return map[string]pingStat{}
 	}
-	key := fmt.Sprintf("pingstats:%s", uuid)
-	if v, ok := pingStatsCache.Get(key); ok {
-		if m, ok2 := v.(map[string]pingStat); ok2 {
-			return m
+	assigned := make(map[string]models.PingTask)
+	for _, task := range pingTasks {
+		if task.AppliesToClient(uuid) {
+			// Membership was already checked. Fleet-wide client lists do not
+			// affect this node's summary and must not inflate every cache key.
+			task.Clients = nil
+			assigned[strconv.FormatUint(uint64(task.Id), 10)] = task
 		}
 	}
-	// 筛选属于该节点的任务
-	assigned := make([]models.PingTask, 0, 4)
-	for _, t := range pingTasks {
-		if t.AppliesToClient(uuid) {
-			assigned = append(assigned, t)
-		}
+	if uuid == "" || len(assigned) == 0 {
+		return map[string]pingStat{}
 	}
-	if len(assigned) == 0 {
-		empty := map[string]pingStat{}
-		pingStatsCache.Set(key, empty)
-		return empty
-	}
-	end := time.Now().UTC()
-	start := end.Add(-1 * time.Hour)
-	recs, err := tasks.GetPingRecords(uuid, -1, start, end)
-	if err != nil || len(recs) == 0 {
-		empty := map[string]pingStat{}
-		pingStatsCache.Set(key, empty)
-		return empty
-	}
-	grouped := make(map[uint][]models.PingRecord)
-	for _, r := range recs {
-		for _, t := range assigned {
-			if r.TaskId == t.Id {
-				grouped[r.TaskId] = append(grouped[r.TaskId], r)
-				break
+	fingerprint, _ := json.Marshal(assigned)
+	cacheHit := func() (map[string]pingStat, bool) {
+		if value, ok := pingStatsCache.Get(uuid); ok {
+			cached := value.(cachedPingSummary)
+			if cached.Fingerprint == string(fingerprint) {
+				return cached.Stats, true
 			}
 		}
+		return nil, false
 	}
-	result := make(map[string]pingStat, len(grouped))
-	for _, t := range assigned {
-		records := grouped[t.Id]
-		if len(records) == 0 {
+	if cached, ok := cacheHit(); ok {
+		return cached
+	}
+	// Flight keys include the policy, while persistent cache keys are only UUIDs:
+	// repeated task edits replace one entry rather than retaining every version.
+	resultCh := pingSummaryLoads.DoChan(uuid+":"+string(fingerprint), func() (any, error) {
+		if cached, ok := cacheHit(); ok {
+			return cached, nil
+		}
+		queryCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		stats, err := loadNodePingSummary(queryCtx, uuid, assigned)
+		if err == nil {
+			pingStatsCache.Set(uuid, cachedPingSummary{Fingerprint: string(fingerprint), Stats: stats})
+		}
+		return stats, err
+	})
+	select {
+	case <-ctx.Done():
+		return map[string]pingStat{}
+	case result := <-resultCh:
+		if result.Err != nil {
+			return map[string]pingStat{}
+		}
+		return result.Val.(map[string]pingStat)
+	}
+}
+
+func loadNodePingSummary(ctx context.Context, uuid string, assigned map[string]models.PingTask) (map[string]pingStat, error) {
+	store := metricstore.GetStore()
+	if store == nil {
+		return nil, fmt.Errorf("metric store unavailable")
+	}
+	now := time.Now().UTC()
+	start := now.Add(-time.Hour)
+	interval := store.CompatibleSeriesInterval(start, now, time.Minute)
+	loaded, err := store.SeriesBatch(ctx, metric.BatchSeriesQuery{
+		Specs: []metric.BatchSeriesSpec{
+			{MetricName: metricstore.MetricPingLatency, Aggregations: []metric.Aggregation{metric.AggAvg, metric.AggMin, metric.AggMax, metric.AggLast, metric.AggP50, metric.AggP99}, Interval: interval, PreserveSeries: true},
+			{MetricName: metricstore.MetricPingLoss, Aggregations: []metric.Aggregation{metric.AggAvg}, Interval: interval, PreserveSeries: true},
+		},
+		EntityIDs: []string{uuid}, Start: start, End: now, Order: metric.OrderAsc,
+	}, now)
+	if err != nil {
+		return nil, err
+	}
+	latency := loaded.Values[metricstore.MetricPingLatency]
+	byTask := func(points []metric.AggregatePoint) map[string][]metric.AggregatePoint {
+		out := make(map[string][]metric.AggregatePoint)
+		for _, point := range points {
+			taskID := point.Tags["task_id"]
+			if _, ok := assigned[taskID]; ok {
+				out[taskID] = append(out[taskID], point)
+			}
+		}
+		return out
+	}
+	avg, minimum, maximum := byTask(latency[metric.AggAvg]), byTask(latency[metric.AggMin]), byTask(latency[metric.AggMax])
+	last, p50, p99 := byTask(latency[metric.AggLast]), byTask(latency[metric.AggP50]), byTask(latency[metric.AggP99])
+	loss := byTask(loaded.Values[metricstore.MetricPingLoss][metric.AggAvg])
+	result := make(map[string]pingStat)
+	for taskID, task := range assigned {
+		var latencySum, lossCount float64
+		total := 0
+		for _, point := range avg[taskID] {
+			total += point.Count
+			latencySum += point.Value * float64(point.Count)
+		}
+		for _, point := range loss[taskID] {
+			lossCount += math.Max(0, math.Min(1, point.Value)) * float64(point.Count)
+		}
+		if total == 0 {
 			continue
 		}
-		latest := -1
-		var latestTs time.Time
-		values := make([]int, 0, len(records))
-		sum := 0
-		valid := 0
-		total := 0
-		lossCount := 0
-		minLat := 0
-		maxLat := 0
-		for _, r := range records {
-			total++
-			if r.Value < 0 { // 丢包
-				lossCount++
-				continue
-			}
-			values = append(values, r.Value)
-			sum += r.Value
-			valid++
-			if minLat == 0 || r.Value < minLat {
-				minLat = r.Value
-			}
-			if r.Value > maxLat {
-				maxLat = r.Value
-			}
-			ts := r.Time
-			if latestTs.IsZero() || ts.After(latestTs) {
-				latestTs = ts
-				latest = r.Value
-			}
-		}
-		avg := 0
+		lossCount = math.Min(float64(total), lossCount)
+		valid := float64(total) - lossCount
+		stat := pingStat{Name: task.Name, Weight: task.Weight, Latest: -1, Min: -1, Loss: lossCount / float64(total) * 100}
 		if valid > 0 {
-			avg = sum / valid
+			// Every failed latency sample is -1 and has a matching loss=1.
+			// Undo its contribution before dividing by the successful count.
+			stat.Avg = int(math.Round((latencySum + lossCount) / valid))
 		}
-		p50, p99 := 0, 0
-		if len(values) > 0 {
-			sort.Ints(values)
-			percentile := func(vals []int, pct float64) int {
-				if len(vals) == 0 {
-					return 0
-				}
-				if pct <= 0 {
-					return vals[0]
-				}
-				if pct >= 1 {
-					return vals[len(vals)-1]
-				}
-				pos := (float64(len(vals) - 1)) * pct
-				lo := int(math.Floor(pos))
-				hi := int(math.Ceil(pos))
-				if lo == hi {
-					return vals[lo]
-				}
-				frac := pos - float64(lo)
-				v := float64(vals[lo]) + (float64(vals[hi])-float64(vals[lo]))*frac
-				return int(math.Round(v))
+		if value := positiveAggregateMin(minimum[taskID]); value != nil {
+			stat.Min = int(math.Round(*value))
+		}
+		if value := positiveAggregateMax(maximum[taskID]); value != nil {
+			stat.Max = int(math.Round(*value))
+		}
+		var latest time.Time
+		for _, point := range last[taskID] {
+			if latest.IsZero() || point.Bucket.After(latest) {
+				latest, stat.Latest = point.Bucket, int(math.Round(point.Value))
 			}
-			p50 = percentile(values, 0.50)
-			p99 = percentile(values, 0.99)
 		}
-		tail := 0.0
-		if p50 > 0 && p99 >= p50 {
-			tail = float64(p99-p50) / float64(p50)
+		median, _ := weightedAggregateValue(p50[taskID], true)
+		upper, _ := weightedAggregateValue(p99[taskID], true)
+		if median != nil && upper != nil && *median > 0 && *upper >= *median {
+			stat.Tail = (*upper - *median) / *median
 		}
-		lossRate := 0.0
-		if total > 0 {
-			lossRate = float64(lossCount) / float64(total) * 100
-		}
-		result[fmt.Sprintf("%d", t.Id)] = pingStat{
-			Name:   t.Name,
-			Latest: latest,
-			Avg:    avg,
-			Tail:   tail,
-			Loss:   lossRate,
-			Min:    minLat,
-			Max:    maxLat,
-		}
+		// Percentiles merged from buckets are estimates; mixed-loss minima
+		// cannot recover a successful minimum without the raw observations.
+		stat.Approximate = true
+		result[taskID] = stat
 	}
-	pingStatsCache.Set(key, result)
-	return result
+	return result, nil
 }
 
 func init() {
@@ -349,7 +384,7 @@ func getNodesLatestStatus(ctx context.Context, req *rpc.JsonRpcRequest) (any, *r
 		if rep == nil {
 			return
 		}
-		stats := getPingStatsForNode(uuid, pingTasks)
+		stats := getPingStatsForNodeContext(ctx, uuid, pingTasks)
 		rl := recordLike{
 			Client:         uuid,
 			Time:           rep.UpdatedAt,

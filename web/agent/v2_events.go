@@ -53,7 +53,7 @@ func DeleteV2EventQueue(uuid string) {
 }
 
 func DispatchPing(uuid string, params v2.PingParams) bool {
-	if conn := GetConnectedClients()[uuid]; conn != nil {
+	if conn := GetConnectedClient(uuid); conn != nil {
 		payload := v2.Request{JSONRPC: v2.Version, Method: v2.MethodAgentPing, Params: params}
 		if err := conn.WriteJSON(payload); err == nil {
 			return true
@@ -106,7 +106,7 @@ func newV2EventID() string {
 // 直写是必要的：agent 的 pull 循环只在 POST fallback 模式下运行，
 // WS 在线节点不会主动 pull，只入队会让事件躺到重连或 TTL 过期。
 func DispatchV2Update(uuid string, params v2.UpdateParams) bool {
-	if conn := GetConnectedClients()[uuid]; conn != nil {
+	if conn := GetConnectedClient(uuid); conn != nil {
 		payload := v2.Request{JSONRPC: v2.Version, Method: v2.MethodAgentUpdate, Params: params}
 		if err := conn.WriteJSON(payload); err == nil {
 			return true
