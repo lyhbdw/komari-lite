@@ -68,12 +68,22 @@ func appendPlaceholders[T ~string](d dialect, args *[]any, values []T) []string 
 	return placeholders
 }
 
+// Small selections use the normalized UNIQUE(series_id, resolution_id,
+// label_id, bucket_milli) index, not a new write-side index. SQLite names this
+// table's sole UNIQUE constraint sqlite_autoindex_<table>_1; schema tests check
+// that contract. Broad queries scan the selected time window once instead.
+const narrowRollupSeriesLimit = 16
+
 func (d sqliteDialect) renderRollupRead(tables tables, indexName string, plan rollupReadPlan) renderedSQL {
 	seriesJSON, _ := json.Marshal(plan.SeriesIDs)
 	args := []any{plan.ResolutionID, plan.StartMilli, plan.EndMilli, string(seriesJSON)}
+	indexHint := " INDEXED BY " + indexName
+	if len(plan.SeriesIDs) <= narrowRollupSeriesLimit {
+		indexHint = " INDEXED BY sqlite_autoindex_" + tables.rollups + "_1"
+	}
 	return renderedSQL{
-		Query: fmt.Sprintf("SELECT %s FROM %s r INDEXED BY %s WHERE r.resolution_id = %s AND r.bucket_milli >= %s AND r.bucket_milli <= %s AND r.series_id IN (SELECT CAST(value AS INTEGER) FROM json_each(%s)) ORDER BY r.bucket_milli ASC, r.series_id ASC, r.label_id ASC",
-			rollupReadColumns(plan.Fields), tables.rollups, indexName,
+		Query: fmt.Sprintf("SELECT %s FROM %s r%s WHERE r.resolution_id = %s AND r.bucket_milli >= %s AND r.bucket_milli <= %s AND r.series_id IN (SELECT CAST(value AS INTEGER) FROM json_each(%s)) ORDER BY r.bucket_milli ASC, r.series_id ASC, r.label_id ASC",
+			rollupReadColumns(plan.Fields), tables.rollups, indexHint,
 			d.placeholder(1), d.placeholder(2), d.placeholder(3), d.placeholder(4)),
 		Args: args,
 	}

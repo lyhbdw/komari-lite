@@ -53,14 +53,20 @@ func createMetricDefinitions(ctx context.Context, s *metric.Store) error {
 
 // EnsureBuiltinMetricDefinitions registers definitions for the server's
 // built-in report and ping writers before a standalone Store receives points.
+// Migration only fills missing definitions; it must not change an existing
+// explicit profile or per-metric policy. Missing definitions use legacy 90d.
 func EnsureBuiltinMetricDefinitions(ctx context.Context, s *metric.Store) error {
-	return createMetricDefinitions(ctx, s)
+	return createBuiltinMetricDefinitions(ctx, s, defaultBuiltinMetricRetentionDays, true)
 }
 
 func createMetricDefinitionsWithDefaultRetention(ctx context.Context, s *metric.Store, defaultRetentionDays int) error {
 	if defaultRetentionDays < defaultBuiltinMetricRetentionDays {
 		defaultRetentionDays = defaultBuiltinMetricRetentionDays
 	}
+	return createBuiltinMetricDefinitions(ctx, s, defaultRetentionDays, false)
+}
+
+func createBuiltinMetricDefinitions(ctx context.Context, s *metric.Store, defaultRetentionDays int, preserveRetention bool) error {
 	definitions := []metric.Definition{
 		{Name: MetricCPU, Type: metric.TypeGauge, Unit: "%", Description: "CPU usage percentage", RetentionDays: defaultRetentionDays},
 		{Name: MetricGPU, Type: metric.TypeGauge, Unit: "%", Description: "GPU usage percentage", RetentionDays: defaultRetentionDays},
@@ -89,6 +95,9 @@ func createMetricDefinitionsWithDefaultRetention(ctx context.Context, s *metric.
 		_, err := s.GetMetric(ctx, def.Name)
 		if err != nil && !errors.Is(err, metric.ErrNotFound) {
 			return fmt.Errorf("failed to get metric %s: %w", def.Name, err)
+		}
+		if preserveRetention && err == nil {
+			continue
 		}
 		if err := s.UpsertMetric(ctx, def); err != nil {
 			return fmt.Errorf("failed to create metric %s: %w", def.Name, err)

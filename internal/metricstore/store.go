@@ -39,7 +39,12 @@ func openStoreWithDefaultRetention(ctx context.Context, cfg *MetricStoreConfig, 
 		return nil, fmt.Errorf("failed to open metric store: %w", err)
 	}
 
-	if err := createMetricDefinitionsWithDefaultRetention(ctx, s, defaultRetentionDays); err != nil {
+	retentionDays, err := builtinRetentionFromConfig(cfg, defaultRetentionDays)
+	if err != nil {
+		_ = s.Close()
+		return nil, err
+	}
+	if err := createBuiltinMetricDefinitions(ctx, s, retentionDays, false); err != nil {
 		s.Close()
 		return nil, fmt.Errorf("failed to create metric definitions: %w", err)
 	}

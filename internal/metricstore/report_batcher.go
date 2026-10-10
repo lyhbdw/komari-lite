@@ -72,6 +72,9 @@ type reportBatchWorker struct {
 	requests  chan reportBatchRequest
 	done      chan struct{}
 	stopping  bool
+	// Budget includes queued, pending and in-flight items; drain does not free it.
+	reportsOutstanding int
+	pingsOutstanding   int
 }
 
 // StartReportBatcher starts the shared report writer. Exact samples are kept in
@@ -108,11 +111,17 @@ func StopReportBatcher(ctx context.Context) error {
 	request := reportBatchRequest{ctx: ctx, done: make(chan error, 1), stop: true}
 	select {
 	case worker.requests <- request:
+	case <-worker.done:
+		return nil
 	case <-ctx.Done():
 		return ctx.Err()
 	}
 	select {
 	case err := <-request.done:
+		// Failed shutdown flushes retain the worker and pending data for retry.
+		if err != nil {
+			return err
+		}
 		<-worker.done
 		reportBatcherMu.Lock()
 		if reportBatcher == worker {
@@ -198,8 +207,12 @@ func (w *reportBatchWorker) enqueue(ctx context.Context, report v2.Report) error
 	if err := ctx.Err(); err != nil {
 		return err
 	}
+	if w.reportsOutstanding >= cap(w.queue) {
+		return ErrReportBatchQueueFull
+	}
 	select {
 	case w.queue <- report:
+		w.reportsOutstanding++
 		return nil
 	default:
 		return ErrReportBatchQueueFull
@@ -217,15 +230,15 @@ func (w *reportBatchWorker) run() {
 	for {
 		select {
 		case request := <-w.requests:
-			pending = append(pending, drainReportQueue(w.queue, reportBatchQueueSize)...)
-			pendingPings = append(pendingPings, drainPingQueue(w.pingQueue, reportBatchQueueSize)...)
 			err := errors.Join(
-				writePendingReports(request.ctx, &pending),
-				writePendingPingRecords(request.ctx, &pendingPings),
+				w.flushReports(request.ctx, &pending),
+				w.flushPings(request.ctx, &pendingPings),
 			)
 			if request.stop {
 				if err != nil {
 					logger.Errorf("metricstore", "failed to flush metric report batch during shutdown: %v", err)
+					request.done <- err
+					continue
 				}
 				close(w.done)
 				request.done <- err
@@ -235,12 +248,10 @@ func (w *reportBatchWorker) run() {
 		case <-pruneTicker.C:
 			pruneReportTrafficStates(time.Now())
 		case <-ticker.C:
-			pendingPings = append(pendingPings, drainPingQueue(w.pingQueue, reportBatchQueueSize)...)
-			if err := writePendingPingRecords(context.Background(), &pendingPings); err != nil {
+			if err := w.flushPings(context.Background(), &pendingPings); err != nil {
 				logger.Errorf("metricstore", "failed to flush ping batch: %v", err)
 			}
-			pending = append(pending, drainReportQueue(w.queue, reportBatchQueueSize)...)
-			if err := writePendingReports(context.Background(), &pending); err != nil {
+			if err := w.flushReports(context.Background(), &pending); err != nil {
 				logger.Errorf("metricstore", "failed to flush metric report batch: %v", err)
 			}
 		}
@@ -256,12 +267,48 @@ func (w *reportBatchWorker) enqueuePing(ctx context.Context, record models.PingR
 	if err := ctx.Err(); err != nil {
 		return err
 	}
+	if w.pingsOutstanding >= cap(w.pingQueue) {
+		return ErrPingBatchQueueFull
+	}
 	select {
 	case w.pingQueue <- record:
+		w.pingsOutstanding++
 		return nil
 	default:
 		return ErrPingBatchQueueFull
 	}
+}
+
+// Retry pending data before draining again. Only successful chunks release
+// budget; errors retain data without freeing channel capacity for new items.
+func (w *reportBatchWorker) flushReports(ctx context.Context, pending *[]v2.Report) error {
+	for pass := 0; pass < 2; pass++ {
+		before := len(*pending)
+		err := writePendingReports(ctx, pending)
+		w.mu.Lock()
+		w.reportsOutstanding -= before - len(*pending)
+		w.mu.Unlock()
+		if err != nil || pass == 1 {
+			return err
+		}
+		*pending = drainReportQueue(w.queue, reportBatchQueueSize)
+	}
+	return nil
+}
+
+func (w *reportBatchWorker) flushPings(ctx context.Context, pending *[]models.PingRecord) error {
+	for pass := 0; pass < 2; pass++ {
+		before := len(*pending)
+		err := writePendingPingRecords(ctx, pending)
+		w.mu.Lock()
+		w.pingsOutstanding -= before - len(*pending)
+		w.mu.Unlock()
+		if err != nil || pass == 1 {
+			return err
+		}
+		*pending = drainPingQueue(w.pingQueue, reportBatchQueueSize)
+	}
+	return nil
 }
 
 // pruneReportTrafficStates drops traffic-counter states for agents that have
@@ -344,12 +391,10 @@ func writePendingReports(ctx context.Context, pending *[]v2.Report) error {
 		if err != nil {
 			return err
 		}
+		clear((*pending)[:batchSize])
 		*pending = (*pending)[batchSize:]
 	}
-	// 当所有待落盘指标已写完时，重置底层切片容量，主动协助 Go GC 回收长生命周期的切片堆内存
-	if len(*pending) == 0 && cap(*pending) > 256 {
-		*pending = nil
-	}
+	*pending = nil
 	return nil
 }
 
@@ -365,12 +410,10 @@ func writePendingPingRecords(ctx context.Context, pending *[]models.PingRecord) 
 		if err != nil {
 			return err
 		}
+		clear((*pending)[:batchSize])
 		*pending = (*pending)[batchSize:]
 	}
-	// 当所有待落盘探测记录已写完时，重置底层切片容量，主动协助 Go GC 回收堆内存
-	if len(*pending) == 0 && cap(*pending) > 256 {
-		*pending = nil
-	}
+	*pending = nil
 	return nil
 }
 
@@ -417,6 +460,11 @@ func writeReportBatch(ctx context.Context, reports []v2.Report) ([]v2.Report, er
 				values.hasDown = hasDown
 			}
 			values.initialized = true
+			// Cache only the restored baseline on failure, not tentative counters
+			// from this batch. Retrying must use the same timestamp and deltas.
+			state.mu.Lock()
+			state.reportTrafficValues = values
+			state.mu.Unlock()
 		}
 
 		if !values.timestamp.IsZero() && !report.UpdatedAt.After(values.timestamp) {
@@ -441,17 +489,17 @@ func writeReportBatch(ctx context.Context, reports []v2.Report) ([]v2.Report, er
 		prepared[i] = report
 	}
 
-	// Persist the restored per-report traffic state even if the write below
-	// fails, so a slow or failing database does not re-issue the previous-
-	// counter queries on every batch.
+	if err := s.WriteBatch(ctx, points); err != nil {
+		return nil, err
+	}
+	// Advance receive timestamps and counters only after acceptance succeeds.
+	// WriteBatch may already retain raw/hot points on a persistence failure;
+	// retrying the same point identity replaces them instead of adding samples.
 	for state, values := range pendingStates {
 		state.mu.Lock()
 		state.reportTrafficValues = values
 		state.mu.Unlock()
 	}
 
-	if err := s.WriteBatch(ctx, points); err != nil {
-		return nil, err
-	}
 	return prepared, nil
 }

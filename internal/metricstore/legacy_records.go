@@ -27,21 +27,7 @@ func GetRecordsByTime(ctx context.Context, start, end time.Time) ([]models.Recor
 		return nil, fmt.Errorf("metric store not enabled")
 	}
 
-	interval := recordSeriesInterval(s, start, end, time.Now().UTC())
-	entityIDs, err := listRecordEntityIDs(ctx, s, start, end, interval)
-	if err != nil {
-		return nil, err
-	}
-	var records []models.Record
-	for _, entityID := range entityIDs {
-		items, err := getRecordsByClientAndTimeFromSeries(ctx, s, entityID, start, end)
-		if err != nil {
-			return nil, err
-		}
-		records = append(records, items...)
-	}
-	sortRecords(records)
-	return records, nil
+	return getRecordsByClientAndTimeFromSeries(ctx, s, "", start, end)
 }
 
 type recordSeriesKey struct {
@@ -54,22 +40,27 @@ func getRecordsByClientAndTimeFromSeries(ctx context.Context, s *metric.Store, c
 	interval := recordSeriesInterval(s, start, end, now)
 	recordMap := make(map[recordSeriesKey]*models.Record)
 
+	specs := make([]metric.BatchSeriesSpec, 0, len(loadRecordMetricNames))
 	for _, metricName := range loadRecordMetricNames {
-		points, err := s.Series(ctx, metric.AggregateQuery{
-			Query: metric.Query{
-				MetricName: metricName,
-				EntityID:   clientUUID,
-				Start:      start,
-				End:        end,
-				Order:      metric.OrderAsc,
-			},
-			Aggregation: recordMetricAggregation(metricName),
-			Interval:    interval,
-		}, now)
-		if err != nil {
-			return nil, fmt.Errorf("failed to query metric %s: %w", metricName, err)
-		}
-		for _, point := range points {
+		specs = append(specs, metric.BatchSeriesSpec{
+			MetricName:     metricName,
+			Aggregations:   []metric.Aggregation{recordMetricAggregation(metricName)},
+			Interval:       interval,
+			PreserveSeries: true, // Never merge different nodes (or GPU tag series).
+		})
+	}
+	var entityIDs []string
+	if clientUUID != "" {
+		entityIDs = []string{clientUUID}
+	}
+	result, err := s.SeriesBatch(ctx, metric.BatchSeriesQuery{
+		Specs: specs, EntityIDs: entityIDs, Start: start, End: end, Order: metric.OrderAsc,
+	}, now)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query record metrics: %w", err)
+	}
+	for _, metricName := range loadRecordMetricNames {
+		for _, point := range result.Values[metricName][recordMetricAggregation(metricName)] {
 			entityID := point.EntityID
 			if entityID == "" {
 				entityID = clientUUID
@@ -122,29 +113,6 @@ func recordDownsampleInterval(rangeDuration time.Duration, maxPoints int) time.D
 		return time.Second
 	}
 	return metric.FloorStandardInterval(interval)
-}
-
-func listRecordEntityIDs(ctx context.Context, s *metric.Store, start, end time.Time, interval time.Duration) ([]string, error) {
-	seen := make(map[string]struct{})
-	for _, metricName := range loadRecordMetricNames {
-		ids, err := s.EntityIDs(ctx, metric.Query{
-			MetricName: metricName,
-			Start:      start.Add(-interval),
-			End:        end,
-		})
-		if err != nil {
-			return nil, err
-		}
-		for _, id := range ids {
-			seen[id] = struct{}{}
-		}
-	}
-	out := make([]string, 0, len(seen))
-	for id := range seen {
-		out = append(out, id)
-	}
-	sort.Strings(out)
-	return out, nil
 }
 
 func applyRecordMetricValue(rec *models.Record, metricName string, value float64) {

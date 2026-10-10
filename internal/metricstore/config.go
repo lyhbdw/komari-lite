@@ -31,6 +31,11 @@ type MetricStoreConfig struct {
 	TablePrefix  string `json:"metric_table_prefix" default:"metric_"`     // 表名前缀
 	MaxOpenConns int    `json:"metric_max_open_conns" default:"25"`        // 最大连接数
 	MaxIdleConns int    `json:"metric_max_idle_conns" default:"5"`         // 最大空闲连接数
+	// RetentionProfile is opt-in. Empty/legacy preserves the old scalar settings
+	// and 90-day definitions. Lightweight overrides ALL legacy scalar settings
+	// (including defaults persisted by older releases) with 3h/24h/7d/30d and
+	// 30-day built-in definitions. It never runs cleanup while opening a store.
+	RetentionProfile string `json:"metric_retention_profile"`
 	// RollupMinuteRetentionMinutes controls the persisted 1-minute bucket window.
 	RollupMinuteRetentionMinutes int `json:"metric_rollup_minute_retention_minutes" default:"600"`
 	// RollupFiveMinuteRetentionMinutes controls the persisted 5-minute bucket window.
@@ -94,6 +99,14 @@ func rollupPolicyFromConfig(cfg *MetricStoreConfig) (metric.RollupPolicy, error)
 		return metric.RollupPolicy{}, fmt.Errorf("metric store config is nil")
 	}
 
+	profile, err := retentionProfileFromConfig(cfg)
+	if err != nil {
+		return metric.RollupPolicy{}, err
+	}
+	if profile == RetentionProfileLightweight {
+		return rollupPolicyFromDurations(3*time.Hour, 24*time.Hour, 7*24*time.Hour, 30*24*time.Hour), nil
+	}
+
 	minuteRetention := cfg.RollupMinuteRetentionMinutes
 	fiveMinuteRetention := cfg.RollupFiveMinuteRetentionMinutes
 	hourRetention := cfg.RollupHourRetentionHours
@@ -141,6 +154,39 @@ func rollupPolicyFromConfig(cfg *MetricStoreConfig) (metric.RollupPolicy, error)
 	return policy, nil
 }
 
+const (
+	RetentionProfileLegacy      = "legacy"
+	RetentionProfileLightweight = "lightweight"
+)
+
+func retentionProfileFromConfig(cfg *MetricStoreConfig) (string, error) {
+	if cfg == nil {
+		return "", fmt.Errorf("metric store config is nil")
+	}
+	switch cfg.RetentionProfile {
+	case "", RetentionProfileLegacy:
+		return RetentionProfileLegacy, nil
+	case RetentionProfileLightweight:
+		return RetentionProfileLightweight, nil
+	default:
+		return "", fmt.Errorf("invalid metric retention profile %q (want legacy or lightweight)", cfg.RetentionProfile)
+	}
+}
+
+func builtinRetentionFromConfig(cfg *MetricStoreConfig, legacyDays int) (int, error) {
+	profile, err := retentionProfileFromConfig(cfg)
+	if err != nil {
+		return 0, err
+	}
+	if profile == RetentionProfileLightweight {
+		return 30, nil
+	}
+	if legacyDays < defaultBuiltinMetricRetentionDays {
+		legacyDays = defaultBuiltinMetricRetentionDays
+	}
+	return legacyDays, nil
+}
+
 func rollupPolicyFromDurations(minuteRetention, fiveMinuteRetention, hourRetention, dayRetention time.Duration) metric.RollupPolicy {
 	return metric.RollupPolicy{
 		RawRetention: DefaultRollupRawRetention,
@@ -149,7 +195,7 @@ func rollupPolicyFromDurations(minuteRetention, fiveMinuteRetention, hourRetenti
 			{Interval: 5 * time.Minute, Retention: fiveMinuteRetention},
 			{Interval: time.Hour, Retention: hourRetention},
 			// Daily buckets form the terminal tier. They remain available until
-			// the tier retention (default 2 years) removes them.
+			// metric definition removes them (90 days by default).
 			{Interval: 24 * time.Hour, Retention: dayRetention},
 		},
 		Compression: 30,

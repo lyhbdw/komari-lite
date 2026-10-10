@@ -48,6 +48,7 @@ func writePingRecords(ctx context.Context, records []models.PingRecord) error {
 		loss := 0.0
 		if rec.Value < 0 {
 			loss = 1
+			rec.Value = -1 // Canonical failure sentinel for loss-aware rollups.
 		}
 		points = append(points,
 			metric.Point{
