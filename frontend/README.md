@@ -42,6 +42,6 @@ npm run dev
 npm run build
 ```
 
-## 主题相关
+## 构建与部署
 
-固定使用内置 Emerald 主题，不提供主题管理和配置修改。内置前端与后端统一发布；构建和嵌入步骤见仓库根目录 `README.md` 以及 `web/public/readme.md`。
+构建和嵌入步骤见仓库根目录 `README.md` 与 `./scripts/build-admin.sh`。前端产物与后端统一发布。

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -102,18 +103,25 @@ func GetPublicInfo() (map[string]interface{}, error) {
 	}, nil
 }
 
+var (
+	defaultThemeItemsCache []models.ManagedThemeConfigurationItem
+	defaultThemeItemsOnce  sync.Once
+)
+
 func themeConfigurationItems(short string) []models.ManagedThemeConfigurationItem {
 	var manifest models.Theme
 	if short == public.DefaultTheme {
-		data, err := public.PublicFS.ReadFile("defaultTheme/komari-theme.json")
-		if err != nil || json.Unmarshal(data, &manifest) != nil {
-			return nil
-		}
-	} else {
-		data, err := os.ReadFile(filepath.Join("./data/theme", short, "komari-theme.json"))
-		if err != nil || json.Unmarshal(data, &manifest) != nil {
-			return nil
-		}
+		defaultThemeItemsOnce.Do(func() {
+			data, err := public.PublicFS.ReadFile("defaultTheme/komari-theme.json")
+			if err == nil && json.Unmarshal(data, &manifest) == nil {
+				defaultThemeItemsCache = managedconfig.Items(manifest.Configuration)
+			}
+		})
+		return defaultThemeItemsCache
+	}
+	data, err := os.ReadFile(filepath.Join("./data/theme", short, "komari-theme.json"))
+	if err != nil || json.Unmarshal(data, &manifest) != nil {
+		return nil
 	}
 	return managedconfig.Items(manifest.Configuration)
 }

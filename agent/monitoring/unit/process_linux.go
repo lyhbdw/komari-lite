@@ -6,11 +6,33 @@ package monitoring
 import (
 	"os"
 	"strconv"
+	"sync"
+	"time"
+)
+
+var (
+	procCountMu       sync.RWMutex
+	cachedProcCount   int
+	procCountCachedAt time.Time
 )
 
 // ProcessCount returns the number of running processes
 func ProcessCount() (count int) {
-	return processCountLinux()
+	procCountMu.RLock()
+	if cachedProcCount > 0 && time.Since(procCountCachedAt) < 9*time.Second {
+		c := cachedProcCount
+		procCountMu.RUnlock()
+		return c
+	}
+	procCountMu.RUnlock()
+
+	c := processCountLinux()
+
+	procCountMu.Lock()
+	cachedProcCount = c
+	procCountCachedAt = time.Now()
+	procCountMu.Unlock()
+	return c
 }
 
 // processCountLinux counts processes by reading /proc directory

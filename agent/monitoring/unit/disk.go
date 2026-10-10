@@ -10,9 +10,11 @@ import (
 )
 
 var (
-	partitionsCacheMu  sync.RWMutex
+	partitionsCacheMu   sync.RWMutex
 	cachedPhysicalParts []disk.PartitionStat
-	partitionsCachedAt time.Time
+	partitionsCachedAt  time.Time
+	cachedDiskInfo      DiskInfo
+	diskInfoCachedAt    time.Time
 )
 
 type DiskInfo struct {
@@ -21,6 +23,14 @@ type DiskInfo struct {
 }
 
 func Disk() DiskInfo {
+	partitionsCacheMu.RLock()
+	if cachedDiskInfo.Total > 0 && time.Since(diskInfoCachedAt) < 15*time.Second {
+		info := cachedDiskInfo
+		partitionsCacheMu.RUnlock()
+		return info
+	}
+	partitionsCacheMu.RUnlock()
+
 	diskinfo := DiskInfo{}
 	// 如果指定了自定义挂载点，只统计指定的挂载点
 	if flags.IncludeMountpoints != "" {
@@ -37,6 +47,10 @@ func Disk() DiskInfo {
 				}
 			}
 		}
+		partitionsCacheMu.Lock()
+		cachedDiskInfo = diskinfo
+		diskInfoCachedAt = time.Now()
+		partitionsCacheMu.Unlock()
 		return diskinfo
 	}
 
@@ -92,6 +106,10 @@ func Disk() DiskInfo {
 				diskinfo.Total += u.Total
 				diskinfo.Used += u.Used
 			}
+			partitionsCacheMu.Lock()
+			cachedDiskInfo = diskinfo
+			diskInfoCachedAt = time.Now()
+			partitionsCacheMu.Unlock()
 	return diskinfo
 }
 
