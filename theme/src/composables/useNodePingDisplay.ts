@@ -165,6 +165,9 @@ export function useNodePingDisplay(
   })
 
   function buildPingBars(metric: NodePingMetric): NodePingBar[] {
+    if (isAllBlocked.value)
+      return []
+
     const points = pingStats.history.value
     if (!points.length)
       return []
@@ -203,15 +206,9 @@ export function useNodePingDisplay(
               ? '未启用记录'
               : 'N/A'
 
-    const className = isBlocked
-      ? metric === 'loss'
-        ? 'bg-rose-500/35 dark:bg-rose-500/30'
-        : 'bg-muted-foreground/15'
-      : 'bg-muted-foreground/10'
-
     return Array.from({ length: NODE_PING_BAR_COUNT }, (_, index) => ({
       key: `${metric}-empty-${index}`,
-      className,
+      className: 'bg-muted-foreground/10',
       tooltip,
     }))
   }

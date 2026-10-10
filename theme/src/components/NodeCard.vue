@@ -378,7 +378,7 @@ function openPingDialog() {
               >
                 <div class="flex items-center justify-between text-[10px] leading-none">
                   <span class="text-muted-foreground">丢包</span>
-                  <span class="font-medium font-mono tabular-nums" :class="isAllBlocked ? 'text-rose-600/80 dark:text-rose-400/80' : 'text-foreground/85'">{{ lossDisplay }}</span>
+                  <span class="font-medium font-mono tabular-nums" :class="isAllBlocked ? 'text-muted-foreground/80' : 'text-foreground/85'">{{ lossDisplay }}</span>
                 </div>
                 <div
                   class="grid h-full items-end gap-[1px]"
