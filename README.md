@@ -101,22 +101,19 @@ Lite 版本不会删除已有数据库表，也不会执行破坏性删表，已
 - CGO 编译环境
 - zstd（重新打包前端资源时需要）
 
-前端资源已包含在仓库中。重新构建前端时：
+前端资源已包含在仓库中。重新构建前端时可直接执行：
 
 ```bash
-cd frontend
-npm ci
-npm run build
-mkdir -p ../web/public/defaultTheme
-tar -cf /tmp/komari-dist.tar -C dist .
-zstd -19 -T0 -q -f /tmp/komari-dist.tar -o ../web/public/defaultTheme/dist.tar.zst
-cp komari-theme.json ../web/public/defaultTheme/komari-theme.json
+# 构建访客端主题 (Vue 3 + Vite)
+./scripts/build-theme.sh
+
+# 构建管理后台 (React + Vite)
+./scripts/build-admin.sh
 ```
 
 构建后端：
 
 ```bash
-cd ..
 CGO_ENABLED=1 go build -tags nomsgpack,sqlite_omit_load_extension \
   -ldflags "-s -w -X github.com/lyhbdw/komari-lite/utils.CurrentVersion=1.0.0" \
   -o komari .
@@ -130,6 +127,16 @@ CGO_ENABLED=1 go build -tags nomsgpack,sqlite_omit_load_extension \
 
 默认监听地址为 `0.0.0.0:25774`，数据目录为当前目录下的 `data/`。生产环境建议通过反向代理提供 HTTPS，并限制管理入口访问范围。
 
+### 轻量时序存储配置（可选）
+
+如需进一步减少 SQLite 时序数据存储占用，可在数据库配置中开启轻量保留档位（`metric_retention_profile = "lightweight"`），将保留周期切换为：
+- 1 分钟精度：3 小时
+- 5 分钟精度：24 小时
+- 1 小时精度：7 天
+- 1 天精度与指标总历史：30 天
+
+未显式配置时默认使用兼容模式（指标保留 90 天），不会自动缩短或删除已有历史数据。
+
 ### Docker 构建
 
 ```bash
@@ -141,6 +148,8 @@ CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -tags nomsgpack,sqlite_omit_load_
 docker build \
   --build-arg TARGETOS=linux \
   --build-arg TARGETARCH=amd64 \
+  --build-arg OCI_REVISION=1.0.0 \
+  --build-arg OCI_VERSION=1.0.0 \
   -t komari-lite:1.0.0 .
 
 docker run -d \

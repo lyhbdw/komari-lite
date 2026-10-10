@@ -10,9 +10,9 @@ ARG OCI_REVISION=
 ARG OCI_SOURCE=https://github.com/lyhbdw/komari-lite
 ARG OCI_VERSION=
 
-RUN test -n "$OCI_REVISION" && test "$OCI_REVISION" != unknown && test -n "$OCI_VERSION" && test "$OCI_VERSION" != unknown
-
 RUN apk add --no-cache ca-certificates curl tzdata
+
+RUN test -n "$OCI_REVISION" && test "$OCI_REVISION" != unknown && test -n "$OCI_VERSION" && test "$OCI_VERSION" != unknown
 
 COPY --chmod=755 komari-${TARGETOS}-${TARGETARCH} /app/komari
 

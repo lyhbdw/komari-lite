@@ -10,12 +10,22 @@ TARGET_DIR="${ROOT_DIR}/web/public/defaultTheme"
 echo "==> Building Komari Lite Theme (Vue 3 + Vite)..."
 cd "${THEME_DIR}"
 
-if [ ! -d "node_modules" ]; then
-    echo "node_modules not found, running npm ci..."
-    npm ci
+if command -v npm >/dev/null 2>&1; then
+    if [ ! -d "node_modules" ]; then
+        echo "node_modules not found, running npm ci..."
+        npm ci
+    fi
+    npm run build
+elif command -v docker >/dev/null 2>&1; then
+    if [ ! -d "node_modules" ]; then
+        echo "node_modules not found, running npm ci via docker..."
+        docker run --rm -v "${THEME_DIR}:/workspace" -w /workspace node:22-alpine npm ci
+    fi
+    docker run --rm -v "${THEME_DIR}:/workspace" -w /workspace node:22-alpine npm run build
+else
+    echo "Error: neither npm nor docker is available" >&2
+    exit 1
 fi
-
-npm run build
 
 echo "==> Packaging theme into ${TARGET_DIR}/dist.tar.zst..."
 mkdir -p "${TARGET_DIR}"
@@ -30,6 +40,6 @@ if [ "${1:-}" = "--sync" ] && [ -d "/opt/komari/data/theme/Lite" ]; then
     mkdir -p /opt/komari/data/theme/Lite/dist
     rm -rf /opt/komari/data/theme/Lite/dist/*
     cp -r "${THEME_DIR}/dist/"* /opt/komari/data/theme/Lite/dist/
-    chown -R komari:komari /opt/komari/data/theme/Lite
+    chown -R 986:986 /opt/komari/data/theme/Lite
     echo "==> Live theme cache updated."
 fi
