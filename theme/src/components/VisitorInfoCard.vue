@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useAppStore } from '@/stores/app'
 
 const appStore = useAppStore()
@@ -373,26 +373,50 @@ function handleFlagError(): void {
   flagVisible.value = false
 }
 
-onMounted(async () => {
+let geoFetched = false
+let geoFetching = false
+
+async function ensureGeoLoaded(): Promise<void> {
+  if (geoFetched || geoFetching)
+    return
+  geoFetching = true
+  loading.value = true
+  try {
+    const geo = await fetchVisitorGeo()
+    if (geo) {
+      ip.value = geo.ip
+      isp.value = geo.isp
+      location.value = geo.location
+      countryCode.value = geo.countryCode.toUpperCase()
+      appStore.visitorCountryCode = geo.countryCode.toUpperCase()
+    }
+    else {
+      ip.value = '暂无法获取'
+      isp.value = '网络信息不可用'
+      location.value = '网络访客'
+    }
+    geoFetched = true
+  }
+  finally {
+    geoFetching = false
+    loading.value = false
+  }
+}
+
+watch(expand, (val) => {
+  if (val) {
+    void ensureGeoLoaded()
+  }
+})
+
+onMounted(() => {
   const client = detectClient()
   device.value = client.device
   browser.value = client.browser
   visitTime.value = formatVisitTime(new Date())
-
-  const geo = await fetchVisitorGeo()
-  if (geo) {
-    ip.value = geo.ip
-    isp.value = geo.isp
-    location.value = geo.location
-    countryCode.value = geo.countryCode.toUpperCase()
-    appStore.visitorCountryCode = geo.countryCode.toUpperCase()
-  }
-  else {
-    ip.value = '暂无法获取'
-    isp.value = '网络信息不可用'
-    location.value = '网络访客'
-  }
-
+  location.value = '网络访客'
+  ip.value = '点击展开'
+  isp.value = ''
   loading.value = false
 })
 </script>

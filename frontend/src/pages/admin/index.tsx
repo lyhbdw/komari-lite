@@ -283,11 +283,27 @@ const Layout = () => {
   };
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      refresh();
-    }, 5000);
-    return () => clearInterval(interval);
-  }, [refresh]);
+    if (account && !account.logged_in)
+      return;
+
+    const tick = () => {
+      if (typeof document === "undefined" || !document.hidden) {
+        refresh();
+      }
+    };
+    const handleVisibilityChange = () => {
+      if (typeof document !== "undefined" && !document.hidden) {
+        refresh();
+      }
+    };
+
+    const interval = setInterval(tick, 5000);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [refresh, account]);
 
   if (account && !account.logged_in) {
     return (
@@ -629,7 +645,11 @@ const MetricsOverview = ({
 
   useEffect(() => {
     let isMounted = true;
+    let inFlight = false;
     const fetchTraffic = async () => {
+      if (inFlight || (typeof document !== "undefined" && document.hidden))
+        return;
+      inFlight = true;
       try {
         const res = await fetch("/api/rpc2", {
           method: "POST",
@@ -673,14 +693,23 @@ const MetricsOverview = ({
         }
       } catch {
         // ignore
+      } finally {
+        inFlight = false;
       }
     };
 
     fetchTraffic();
+    const handleVisibility = () => {
+      if (typeof document !== "undefined" && !document.hidden) {
+        fetchTraffic();
+      }
+    };
     const timer = setInterval(fetchTraffic, 5000);
+    document.addEventListener("visibilitychange", handleVisibility);
     return () => {
       isMounted = false;
       clearInterval(timer);
+      document.removeEventListener("visibilitychange", handleVisibility);
     };
   }, []);
 

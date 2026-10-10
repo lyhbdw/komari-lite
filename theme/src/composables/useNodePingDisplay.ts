@@ -3,6 +3,7 @@ import type { NodePingPerTaskStat } from '@/composables/useNodePingStats'
 import { computed, toValue } from 'vue'
 import { NODE_PING_BAR_COUNT, useNodePingStats } from '@/composables/useNodePingStats'
 import { useAppStore } from '@/stores/app'
+import { useNodesStore } from '@/stores/nodes'
 import { formatDateTime } from '@/utils/helper'
 
 type NodePingMetric = 'latency' | 'loss'
@@ -109,6 +110,52 @@ export function useNodePingDisplay(
     enabled: pingStatsEnabled,
   })
 
+  const nodesStore = useNodesStore()
+  const realtimePingMap = computed(() => {
+    const node = nodesStore.nodesByUuid.get(toValue(uuid))
+    return node?.ping
+  })
+
+  const realtimePerTaskStats = computed<NodePingPerTaskStat[]>(() => {
+    const ping = realtimePingMap.value
+    if (!ping)
+      return []
+    return Object.entries(ping).map(([taskIdStr, stat]) => ({
+      taskId: Number(taskIdStr),
+      name: stat.name || `Ping ${taskIdStr}`,
+      avgLatency: stat.avg,
+      loss: stat.loss,
+    }))
+  })
+
+  const hasRealtimePing = computed(() => realtimePerTaskStats.value.length > 0)
+
+  const effectivePerTaskStats = computed(() => {
+    if (hasRealtimePing.value)
+      return realtimePerTaskStats.value
+    return pingStats.perTaskStats.value
+  })
+
+  const effectiveAvgLatency = computed(() => {
+    if (hasRealtimePing.value) {
+      const valid = realtimePerTaskStats.value.filter(s => s.avgLatency >= 0)
+      if (valid.length === 0)
+        return -1
+      return valid.reduce((sum, s) => sum + s.avgLatency, 0) / valid.length
+    }
+    return pingStats.avgLatency.value
+  })
+
+  const effectiveAvgLoss = computed(() => {
+    if (hasRealtimePing.value) {
+      const stats = realtimePerTaskStats.value
+      if (stats.length === 0)
+        return 0
+      return stats.reduce((sum, s) => sum + s.loss, 0) / stats.length
+    }
+    return pingStats.avgLoss.value
+  })
+
   function buildPingBars(metric: NodePingMetric): NodePingBar[] {
     const points = pingStats.history.value
     if (!points.length)
@@ -157,6 +204,10 @@ export function useNodePingDisplay(
   const lossRenderBars = computed(() => lossBars.value.length ? lossBars.value : buildEmptyPingBars('loss'))
 
   const latencyDisplay = computed(() => {
+    if (hasRealtimePing.value) {
+      const lat = effectiveAvgLatency.value
+      return lat >= 0 ? `${Math.round(lat)} ms` : '--'
+    }
     if (pingStats.hasData.value)
       return `${Math.round(pingStats.avgLatency.value)} ms`
     if (pingStats.loading.value)
@@ -165,6 +216,8 @@ export function useNodePingDisplay(
   })
 
   const lossDisplay = computed(() => {
+    if (hasRealtimePing.value)
+      return `${effectiveAvgLoss.value.toFixed(1)}%`
     if (pingStats.hasData.value)
       return `${pingStats.avgLoss.value.toFixed(1)}%`
     if (pingStats.loading.value)
@@ -173,6 +226,10 @@ export function useNodePingDisplay(
   })
 
   const latencyPanelTooltip = computed(() => {
+    if (hasRealtimePing.value) {
+      const lat = effectiveAvgLatency.value
+      return lat >= 0 ? `平均延迟 ${Math.round(lat)} ms` : '暂无延迟数据'
+    }
     if (!pingStats.hasData.value) {
       if (pingStats.loading.value)
         return options.loadingPanelTooltipText?.latency ?? ''
@@ -182,6 +239,9 @@ export function useNodePingDisplay(
   })
 
   const lossPanelTooltip = computed(() => {
+    if (hasRealtimePing.value) {
+      return `平均丢包 ${effectiveAvgLoss.value.toFixed(1)}%`
+    }
     if (!pingStats.hasData.value) {
       if (pingStats.loading.value)
         return options.loadingPanelTooltipText?.loss ?? ''
@@ -195,7 +255,7 @@ export function useNodePingDisplay(
   })
 
   const topPingNetworks = computed(() => {
-    const perTaskStats = pingStats.perTaskStats.value
+    const perTaskStats = effectivePerTaskStats.value
     const configuredNames = appStore.pingNetworkOrder
 
     // 未配置自定义顺序时保持默认行为：按 taskId 顺序取前 3 条

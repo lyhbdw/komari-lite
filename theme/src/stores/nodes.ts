@@ -93,34 +93,21 @@ interface StatusData {
 const EARTH_SNAPSHOT_INTERVAL_MS = 60_000
 const CACHE_KEY = 'komari_nodes_cache_v1'
 
+// Telemetry may contain administrator-only nodes and IPs. Never hydrate it
+// before authorization, and remove legacy snapshots without touching UI prefs.
 function loadCachedNodes(): NodeData[] {
-  if (typeof window === 'undefined')
-    return []
-  try {
-    const raw = localStorage.getItem(CACHE_KEY)
-    if (raw) {
-      const parsed = JSON.parse(raw)
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.removeItem(CACHE_KEY)
+      for (let index = localStorage.length - 1; index >= 0; index -= 1) {
+        const key = localStorage.key(index)
+        if (key?.startsWith('komari-theme-lite:node-ping-stats:'))
+          localStorage.removeItem(key)
       }
     }
-  }
-  catch {}
-  return []
-}
-
-let saveTimer: ReturnType<typeof setTimeout> | null = null
-function debouncedSaveCache(data: NodeData[]): void {
-  if (typeof window === 'undefined')
-    return
-  if (saveTimer)
-    clearTimeout(saveTimer)
-  saveTimer = setTimeout(() => {
-    try {
-      localStorage.setItem(CACHE_KEY, JSON.stringify(data))
-    }
     catch {}
-  }, 1000)
+  }
+  return []
 }
 
 const useNodesStore = defineStore('nodes', () => {
@@ -335,6 +322,7 @@ const useNodesStore = defineStore('nodes', () => {
       connections: status.connections,
       connections_udp: status.connections_udp,
       uptime: status.uptime,
+      ping: status.ping,
     }
   }
 
@@ -395,7 +383,6 @@ const useNodesStore = defineStore('nodes', () => {
     // 按 weight 升序排序节点（weight 越小越靠前）
     sortNodesByWeight()
     refreshEarthNodes(true)
-    debouncedSaveCache(nodes.value)
   }
 
   /**
@@ -410,13 +397,13 @@ const useNodesStore = defineStore('nodes', () => {
    */
   function updateNodeStatuses(statuses: Record<string, NodeStatus>): void {
     let hasChanges = false
+    const byUuid = new Map<string, NodeData>()
+    for (const node of nodes.value) {
+      byUuid.set(node.uuid, node)
+    }
 
     Object.entries(statuses).forEach(([uuid, status]) => {
-      const index = nodes.value.findIndex(n => n.uuid === uuid)
-      if (index === -1)
-        return
-
-      const node = nodes.value[index]
+      const node = byUuid.get(uuid)
       if (!node)
         return
 
@@ -427,67 +414,67 @@ const useNodesStore = defineStore('nodes', () => {
 
     if (hasChanges) {
       refreshEarthNodes()
-      debouncedSaveCache(nodes.value)
     }
   }
 
   /**
-   * 更新节点基本信息
+   * 更新节点基本信息（细粒度原位比对，仅在结构变化时重排）
    */
   function updateNodeClients(clients: Record<string, Client>): void {
     const newUuids = new Set(Object.keys(clients))
+    let structureChanged = false
+    let regionChanged = false
 
-    // 更新现有节点信息或添加新节点
+    const byUuid = new Map<string, NodeData>()
+    for (const node of nodes.value) {
+      byUuid.set(node.uuid, node)
+    }
+
     Object.entries(clients).forEach(([uuid, client]) => {
-      const index = nodes.value.findIndex(n => n.uuid === uuid)
+      const currentNode = byUuid.get(uuid)
 
-      if (index !== -1) {
-        // 更新现有节点，保留状态信息
-        const currentNode = nodes.value[index]
-        if (!currentNode)
-          return
-
+      if (currentNode) {
         const baseNode = createNodeFromClient(client)
-        nodes.value[index] = updateNodeStatus(baseNode, {
-          online: currentNode.online,
-          time: currentNode.time,
-          cpu: currentNode.cpu,
-          gpu: currentNode.gpu,
-          ram: currentNode.ram,
-          swap: currentNode.swap,
-          load: currentNode.load,
-          load5: currentNode.load5,
-          load15: currentNode.load15,
-          temp: currentNode.temp,
-          disk: currentNode.disk,
-          net_in: currentNode.net_in,
-          net_out: currentNode.net_out,
-          net_total_up: currentNode.net_total_up,
-          net_total_down: currentNode.net_total_down,
-          process: currentNode.process,
-          connections: currentNode.connections,
-          connections_udp: currentNode.connections_udp,
-          uptime: currentNode.uptime,
-          ping: currentNode.ping,
-        })
+        const staticKeys: (keyof Client)[] = [
+          'name', 'cpu_name', 'virtualization', 'arch', 'cpu_cores',
+          'os', 'kernel_version', 'gpu_name', 'ipv4', 'ipv6', 'region',
+          'public_remark', 'mem_total', 'swap_total', 'disk_total', 'version',
+          'weight', 'price', 'premium', 'premium_currency', 'billing_cycle',
+          'auto_renewal', 'currency', 'expired_at', 'group', 'tags',
+          'traffic_limit', 'traffic_limit_type', 'created_at', 'updated_at',
+        ]
+        for (const key of staticKeys) {
+          const nextVal = (baseNode as any)[key]
+          if ((currentNode as any)[key] !== nextVal) {
+            if (key === 'weight')
+              structureChanged = true
+            if (key === 'region')
+              regionChanged = true
+            ;(currentNode as any)[key] = nextVal
+          }
+        }
       }
       else {
-        // 添加新节点（不带状态）
         nodes.value.push(createNodeFromClient(client))
+        structureChanged = true
       }
     })
 
-    // 移除不存在的节点
     for (let i = nodes.value.length - 1; i >= 0; i--) {
       const node = nodes.value[i]
       if (node && !newUuids.has(node.uuid)) {
         nodes.value.splice(i, 1)
+        structureChanged = true
       }
     }
 
-    // 按 weight 降序排序
-    sortNodesByWeight()
-    refreshEarthNodes(true)
+    if (structureChanged) {
+      sortNodesByWeight()
+      refreshEarthNodes(true)
+    }
+    else if (regionChanged) {
+      refreshEarthNodes(true)
+    }
   }
 
   /**

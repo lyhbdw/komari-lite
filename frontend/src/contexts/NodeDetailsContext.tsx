@@ -7,6 +7,7 @@ export const NodeDetailsProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const [error, setError] = useState<string | null>(null);
   const mountedRef = useRef(true);
   const hasLoadedRef = useRef(false);
+  const inFlightRef = useRef(false);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -16,6 +17,9 @@ export const NodeDetailsProvider: React.FC<{ children: React.ReactNode }> = ({ c
   }, []);
 
   const refresh = useCallback(() => {
+    if (inFlightRef.current)
+      return;
+    inFlightRef.current = true;
     if (!hasLoadedRef.current) {
       setIsLoading(true);
     }
@@ -35,6 +39,9 @@ export const NodeDetailsProvider: React.FC<{ children: React.ReactNode }> = ({ c
         if (!mountedRef.current) return;
         setError(err instanceof Error ? err.message : String(err));
         setIsLoading(false);
+      })
+      .finally(() => {
+        inFlightRef.current = false;
       });
   }, []);
 

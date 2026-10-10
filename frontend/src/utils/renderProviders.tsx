@@ -16,6 +16,123 @@ interface RenderProviderInputsProps {
   isSaving?: boolean;
 }
 
+interface ProviderFieldItemProps {
+  f: any;
+  fieldValue: any;
+  updateLocalValue: (name: string, val: any) => void;
+  translationPrefix: string;
+  t: any;
+}
+
+const ProviderFieldItem: React.FC<ProviderFieldItemProps> = ({
+  f,
+  fieldValue,
+  updateLocalValue,
+  translationPrefix,
+  t,
+}) => {
+  const [showSecret, setShowSecret] = useState(false);
+  const fieldTitle = String(t(`${translationPrefix}.${f.name}`, f.name));
+  const fieldDescription = f.help
+    ? String(t(`${translationPrefix}.${f.name}_help`, f.help))
+    : undefined;
+  const isSensitive =
+    f.name.includes("token") ||
+    f.name.includes("secret") ||
+    f.name.includes("password");
+  const isNumber = ["int", "int64", "float32", "float64"].includes(f.type);
+
+  return (
+    <div className="flex flex-col justify-between p-3.5 rounded-lg border border-border/60 bg-muted/20">
+      <div>
+        <div className="flex items-center justify-between gap-2">
+          <label
+            htmlFor={`field-${f.name}`}
+            className="text-xs font-medium text-foreground block"
+          >
+            {fieldTitle}
+          </label>
+          <div className="flex items-center gap-1.5">
+            {f.required && (
+              <span className="text-[10px] font-mono font-medium text-amber-600 dark:text-amber-400 bg-amber-500/10 px-1.5 py-0.2 rounded border border-amber-500/20">
+                必填
+              </span>
+            )}
+            {isSensitive && (
+              <button
+                type="button"
+                onClick={() => setShowSecret(!showSecret)}
+                className="text-muted-foreground hover:text-foreground p-0.5 rounded transition-colors cursor-pointer"
+                title={showSecret ? "隐藏敏感内容" : "显示明文内容"}
+              >
+                {showSecret ? <EyeOff size={13} /> : <Eye size={13} />}
+              </button>
+            )}
+          </div>
+        </div>
+        {fieldDescription && (
+          <p className="text-[11px] text-muted-foreground mt-1 leading-relaxed">
+            {fieldDescription}
+          </p>
+        )}
+      </div>
+
+      {f.type === "bool" ? (
+        <div className="mt-2.5 flex items-center justify-between pt-1">
+          <span className="text-xs text-muted-foreground">
+            {fieldValue ? "已启用" : "已停用"}
+          </span>
+          <input
+            type="checkbox"
+            id={`field-${f.name}`}
+            checked={!!fieldValue}
+            onChange={(e) => updateLocalValue(f.name, e.target.checked)}
+            className="size-4 cursor-pointer accent-foreground"
+          />
+        </div>
+      ) : f.type === "option" && f.options ? (
+        <select
+          id={`field-${f.name}`}
+          value={fieldValue}
+          onChange={(e) => updateLocalValue(f.name, e.target.value)}
+          className="mt-2.5 w-full h-8 px-2.5 text-xs rounded-md border border-border bg-background text-foreground outline-none focus:border-foreground/50 shadow-2xs cursor-pointer font-mono"
+        >
+          {f.options.split(",").map((opt: string) => (
+            <option key={opt} value={opt}>
+              {opt}
+            </option>
+          ))}
+        </select>
+      ) : f.type === "richtext" || f.type === "text" ? (
+        <textarea
+          id={`field-${f.name}`}
+          value={String(fieldValue)}
+          onChange={(e) => updateLocalValue(f.name, e.target.value)}
+          rows={3}
+          placeholder={f.default || ""}
+          className="mt-2.5 w-full p-2 text-xs rounded-md border border-border bg-background text-foreground outline-none focus:border-foreground/50 shadow-2xs font-mono resize-none"
+        />
+      ) : (
+        <input
+          id={`field-${f.name}`}
+          type={isSensitive && !showSecret ? "password" : isNumber ? "number" : "text"}
+          value={String(fieldValue)}
+          onChange={(e) => {
+            const val = isNumber
+              ? e.target.value === ""
+                ? 0
+                : Number(e.target.value)
+              : e.target.value;
+            updateLocalValue(f.name, val);
+          }}
+          placeholder={f.default || ""}
+          className="mt-2.5 w-full h-8 px-2.5 text-xs rounded-md border border-border bg-background text-foreground outline-none focus:border-foreground/50 shadow-2xs font-mono"
+        />
+      )}
+    </div>
+  );
+};
+
 export const renderProviderInputs = ({
   currentProvider,
   providerDefs,
@@ -97,118 +214,22 @@ export const renderProviderInputs = ({
     setProviderValues((v: any) => ({ ...v, [fieldName]: value }));
   };
 
-  const ProviderFieldItem = ({ f }: { f: any }) => {
-    const [showSecret, setShowSecret] = useState(false);
-    const fieldTitle = String(t(`${translationPrefix}.${f.name}`, f.name));
-    const fieldDescription = f.help
-      ? String(t(`${translationPrefix}.${f.name}_help`, f.help))
-      : undefined;
-    const fieldValue =
-      providerValues[f.name] !== undefined
-        ? providerValues[f.name]
-        : f.default || "";
-    const isSensitive =
-      f.name.includes("token") ||
-      f.name.includes("secret") ||
-      f.name.includes("password");
-    const isNumber = ["int", "int64", "float32", "float64"].includes(f.type);
-
-    return (
-      <div className="flex flex-col justify-between p-3.5 rounded-lg border border-border/60 bg-muted/20">
-        <div>
-          <div className="flex items-center justify-between gap-2">
-            <label
-              htmlFor={`field-${f.name}`}
-              className="text-xs font-medium text-foreground block"
-            >
-              {fieldTitle}
-            </label>
-            <div className="flex items-center gap-1.5">
-              {f.required && (
-                <span className="text-[10px] font-mono font-medium text-amber-600 dark:text-amber-400 bg-amber-500/10 px-1.5 py-0.2 rounded border border-amber-500/20">
-                  必填
-                </span>
-              )}
-              {isSensitive && (
-                <button
-                  type="button"
-                  onClick={() => setShowSecret(!showSecret)}
-                  className="text-muted-foreground hover:text-foreground p-0.5 rounded transition-colors cursor-pointer"
-                  title={showSecret ? "隐藏敏感内容" : "显示明文内容"}
-                >
-                  {showSecret ? <EyeOff size={13} /> : <Eye size={13} />}
-                </button>
-              )}
-            </div>
-          </div>
-          {fieldDescription && (
-            <p className="text-[11px] text-muted-foreground mt-1 leading-relaxed">
-              {fieldDescription}
-            </p>
-          )}
-        </div>
-
-        {f.type === "bool" ? (
-          <div className="mt-2.5 flex items-center justify-between pt-1">
-            <span className="text-xs text-muted-foreground">
-              {fieldValue ? "已启用" : "已停用"}
-            </span>
-            <input
-              type="checkbox"
-              id={`field-${f.name}`}
-              checked={!!fieldValue}
-              onChange={(e) => updateLocalValue(f.name, e.target.checked)}
-              className="size-4 cursor-pointer accent-foreground"
-            />
-          </div>
-        ) : f.type === "option" && f.options ? (
-          <select
-            id={`field-${f.name}`}
-            value={fieldValue}
-            onChange={(e) => updateLocalValue(f.name, e.target.value)}
-            className="mt-2.5 w-full h-8 px-2.5 text-xs rounded-md border border-border bg-background text-foreground outline-none focus:border-foreground/50 shadow-2xs cursor-pointer font-mono"
-          >
-            {f.options.split(",").map((opt: string) => (
-              <option key={opt} value={opt}>
-                {opt}
-              </option>
-            ))}
-          </select>
-        ) : f.type === "richtext" || f.type === "text" ? (
-          <textarea
-            id={`field-${f.name}`}
-            value={String(fieldValue)}
-            onChange={(e) => updateLocalValue(f.name, e.target.value)}
-            rows={3}
-            placeholder={f.default || ""}
-            className="mt-2.5 w-full p-2 text-xs rounded-md border border-border bg-background text-foreground outline-none focus:border-foreground/50 shadow-2xs font-mono resize-none"
-          />
-        ) : (
-          <input
-            id={`field-${f.name}`}
-            type={isSensitive && !showSecret ? "password" : isNumber ? "number" : "text"}
-            value={String(fieldValue)}
-            onChange={(e) => {
-              const val = isNumber
-                ? e.target.value === ""
-                  ? 0
-                  : Number(e.target.value)
-                : e.target.value;
-              updateLocalValue(f.name, val);
-            }}
-            placeholder={f.default || ""}
-            className="mt-2.5 w-full h-8 px-2.5 text-xs rounded-md border border-border bg-background text-foreground outline-none focus:border-foreground/50 shadow-2xs font-mono"
-          />
-        )}
-      </div>
-    );
-  };
-
   return (
     <div key={currentProvider} className="space-y-4 pt-1">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {fields.map((f: any) => (
-          <ProviderFieldItem key={f.name} f={f} />
+          <ProviderFieldItem
+            key={f.name}
+            f={f}
+            fieldValue={
+              providerValues[f.name] !== undefined
+                ? providerValues[f.name]
+                : f.default || ""
+            }
+            updateLocalValue={updateLocalValue}
+            translationPrefix={translationPrefix || "providers"}
+            t={t}
+          />
         ))}
       </div>
 

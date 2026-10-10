@@ -16,13 +16,13 @@ type LoginDialogProps = {
   onLoginSuccess?: () => void;
 };
 
-const LoginDialog = ({ trigger, autoOpen = false, showSettings = true, info, onLoginSuccess }: LoginDialogProps) => {
-  const InnerLayout = ({
-    autoOpen,
-    showSettings,
-    info,
-    onLoginSuccess,
-  }: Pick<LoginDialogProps, "autoOpen" | "showSettings" | "info" | "onLoginSuccess">) => {
+const InnerLayout = ({
+  trigger,
+  autoOpen = false,
+  showSettings = true,
+  info,
+  onLoginSuccess,
+}: LoginDialogProps) => {
     const { account, loading, error, refresh } = useAccount();
     const [t] = useTranslation();
     const [username, setUsername] = React.useState("");
@@ -219,15 +219,12 @@ const LoginDialog = ({ trigger, autoOpen = false, showSettings = true, info, onL
         </Dialog.Content>
       </Dialog.Root>
     );
-  };
+};
+
+const LoginDialog = (props: LoginDialogProps) => {
   return (
     <AccountProvider>
-      <InnerLayout
-        autoOpen={autoOpen}
-        showSettings={showSettings}
-        info={info}
-        onLoginSuccess={onLoginSuccess}
-      />
+      <InnerLayout {...props} />
     </AccountProvider>
   );
 };

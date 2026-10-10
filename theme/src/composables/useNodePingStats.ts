@@ -115,7 +115,7 @@ function getIncludedTaskIds(records: PingRecord[]): Set<number> {
 
   return new Set(
     [...recordSummaries.entries()]
-      .filter(([, summary]) => summary.total > 0 && summary.success > 0)
+      .filter(([, summary]) => summary.total > 0)
       .map(([taskId]) => taskId),
   )
 }
@@ -287,6 +287,8 @@ function startSharedPingRecordsRefresh(entry: SharedPingRecordsEntry, hours: num
     return
 
   entry.refreshTimer = setInterval(() => {
+    if (typeof document !== 'undefined' && document.hidden)
+      return
     void loadSharedPingRecords(entry, hours).catch(() => {})
   }, PING_RECORD_REFRESH_INTERVAL_MS)
 }

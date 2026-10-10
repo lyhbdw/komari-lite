@@ -4,7 +4,7 @@ import type { StatusRecord } from '@/utils/rpc'
 import { Icon } from '@iconify/vue'
 import { useIntervalFn } from '@vueuse/core'
 import dayjs from 'dayjs'
-import { computed, onMounted, ref, shallowRef, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, shallowRef, watch } from 'vue'
 import VChart from 'vue-echarts'
 import ChartSkeleton from '@/components/ChartSkeleton.vue'
 import { CardX } from '@/components/ui/card-x'
@@ -181,9 +181,17 @@ function statusToRecordFormat(records: StatusRecord[]): RecordFormat[] {
   }))
 }
 
+let activeRequestId = 0
+let inFlight = false
+
 async function fetchRecentData() {
-  if (!props.uuid)
+  if (!props.uuid || inFlight)
     return
+  if (typeof document !== 'undefined' && document.hidden)
+    return
+
+  const reqId = ++activeRequestId
+  inFlight = true
 
   // 只在首次加载时显示 loading
   if (isInitialLoad.value) {
@@ -193,18 +201,25 @@ async function fetchRecentData() {
 
   try {
     const result = await rpc.getNodeRecentStatus(props.uuid)
+    if (reqId !== activeRequestId)
+      return
     const records = result?.records || []
     records.sort((a, b) => dayjs(a.time).valueOf() - dayjs(b.time).valueOf())
     const maxLength = 150
     remoteData.value = records.slice(-maxLength)
   }
   catch (err) {
+    if (reqId !== activeRequestId)
+      return
     error.value = err instanceof Error ? err.message : '获取数据失败'
     remoteData.value = []
   }
   finally {
-    loading.value = false
-    isInitialLoad.value = false
+    inFlight = false
+    if (reqId === activeRequestId) {
+      loading.value = false
+      isInitialLoad.value = false
+    }
   }
 }
 
@@ -212,6 +227,7 @@ async function fetchHistoryData() {
   if (!props.uuid)
     return
 
+  const reqId = ++activeRequestId
   const hours = selectedHours.value || 4
 
   loading.value = true
@@ -226,6 +242,8 @@ async function fetchHistoryData() {
       hours,
       load_type: 'all',
     })
+    if (reqId !== activeRequestId)
+      return
     const records = result?.records?.[props.uuid] || []
 
     // 按时间排序
@@ -236,11 +254,15 @@ async function fetchHistoryData() {
     remoteData.value = records
   }
   catch (err) {
+    if (reqId !== activeRequestId)
+      return
     error.value = err instanceof Error ? err.message : '获取数据失败'
     remoteData.value = []
   }
   finally {
-    loading.value = false
+    if (reqId === activeRequestId) {
+      loading.value = false
+    }
   }
 }
 
@@ -835,14 +857,30 @@ const processChartOption = computed(() => ({
 
 // 使用 VueUse 的 useIntervalFn 自动管理定时器
 const { pause: pauseRealtimeUpdate, resume: resumeRealtimeUpdate } = useIntervalFn(
-  () => fetchData(),
+  () => {
+    if (typeof document !== 'undefined' && document.hidden)
+      return
+    fetchData()
+  },
   dataUpdateInterval,
   { immediate: false },
 )
 
+function handleVisibilityChange() {
+  if (typeof document === 'undefined')
+    return
+  if (document.hidden) {
+    pauseRealtimeUpdate()
+  }
+  else if (isRealtime.value) {
+    fetchData()
+    resumeRealtimeUpdate()
+  }
+}
+
 // 根据是否为实时模式控制定时器
 watch(isRealtime, (realtime) => {
-  if (realtime) {
+  if (realtime && (typeof document === 'undefined' || !document.hidden)) {
     resumeRealtimeUpdate()
   }
   else {
@@ -864,7 +902,17 @@ watch(() => props.uuid, () => {
 })
 
 onMounted(() => {
+  if (typeof document !== 'undefined') {
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+  }
   fetchData()
+})
+
+onUnmounted(() => {
+  pauseRealtimeUpdate()
+  if (typeof document !== 'undefined') {
+    document.removeEventListener('visibilitychange', handleVisibilityChange)
+  }
 })
 </script>
 

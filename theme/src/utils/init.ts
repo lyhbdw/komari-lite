@@ -42,6 +42,7 @@ class InitManager {
   private useWebSocket: boolean | null = null // 根据主题配置决定
   private wsCloseUnsubscribe: (() => void) | null = null
   private wsErrorUnsubscribe: (() => void) | null = null
+  private clientPollTick = 0
   constructor(config: InitConfig = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config }
     this.rpc = getSharedRpc()
@@ -380,21 +381,31 @@ class InitManager {
     this.isPolling = true
 
     try {
-      // 并行执行三个请求
+      this.clientPollTick++
+      // 静态节点元数据（名称、硬件、分组）低频刷新（约 60 秒一次），大幅降低轮询压力
+      const shouldFetchClients = (this.clientPollTick % 20 === 1) || this.nodesStore.nodes.length === 0
+
+      // 并行执行请求
       const [, clientsResult, statusesResult] = await Promise.all([
         // 1. Ping 测试服务器状态
         this.rpc.ping(),
-        // 2. 获取节点信息
-        this.rpc.getNodes() as Promise<Record<string, Client>>,
+        // 2. 获取节点信息（按需）
+        shouldFetchClients
+          ? (this.rpc.getNodes() as Promise<Record<string, Client>>)
+          : Promise.resolve(null),
         // 3. 获取节点最新状态
         this.rpc.getNodesLatestStatus() as Promise<Record<string, NodeStatus>>,
       ])
 
-      // 更新节点信息（会智能合并，不会重建数组）
-      this.nodesStore.updateNodeClients(clientsResult)
+      // 更新节点信息（仅在重新获取时）
+      if (clientsResult) {
+        this.nodesStore.updateNodeClients(clientsResult)
+      }
 
       // 更新节点状态
-      this.nodesStore.updateNodeStatuses(statusesResult)
+      if (statusesResult) {
+        this.nodesStore.updateNodeStatuses(statusesResult)
+      }
 
       // 连接恢复正常，重置错误状态
       this.appStore.connectionError = false
