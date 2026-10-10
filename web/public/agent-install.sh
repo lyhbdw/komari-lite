@@ -489,7 +489,7 @@ else
     fi
 
     if [ "$download_ok" = false ]; then
-        log_warn "Direct download failed, trying accelerated GitHub mirror fallback..."
+        log_warning "Direct download failed, trying accelerated GitHub mirror fallback..."
         for mirror in "https://ghfast.top" "https://ghproxy.net"; do
             mirror_path="download/${version_to_install}"
             [ "$version_to_install" = "latest" ] && mirror_path="latest/download"
