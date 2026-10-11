@@ -169,7 +169,7 @@ const AddButton: React.FC = () => {
 
   return (
     <Dialog.Root open={isOpen} onOpenChange={setIsOpen}>
-      <Dialog.Trigger>
+      <Dialog.Trigger asChild>
         <button
           onClick={() => setIsOpen(true)}
           className="h-8 px-3.5 rounded-lg bg-foreground text-background font-medium text-xs flex items-center gap-1.5 shadow-2xs hover:opacity-90 active:scale-[0.98] transition-all cursor-pointer shrink-0"
@@ -178,19 +178,24 @@ const AddButton: React.FC = () => {
           <span>{t("common.add", "添加任务")}</span>
         </button>
       </Dialog.Trigger>
-      <Dialog.Content className="max-w-md">
-        <Dialog.Title>
-          <div className="flex items-center gap-2">
-            <Activity size={16} className="text-muted-foreground" />
+      <Dialog.Content className="sm:max-w-md p-6 gap-5">
+        <Dialog.Header className="space-y-1.5 text-left">
+          <Dialog.Title className="flex items-center gap-2 text-base font-semibold leading-none tracking-tight text-foreground">
+            <Activity size={16} className="text-muted-foreground shrink-0" />
             <span>{t("common.add", "添加网络探测任务")}</span>
-          </div>
-        </Dialog.Title>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-3.5 my-2 text-xs">
+          </Dialog.Title>
+          <Dialog.Description className="text-xs text-muted-foreground leading-relaxed">
+            创建 ICMP、TCP 或 HTTP 延迟监测任务，并下发给指定服务器节点。
+          </Dialog.Description>
+        </Dialog.Header>
+        <form onSubmit={handleSubmit} className="grid gap-3.5 my-0.5 text-xs">
           {/* 任务名称 */}
-          <div className="space-y-1">
-            <label htmlFor="ping_name" className="text-xs font-medium text-foreground block">
-              任务名称
-            </label>
+          <div className="grid gap-1.5">
+            <div className="flex items-center h-5">
+              <label htmlFor="ping_name" className="text-xs font-medium leading-none text-foreground">
+                任务名称
+              </label>
+            </div>
             <input
               id="ping_name"
               type="text"
@@ -199,21 +204,23 @@ const AddButton: React.FC = () => {
               placeholder="例如：江苏电信v4、Cloudflare Anycast"
               required
               autoFocus
-              className="w-full h-8 px-2.5 text-xs rounded-md border border-border bg-background text-foreground outline-none focus:border-foreground/50 shadow-2xs"
+              className="w-full h-9 px-3 text-sm rounded-lg border border-input bg-transparent text-foreground outline-none focus-visible:ring-1 focus-visible:ring-ring shadow-xs"
             />
           </div>
 
           {/* 协议与间隔 */}
           <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <label htmlFor="ping_type" className="text-xs font-medium text-foreground block">
-                协议类型
-              </label>
+            <div className="grid gap-1.5">
+              <div className="flex items-center h-5">
+                <label htmlFor="ping_type" className="text-xs font-medium leading-none text-foreground">
+                  协议类型
+                </label>
+              </div>
               <Select.Root
                 value={selectedType}
                 onValueChange={(value) => setSelectedType(value as "icmp" | "tcp" | "http")}
               >
-                <Select.Trigger id="ping_type" className="w-full h-8 cursor-pointer text-xs" />
+                <Select.Trigger id="ping_type" className="w-full h-9 cursor-pointer text-sm" />
                 <Select.Content>
                   <Select.Item value="tcp">TCP (端口握手)</Select.Item>
                   <Select.Item value="icmp">ICMP (Ping 报文)</Select.Item>
@@ -221,10 +228,12 @@ const AddButton: React.FC = () => {
                 </Select.Content>
               </Select.Root>
             </div>
-            <div className="space-y-1">
-              <label htmlFor="ping_interval" className="text-xs font-medium text-foreground block">
-                探测频率 (秒/次)
-              </label>
+            <div className="grid gap-1.5">
+              <div className="flex items-center h-5">
+                <label htmlFor="ping_interval" className="text-xs font-medium leading-none text-foreground">
+                  探测频率 (秒/次)
+                </label>
+              </div>
               <input
                 id="ping_interval"
                 type="number"
@@ -232,16 +241,18 @@ const AddButton: React.FC = () => {
                 onChange={(e) => setInterval(Number(e.target.value))}
                 min={1}
                 required
-                className="w-full h-8 px-2.5 text-xs rounded-md border border-border bg-background text-foreground outline-none focus:border-foreground/50 shadow-2xs font-mono"
+                className="w-full h-9 px-3 text-sm rounded-lg border border-input bg-transparent text-foreground outline-none focus-visible:ring-1 focus-visible:ring-ring shadow-xs font-mono"
               />
             </div>
           </div>
 
           {/* 目标端点 */}
-          <div className="space-y-1">
-            <label htmlFor="ping_target" className="text-xs font-medium text-foreground block">
-              目标地址 (Target)
-            </label>
+          <div className="grid gap-1.5">
+            <div className="flex items-center h-5">
+              <label htmlFor="ping_target" className="text-xs font-medium leading-none text-foreground">
+                目标地址 (Target)
+              </label>
+            </div>
             <input
               id="ping_target"
               type="text"
@@ -249,9 +260,9 @@ const AddButton: React.FC = () => {
               onChange={(e) => setTarget(e.target.value)}
               placeholder="1.1.1.1:80 或 example.com:443 或 http://..."
               required
-              className="w-full h-8 px-2.5 text-xs rounded-md border border-border bg-background text-foreground outline-none focus:border-foreground/50 shadow-2xs font-mono"
+              className="w-full h-9 px-3 text-sm rounded-lg border border-input bg-transparent text-foreground outline-none focus-visible:ring-1 focus-visible:ring-ring shadow-xs font-mono"
             />
-            <p className="text-[11px] text-muted-foreground">
+            <p className="text-[11px] text-muted-foreground leading-relaxed">
               TCP 需包含端口（如 1.1.1.1:80）；ICMP 填写 IP 或纯域名；HTTP 需带完整 URL。
             </p>
           </div>
@@ -289,16 +300,16 @@ const AddButton: React.FC = () => {
             </div>
           </div>
 
-          <Flex justify="end" gap="2" mt="2">
-            <Dialog.Close>
-              <Button variant="soft" color="gray" type="button" className="cursor-pointer">
+          <Dialog.Footer className="pt-2 border-t border-border/50 flex flex-row justify-end gap-2">
+            <Dialog.Close asChild>
+              <Button variant="outline" type="button" className="cursor-pointer">
                 {t("common.cancel", "取消")}
               </Button>
             </Dialog.Close>
             <Button disabled={saving} type="submit" className="cursor-pointer">
               {saving ? "添加中..." : t("common.add", "添加任务")}
             </Button>
-          </Flex>
+          </Dialog.Footer>
         </form>
       </Dialog.Content>
     </Dialog.Root>

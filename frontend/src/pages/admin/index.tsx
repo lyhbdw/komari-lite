@@ -472,27 +472,42 @@ function BatchGroupDialog({
 
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
-      <Dialog.Content className="max-w-sm">
-        <Dialog.Title>批量设置分组</Dialog.Title>
-        <Dialog.Description className="text-xs text-muted-foreground mt-1">
-          将选中的 {selectedCount} 台服务器归入指定分组：
-        </Dialog.Description>
-        <div className="my-3 space-y-2.5">
-          <TextField.Root
-            value={group}
-            onChange={(e) => setGroup(e.target.value)}
-            placeholder="输入新分组名称或快速选择已有"
-            autoFocus
-          />
+      <Dialog.Content className="sm:max-w-md p-6 gap-5">
+        <Dialog.Header className="space-y-1.5 text-left">
+          <Dialog.Title className="flex items-center gap-2 text-base font-semibold leading-none tracking-tight text-foreground">
+            <Layers size={16} className="text-muted-foreground shrink-0" />
+            <span>批量设置分组</span>
+          </Dialog.Title>
+          <Dialog.Description className="text-xs text-muted-foreground leading-relaxed">
+            将选中的 <strong className="text-foreground">{selectedCount}</strong> 台服务器统一归入指定分组。
+          </Dialog.Description>
+        </Dialog.Header>
+        <div className="space-y-3 my-0.5">
+          <div className="grid gap-1.5">
+            <label className="text-xs font-medium leading-none text-foreground">
+              分组名称
+            </label>
+            <TextField.Root
+              value={group}
+              onChange={(e) => setGroup(e.target.value)}
+              placeholder="输入新分组名称或快速选择已有"
+              autoFocus
+              className="h-9 text-sm"
+            />
+          </div>
           {availableGroups.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 items-center">
-              <span className="text-[11px] text-muted-foreground">已有分组:</span>
+            <div className="flex flex-wrap gap-1.5 items-center pt-1">
+              <span className="text-[11px] text-muted-foreground">快速选择:</span>
               {availableGroups.map((g) => (
                 <button
                   key={g}
                   type="button"
                   onClick={() => setGroup(g)}
-                  className="px-2 py-0.5 text-xs rounded bg-muted hover:bg-muted/80 text-foreground transition-colors cursor-pointer border border-border/50"
+                  className={`px-2 py-0.5 text-xs rounded-md border transition-colors cursor-pointer ${
+                    group === g
+                      ? "border-foreground bg-foreground text-background font-medium"
+                      : "border-border/60 bg-muted/40 hover:bg-muted text-foreground"
+                  }`}
                 >
                   {g}
                 </button>
@@ -500,16 +515,16 @@ function BatchGroupDialog({
             </div>
           )}
         </div>
-        <Flex justify="end" gap="2" mt="4">
-          <Dialog.Close>
-            <Button variant="soft" color="gray" disabled={saving}>
-              {t("common.cancel")}
+        <Dialog.Footer className="pt-2 border-t border-border/50 flex flex-row justify-end gap-2">
+          <Dialog.Close asChild>
+            <Button variant="outline" type="button" disabled={saving}>
+              {t("common.cancel", "取消")}
             </Button>
           </Dialog.Close>
           <Button onClick={handleSave} disabled={saving}>
-            {saving ? "保存中..." : t("common.save")}
+            {saving ? "保存中..." : t("common.save", "保存")}
           </Button>
-        </Flex>
+        </Dialog.Footer>
       </Dialog.Content>
     </Dialog.Root>
   );
@@ -541,27 +556,29 @@ function BatchDeleteDialog({
 
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
-      <Dialog.Content className="max-w-md">
-        <Dialog.Title className="text-destructive flex items-center gap-1.5">
-          <AlertTriangle size={18} />
-          <span>确认批量删除</span>
-        </Dialog.Title>
-        <div className="my-3 p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-xs leading-relaxed">
+      <Dialog.Content className="sm:max-w-md p-6 gap-5">
+        <Dialog.Header className="space-y-1.5 text-left">
+          <Dialog.Title className="text-destructive flex items-center gap-2 text-base font-semibold leading-none tracking-tight">
+            <AlertTriangle size={17} className="shrink-0 text-destructive" />
+            <span>确认批量删除</span>
+          </Dialog.Title>
+          <Dialog.Description className="text-xs text-muted-foreground leading-relaxed">
+            确定要继续删除选中的 <strong className="text-foreground">{selectedCount}</strong> 台服务器节点吗？
+          </Dialog.Description>
+        </Dialog.Header>
+        <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-xs leading-relaxed my-0.5">
           警告：此操作不可撤销！将同时永久删除选中的 <strong>{selectedCount}</strong> 台服务器及其监控历史数据。
         </div>
-        <Dialog.Description className="text-xs text-muted-foreground">
-          确定要继续删除这 {selectedCount} 台节点吗？
-        </Dialog.Description>
-        <Flex justify="end" gap="2" mt="4">
-          <Dialog.Close>
-            <Button variant="soft" color="gray" disabled={deleting}>
-              {t("common.cancel")}
+        <Dialog.Footer className="pt-2 border-t border-border/50 flex flex-row justify-end gap-2">
+          <Dialog.Close asChild>
+            <Button variant="outline" type="button" disabled={deleting}>
+              {t("common.cancel", "取消")}
             </Button>
           </Dialog.Close>
           <Button onClick={handleDelete} disabled={deleting} color="red">
             {deleting ? "删除中..." : `确认删除 (${selectedCount}台)`}
           </Button>
-        </Flex>
+        </Dialog.Footer>
       </Dialog.Content>
     </Dialog.Root>
   );
@@ -924,7 +941,7 @@ const UpgradeAgentButton = () => {
 
   return (
     <Dialog.Root open={upgradeOpen} onOpenChange={setUpgradeOpen}>
-      <Dialog.Trigger>
+      <Dialog.Trigger asChild>
         <button
           type="button"
           onClick={() => openUpgradeDialog()}
@@ -935,23 +952,31 @@ const UpgradeAgentButton = () => {
           <span className="hidden sm:inline">升级 Agent</span>
         </button>
       </Dialog.Trigger>
-      <Dialog.Content className="max-w-md">
-        <Dialog.Title>{t("admin.nodeTable.upgradeAgents")}</Dialog.Title>
-        <div className="mt-2 text-xs text-muted-foreground leading-relaxed">
-          {t("admin.nodeTable.upgradeDescription", {
-            defaultValue:
-              "将向全部节点下发升级事件。Agent 会从面板下载新版本并自动完成替换与重启。",
-            version: upgradeVersion,
-          })}
-          {upgradeVersion ? (
-            <div className="mt-2 font-mono text-foreground">
-              {t("admin.nodeTable.upgradeTargetVersion")}: {upgradeVersion.startsWith("v") ? upgradeVersion : `v${upgradeVersion}`}
-            </div>
-          ) : null}
-        </div>
-        <Flex justify="end" gap="2" mt="4">
-          <Dialog.Close>
-            <Button variant="soft" color="gray" disabled={upgrading}>
+      <Dialog.Content className="sm:max-w-md p-6 gap-5">
+        <Dialog.Header className="space-y-1.5 text-left">
+          <Dialog.Title className="flex items-center gap-2 text-base font-semibold leading-none tracking-tight text-foreground">
+            <ArrowUpCircle size={16} className="text-muted-foreground shrink-0" />
+            <span>{t("admin.nodeTable.upgradeAgents", "批量升级 Agent")}</span>
+          </Dialog.Title>
+          <Dialog.Description className="text-xs text-muted-foreground leading-relaxed">
+            {t("admin.nodeTable.upgradeDescription", {
+              defaultValue:
+                "将向全部节点下发升级事件。Agent 会从面板下载新版本并自动完成替换与重启。",
+              version: upgradeVersion,
+            })}
+          </Dialog.Description>
+        </Dialog.Header>
+        {upgradeVersion ? (
+          <div className="p-3 rounded-lg border border-border/70 bg-muted/30 flex items-center justify-between text-xs">
+            <span className="text-muted-foreground">{t("admin.nodeTable.upgradeTargetVersion", "目标版本")}</span>
+            <span className="font-mono font-medium text-foreground">
+              {upgradeVersion.startsWith("v") ? upgradeVersion : `v${upgradeVersion}`}
+            </span>
+          </div>
+        ) : null}
+        <Dialog.Footer className="pt-2 border-t border-border/50 flex flex-row justify-end gap-2">
+          <Dialog.Close asChild>
+            <Button variant="outline" type="button" disabled={upgrading}>
               {t("common.cancel", "Cancel")}
             </Button>
           </Dialog.Close>
@@ -960,7 +985,7 @@ const UpgradeAgentButton = () => {
               ? t("admin.nodeTable.upgrading", "下发中...")
               : t("admin.nodeTable.upgradeConfirm", "确认升级")}
           </Button>
-        </Flex>
+        </Dialog.Footer>
       </Dialog.Content>
     </Dialog.Root>
   );
@@ -1154,7 +1179,7 @@ const TableToolbar = ({
         )}
 
         <Dialog.Root open={dialogOpen} onOpenChange={setDialogOpen}>
-          <Dialog.Trigger>
+          <Dialog.Trigger asChild>
             <button
               onClick={() => setDialogOpen(true)}
               className="h-8 px-3 rounded-lg bg-foreground text-background font-medium text-xs flex items-center gap-1.5 shadow-2xs hover:opacity-90 active:scale-[0.98] transition-all cursor-pointer shrink-0"
@@ -1163,38 +1188,37 @@ const TableToolbar = ({
               <span>{t("admin.nodeTable.addNode", "添加节点")}</span>
             </button>
           </Dialog.Trigger>
-          <Dialog.Content className="max-w-md">
-            <Dialog.Title>
-              <div className="flex items-center gap-2">
-                <Plus size={15} className="text-muted-foreground" />
+          <Dialog.Content className="sm:max-w-md p-6 gap-5">
+            <Dialog.Header className="space-y-1.5 text-left">
+              <Dialog.Title className="flex items-center gap-2 text-base font-semibold leading-none tracking-tight text-foreground">
+                <Plus size={16} className="text-muted-foreground shrink-0" />
                 <span>{t("admin.nodeTable.addNode", "添加新服务器节点")}</span>
-              </div>
-            </Dialog.Title>
-            <div className="mt-2 space-y-2 text-xs">
-              <p className="text-[11px] text-muted-foreground leading-relaxed">
+              </Dialog.Title>
+              <Dialog.Description className="text-xs text-muted-foreground leading-relaxed">
                 创建新节点记录。保存后将自动生成专属 Token 令牌，供一键部署脚本接入使用。
-              </p>
-              <div className="space-y-1 pt-1">
-                <label className="text-xs font-medium text-foreground block">
-                  {t("admin.nodeTable.nameOptional", "服务器名称（选填）")}
-                </label>
-                <input
-                  ref={inputRef}
-                  placeholder="例如：香港 BGP、东京 CN2..."
-                  autoFocus
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      handleAddNode(inputRef.current?.value);
-                    }
-                  }}
-                  className="w-full h-8 px-2.5 text-xs rounded-md border border-border bg-background text-foreground outline-none focus:border-foreground/50 shadow-2xs"
-                />
-              </div>
+              </Dialog.Description>
+            </Dialog.Header>
+            <div className="space-y-1.5 my-0.5">
+              <label htmlFor="new-node-name-input" className="text-xs font-medium text-foreground block">
+                {t("admin.nodeTable.nameOptional", "服务器名称（选填）")}
+              </label>
+              <input
+                id="new-node-name-input"
+                ref={inputRef}
+                placeholder="例如：香港 BGP、东京 CN2..."
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleAddNode(inputRef.current?.value);
+                  }
+                }}
+                className="w-full h-9 px-3 text-sm rounded-md border border-border bg-background text-foreground outline-none focus:border-foreground/50 shadow-2xs"
+              />
             </div>
-            <Flex justify="end" gap="2" mt="4">
-              <Dialog.Close>
-                <Button variant="soft" color="gray" disabled={loading} className="cursor-pointer">
+            <Dialog.Footer className="pt-2 border-t border-border/50 flex flex-row justify-end gap-2">
+              <Dialog.Close asChild>
+                <Button variant="outline" type="button" disabled={loading} className="cursor-pointer">
                   {t("common.cancel", "取消")}
                 </Button>
               </Dialog.Close>
@@ -1205,7 +1229,7 @@ const TableToolbar = ({
               >
                 {loading ? "添加中..." : t("common.confirm", "确认添加")}
               </Button>
-            </Flex>
+            </Dialog.Footer>
           </Dialog.Content>
         </Dialog.Root>
       </div>
@@ -1702,46 +1726,49 @@ function RenewDialog({
 
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
-      <Dialog.Content className="max-w-md">
-        <Dialog.Title className="flex items-center gap-2">
-          <CalendarCheck size={18} className="text-emerald-600 dark:text-emerald-400" />
-          <span>{t("admin.nodeTable.renewTitle", "确认节点已续费")}</span>
-        </Dialog.Title>
-        <div className="my-3 space-y-3">
-          <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-800 dark:text-emerald-300 text-xs leading-relaxed">
+      <Dialog.Content className="sm:max-w-md p-6 gap-5">
+        <Dialog.Header className="space-y-1.5 text-left">
+          <Dialog.Title className="flex items-center gap-2 text-base font-semibold leading-none tracking-tight text-foreground">
+            <CalendarCheck size={16} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+            <span>{t("admin.nodeTable.renewTitle", "确认节点已续费")}</span>
+            <span className="font-mono text-xs text-muted-foreground font-normal ml-1">
+              · {node.name}
+            </span>
+          </Dialog.Title>
+          <Dialog.Description className="text-xs text-muted-foreground leading-relaxed">
             确认已在服务商处完成该机器的续费？系统将按该节点已配置的计费周期自动顺延时长。
+          </Dialog.Description>
+        </Dialog.Header>
+        <div className="rounded-lg border border-border/80 bg-muted/40 p-3 space-y-2 text-xs my-0.5">
+          <div className="flex justify-between items-center">
+            <span className="text-muted-foreground">服务器名称:</span>
+            <span className="font-semibold text-foreground">{node.name}</span>
           </div>
-          <div className="rounded-lg border border-border/80 bg-muted/40 p-3 space-y-2 text-xs">
-            <div className="flex justify-between items-center">
-              <span className="text-muted-foreground">服务器名称:</span>
-              <span className="font-semibold text-foreground">{node.name}</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-muted-foreground">计费周期:</span>
-              <span className="font-mono text-foreground">{cycleDays} 天</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-muted-foreground">当前到期日:</span>
-              <span className="font-mono text-foreground">{currentDateStr}</span>
-            </div>
-            <div className="pt-2 border-t border-border/60 flex justify-between items-center">
-              <span className="font-medium text-foreground">续费后新到期日:</span>
-              <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400 text-sm">
-                {newDateStr}
-              </span>
-            </div>
+          <div className="flex justify-between items-center">
+            <span className="text-muted-foreground">计费周期:</span>
+            <span className="font-mono text-foreground">{cycleDays} 天</span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-muted-foreground">当前到期日:</span>
+            <span className="font-mono text-foreground">{currentDateStr}</span>
+          </div>
+          <div className="pt-2 border-t border-border/60 flex justify-between items-center">
+            <span className="font-medium text-foreground">续费后新到期日:</span>
+            <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400 text-sm">
+              {newDateStr}
+            </span>
           </div>
         </div>
-        <Flex justify="end" gap="2" mt="4">
-          <Dialog.Close>
-            <Button variant="soft" color="gray" disabled={loading}>
+        <Dialog.Footer className="pt-2 border-t border-border/50 flex flex-row justify-end gap-2">
+          <Dialog.Close asChild>
+            <Button variant="outline" type="button" disabled={loading}>
               {t("common.cancel", "取消")}
             </Button>
           </Dialog.Close>
           <Button onClick={handleRenew} disabled={loading} color="green">
             {loading ? t("common.saving", "更新中...") : t("admin.nodeTable.confirmRenew", "确认续费")}
           </Button>
-        </Flex>
+        </Dialog.Footer>
       </Dialog.Content>
     </Dialog.Root>
   );
@@ -1791,7 +1818,7 @@ function DeleteButton({
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
       {trigger !== null && (
-        <Dialog.Trigger>
+        <Dialog.Trigger asChild>
           {trigger !== undefined ? (
             trigger
           ) : (
@@ -1801,28 +1828,32 @@ function DeleteButton({
           )}
         </Dialog.Trigger>
       )}
-      <Dialog.Content className="max-w-md">
-        <Dialog.Title>{t("common.delete")}</Dialog.Title>
-        <div className="my-2.5 p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-xs leading-relaxed flex items-start gap-2">
-          <AlertTriangle size={15} className="shrink-0 mt-0.5" />
-          <span>
-            {t(
-              "admin.nodeTable.deleteWarning",
-              "警告：此操作不可撤销！删除后该节点将立即失去连接，历史监控数据将被清除。"
-            )}
-          </span>
+      <Dialog.Content className="sm:max-w-md p-6 gap-5">
+        <Dialog.Header className="space-y-1.5 text-left">
+          <Dialog.Title className="text-destructive flex items-center gap-2 text-base font-semibold leading-none tracking-tight">
+            <AlertTriangle size={17} className="shrink-0 text-destructive" />
+            <span>{t("common.delete", "删除服务器节点")}</span>
+          </Dialog.Title>
+          <Dialog.Description className="text-xs text-muted-foreground leading-relaxed">
+            {t("common.confirm_delete", "确认删除节点：")} <strong className="text-foreground font-mono">{node.name}</strong>？
+          </Dialog.Description>
+        </Dialog.Header>
+        <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-xs leading-relaxed my-0.5">
+          {t(
+            "admin.nodeTable.deleteWarning",
+            "警告：此操作不可撤销！删除后该节点将立即失去连接，历史监控数据将被清除。"
+          )}
         </div>
-        <Dialog.Description className="text-xs text-muted-foreground mt-1">
-          {t("common.confirm_delete", "确认删除节点：")} <strong className="text-foreground font-mono">{node.name}</strong>？
-        </Dialog.Description>
-        <Flex justify="end" gap="2" mt="4">
-          <Dialog.Close>
-            <Button variant="soft" color="gray">{t("common.cancel")}</Button>
+        <Dialog.Footer className="pt-2 border-t border-border/50 flex flex-row justify-end gap-2">
+          <Dialog.Close asChild>
+            <Button variant="outline" type="button" disabled={deleting}>
+              {t("common.cancel", "取消")}
+            </Button>
           </Dialog.Close>
           <Button disabled={deleting} color="red" onClick={handleDelete}>
             {deleting ? t("common.deleting", "删除中...") : t("common.confirm_delete", "确认删除")}
           </Button>
-        </Flex>
+        </Dialog.Footer>
       </Dialog.Content>
     </Dialog.Root>
   );
@@ -1884,13 +1915,13 @@ function GenerateCommandButton({
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       {trigger !== null && (
-        <Dialog.Trigger>
+        <Dialog.Trigger asChild>
           {trigger !== undefined ? (
             trigger
           ) : (
             <button
               type="button"
-              className="w-7 h-7 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/70 flex items-center justify-center transition-colors cursor-pointer"
+              className="size-7 rounded-md border border-border/60 text-muted-foreground hover:text-foreground hover:bg-muted inline-flex items-center justify-center transition-colors cursor-pointer shadow-2xs"
               title={t("admin.nodeTable.installCommand", "安装指令")}
             >
               <Download size={13} />
@@ -1898,13 +1929,19 @@ function GenerateCommandButton({
           )}
         </Dialog.Trigger>
       )}
-      <Dialog.Content className="max-w-lg">
-        <Dialog.Title>
-          {t("admin.nodeTable.installCommand", "一键部署指令")}
-        </Dialog.Title>
-        <div className="flex flex-col gap-3.5 my-1">
+      <Dialog.Content className="sm:max-w-lg p-6 gap-5">
+        <Dialog.Header className="space-y-1.5 text-left">
+          <Dialog.Title className="flex items-center gap-2 text-base font-semibold leading-none tracking-tight text-foreground">
+            <Download size={16} className="text-muted-foreground shrink-0" />
+            <span>{t("admin.nodeTable.installCommand", "一键部署指令")}</span>
+          </Dialog.Title>
+          <Dialog.Description className="text-xs text-muted-foreground leading-relaxed">
+            配置客户端采集参数并生成跨平台一键部署脚本。
+          </Dialog.Description>
+        </Dialog.Header>
+        <div className="flex flex-col gap-3.5 my-0.5">
           <div>
-            <span className="text-xs font-medium text-muted-foreground block mb-2">
+            <span className="text-xs font-medium text-foreground block mb-2">
               {t("admin.nodeTable.installOptions", "安装选项")}
             </span>
             <div className="space-y-2.5 rounded-lg border border-border/70 bg-muted/20 p-3">
@@ -1935,6 +1972,7 @@ function GenerateCommandButton({
                           includeNics: e.target.value,
                         }))
                       }
+                      className="h-8 text-xs"
                     />
                   </div>
                 )}
@@ -1967,6 +2005,7 @@ function GenerateCommandButton({
                           excludeNics: e.target.value,
                         }))
                       }
+                      className="h-8 text-xs"
                     />
                   </div>
                 )}
@@ -2001,6 +2040,7 @@ function GenerateCommandButton({
                           interval: e.target.value,
                         }))
                       }
+                      className="h-8 text-xs"
                     />
                   </div>
                 )}
@@ -2009,26 +2049,25 @@ function GenerateCommandButton({
           </div>
 
           <div>
-            <span className="text-xs font-medium text-muted-foreground block mb-1.5">
+            <span className="text-xs font-medium text-foreground block mb-1.5">
               {t("admin.nodeTable.generatedCommand", "生成的指令")}
             </span>
             <div className="rounded-lg border border-border/70 bg-muted/40 p-3 font-mono text-[11px] leading-relaxed break-all select-all text-foreground max-h-36 overflow-y-auto">
               {generateCommand()}
             </div>
           </div>
-
-          <Flex justify="end" gap="2" mt="2">
-            <Dialog.Close>
-              <Button variant="soft" color="gray" type="button">
-                {t("common.close", "关闭")}
-              </Button>
-            </Dialog.Close>
-            <Button onClick={() => copyToClipboardHandler(generateCommand())}>
-              <Copy size={14} />
-              {t("common.copy")}
-            </Button>
-          </Flex>
         </div>
+        <Dialog.Footer className="pt-2 border-t border-border/50 flex flex-row justify-end gap-2">
+          <Dialog.Close asChild>
+            <Button variant="outline" type="button">
+              {t("common.close", "关闭")}
+            </Button>
+          </Dialog.Close>
+          <Button onClick={() => copyToClipboardHandler(generateCommand())}>
+            <Copy size={13} />
+            <span>{t("common.copy", "复制指令")}</span>
+          </Button>
+        </Dialog.Footer>
       </Dialog.Content>
     </Dialog.Root>
   );

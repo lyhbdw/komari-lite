@@ -193,7 +193,7 @@ const ServerRow: React.FC<{
       </TableCell>
       <TableCell className="text-right pr-4 py-3">
         <Dialog.Root open={open} onOpenChange={setOpen}>
-          <Dialog.Trigger>
+          <Dialog.Trigger asChild>
             <button
               type="button"
               className="size-7 rounded-md border border-border/60 hover:bg-muted text-muted-foreground hover:text-foreground inline-flex items-center justify-center transition-colors cursor-pointer shadow-2xs"
@@ -202,14 +202,20 @@ const ServerRow: React.FC<{
               <Settings2 size={13} />
             </button>
           </Dialog.Trigger>
-          <Dialog.Content className="max-w-md km-pingtask-server-form">
-            <Dialog.Title>
-              <div className="flex items-center gap-2">
-                <Server size={16} className="text-muted-foreground" />
-                <span>配置探测任务 - {nodeName}</span>
-              </div>
-            </Dialog.Title>
-            <div className="my-3">
+          <Dialog.Content className="sm:max-w-md p-6 gap-5 km-pingtask-server-form">
+            <Dialog.Header className="space-y-1.5 text-left">
+              <Dialog.Title className="flex items-center gap-2 text-base font-semibold leading-none tracking-tight text-foreground">
+                <Server size={16} className="text-muted-foreground shrink-0" />
+                <span>配置探测任务</span>
+                <span className="font-mono text-xs text-muted-foreground font-normal ml-1">
+                  · {nodeName}
+                </span>
+              </Dialog.Title>
+              <Dialog.Description className="text-xs text-muted-foreground leading-relaxed">
+                选择该服务器节点需要执行的网络探测任务。
+              </Dialog.Description>
+            </Dialog.Header>
+            <div className="my-0.5">
               <Selector
                 value={selectedIds}
                 onChange={setSelectedIds}
@@ -235,7 +241,7 @@ const ServerRow: React.FC<{
                 }
               />
             </div>
-            <div className="flex justify-end gap-2 mt-4">
+            <Dialog.Footer className="pt-2 border-t border-border/50 flex flex-row justify-end gap-2">
               <Dialog.Close asChild>
                 <Button
                   variant="outline"
@@ -253,7 +259,7 @@ const ServerRow: React.FC<{
               >
                 {saving ? "保存中..." : t("common.save", "保存修改")}
               </Button>
-            </div>
+            </Dialog.Footer>
           </Dialog.Content>
         </Dialog.Root>
       </TableCell>

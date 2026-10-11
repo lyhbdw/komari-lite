@@ -125,7 +125,7 @@ export default function Sessions() {
           </p>
         </div>
         <Dialog.Root>
-          <Dialog.Trigger>
+          <Dialog.Trigger asChild>
             <button
               type="button"
               className="h-8 px-3 rounded-lg border border-destructive/30 bg-destructive/10 text-destructive font-medium text-xs flex items-center gap-1.5 shadow-2xs hover:bg-destructive/20 active:scale-[0.98] transition-all cursor-pointer"
@@ -133,19 +133,23 @@ export default function Sessions() {
               <span>{t("sessions.delete_all", "退出所有会话")}</span>
             </button>
           </Dialog.Trigger>
-          <Dialog.Content>
-            <Dialog.Title>{t("sessions.delete_all")}</Dialog.Title>
-            <Dialog.Description>
-              {t("sessions.delete_all_desc")}
-            </Dialog.Description>
-            <div className="flex justify-end gap-2 mt-4">
+          <Dialog.Content className="sm:max-w-sm p-6 gap-5">
+            <Dialog.Header className="space-y-1.5 text-left">
+              <Dialog.Title className="text-base font-semibold leading-none tracking-tight text-destructive">
+                {t("sessions.delete_all", "退出所有会话")}
+              </Dialog.Title>
+              <Dialog.Description className="text-xs text-muted-foreground leading-relaxed">
+                {t("sessions.delete_all_desc", "确定要销毁除当前会话外的所有登录状态吗？")}
+              </Dialog.Description>
+            </Dialog.Header>
+            <Dialog.Footer className="pt-2 border-t border-border/50 flex flex-row justify-end gap-2">
               <Dialog.Close asChild>
-                <Button variant="outline">{t("common.cancel")}</Button>
+                <Button variant="outline">{t("common.cancel", "取消")}</Button>
               </Dialog.Close>
               <Button variant="destructive" onClick={deleteAllSessions}>
-                {t("common.delete")}
+                {t("common.delete", "确认退出")}
               </Button>
-            </div>
+            </Dialog.Footer>
           </Dialog.Content>
         </Dialog.Root>
       </div>
@@ -169,7 +173,7 @@ export default function Sessions() {
                 <TableRow key={s.uuid} className="km-session-item">
                   <TableCell>
                     <Dialog.Root>
-                      <Dialog.Trigger>
+                      <Dialog.Trigger asChild>
                         <button
                           type="button"
                           className="hover:underline cursor-pointer inline-flex items-center gap-1.5 text-left text-xs font-mono group"
@@ -184,11 +188,22 @@ export default function Sessions() {
                           )}
                         </button>
                       </Dialog.Trigger>
-                      <Dialog.Content className="max-w-lg">
-                        <Dialog.Title>
-                          {t("sessions.active_sessions")}
-                        </Dialog.Title>
-                        <div className="flex flex-col gap-3 my-2 text-xs">
+                      <Dialog.Content className="sm:max-w-lg p-6 gap-5">
+                        <Dialog.Header className="space-y-1.5 text-left">
+                          <Dialog.Title className="flex items-center gap-2 text-base font-semibold leading-none tracking-tight text-foreground">
+                            <Info size={16} className="text-muted-foreground shrink-0" />
+                            <span>{t("sessions.active_sessions", "会话详细信息")}</span>
+                            {isCurrent && (
+                              <span className="ml-1 text-[10px] font-mono px-1.5 py-0.2 rounded bg-foreground text-background font-medium">
+                                {t("sessions.current", "当前会话")}
+                              </span>
+                            )}
+                          </Dialog.Title>
+                          <Dialog.Description className="text-xs text-muted-foreground leading-relaxed">
+                            查看该会话的接入设备、IP 地址及生命周期状态。
+                          </Dialog.Description>
+                        </Dialog.Header>
+                        <div className="flex flex-col gap-3 my-0.5 text-xs">
                           <div className="p-2.5 rounded-lg border border-border/70 bg-muted/30 flex items-start justify-between gap-2">
                             <div className="min-w-0">
                               <span className="text-[11px] font-medium text-muted-foreground block mb-0.5">
@@ -213,7 +228,7 @@ export default function Sessions() {
                           </div>
 
                           <div className="grid grid-cols-2 gap-2.5">
-                            <div className="p-2 rounded-lg border border-border/50 bg-muted/20">
+                            <div className="p-2.5 rounded-lg border border-border/50 bg-muted/20">
                               <span className="text-[11px] font-medium text-muted-foreground block mb-0.5">
                                 IP / {t("sessions.latest_ip")}
                               </span>
@@ -221,7 +236,7 @@ export default function Sessions() {
                                 {s.ip} / {s.latest_ip}
                               </span>
                             </div>
-                            <div className="p-2 rounded-lg border border-border/50 bg-muted/20">
+                            <div className="p-2.5 rounded-lg border border-border/50 bg-muted/20">
                               <span className="text-[11px] font-medium text-muted-foreground block mb-0.5">
                                 {t("sessions.login_method")}
                               </span>
@@ -261,7 +276,7 @@ export default function Sessions() {
                               <span className="text-muted-foreground block">
                                 {t("sessions.created_at")}
                               </span>
-                              <span className="text-foreground mt-0.5 block">
+                              <span className="text-foreground mt-0.5 block font-mono">
                                 {new Date(s.created_at).toLocaleString()}
                               </span>
                             </div>
@@ -269,7 +284,7 @@ export default function Sessions() {
                               <span className="text-muted-foreground block">
                                 {t("sessions.expires_at")}
                               </span>
-                              <span className="text-foreground mt-0.5 block">
+                              <span className="text-foreground mt-0.5 block font-mono">
                                 {new Date(s.expires).toLocaleString()}
                               </span>
                             </div>
@@ -277,7 +292,7 @@ export default function Sessions() {
                               <span className="text-muted-foreground block">
                                 {t("sessions.latest_online")}
                               </span>
-                              <span className="text-foreground mt-0.5 block">
+                              <span className="text-foreground mt-0.5 block font-mono">
                                 {new Date(s.latest_online).toLocaleString()}{" "}
                                 ({formatDuration(Date.now() - new Date(s.latest_online).getTime(), t)})
                               </span>
@@ -285,11 +300,11 @@ export default function Sessions() {
                           </div>
                         </div>
 
-                        <div className="flex justify-end mt-4">
+                        <Dialog.Footer className="pt-2 border-t border-border/50 flex flex-row justify-end gap-2">
                           <Dialog.Close asChild>
-                            <Button variant="outline">{t("common.close")}</Button>
+                            <Button variant="outline">{t("common.close", "关闭")}</Button>
                           </Dialog.Close>
-                        </div>
+                        </Dialog.Footer>
                       </Dialog.Content>
                     </Dialog.Root>
                   </TableCell>
@@ -310,26 +325,28 @@ export default function Sessions() {
                           </Button>
                         </Dialog.Trigger>
                       )}
-                      <Dialog.Content>
-                        <Dialog.Title>
-                          {t("common.confirm_delete")}
-                        </Dialog.Title>
-                        <Dialog.Description>
-                          {t("sessions.delete_one_desc")}
-                        </Dialog.Description>
-                        <div className="flex justify-end gap-2 mt-4">
+                      <Dialog.Content className="sm:max-w-sm p-6 gap-5">
+                        <Dialog.Header className="space-y-1.5 text-left">
+                          <Dialog.Title className="text-base font-semibold leading-none tracking-tight text-destructive">
+                            {t("common.confirm_delete", "确认删除会话")}
+                          </Dialog.Title>
+                          <Dialog.Description className="text-xs text-muted-foreground leading-relaxed">
+                            {t("sessions.delete_one_desc", "确认注销并删除该登录会话吗？该设备需重新输入密码登录。")}
+                          </Dialog.Description>
+                        </Dialog.Header>
+                        <Dialog.Footer className="pt-2 border-t border-border/50 flex flex-row justify-end gap-2">
                           <Dialog.Close asChild>
                             <Button variant="outline">
-                              {t("common.cancel")}
+                              {t("common.cancel", "取消")}
                             </Button>
                           </Dialog.Close>
                           <Button
                             variant="destructive"
                             onClick={() => deleteSession(s.id)}
                           >
-                            {t("common.delete")}
+                            {t("common.delete", "确认删除")}
                           </Button>
-                        </div>
+                        </Dialog.Footer>
                       </Dialog.Content>
                     </Dialog.Root>
                   </TableCell>

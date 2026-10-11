@@ -355,7 +355,7 @@ const Row = ({
         <div className="flex items-center justify-end gap-1">
           {/* 编辑按钮 */}
           <Dialog.Root open={editOpen} onOpenChange={setEditOpen}>
-            <Dialog.Trigger>
+            <Dialog.Trigger asChild>
               <button
                 type="button"
                 className="size-7 rounded-md border border-border/60 hover:bg-muted text-muted-foreground hover:text-foreground inline-flex items-center justify-center transition-colors cursor-pointer shadow-2xs"
@@ -364,37 +364,47 @@ const Row = ({
                 <Pencil size={13} />
               </button>
             </Dialog.Trigger>
-            <Dialog.Content className="max-w-md">
-              <Dialog.Title>
-                <div className="flex items-center gap-2">
-                  <Pencil size={15} className="text-muted-foreground" />
+            <Dialog.Content className="sm:max-w-md p-6 gap-5">
+              <Dialog.Header className="space-y-1.5 text-left">
+                <Dialog.Title className="flex items-center gap-2 text-base font-semibold leading-none tracking-tight text-foreground">
+                  <Pencil size={15} className="text-muted-foreground shrink-0" />
                   <span>编辑探测任务</span>
-                </div>
-              </Dialog.Title>
-              <form onSubmit={handleEdit} className="flex flex-col gap-3.5 my-2 text-xs">
-                <div className="space-y-1">
-                  <label htmlFor={`edit-task-name-${task.id}`} className="text-xs font-medium text-foreground block">
-                    任务名称
-                  </label>
+                  <span className="font-mono text-xs text-muted-foreground font-normal ml-1">
+                    · {task.name}
+                  </span>
+                </Dialog.Title>
+                <Dialog.Description className="text-xs text-muted-foreground leading-relaxed">
+                  修改探测任务的协议、目标地址、频率与节点执行范围。
+                </Dialog.Description>
+              </Dialog.Header>
+              <form onSubmit={handleEdit} className="grid gap-3.5 my-0.5 text-xs">
+                <div className="grid gap-1.5">
+                  <div className="flex items-center h-5">
+                    <label htmlFor={`edit-task-name-${task.id}`} className="text-xs font-medium leading-none text-foreground">
+                      任务名称
+                    </label>
+                  </div>
                   <input
                     id={`edit-task-name-${task.id}`}
                     value={form.name}
                     onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
                     required
-                    className="w-full h-8 px-2.5 text-xs rounded-md border border-border bg-background text-foreground outline-none focus:border-foreground/50 shadow-2xs"
+                    className="w-full h-9 px-3 text-sm rounded-lg border border-input bg-transparent text-foreground outline-none focus-visible:ring-1 focus-visible:ring-ring shadow-xs"
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <label htmlFor={`edit-task-type-${task.id}`} className="text-xs font-medium text-foreground block">
-                      协议类型
-                    </label>
+                  <div className="grid gap-1.5">
+                    <div className="flex items-center h-5">
+                      <label htmlFor={`edit-task-type-${task.id}`} className="text-xs font-medium leading-none text-foreground">
+                        协议类型
+                      </label>
+                    </div>
                     <Select.Root
                       value={form.type}
                       onValueChange={(v) => setForm((f) => ({ ...f, type: v as any }))}
                     >
-                      <Select.Trigger id={`edit-task-type-${task.id}`} className="w-full h-8 cursor-pointer text-xs" />
+                      <Select.Trigger id={`edit-task-type-${task.id}`} className="w-full h-9 cursor-pointer text-sm" />
                       <Select.Content>
                         <Select.Item value="tcp">TCP (端口握手)</Select.Item>
                         <Select.Item value="icmp">ICMP (Ping 报文)</Select.Item>
@@ -402,10 +412,12 @@ const Row = ({
                       </Select.Content>
                     </Select.Root>
                   </div>
-                  <div className="space-y-1">
-                    <label htmlFor={`edit-task-interval-${task.id}`} className="text-xs font-medium text-foreground block">
-                      探测频率 (秒/次)
-                    </label>
+                  <div className="grid gap-1.5">
+                    <div className="flex items-center h-5">
+                      <label htmlFor={`edit-task-interval-${task.id}`} className="text-xs font-medium leading-none text-foreground">
+                        探测频率 (秒/次)
+                      </label>
+                    </div>
                     <input
                       id={`edit-task-interval-${task.id}`}
                       type="number"
@@ -413,21 +425,23 @@ const Row = ({
                       value={form.interval}
                       onChange={(e) => setForm((f) => ({ ...f, interval: Number(e.target.value) }))}
                       required
-                      className="w-full h-8 px-2.5 text-xs rounded-md border border-border bg-background text-foreground outline-none focus:border-foreground/50 shadow-2xs font-mono"
+                      className="w-full h-9 px-3 text-sm rounded-lg border border-input bg-transparent text-foreground outline-none focus-visible:ring-1 focus-visible:ring-ring shadow-xs font-mono"
                     />
                   </div>
                 </div>
 
-                <div className="space-y-1">
-                  <label htmlFor={`edit-task-target-${task.id}`} className="text-xs font-medium text-foreground block">
-                    目标地址 (Target)
-                  </label>
+                <div className="grid gap-1.5">
+                  <div className="flex items-center h-5">
+                    <label htmlFor={`edit-task-target-${task.id}`} className="text-xs font-medium leading-none text-foreground">
+                      目标地址 (Target)
+                    </label>
+                  </div>
                   <input
                     id={`edit-task-target-${task.id}`}
                     value={form.target}
                     onChange={(e) => setForm((f) => ({ ...f, target: e.target.value }))}
                     required
-                    className="w-full h-8 px-2.5 text-xs rounded-md border border-border bg-background text-foreground outline-none focus:border-foreground/50 shadow-2xs font-mono"
+                    className="w-full h-9 px-3 text-sm rounded-lg border border-input bg-transparent text-foreground outline-none focus-visible:ring-1 focus-visible:ring-ring shadow-xs font-mono"
                   />
                 </div>
 
@@ -465,23 +479,23 @@ const Row = ({
                   </div>
                 </div>
 
-                <Flex gap="2" justify="end" mt="2">
-                  <Dialog.Close>
-                    <Button variant="soft" color="gray" type="button" className="cursor-pointer">
+                <Dialog.Footer className="pt-2 border-t border-border/50 flex flex-row justify-end gap-2">
+                  <Dialog.Close asChild>
+                    <Button variant="outline" type="button" className="cursor-pointer">
                       {t("common.cancel", "取消")}
                     </Button>
                   </Dialog.Close>
                   <Button type="submit" disabled={editSaving} className="cursor-pointer">
                     {editSaving ? "保存中..." : t("common.save", "保存修改")}
                   </Button>
-                </Flex>
+                </Dialog.Footer>
               </form>
             </Dialog.Content>
           </Dialog.Root>
 
           {/* 删除按钮 */}
           <Dialog.Root open={deleteOpen} onOpenChange={setDeleteOpen}>
-            <Dialog.Trigger>
+            <Dialog.Trigger asChild>
               <button
                 type="button"
                 className="size-7 rounded-md border border-border/60 hover:bg-rose-500/10 text-muted-foreground hover:text-rose-600 dark:hover:text-rose-400 inline-flex items-center justify-center transition-colors cursor-pointer shadow-2xs"
@@ -490,19 +504,19 @@ const Row = ({
                 <Trash2 size={13} />
               </button>
             </Dialog.Trigger>
-            <Dialog.Content className="max-w-sm">
-              <Dialog.Title>
-                <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400">
-                  <Trash2 size={16} />
+            <Dialog.Content className="sm:max-w-sm p-6 gap-5">
+              <Dialog.Header className="space-y-1.5 text-left">
+                <Dialog.Title className="flex items-center gap-2 text-base font-semibold leading-none tracking-tight text-destructive">
+                  <Trash2 size={16} className="shrink-0" />
                   <span>确认删除探测任务</span>
-                </div>
-              </Dialog.Title>
-              <p className="text-xs text-muted-foreground my-2 leading-relaxed">
-                删除任务 <strong className="text-foreground">{task.name}</strong> 后，所有节点将停止探测且历史延迟数据将被移除。此操作不可恢复。
-              </p>
-              <Flex gap="2" justify="end" mt="4">
-                <Dialog.Close>
-                  <Button variant="soft" color="gray" type="button" className="cursor-pointer">
+                </Dialog.Title>
+                <Dialog.Description className="text-xs text-muted-foreground leading-relaxed">
+                  删除任务 <strong className="text-foreground">{task.name}</strong> 后，所有节点将停止探测且历史延迟数据将被移除。此操作不可恢复。
+                </Dialog.Description>
+              </Dialog.Header>
+              <Dialog.Footer className="pt-2 border-t border-border/50 flex flex-row justify-end gap-2">
+                <Dialog.Close asChild>
+                  <Button variant="outline" type="button" className="cursor-pointer">
                     {t("common.cancel", "取消")}
                   </Button>
                 </Dialog.Close>
@@ -514,7 +528,7 @@ const Row = ({
                 >
                   {deleteLoading ? "删除中..." : t("common.delete", "确认删除")}
                 </Button>
-              </Flex>
+              </Dialog.Footer>
             </Dialog.Content>
           </Dialog.Root>
         </div>

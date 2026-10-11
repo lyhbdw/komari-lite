@@ -24,44 +24,44 @@ const AdminLayout = () => {
   return (
     <>
       <Dialog.Root open={open}>
-        <Dialog.Content className="km-admin-eula-dialog">
-          <Dialog.Content>
-            <Dialog.Title>{t("eula.title")}</Dialog.Title>
-            <div className="km-admin-eula-content flex flex-col gap-2">
-              <div className="max-h-[70vh] overflow-y-auto space-y-4">
-                <pre className="text-wrap">{getEula(i18n.language)}</pre>
-              </div>
-              <div className="flex flex-row gap-2 justify-end items-center">
-                <Button
-                  variant="soft"
-                  color="red"
-                  onClick={() => window.close()}
-                >
-                  {t("eula.reject")}
-                </Button>
-                <Button
-                  variant="solid"
-                  onClick={async () => {
-                    try {
-                      await updateSettingsWithToast(
-                        { eula_accepted: true },
-                        (key) => key
-                      );
-                      setSettings((prev) => ({
-                        ...prev,
-                        eula_accepted: true,
-                      }));
-                      setOpen(false);
-                    } catch {
-                      setOpen(true);
-                    }
-                  }}
-                >
-                  {t("eula.accept")}
-                </Button>
-              </div>
+        <Dialog.Content className="sm:max-w-2xl p-6 gap-5 km-admin-eula-dialog">
+          <Dialog.Header className="space-y-1.5 text-left">
+            <Dialog.Title className="text-base font-semibold leading-none tracking-tight text-foreground">
+              {t("eula.title")}
+            </Dialog.Title>
+          </Dialog.Header>
+          <div className="km-admin-eula-content flex flex-col gap-4">
+            <div className="max-h-[65vh] overflow-y-auto rounded-lg border border-border/70 bg-muted/30 p-4 text-xs leading-relaxed">
+              <pre className="text-wrap font-sans">{getEula(i18n.language)}</pre>
             </div>
-          </Dialog.Content>
+            <Dialog.Footer className="pt-2 border-t border-border/50 flex flex-row gap-2 justify-end items-center">
+              <Button
+                variant="outline"
+                onClick={() => window.close()}
+              >
+                {t("eula.reject")}
+              </Button>
+              <Button
+                onClick={async () => {
+                  try {
+                    await updateSettingsWithToast(
+                      { eula_accepted: true },
+                      (key) => key
+                    );
+                    setSettings((prev) => ({
+                      ...prev,
+                      eula_accepted: true,
+                    }));
+                    setOpen(false);
+                  } catch {
+                    setOpen(true);
+                  }
+                }}
+              >
+                {t("eula.accept")}
+              </Button>
+            </Dialog.Footer>
+          </div>
         </Dialog.Content>
       </Dialog.Root>
       <AccountProvider>

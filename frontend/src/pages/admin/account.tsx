@@ -441,28 +441,27 @@ const InnerLayout = () => {
 
       {/* 4. 启用 2FA 弹窗 */}
       <Dialog.Root open={isEnable2FaOpen} onOpenChange={setIsEnable2FaOpen}>
-        <Dialog.Content className="max-w-sm">
-          <Dialog.Title>
-            <div className="flex items-center gap-2">
-              <QrCode size={16} className="text-muted-foreground" />
+        <Dialog.Content className="sm:max-w-sm p-6 gap-5">
+          <Dialog.Header className="space-y-1.5 text-left">
+            <Dialog.Title className="flex items-center gap-2 text-base font-semibold leading-none tracking-tight text-foreground">
+              <QrCode size={16} className="text-muted-foreground shrink-0" />
               <span>{t("account.enable_2fa", "启用两步验证 (2FA)")}</span>
-            </div>
-          </Dialog.Title>
+            </Dialog.Title>
+            <Dialog.Description className="text-xs text-muted-foreground leading-relaxed">
+              {t("account.2fa_qr_code_hint", "使用身份验证器应用扫描下方二维码，并输入生成的动态验证码：")}
+            </Dialog.Description>
+          </Dialog.Header>
 
-          <form onSubmit={handleConfirmEnable2Fa} className="flex flex-col gap-3 my-2 text-xs">
-            <p className="text-[11px] text-muted-foreground leading-relaxed text-center">
-              {t("account.2fa_qr_code_hint", "使用 Google Authenticator、1Password 等身份验证应用扫描下方二维码：")}
-            </p>
-
-            <div className="flex justify-center p-3 bg-white rounded-lg border border-border/70 shadow-2xs mx-auto">
+          <form onSubmit={handleConfirmEnable2Fa} className="flex flex-col gap-3.5 my-0.5 text-xs">
+            <div className="flex justify-center p-3.5 bg-white rounded-lg border border-border/70 shadow-2xs mx-auto">
               {twoFaLoading ? (
-                <Skeleton className="size-[180px]" />
+                <Skeleton className="size-[170px]" />
               ) : (
                 <img
                   src={qrcodeUrl || ""}
                   alt="2FA 二维码"
-                  width={180}
-                  height={180}
+                  width={170}
+                  height={170}
                   className="rounded"
                 />
               )}
@@ -484,7 +483,7 @@ const InnerLayout = () => {
               />
             </div>
 
-            <div className="flex justify-end gap-2 mt-4">
+            <Dialog.Footer className="pt-2 border-t border-border/50 flex flex-row justify-end gap-2">
               <Dialog.Close asChild>
                 <Button variant="outline" type="button" className="cursor-pointer">
                   {t("common.cancel", "取消")}
@@ -497,26 +496,25 @@ const InnerLayout = () => {
               >
                 {twoFaLoading ? "验证中..." : "确认绑定"}
               </Button>
-            </div>
+            </Dialog.Footer>
           </form>
         </Dialog.Content>
       </Dialog.Root>
 
       {/* 5. 停用 2FA 确认弹窗 */}
       <Dialog.Root open={isDisable2FaOpen} onOpenChange={setIsDisable2FaOpen}>
-        <Dialog.Content className="max-w-sm">
-          <Dialog.Title>
-            <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400">
-              <Shield size={16} />
+        <Dialog.Content className="sm:max-w-sm p-6 gap-5">
+          <Dialog.Header className="space-y-1.5 text-left">
+            <Dialog.Title className="flex items-center gap-2 text-base font-semibold leading-none tracking-tight text-destructive">
+              <Shield size={16} className="shrink-0" />
               <span>{t("account.disable_2fa", "停用两步验证")}</span>
-            </div>
-          </Dialog.Title>
-
-          <form onSubmit={handleConfirmDisable2Fa} className="flex flex-col gap-3 my-2 text-xs">
-            <p className="text-[11px] text-muted-foreground leading-relaxed">
+            </Dialog.Title>
+            <Dialog.Description className="text-xs text-muted-foreground leading-relaxed">
               {t("account.disable_2fa_confirmation", "停用后，登录将仅依赖密码验证，安全性将降低。请输入当前 6 位验证码确认：")}
-            </p>
+            </Dialog.Description>
+          </Dialog.Header>
 
+          <form onSubmit={handleConfirmDisable2Fa} className="flex flex-col gap-3.5 my-0.5 text-xs">
             <div className="space-y-1.5">
               <input
                 type="number"
@@ -529,7 +527,7 @@ const InnerLayout = () => {
               />
             </div>
 
-            <div className="flex justify-end gap-2 mt-4">
+            <Dialog.Footer className="pt-2 border-t border-border/50 flex flex-row justify-end gap-2">
               <Dialog.Close asChild>
                 <Button variant="outline" type="button" className="cursor-pointer">
                   {t("common.cancel", "取消")}
@@ -543,7 +541,7 @@ const InnerLayout = () => {
               >
                 {twoFaLoading ? "处理中..." : "确认停用"}
               </Button>
-            </div>
+            </Dialog.Footer>
           </form>
         </Dialog.Content>
       </Dialog.Root>

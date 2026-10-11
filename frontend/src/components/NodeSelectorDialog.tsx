@@ -71,11 +71,18 @@ const NodeSelectorDialog: React.FC<NodeSelectorDialogProps> = ({
       <Dialog.Trigger asChild>
         {children ? (typeof children === "string" ? <Button>{children}</Button> : children) : <Button>{title || t("common.select")}</Button>}
       </Dialog.Trigger>
-      <Dialog.Content className="max-w-[420px] km-node-selector-dialog">
-        <Dialog.Title>{title || t("common.select")}</Dialog.Title>
-        <div className="flex flex-col gap-3">
+      <Dialog.Content className="sm:max-w-[440px] p-6 gap-5 km-node-selector-dialog">
+        <Dialog.Header className="space-y-1.5 text-left">
+          <Dialog.Title className="text-base font-semibold leading-none tracking-tight text-foreground">
+            {title || t("common.select", "选择服务器节点")}
+          </Dialog.Title>
+          <Dialog.Description className="text-xs text-muted-foreground leading-relaxed">
+            勾选需要关联的服务器节点，支持按名称搜索与批量选择。
+          </Dialog.Description>
+        </Dialog.Header>
+        <div className="flex flex-col gap-3 my-0.5">
           <div className="flex justify-between items-center gap-2">
-            <label className="text-xs text-muted-foreground">
+            <label className="text-xs text-muted-foreground font-mono">
               {t("common.selected_total", {
                 count: temp.length,
                 total: totalCount,
@@ -101,13 +108,13 @@ const NodeSelectorDialog: React.FC<NodeSelectorDialogProps> = ({
             hiddenUuidOnlyClient={hiddenUuidOnlyClient}
             hiddenDescription={hiddenDescription}
           />
-          <div className="flex justify-end gap-2 mt-2">
-            <Dialog.Close asChild>
-              <Button variant="outline">{t("common.cancel")}</Button>
-            </Dialog.Close>
-            <Button onClick={handleOk}>{t("common.done")}</Button>
-          </div>
         </div>
+        <Dialog.Footer className="pt-2 border-t border-border/50 flex flex-row justify-end gap-2">
+          <Dialog.Close asChild>
+            <Button variant="outline">{t("common.cancel", "取消")}</Button>
+          </Dialog.Close>
+          <Button onClick={handleOk}>{t("common.done", "完成")}</Button>
+        </Dialog.Footer>
       </Dialog.Content>
     </Dialog.Root>
   );

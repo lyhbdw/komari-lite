@@ -260,17 +260,20 @@ const LogPage = () => {
 
       {/* 4. 日志详情弹窗 */}
       <Dialog.Root open={!!activeLog} onOpenChange={(open) => !open && setActiveLog(null)}>
-        <Dialog.Content className="max-w-xl">
-          <Dialog.Title>
-            <div className="flex items-center gap-2">
-              <FileText size={16} className="text-muted-foreground" />
+        <Dialog.Content className="sm:max-w-xl p-6 gap-5">
+          <Dialog.Header className="space-y-1.5 text-left">
+            <Dialog.Title className="flex items-center gap-2 text-base font-semibold leading-none tracking-tight text-foreground">
+              <FileText size={16} className="text-muted-foreground shrink-0" />
               <span>{t("logs.detail_title", "日志详情")} #{activeLog?.id}</span>
-            </div>
-          </Dialog.Title>
+            </Dialog.Title>
+            <Dialog.Description className="text-xs text-muted-foreground leading-relaxed">
+              查看系统事件记录、触发时间及完整消息内容。
+            </Dialog.Description>
+          </Dialog.Header>
 
           {activeLog && (
-            <div className="flex flex-col gap-3 my-3 text-xs">
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <div className="flex flex-col gap-3 my-0.5 text-xs">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                 <div className="p-2.5 rounded-lg border border-border/50 bg-muted/20">
                   <span className="text-[11px] font-medium text-muted-foreground block mb-0.5">ID</span>
                   <span className="font-mono text-foreground font-semibold">{activeLog.id}</span>
@@ -296,15 +299,15 @@ const LogPage = () => {
                 </div>
               )}
 
-              <div className="space-y-1">
-                <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-medium text-muted-foreground">完整内容 (Message)</span>
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between h-5">
+                  <span className="text-xs font-medium text-foreground">完整内容 (Message)</span>
                   <button
                     type="button"
                     onClick={() => copyToClipboard(activeLog.message, { successMessage: "已复制日志内容" })}
-                    className="text-[11px] text-muted-foreground hover:text-foreground flex items-center gap-1 cursor-pointer transition-colors"
+                    className="h-6 px-2 rounded-md border border-border/60 bg-background hover:bg-muted text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-[11px] transition-colors cursor-pointer shadow-2xs"
                   >
-                    <Copy size={12} />
+                    <Copy size={11} />
                     <span>复制</span>
                   </button>
                 </div>
@@ -315,13 +318,13 @@ const LogPage = () => {
             </div>
           )}
 
-          <div className="flex justify-end mt-4">
+          <Dialog.Footer className="pt-2 border-t border-border/50 flex flex-row justify-end gap-2">
             <Dialog.Close asChild>
               <Button variant="outline" className="cursor-pointer">
                 {t("common.close", "关闭")}
               </Button>
             </Dialog.Close>
-          </div>
+          </Dialog.Footer>
         </Dialog.Content>
       </Dialog.Root>
     </div>

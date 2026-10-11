@@ -123,8 +123,8 @@ const InnerLayout = ({
         <Dialog.Trigger asChild>
           {trigger ? (typeof trigger === 'string' ? <Button>{trigger}</Button> : trigger) : <Button>{t("login.title")}</Button>}
         </Dialog.Trigger>
-        <Dialog.Content className="km-login-dialog max-w-[420px] p-6 sm:p-7 rounded-2xl border border-border bg-card shadow-2xl z-50">
-          <div className="flex flex-col items-center text-center mb-6">
+        <Dialog.Content className="km-login-dialog sm:max-w-[420px] p-6 sm:p-7 rounded-2xl border border-border bg-card shadow-2xl z-50">
+          <Dialog.Header className="flex flex-col items-center text-center mb-6">
             <div className="w-10 h-10 rounded-xl bg-foreground text-background flex items-center justify-center font-bold text-lg mb-3 shadow-sm select-none">
               K
             </div>
@@ -134,7 +134,7 @@ const InnerLayout = ({
             <Dialog.Description className="text-xs text-muted-foreground mt-1.5 m-0">
               {info || t("login.desc")}
             </Dialog.Description>
-          </div>
+          </Dialog.Header>
           <form
             className="km-login-form space-y-4"
             onSubmit={(e) => {

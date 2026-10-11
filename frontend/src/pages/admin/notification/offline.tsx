@@ -102,23 +102,22 @@ const NotificationEditForm = ({
           name="grace_period"
         />
       </div>
-      <Flex gap="2" justify="end" className="mt-4">
+      <Dialog.Footer className="pt-2 border-t border-border/50 flex flex-row justify-end gap-2">
         {onCancel && (
-          <Dialog.Close>
+          <Dialog.Close asChild>
             <Button
-              variant="soft"
-              color="gray"
+              variant="outline"
               type="button"
               onClick={onCancel}
             >
-              {t("common.cancel")}
+              {t("common.cancel", "取消")}
             </Button>
           </Dialog.Close>
         )}
-        <Button variant="solid" type="submit" disabled={loading}>
-          {t("common.save")}
+        <Button type="submit" disabled={loading}>
+          {loading ? "保存中..." : t("common.save", "保存修改")}
         </Button>
-      </Flex>
+      </Dialog.Footer>
     </form>
   );
 };
@@ -227,7 +226,7 @@ const InnerLayout = () => {
           })}
         </span>
         <Dialog.Root open={batchDialogOpen} onOpenChange={setBatchDialogOpen}>
-          <Dialog.Trigger>
+          <Dialog.Trigger asChild>
             <button
               type="button"
               onClick={() => {
@@ -246,8 +245,16 @@ const InnerLayout = () => {
               <span>{t("common.batch_edit", "批量编辑设置")}</span>
             </button>
           </Dialog.Trigger>
-          <Dialog.Content>
-            <Dialog.Title>{t("common.batch_edit")}</Dialog.Title>
+          <Dialog.Content className="sm:max-w-md p-6 gap-5">
+            <Dialog.Header className="space-y-1.5 text-left">
+              <Dialog.Title className="flex items-center gap-2 text-base font-semibold leading-none tracking-tight text-foreground">
+                <Pencil size={15} className="text-muted-foreground shrink-0" />
+                <span>{t("common.batch_edit", "批量编辑离线通知")}</span>
+              </Dialog.Title>
+              <Dialog.Description className="text-xs text-muted-foreground leading-relaxed">
+                统一修改所选节点的离线告警冷却与宽限时间配置。
+              </Dialog.Description>
+            </Dialog.Header>
             <NotificationEditForm
               initialValues={batchForm}
               loading={batchLoading}
@@ -386,7 +393,7 @@ const ActionButtons = ({
   return (
     <Flex gap="2" align="center">
       <Dialog.Root open={editOpen} onOpenChange={setEditOpen}>
-        <Dialog.Trigger>
+        <Dialog.Trigger asChild>
           <IconButton
             variant="ghost"
             title={t("common.edit", "Edit")}
@@ -395,8 +402,16 @@ const ActionButtons = ({
             <Pencil size={16} />
           </IconButton>
         </Dialog.Trigger>
-        <Dialog.Content>
-          <Dialog.Title>{t("common.edit")}</Dialog.Title>
+        <Dialog.Content className="sm:max-w-md p-6 gap-5">
+          <Dialog.Header className="space-y-1.5 text-left">
+            <Dialog.Title className="flex items-center gap-2 text-base font-semibold leading-none tracking-tight text-foreground">
+              <Pencil size={15} className="text-muted-foreground shrink-0" />
+              <span>{t("common.edit", "编辑离线通知")}</span>
+            </Dialog.Title>
+            <Dialog.Description className="text-xs text-muted-foreground leading-relaxed">
+              配置该服务器节点的离线告警状态、冷却时间与容忍宽限期。
+            </Dialog.Description>
+          </Dialog.Header>
           <NotificationEditForm
             initialValues={{
               enable: offlineNotifications?.enable ?? false,
