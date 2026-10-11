@@ -2047,11 +2047,14 @@ function EditButton({ node }: { node: NodeDetail }) {
   const [traffic_limit_type, setTrafficLimitType] = useState("sum");
 
   React.useEffect(() => {
-    setTrafficLimit(node.traffic_limit || 0);
-    setTrafficLimitType(node.traffic_limit_type || "sum");
-  }, [node.traffic_limit, node.traffic_limit_type]);
+    if (open) {
+      setTrafficLimit(node.traffic_limit || 0);
+      setTrafficLimitType(node.traffic_limit_type || "sum");
+    }
+  }, [node.traffic_limit, node.traffic_limit_type, open]);
 
-  const save = async () => {
+  const save = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     try {
       setSaving(true);
       await fetch(`/api/admin/client/${node.uuid}/edit`, {
@@ -2077,9 +2080,10 @@ function EditButton({ node }: { node: NodeDetail }) {
       setSaving(false);
     }
   };
+
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
-      <Dialog.Trigger>
+      <Dialog.Trigger asChild>
         <button
           type="button"
           className="size-7 rounded-md border border-border/60 text-muted-foreground hover:text-foreground hover:bg-muted inline-flex items-center justify-center transition-colors cursor-pointer shadow-2xs"
@@ -2088,58 +2092,138 @@ function EditButton({ node }: { node: NodeDetail }) {
           <Pencil size={13} />
         </button>
       </Dialog.Trigger>
-      <Dialog.Content className="max-w-md">
-        <Dialog.Title>{t("admin.nodeEdit.editInfo", "编辑信息")}</Dialog.Title>
-        <div className="flex flex-col gap-3 my-1">
-          <div>
-            <label className="block mb-1 text-xs font-medium text-muted-foreground">
-              {t("admin.nodeEdit.name", "名称")}
-            </label>
+      <Dialog.Content className="sm:max-w-[460px] p-6 gap-5">
+        <Dialog.Header className="space-y-1.5 text-left">
+          <Dialog.Title className="flex items-center gap-2 text-base font-semibold leading-none tracking-tight text-foreground">
+            <Pencil size={15} className="text-muted-foreground shrink-0" />
+            <span>{t("admin.nodeEdit.editInfo", "编辑信息")}</span>
+            <span className="font-mono text-xs text-muted-foreground font-normal ml-1">
+              · {node.name}
+            </span>
+          </Dialog.Title>
+          <Dialog.Description className="text-xs text-muted-foreground leading-relaxed">
+            {t(
+              "admin.nodeEdit.editDescription",
+              "修改服务器名称、Token、分组标签与流量统计规则。"
+            )}
+          </Dialog.Description>
+        </Dialog.Header>
+
+        <form onSubmit={save} className="grid gap-3.5 my-0.5">
+          {/* 1. 服务器名称 */}
+          <div className="grid gap-1.5">
+            <div className="flex items-center justify-between h-5">
+              <label
+                htmlFor={`edit-name-${node.uuid}`}
+                className="text-xs font-medium leading-none text-foreground"
+              >
+                {t("admin.nodeEdit.name", "名称")}
+              </label>
+            </div>
             <TextField.Root
+              id={`edit-name-${node.uuid}`}
               defaultValue={node.name}
               placeholder={t("admin.nodeEdit.namePlaceholder", "请输入名称")}
               ref={nameRef}
+              className="h-9 text-sm"
             />
           </div>
-          <div>
-            <label className="block mb-1 text-xs font-medium text-muted-foreground">
-              {t("admin.nodeEdit.token", "Token 令牌")}
-            </label>
+
+          {/* 2. Token 令牌 */}
+          <div className="grid gap-1.5">
+            <div className="flex items-center justify-between h-5">
+              <label
+                htmlFor={`edit-token-${node.uuid}`}
+                className="text-xs font-medium leading-none text-foreground"
+              >
+                {t("admin.nodeEdit.token", "Token 令牌")}
+              </label>
+              <span className="text-[11px] text-muted-foreground leading-none">
+                {t("admin.nodeEdit.tokenReadOnly", "只读")}
+              </span>
+            </div>
             <TextField.Root
+              id={`edit-token-${node.uuid}`}
               value={node.token}
               placeholder={t("admin.nodeEdit.tokenPlaceholder", "请输入 Token")}
               readOnly
-            />
+              className="h-9 font-mono text-xs bg-muted/40 text-muted-foreground pr-1 selection:bg-primary/20"
+            >
+              <TextField.Slot side="right">
+                <button
+                  type="button"
+                  onClick={() =>
+                    copyToClipboard(node.token, {
+                      successMessage: t("admin.nodeEdit.tokenCopied", "Token 已复制到剪贴板"),
+                    })
+                  }
+                  className="h-6 px-2 rounded-md border border-border/60 bg-background hover:bg-muted text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-[11px] font-sans transition-colors cursor-pointer shadow-2xs"
+                  title={t("common.copy", "复制")}
+                >
+                  <Copy size={11} />
+                  <span>{t("common.copy", "复制")}</span>
+                </button>
+              </TextField.Slot>
+            </TextField.Root>
           </div>
-          <div className="grid grid-cols-2 gap-2.5">
-            <div>
-              <div className="flex items-center gap-1 mb-1">
-                <label className="text-xs font-medium text-muted-foreground">
-                  {t("common.tags")}
+
+          {/* 3. 标签与分组 (水平基线完全对齐) */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="grid gap-1.5">
+              <div className="flex items-center gap-1.5 h-5">
+                <label
+                  htmlFor={`edit-tags-${node.uuid}`}
+                  className="text-xs font-medium leading-none text-foreground"
+                >
+                  {t("common.tags", "标签")}
                 </label>
-                <Tips>
+                <Tips size="13">
                   <span
                     dangerouslySetInnerHTML={{ __html: t("common.tagsTips") }}
                   />
                 </Tips>
               </div>
-              <TextField.Root defaultValue={node.tags} ref={tagsRef} placeholder="tag1,tag2" />
+              <TextField.Root
+                id={`edit-tags-${node.uuid}`}
+                defaultValue={node.tags}
+                ref={tagsRef}
+                placeholder="tag1,tag2"
+                className="h-9 text-sm"
+              />
             </div>
-            <div>
-              <label className="block mb-1 text-xs font-medium text-muted-foreground">
-                {t("common.group")}
-              </label>
-              <TextField.Root defaultValue={node.group} ref={groupRef} placeholder="default" />
+            <div className="grid gap-1.5">
+              <div className="flex items-center h-5">
+                <label
+                  htmlFor={`edit-group-${node.uuid}`}
+                  className="text-xs font-medium leading-none text-foreground"
+                >
+                  {t("common.group", "分组")}
+                </label>
+              </div>
+              <TextField.Root
+                id={`edit-group-${node.uuid}`}
+                defaultValue={node.group}
+                ref={groupRef}
+                placeholder="default"
+                className="h-9 text-sm"
+              />
             </div>
           </div>
-          <div>
-            <label className="block mb-1 text-xs font-medium text-muted-foreground">
-              {t("admin.nodeEdit.publicRemark", "公开备注")}
-            </label>
+
+          {/* 4. 公开备注 */}
+          <div className="grid gap-1.5">
+            <div className="flex items-center justify-between h-5">
+              <label
+                htmlFor={`edit-remark-${node.uuid}`}
+                className="text-xs font-medium leading-none text-foreground"
+              >
+                {t("admin.nodeEdit.publicRemark", "公开备注")}
+              </label>
+            </div>
             <TextArea
+              id={`edit-remark-${node.uuid}`}
               defaultValue={node.public_remark}
-              resize={"vertical"}
-              style={{ minHeight: "60px" }}
+              className="min-h-[68px] max-h-32 text-xs leading-relaxed resize-y"
               placeholder={t(
                 "admin.nodeEdit.publicRemarkPlaceholder",
                 "请输入公开备注"
@@ -2148,63 +2232,88 @@ function EditButton({ node }: { node: NodeDetail }) {
             />
           </div>
 
-          <div className="pt-2 border-t border-border/60 space-y-2">
-            <div className="text-xs font-medium text-foreground">
-              {t("admin.nodeEdit.trafficLimit")}
-            </div>
-            <div className="grid grid-cols-2 gap-2.5">
-              <div>
-                <label className="block mb-1 text-[11px] font-medium text-muted-foreground">
-                  {t("admin.nodeEdit.trafficLimitType")}
-                </label>
-                <Select.Root
-                  value={traffic_limit_type}
-                  onValueChange={setTrafficLimitType}
+          {/* 5. 流量阈值与统计方式 */}
+          <div className="pt-3 border-t border-border/60 grid grid-cols-2 gap-3">
+            <div className="grid gap-1.5">
+              <div className="flex items-center h-5">
+                <label
+                  htmlFor={`edit-traffic-type-${node.uuid}`}
+                  className="text-xs font-medium leading-none text-foreground"
                 >
-                  <Select.Trigger className="w-full" />
-                  <Select.Content>
-                    <Select.Item value="sum">{t("admin.nodeEdit.trafficLimitType_sum")}</Select.Item>
-                    <Select.Item value="max">{t("admin.nodeEdit.trafficLimitType_max")}</Select.Item>
-                    <Select.Item value="min">{t("admin.nodeEdit.trafficLimitType_min")}</Select.Item>
-                    <Select.Item value="up">{t("admin.nodeEdit.trafficLimitType_up")}</Select.Item>
-                    <Select.Item value="down">{t("admin.nodeEdit.trafficLimitType_down")}</Select.Item>
-                  </Select.Content>
-                </Select.Root>
-              </div>
-              <div>
-                <label className="block mb-1 text-[11px] font-medium text-muted-foreground">
-                  {t("admin.nodeEdit.trafficLimit")}
+                  {t("admin.nodeEdit.trafficLimitType", "统计方式")}
                 </label>
-                <TextField.Root
-                  defaultValue={formatBytes(traffic_limit || 0)}
-                  placeholder="1 TB"
-                  onChange={(e) => {
-                    setTrafficLimit(stringToBytes(e.currentTarget.value));
-                  }}
-                  onBlur={(e) => {
-                    e.currentTarget.value = formatBytes(traffic_limit);
-                  }}
-                />
               </div>
+              <Select.Root
+                value={traffic_limit_type}
+                onValueChange={setTrafficLimitType}
+              >
+                <Select.Trigger
+                  id={`edit-traffic-type-${node.uuid}`}
+                  className="w-full h-9 text-sm"
+                />
+                <Select.Content>
+                  <Select.Item value="sum">
+                    {t("admin.nodeEdit.trafficLimitType_sum", "总和")}
+                  </Select.Item>
+                  <Select.Item value="max">
+                    {t("admin.nodeEdit.trafficLimitType_max", "取最大")}
+                  </Select.Item>
+                  <Select.Item value="min">
+                    {t("admin.nodeEdit.trafficLimitType_min", "取最小")}
+                  </Select.Item>
+                  <Select.Item value="up">
+                    {t("admin.nodeEdit.trafficLimitType_up", "仅上传")}
+                  </Select.Item>
+                  <Select.Item value="down">
+                    {t("admin.nodeEdit.trafficLimitType_down", "仅下载")}
+                  </Select.Item>
+                </Select.Content>
+              </Select.Root>
+            </div>
+            <div className="grid gap-1.5">
+              <div className="flex items-center justify-between h-5">
+                <label
+                  htmlFor={`edit-traffic-limit-${node.uuid}`}
+                  className="text-xs font-medium leading-none text-foreground"
+                >
+                  {t("admin.nodeEdit.trafficLimit", "流量阈值")}
+                </label>
+                <span className="font-mono text-[11px] text-muted-foreground leading-none">
+                  {traffic_limit > 0 ? formatBytes(traffic_limit) : "0 B"}
+                </span>
+              </div>
+              <TextField.Root
+                id={`edit-traffic-limit-${node.uuid}`}
+                defaultValue={traffic_limit > 0 ? formatBytes(traffic_limit) : ""}
+                placeholder="1 TB (0 为不限制)"
+                className="h-9 text-sm"
+                onChange={(e) => {
+                  setTrafficLimit(stringToBytes(e.currentTarget.value));
+                }}
+                onBlur={(e) => {
+                  if (traffic_limit > 0) {
+                    e.currentTarget.value = formatBytes(traffic_limit);
+                  } else if (!e.currentTarget.value.trim() || e.currentTarget.value === "0") {
+                    e.currentTarget.value = "";
+                  }
+                }}
+              />
             </div>
           </div>
-        </div>
-        <Flex gap="2" justify="end" mt="4">
-          <Dialog.Close>
-            <Button variant="soft" color="gray" type="button">
-              {t("common.cancel")}
+
+          <Dialog.Footer className="pt-2 border-t border-border/50 flex flex-row justify-end gap-2">
+            <Dialog.Close asChild>
+              <Button variant="outline" type="button" disabled={saving}>
+                {t("common.cancel", "取消")}
+              </Button>
+            </Dialog.Close>
+            <Button type="submit" disabled={saving}>
+              {saving
+                ? t("admin.nodeEdit.waiting", "等待...")
+                : t("common.save", "保存")}
             </Button>
-          </Dialog.Close>
-          <Button
-            type="submit"
-            disabled={saving}
-            onClick={save}
-          >
-            {saving
-              ? t("admin.nodeEdit.waiting", "等待...")
-              : t("common.save", "保存")}
-          </Button>
-        </Flex>
+          </Dialog.Footer>
+        </form>
       </Dialog.Content>
     </Dialog.Root>
   );
@@ -2609,7 +2718,7 @@ function BillingButton({
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
       {trigger !== null && (
-        <Dialog.Trigger>
+        <Dialog.Trigger asChild>
           {trigger !== undefined ? (
             trigger
           ) : (
@@ -2622,29 +2731,40 @@ function BillingButton({
           )}
         </Dialog.Trigger>
       )}
-      <Dialog.Content className="max-w-md">
-        <Dialog.Title>{t("admin.nodeTable.billing", "账单")}</Dialog.Title>
-        <form onSubmit={handleSave} className="flex flex-col gap-3 my-1">
-          <div className="grid grid-cols-2 gap-2.5">
-            <div>
-              <div className="flex items-center gap-1 mb-1">
-                <label className="text-xs font-medium text-muted-foreground">
+      <Dialog.Content className="sm:max-w-[460px] p-6 gap-5">
+        <Dialog.Header className="space-y-1.5 text-left">
+          <Dialog.Title className="flex items-center gap-2 text-base font-semibold leading-none tracking-tight text-foreground">
+            <CircleDollarSign size={16} className="text-muted-foreground shrink-0" />
+            <span>{t("admin.nodeTable.billing", "账单管理")}</span>
+            <span className="font-mono text-xs text-muted-foreground font-normal ml-1">
+              · {node.name}
+            </span>
+          </Dialog.Title>
+          <Dialog.Description className="text-xs text-muted-foreground leading-relaxed">
+            {t("admin.nodeTable.billingDescription", "配置该节点的采购价格、结算货币、计费周期与续费规则。")}
+          </Dialog.Description>
+        </Dialog.Header>
+        <form onSubmit={handleSave} className="grid gap-3.5 my-0.5">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="grid gap-1.5">
+              <div className="flex items-center gap-1.5 h-5">
+                <label className="text-xs font-medium leading-none text-foreground">
                   {t("admin.nodeTable.price")}
                 </label>
-                <Tips><span>{t("admin.nodeTable.priceTips")}</span></Tips>
+                <Tips size="13"><span>{t("admin.nodeTable.priceTips")}</span></Tips>
               </div>
-              <TextField.Root name="price" defaultValue={node.price} placeholder="0.00" />
+              <TextField.Root name="price" defaultValue={node.price} placeholder="0.00" className="h-9 text-sm" />
             </div>
 
-            <div>
-              <div className="flex items-center gap-1 mb-1">
-                <label className="text-xs font-medium text-muted-foreground">
+            <div className="grid gap-1.5">
+              <div className="flex items-center gap-1.5 h-5">
+                <label className="text-xs font-medium leading-none text-foreground">
                   {t("admin.nodeTable.currency", "价格货币")}
                 </label>
-                <Tips><span>{t("admin.nodeTable.currencyTips")}</span></Tips>
+                <Tips size="13"><span>{t("admin.nodeTable.currencyTips")}</span></Tips>
               </div>
               <Select.Root value={currency} onValueChange={setCurrency}>
-                <Select.Trigger className="w-full" />
+                <Select.Trigger className="w-full h-9 text-sm" />
                 <Select.Content>
                   {getCurrencySelectOptions(currency).map((c) => (
                     <Select.Item key={c.value} value={c.value}>
@@ -2656,26 +2776,26 @@ function BillingButton({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-2.5">
-            <div>
-              <div className="flex items-center gap-1 mb-1">
-                <label className="text-xs font-medium text-muted-foreground">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="grid gap-1.5">
+              <div className="flex items-center gap-1.5 h-5">
+                <label className="text-xs font-medium leading-none text-foreground">
                   {t("admin.nodeTable.premium")}
                 </label>
-                <Tips><span>{t("admin.nodeTable.premiumTips")}</span></Tips>
+                <Tips size="13"><span>{t("admin.nodeTable.premiumTips")}</span></Tips>
               </div>
-              <TextField.Root name="premium" defaultValue={node.premium} placeholder="0.00" />
+              <TextField.Root name="premium" defaultValue={node.premium} placeholder="0.00" className="h-9 text-sm" />
             </div>
 
-            <div>
-              <div className="flex items-center gap-1 mb-1">
-                <label className="text-xs font-medium text-muted-foreground">
+            <div className="grid gap-1.5">
+              <div className="flex items-center gap-1.5 h-5">
+                <label className="text-xs font-medium leading-none text-foreground">
                   {t("admin.nodeTable.premiumCurrency", "溢价货币")}
                 </label>
-                <Tips><span>{t("admin.nodeTable.premiumCurrencyTips", "溢价独立结算币种，默认为 ¥")}</span></Tips>
+                <Tips size="13"><span>{t("admin.nodeTable.premiumCurrencyTips", "溢价独立结算币种，默认为 ¥")}</span></Tips>
               </div>
               <Select.Root value={premiumCurrency} onValueChange={setPremiumCurrency}>
-                <Select.Trigger className="w-full" />
+                <Select.Trigger className="w-full h-9 text-sm" />
                 <Select.Content>
                   {getCurrencySelectOptions(premiumCurrency).map((c) => (
                     <Select.Item key={c.value} value={c.value}>
@@ -2687,13 +2807,13 @@ function BillingButton({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-2.5">
-            <div>
-              <div className="flex items-center gap-1 mb-1">
-                <label className="text-xs font-medium text-muted-foreground">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="grid gap-1.5">
+              <div className="flex items-center gap-1.5 h-5">
+                <label className="text-xs font-medium leading-none text-foreground">
                   {t("admin.nodeTable.billingCycle")}
                 </label>
-                <Tips><span dangerouslySetInnerHTML={{ __html: t("admin.nodeTable.billingCycleTips") }}></span></Tips>
+                <Tips size="13"><span dangerouslySetInnerHTML={{ __html: t("admin.nodeTable.billingCycleTips") }}></span></Tips>
               </div>
               <SelectOrInput
                 options={[
@@ -2710,13 +2830,16 @@ function BillingButton({
                 name="billingCycle"
                 value={billingCycle === "0" ? "" : billingCycle}
                 onChange={setBillingCycle}
+                className="h-9 text-sm"
               />
             </div>
 
-            <div>
-              <label className="block mb-1 text-xs font-medium text-muted-foreground">
-                {t("admin.nodeTable.expiredAt")}
-              </label>
+            <div className="grid gap-1.5">
+              <div className="flex items-center h-5">
+                <label className="text-xs font-medium leading-none text-foreground">
+                  {t("admin.nodeTable.expiredAt")}
+                </label>
+              </div>
               <TextField.Root
                 name="expiredAt"
                 defaultValue={
@@ -2725,6 +2848,7 @@ function BillingButton({
                     : "0001-01-01"
                 }
                 type="date"
+                className="h-9 text-sm"
               >
                 <TextField.Slot side="right">
                   <Button
@@ -2763,16 +2887,16 @@ function BillingButton({
             </div>
           </div>
 
-          <Flex justify="end" gap="2" mt="4">
-            <Dialog.Close>
-              <Button variant="soft" color="gray" type="button">
+          <Dialog.Footer className="pt-2 border-t border-border/50 flex flex-row justify-end gap-2">
+            <Dialog.Close asChild>
+              <Button variant="outline" type="button">
                 {t("common.cancel")}
               </Button>
             </Dialog.Close>
             <Button type="submit" disabled={saving}>
               {t("common.save")}
             </Button>
-          </Flex>
+          </Dialog.Footer>
         </form>
       </Dialog.Content>
     </Dialog.Root>

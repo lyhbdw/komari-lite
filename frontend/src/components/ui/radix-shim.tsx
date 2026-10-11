@@ -1,4 +1,5 @@
 import * as React from "react";
+import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Dialog as ShadcnDialog } from "@/components/ui/dialog";
 import { Switch as ShadcnSwitch } from "@/components/ui/switch";
@@ -378,21 +379,24 @@ export const Select = {
   Trigger: ({ id, className }: any) => {
     const { value, onValueChange, items } = React.useContext(SelectContext);
     return (
-      <select
-        id={id}
-        value={value}
-        onChange={(e) => onValueChange?.(e.target.value)}
-        className={cn(
-          "w-full h-8 px-2.5 rounded-lg border border-input bg-transparent text-foreground text-xs shadow-xs outline-none transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer dark:bg-muted/20",
-          className
-        )}
-      >
-        {items.map((item) => (
-          <option key={item.value} value={item.value} className="bg-popover text-popover-foreground">
-            {typeof item.label === "string" ? item.label : item.value}
-          </option>
-        ))}
-      </select>
+      <div className="relative w-full">
+        <select
+          id={id}
+          value={value}
+          onChange={(e) => onValueChange?.(e.target.value)}
+          className={cn(
+            "flex h-9 w-full appearance-none items-center justify-between rounded-lg border border-input bg-transparent pl-3 pr-8 text-sm text-foreground shadow-xs outline-none transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer dark:bg-muted/20",
+            className
+          )}
+        >
+          {items.map((item) => (
+            <option key={item.value} value={item.value} className="bg-popover text-popover-foreground">
+              {typeof item.label === "string" ? item.label : item.value}
+            </option>
+          ))}
+        </select>
+        <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground opacity-60" />
+      </div>
     );
   },
   Content: ({ children }: any) => <>{children}</>,
@@ -499,7 +503,7 @@ export const Popover = {
     }, [isOpen]);
     return (
       <PopoverContext.Provider value={{ open: isOpen, setOpen }}>
-        <div ref={ref} className="relative inline-block">
+        <div ref={ref} className="relative inline-flex items-center">
           {children}
         </div>
       </PopoverContext.Provider>
@@ -508,7 +512,7 @@ export const Popover = {
   Trigger: ({ children, ...props }: any) => {
     const { open, setOpen } = React.useContext(PopoverContext);
     return (
-      <div onClick={() => setOpen(!open)} className="cursor-pointer inline-flex" {...props}>
+      <div onClick={() => setOpen(!open)} className="cursor-pointer inline-flex items-center" {...props}>
         {children}
       </div>
     );
@@ -520,7 +524,7 @@ export const Popover = {
       <div
         style={{ width: width || "auto" }}
         className={cn(
-          "absolute z-50 mt-1.5 rounded-xl border border-border/80 bg-popover/95 p-3 text-popover-foreground shadow-xl backdrop-blur-md animate-in fade-in-0 zoom-in-95 duration-150",
+          "absolute top-full left-0 z-50 mt-1.5 rounded-xl border border-border/80 bg-popover/95 p-3 text-popover-foreground shadow-xl backdrop-blur-md animate-in fade-in-0 zoom-in-95 duration-150",
           className
         )}
         {...props}

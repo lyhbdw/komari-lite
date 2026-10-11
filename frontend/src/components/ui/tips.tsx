@@ -14,8 +14,8 @@ interface TipsProps {
 }
 
 const Tips: React.FC<TipsProps & React.HTMLAttributes<HTMLDivElement>> = ({
-  size = "16",
-  color = "gray",
+  size = "14",
+  color,
   trigger,
   children,
   side = "bottom",
@@ -37,12 +37,12 @@ const Tips: React.FC<TipsProps & React.HTMLAttributes<HTMLDivElement>> = ({
   };
 
   return (
-    <div className="relative inline-block km-ui-tips" {...props}>
+    <div className="relative inline-flex items-center leading-none km-ui-tips" {...props}>
       {isDialog ? (
         <Dialog.Root open={isOpen} onOpenChange={setIsOpen}>
           <Dialog.Trigger aria-label={ariaLabel}>
             <div
-              className={`flex items-center justify-center rounded-full font-bold cursor-pointer `}
+              className="inline-flex items-center justify-center rounded-full text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
               onClick={handleInteraction}
             >
               {trigger ?? <Info color={color} size={size} />}
@@ -58,7 +58,7 @@ const Tips: React.FC<TipsProps & React.HTMLAttributes<HTMLDivElement>> = ({
         <Popover.Root open={isOpen} onOpenChange={setIsOpen}>
           <Popover.Trigger aria-label={ariaLabel}>
             <div
-              className={`flex items-center justify-center rounded-full font-bold cursor-pointer `}
+              className="inline-flex items-center justify-center rounded-full text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
               onClick={isMobile ? handleInteraction : undefined}
               onMouseEnter={!isMobile ? () => setIsOpen(true) : undefined}
               onMouseLeave={!isMobile ? () => setIsOpen(false) : undefined}
