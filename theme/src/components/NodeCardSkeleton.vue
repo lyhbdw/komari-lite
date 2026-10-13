@@ -46,20 +46,9 @@ import { Skeleton } from '@/components/ui/skeleton'
             <Skeleton class="h-2.5 w-8" />
             <Skeleton class="h-2.5 w-14" />
           </div>
-          <!-- 财务三项骨架 (月均 / 剩余 / 溢价) -->
-          <div class="grid grid-cols-3 divide-x divide-border/50 rounded-lg bg-muted/40 dark:bg-muted/20 border border-border/50 py-1.5 px-0.5 my-0.5">
-            <div class="flex flex-col items-center justify-center gap-1 px-1">
-              <Skeleton class="h-2 w-6" />
-              <Skeleton class="h-2.5 w-12" />
-            </div>
-            <div class="flex flex-col items-center justify-center gap-1 px-1">
-              <Skeleton class="h-2 w-6" />
-              <Skeleton class="h-2.5 w-10" />
-            </div>
-            <div class="flex flex-col items-center justify-center gap-1 px-1">
-              <Skeleton class="h-2 w-6" />
-              <Skeleton class="h-2.5 w-9" />
-            </div>
+          <div class="flex justify-between items-center">
+            <Skeleton class="h-2.5 w-8" />
+            <Skeleton class="h-2.5 w-24" />
           </div>
           <div class="flex justify-between items-center">
             <Skeleton class="h-2.5 w-8" />

@@ -207,6 +207,24 @@ const premiumInfo = computed(() => {
   }
 })
 
+const billingTooltip = computed(() => {
+  const parts: string[] = []
+
+  if (monthlyCostInfo.value.tooltip) {
+    parts.push(monthlyCostInfo.value.tooltip)
+  }
+
+  if (remainingTimeInfo.value.tooltip) {
+    parts.push(remainingTimeInfo.value.tooltip)
+  }
+
+  if (premiumInfo.value.hasPremium && premiumInfo.value.tooltip) {
+    parts.push(premiumInfo.value.tooltip)
+  }
+
+  return parts.join('\n')
+})
+
 function openPingDialog() {
   emit('pingClick', props.node)
 }
@@ -387,42 +405,29 @@ function openPingDialog() {
                 {{ props.node.uptime > 0 ? formatUptime(props.node.uptime) : '-' }}
               </span>
             </div>
-            <!-- 财务指标 (月均 / 剩余 / 溢价) shadcn/ui 紧凑微卡片 -->
-            <div class="grid grid-cols-3 divide-x divide-border/50 rounded-lg bg-muted/40 dark:bg-muted/20 border border-border/50 py-1.5 px-0.5 my-0.5 text-center transition-colors">
-              <!-- 月均费用 -->
-              <DataTooltip placement="top" :content="monthlyCostInfo.tooltip" class="flex flex-col items-center justify-center px-1 min-w-0 cursor-pointer">
-                <span class="text-[9.5px] text-muted-foreground/80 font-medium tracking-tight leading-none mb-1">
-                  {{ appStore.lang === 'zh-CN' ? '月均' : 'Monthly' }}
-                </span>
-                <span class="text-[11px] font-mono font-semibold tabular-nums text-foreground/90 leading-none truncate max-w-full">
-                  {{ monthlyCostInfo.text }}
-                </span>
-              </DataTooltip>
-
-              <!-- 剩余时间 -->
-              <DataTooltip placement="top" :content="remainingTimeInfo.tooltip" class="flex flex-col items-center justify-center px-1 min-w-0 cursor-pointer">
-                <span class="text-[9.5px] text-muted-foreground/80 font-medium tracking-tight leading-none mb-1">
-                  {{ appStore.lang === 'zh-CN' ? '剩余' : 'Remaining' }}
-                </span>
-                <span
-                  class="text-[11px] font-mono font-semibold tabular-nums leading-none truncate max-w-full"
-                  :class="remainingTimeInfo.colorClass"
-                >
-                  {{ remainingTimeInfo.text }}
-                </span>
-              </DataTooltip>
-
-              <!-- 溢价 -->
-              <DataTooltip placement="top" :content="premiumInfo.tooltip" class="flex flex-col items-center justify-center px-1 min-w-0 cursor-pointer">
-                <span class="text-[9.5px] text-muted-foreground/80 font-medium tracking-tight leading-none mb-1">
-                  {{ appStore.lang === 'zh-CN' ? '溢价' : 'Premium' }}
-                </span>
-                <span
-                  class="text-[11px] font-mono font-semibold tabular-nums leading-none truncate max-w-full"
-                  :class="premiumInfo.hasPremium ? 'text-amber-600 dark:text-amber-400 font-semibold' : 'text-muted-foreground/60'"
-                >
-                  {{ premiumInfo.text }}
-                </span>
+            <div class="flex items-center justify-between">
+              <span class="truncate tracking-wide text-muted-foreground">
+                {{ appStore.lang === 'zh-CN' ? '费用' : 'Billing' }}
+              </span>
+              <DataTooltip placement="left" :content="billingTooltip" content-class="whitespace-pre-wrap right-0 mr-0 text-left max-w-xs text-[10.5px]">
+                <div class="truncate flex flex-row items-center gap-1 font-mono tabular-nums text-[10.5px] cursor-pointer">
+                  <!-- 每月多少钱 -->
+                  <span class="text-foreground/85">
+                    {{ monthlyCostInfo.text }}
+                  </span>
+                  <span class="text-muted-foreground/40">·</span>
+                  <!-- 剩余时间 -->
+                  <span :class="remainingTimeInfo.colorClass">
+                    {{ remainingTimeInfo.text }}
+                  </span>
+                  <!-- 溢价 (有溢价时展示) -->
+                  <template v-if="premiumInfo.hasPremium">
+                    <span class="text-muted-foreground/40">·</span>
+                    <span class="text-amber-600 dark:text-amber-400 font-medium">
+                      {{ appStore.lang === 'zh-CN' ? '溢价' : 'Prem' }} {{ premiumInfo.text }}
+                    </span>
+                  </template>
+                </div>
               </DataTooltip>
             </div>
             <div class="flex items-center justify-between">
