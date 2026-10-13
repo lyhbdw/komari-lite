@@ -12,9 +12,10 @@ import { useAppStore } from '@/stores/app'
 import * as financeHelper from '@/utils/financeHelper'
 import { sharedExchangeRates, sharedFinanceCurrency } from '@/utils/financeHelper'
 import { formatDateTime, getStatus, getStatusTextClass } from '@/utils/helper'
-import { getCustomTags, getDiskPercentage, getMemPercentage, getPriceTags, getRemainingTimeTagClass, getTrafficUsed, getTrafficUsedPercentage, hasRegion, showTrafficProgress } from '@/utils/nodeHelpers'
+import { getCustomTags, getDiskPercentage, getMemPercentage, getTrafficUsed, getTrafficUsedPercentage, hasRegion, showTrafficProgress } from '@/utils/nodeHelpers'
 import { getOSImage, getOSName } from '@/utils/osImageHelper'
 import { getFlagSrc, getRegionDisplayName } from '@/utils/regionHelper'
+import { getDaysUntilExpired, getExpireStatus, getExpireTextClass } from '@/utils/tagHelper'
 
 const props = defineProps<{ node: NodeData }>()
 
@@ -57,8 +58,6 @@ const {
 
 const trafficUsedPercentage = computed(() => getTrafficUsedPercentage(props.node))
 const trafficUsed = computed(() => getTrafficUsed(props.node))
-const priceTags = computed(() => getPriceTags(props.node, appStore.lang))
-const remainingTimeTagClass = computed(() => getRemainingTimeTagClass(props.node))
 const customTags = computed(() => getCustomTags(props.node))
 
 const monthlyCostInfo = computed(() => {
@@ -94,22 +93,117 @@ const monthlyCostInfo = computed(() => {
   const baseMonthlyAmount = monthlyCostCNY * baseRate
   const baseFormatted = financeHelper.formatFinanceAmount(baseMonthlyAmount, baseCurrency)
 
+  const cycleDays = `${billingCycle}${isZh ? '天' : 'd'}`
+  const rawPriceText = `${node.price} ${node.currency}`
+
   if (rawCurrency === baseCurrency) {
     return {
-      text: `${baseFormatted.symbol}${baseFormatted.value} ${unitSuffix}`,
+      text: `${baseFormatted.symbol}${baseFormatted.value}${unitSuffix}`,
       tooltip: isZh
-        ? `计费周期: ${billingCycle}天 · 周期原价: ${node.price} ${node.currency}`
-        : `Billing: ${billingCycle}d · Price: ${node.price} ${node.currency}`,
+        ? `计费周期: ${cycleDays} · 周期原价: ${rawPriceText} · 折合月均: ${baseFormatted.symbol}${baseFormatted.value}/月`
+        : `Billing: ${cycleDays} · Price: ${rawPriceText} · Monthly: ${baseFormatted.symbol}${baseFormatted.value}/mo`,
       isFree: false,
     }
   }
 
   return {
-    text: `${baseFormatted.symbol}${baseFormatted.value} ${unitSuffix}`,
+    text: `${baseFormatted.symbol}${baseFormatted.value}${unitSuffix}`,
     tooltip: isZh
-      ? `原币约: ${rawFormatted.symbol}${rawFormatted.value} ${unitSuffix} (周期: ${billingCycle}天 · 原价: ${node.price} ${node.currency})`
-      : `Original: ${rawFormatted.symbol}${rawFormatted.value} ${unitSuffix} (Cycle: ${billingCycle}d · Price: ${node.price} ${node.currency})`,
+      ? `月均折合: ${baseFormatted.symbol}${baseFormatted.value}/月 (原币约: ${rawFormatted.symbol}${rawFormatted.value}/月 · 周期: ${cycleDays} · 原价: ${rawPriceText})`
+      : `Monthly: ${baseFormatted.symbol}${baseFormatted.value}/mo (Original: ${rawFormatted.symbol}${rawFormatted.value}/mo · Cycle: ${cycleDays} · Price: ${rawPriceText})`,
     isFree: false,
+  }
+})
+
+const remainingTimeInfo = computed(() => {
+  const node = props.node
+  const isZh = appStore.lang === 'zh-CN'
+  const price = Number(node.price)
+
+  if (price === 0 || price === -1) {
+    return {
+      text: isZh ? '长期' : 'Long-term',
+      tooltip: isZh ? '免费长期有效' : 'Free long-term node',
+      colorClass: 'text-muted-foreground',
+    }
+  }
+
+  if (!node.expired_at) {
+    return {
+      text: isZh ? '未设置' : '-',
+      tooltip: isZh ? '未设置到期时间' : 'No expiration date set',
+      colorClass: 'text-muted-foreground/60',
+    }
+  }
+
+  const days = getDaysUntilExpired(node.expired_at)
+  const status = getExpireStatus(node.expired_at)
+  const formattedDate = formatDateTime(node.expired_at, 'YYYY-MM-DD')
+
+  if (status === 'long_term') {
+    return {
+      text: isZh ? '长期' : 'Long-term',
+      tooltip: isZh ? `到期时间: ${formattedDate} (长期有效)` : `Expires: ${formattedDate} (Long-term)`,
+      colorClass: 'text-muted-foreground',
+    }
+  }
+
+  if (status === 'expired') {
+    return {
+      text: isZh ? '已过期' : 'Expired',
+      tooltip: isZh ? `已于 ${formattedDate} 到期` : `Expired on ${formattedDate}`,
+      colorClass: 'text-rose-600 dark:text-rose-400 font-bold',
+    }
+  }
+
+  const daysText = isZh ? `${days}天` : `${days}d`
+  const colorClass = getExpireTextClass(node.expired_at)
+
+  return {
+    text: daysText,
+    tooltip: isZh
+      ? `到期时间: ${formattedDate} (剩余 ${days} 天)`
+      : `Expires: ${formattedDate} (${days} days left)`,
+    colorClass,
+  }
+})
+
+const premiumInfo = computed(() => {
+  const node = props.node
+  const { amount, currency } = financeHelper.getNodePremiumInfo(node)
+  const isZh = appStore.lang === 'zh-CN'
+
+  if (amount <= 0) {
+    return {
+      hasPremium: false,
+      text: isZh ? '无' : '-',
+      tooltip: isZh ? '未设置购入溢价' : 'No purchase premium',
+    }
+  }
+
+  const baseCurrency = sharedFinanceCurrency.value
+  const premiumCNY = financeHelper.getNodePremiumCNY(node, sharedExchangeRates.value)
+  const baseRate = sharedExchangeRates.value[baseCurrency] || 1
+  const baseAmount = premiumCNY * baseRate
+  const baseFormatted = financeHelper.formatFinanceAmount(baseAmount, baseCurrency)
+  const rawFormatted = financeHelper.formatFinanceAmount(amount, currency)
+
+  if (currency === baseCurrency) {
+    return {
+      hasPremium: true,
+      text: `${baseFormatted.symbol}${baseFormatted.value}`,
+      tooltip: isZh
+        ? `购入溢价: ${baseFormatted.symbol}${baseFormatted.value} ${baseCurrency}`
+        : `Purchase premium: ${baseFormatted.symbol}${baseFormatted.value} ${baseCurrency}`,
+    }
+  }
+
+  return {
+    hasPremium: true,
+    text: `${baseFormatted.symbol}${baseFormatted.value}`,
+    tooltip: isZh
+      ? `折合溢价: ${baseFormatted.symbol}${baseFormatted.value} ${baseCurrency} (原币: ${rawFormatted.symbol}${rawFormatted.value} ${currency})`
+      : `Approx premium: ${baseFormatted.symbol}${baseFormatted.value} ${baseCurrency} (Original: ${rawFormatted.symbol}${rawFormatted.value} ${currency})`,
   }
 })
 
@@ -293,18 +387,41 @@ function openPingDialog() {
                 {{ props.node.uptime > 0 ? formatUptime(props.node.uptime) : '-' }}
               </span>
             </div>
-            <div class="flex items-center justify-between">
-              <span class="truncate tracking-wide text-muted-foreground">
-                费用
-              </span>
-              <DataTooltip placement="left" :content="`${expiredDate} 到期${monthlyCostInfo.text && !monthlyCostInfo.isFree ? ` · 月均: ${monthlyCostInfo.text}` : ''}`" content-class="whitespace-nowrap right-0 mr-0">
-                <span class="truncate flex flex-row gap-1">
-                  <template v-for="(tag, index) in priceTags" :key="tag.text">
-                    <span class="inline-flex flex-row gap-1 items-center">
-                      <span :class="tag.highlight ? remainingTimeTagClass : ''">{{ tag.text }}</span>
-                    </span>
-                    <span v-if="index < priceTags.length - 1">·</span>
-                  </template>
+            <!-- 财务指标 (月均 / 剩余 / 溢价) shadcn/ui 紧凑微卡片 -->
+            <div class="grid grid-cols-3 divide-x divide-border/50 rounded-lg bg-muted/40 dark:bg-muted/20 border border-border/50 py-1.5 px-0.5 my-0.5 text-center transition-colors">
+              <!-- 月均费用 -->
+              <DataTooltip placement="top" :content="monthlyCostInfo.tooltip" class="flex flex-col items-center justify-center px-1 min-w-0 cursor-pointer">
+                <span class="text-[9.5px] text-muted-foreground/80 font-medium tracking-tight leading-none mb-1">
+                  {{ appStore.lang === 'zh-CN' ? '月均' : 'Monthly' }}
+                </span>
+                <span class="text-[11px] font-mono font-semibold tabular-nums text-foreground/90 leading-none truncate max-w-full">
+                  {{ monthlyCostInfo.text }}
+                </span>
+              </DataTooltip>
+
+              <!-- 剩余时间 -->
+              <DataTooltip placement="top" :content="remainingTimeInfo.tooltip" class="flex flex-col items-center justify-center px-1 min-w-0 cursor-pointer">
+                <span class="text-[9.5px] text-muted-foreground/80 font-medium tracking-tight leading-none mb-1">
+                  {{ appStore.lang === 'zh-CN' ? '剩余' : 'Remaining' }}
+                </span>
+                <span
+                  class="text-[11px] font-mono font-semibold tabular-nums leading-none truncate max-w-full"
+                  :class="remainingTimeInfo.colorClass"
+                >
+                  {{ remainingTimeInfo.text }}
+                </span>
+              </DataTooltip>
+
+              <!-- 溢价 -->
+              <DataTooltip placement="top" :content="premiumInfo.tooltip" class="flex flex-col items-center justify-center px-1 min-w-0 cursor-pointer">
+                <span class="text-[9.5px] text-muted-foreground/80 font-medium tracking-tight leading-none mb-1">
+                  {{ appStore.lang === 'zh-CN' ? '溢价' : 'Premium' }}
+                </span>
+                <span
+                  class="text-[11px] font-mono font-semibold tabular-nums leading-none truncate max-w-full"
+                  :class="premiumInfo.hasPremium ? 'text-amber-600 dark:text-amber-400 font-semibold' : 'text-muted-foreground/60'"
+                >
+                  {{ premiumInfo.text }}
                 </span>
               </DataTooltip>
             </div>

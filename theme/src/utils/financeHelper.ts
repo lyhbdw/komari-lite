@@ -178,7 +178,7 @@ export function setStoredFinanceCurrency(currency: CurrencyCode): void {
   sharedFinanceCurrency.value = currency
 }
 
-interface NodePremiumInfo {
+export interface NodePremiumInfo {
   amount: number
   currency: CurrencyCode
   symbol: string
@@ -187,7 +187,7 @@ interface NodePremiumInfo {
 const FREE_NODE_REGEX = /白嫖|免费|free/i
 const NODE_PREMIUM_TAG_REGEX = /溢价\s*(\d+(?:\.\d+)?)\s*(?:rmb|cny|usd|eur|gbp|[r元$€£])?/i
 
-function isFreeNode(node: NodeData): boolean {
+export function isFreeNode(node: NodeData): boolean {
   const price = Number(node.price)
   if (price === 0 || price === -1)
     return true
@@ -196,7 +196,7 @@ function isFreeNode(node: NodeData): boolean {
   return FREE_NODE_REGEX.test(tags)
 }
 
-function getNodePremiumInfo(node: NodeData): NodePremiumInfo {
+export function getNodePremiumInfo(node: NodeData): NodePremiumInfo {
   let tagAmount: number | null = null
   let tagCurrency: CurrencyCode | null = null
 
