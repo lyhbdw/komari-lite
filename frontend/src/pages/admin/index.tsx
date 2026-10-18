@@ -308,8 +308,12 @@ const Layout = () => {
   if (account && !account.logged_in) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[50vh] text-center p-6">
-        <div className="w-12 h-12 rounded-2xl bg-foreground text-background flex items-center justify-center font-bold text-xl mb-4 shadow-sm select-none">
-          K
+        <div className="w-12 h-12 rounded-2xl bg-foreground text-background flex items-center justify-center p-2.5 mb-4 shadow-sm select-none">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none" className="size-full">
+            <rect x="36" y="36" width="440" height="440" rx="96" stroke="currentColor" strokeWidth="40" fill="none" />
+            <path d="M 148 168 L 246 256 L 148 344" stroke="currentColor" strokeWidth="46" strokeLinecap="round" strokeLinejoin="round" />
+            <rect x="276" y="322" width="112" height="44" rx="12" fill="currentColor" />
+          </svg>
         </div>
         <h2 className="text-lg font-semibold tracking-tight text-foreground">
           请先登录管理后台
