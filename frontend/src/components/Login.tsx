@@ -125,8 +125,12 @@ const InnerLayout = ({
         </Dialog.Trigger>
         <Dialog.Content className="km-login-dialog sm:max-w-[420px] p-6 sm:p-7 rounded-2xl border border-border bg-card shadow-2xl z-50">
           <Dialog.Header className="flex flex-col items-center text-center mb-6">
-            <div className="w-10 h-10 rounded-xl bg-foreground text-background flex items-center justify-center font-bold text-lg mb-3 shadow-sm select-none">
-              K
+            <div className="w-10 h-10 rounded-xl bg-foreground text-background flex items-center justify-center p-2 mb-3 shadow-sm select-none">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none" className="size-full">
+                <rect x="36" y="36" width="440" height="440" rx="96" stroke="currentColor" strokeWidth="40" fill="none" />
+                <path d="M 148 168 L 246 256 L 148 344" stroke="currentColor" strokeWidth="46" strokeLinecap="round" strokeLinejoin="round" />
+                <rect x="276" y="322" width="112" height="44" rx="12" fill="currentColor" />
+              </svg>
             </div>
             <Dialog.Title className="text-xl font-bold tracking-tight text-foreground m-0">
               {t("login.title")}
