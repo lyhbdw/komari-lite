@@ -213,34 +213,6 @@ export const Badge = ({ color, variant, size, className, children, ...props }: a
   );
 };
 
-export const Card = ({ size, className, children, ...props }: any) => (
-  <div
-    className={cn("rounded-xl border border-border bg-card p-4 shadow-2xs text-card-foreground", className)}
-    {...props}
-  >
-    {children}
-  </div>
-);
-
-export const Callout = {
-  Root: ({ color, className, children, ...props }: any) => (
-    <div
-      className={cn(
-        "flex items-start gap-2.5 p-3 rounded-lg border text-xs",
-        color === "red"
-          ? "bg-destructive/10 text-destructive border-destructive/20"
-          : "bg-muted/50 text-foreground border-border",
-        className
-      )}
-      {...props}
-    >
-      {children}
-    </div>
-  ),
-  Icon: ({ children }: any) => <div className="shrink-0 mt-0.5">{children}</div>,
-  Text: ({ children, className }: any) => <div className={cn("leading-relaxed", className)}>{children}</div>,
-};
-
 export const Separator = ({ size, className, ...props }: any) => (
   <div className={cn("shrink-0 bg-border h-px w-full my-2", className)} {...props} />
 );
@@ -535,39 +507,4 @@ export const Popover = {
   },
 };
 
-const SegmentedContext = React.createContext<{
-  value?: string;
-  onValueChange?: (val: string) => void;
-}>({});
 
-export const SegmentedControl = {
-  Root: ({ value, onValueChange, className, children }: any) => (
-    <SegmentedContext.Provider value={{ value, onValueChange }}>
-      <div
-        className={cn(
-          "inline-flex items-center p-0.5 rounded-lg bg-muted border border-border/60 text-muted-foreground text-xs",
-          className
-        )}
-      >
-        {children}
-      </div>
-    </SegmentedContext.Provider>
-  ),
-  Item: ({ value: itemValue, className, children }: any) => {
-    const { value, onValueChange } = React.useContext(SegmentedContext);
-    const active = value === itemValue;
-    return (
-      <button
-        type="button"
-        onClick={() => onValueChange?.(itemValue)}
-        className={cn(
-          "h-7 px-2.5 rounded-md font-medium transition-all cursor-pointer",
-          active ? "bg-card text-foreground shadow-2xs font-semibold" : "hover:text-foreground",
-          className
-        )}
-      >
-        {children}
-      </button>
-    );
-  },
-};
