@@ -28,8 +28,7 @@
     "react-router-dom": "^7.18.4",
     "sonner": "^2.0.3",
     "tailwind-merge": "^3.3.0",
-    "tailwindcss": "^4.1.5",
-    "uplot": "^1.6.32"
+    "tailwindcss": "^4.1.5"
   },
   "devDependencies": {
     "@eslint/js": "^9.25.0",
