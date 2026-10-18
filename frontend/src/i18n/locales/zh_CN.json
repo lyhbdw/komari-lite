@@ -112,66 +112,6 @@
       "alert_range_error": "请输入 0-100 之间的数值"
     }
   },
-  "chart": {
-    "addChart": "新增图表",
-    "addMetric": "添加指标",
-    "approximate": "近似",
-    "avg": "平均值",
-    "connections": "连接数",
-    "customRange": "自定义",
-    "cutPeak": "平滑",
-    "cutPeak_tips": "<h2 class=\"text-lg font-bold\">关于数据平滑的提示</h2><p>当您开启平滑后，您在统计图中看到的曲线经过<strong>指数加权移动平均 (EWMA)</strong> 算法处理，这是一种常用的数据平滑技术。</p></br><p>需要注意的是，经过EWMA算法平滑后的曲线所展示的数值，<strong>并非原始的、真实的测量数据</strong>。它们是根据EWMA算法计算得出的一个<strong>平滑趋势线</strong>，旨在减少数据波动，使数据模式和趋势更容易被识别。</p></br><p>因此，您看到的数值更像是<strong>视觉上的呈现</strong>，帮助您更好地理解数据的整体走向和长期趋势，而不是每一个时间点的精确真实值。如果您需要查看具体、原始的数据点，请参考未经平滑处理的数据视图。</p>",
-    "dashboard": "图表",
-    "days": "{{count}} 天",
-    "days_one": "{{count}} 天",
-    "days_other": "{{count}} 天",
-    "endTime": "结束时间",
-    "globalTemplateSaved": "全局图表模板已保存",
-    "globalTemplateSaveFailed": "保存全局图表模板失败",
-    "gpu_memory": "显存使用率",
-    "hideAll": "隐藏全部",
-    "hours": "{{count}} 小时",
-    "hours_one": "{{count}} 小时",
-    "hours_other": "{{count}} 小时",
-    "interval": "检测间隔",
-    "invalidTimeRange": "开始时间必须早于结束时间",
-    "latest": "最新",
-    "lossRate": "丢包",
-    "max": "最大值",
-    "mem_used": "内存",
-    "min": "最小值",
-    "minutes": "{{count}} 分钟",
-    "minutes_one": "{{count}} 分钟",
-    "minutes_other": "{{count}} 分钟",
-    "process": "进程数",
-    "query": "查询",
-    "quickRange": "快捷选择",
-    "recentDay": "最近 1 天",
-    "recentDays": "最近 {{count}} 天",
-    "recentDays_one": "最近 {{count}} 天",
-    "recentDays_other": "最近 {{count}} 天",
-    "recentWeek": "最近 1 周",
-    "removeMetric": "删除指标",
-    "sampling": {
-      "first": "第一个值",
-      "last": "最后一个值",
-      "max": "最大值",
-      "min": "最小值",
-      "p70": "第 70 百分位",
-      "p95": "第 95 百分位",
-      "p99": "第 99 百分位",
-      "stddev": "标准差"
-    },
-    "samplingAlgorithm": "采样算法",
-    "samplingAlgorithmTips": "<b>降采样说明</b><br/>查询历史时间范围时，后端会按照请求的时间间隔把数据点归入对齐后的固定时间桶，再用当前选择的算法为每个时间桶计算一个值。<br/><br/>平均值/最小值/最大值/第一个值/最后一个值/标准差和百分位都会在每个时间桶内部计算。空时间桶会保持为空，所以图表上的断点仍然表示该时间段没有数据。",
-    "saveGlobalTemplate": "保存为全局模板",
-    "showAll": "显示全部",
-    "startTime": "开始时间",
-    "total": "样本数量",
-    "usage": "使用率",
-    "valid": "有效样本",
-    "volatility": "波动"
-  },
   "common": {
     "action": "操作",
     "add": "添加",
@@ -255,8 +195,6 @@
     "weight": "权重"
   },
   "copy_success": "已复制到剪贴板",
-  "current_online": "当前在线",
-  "current_time": "当前时间",
   "errorBoundary": {
     "go_to_home": "返回首页",
     "no_stack_trace": "无可用的栈跟踪。",
@@ -295,7 +233,6 @@
     "empty": "暂无审计日志记录",
     "title": "审计日志"
   },
-  "network_speed": "网络速率",
   "nodeCard": {
     "chart": "图表",
     "disk": "磁盘",
@@ -326,9 +263,6 @@
     "totalUpload": "总上传",
     "uptime": "运行时间",
     "virtualization": "虚拟化"
-  },
-  "nodes": {
-    "empty": "暂无服务器数据"
   },
   "notification": {
     "channels": {
@@ -368,7 +302,6 @@
     "task_view": "按任务视图",
     "title": "网络探测"
   },
-  "region_overview": "点亮地区",
   "rpc2": {
     "automatic_connection_failed": "自动连接失败:",
     "batch_request_failed": "批量请求失败",
@@ -474,7 +407,6 @@
     },
     "title": "设置"
   },
-  "status_settings": "状态显示设置",
   "system": {
     "title": "设置"
   },
@@ -483,7 +415,6 @@
     "minute": "分钟",
     "second": "秒"
   },
-  "traffic_overview": "流量概览",
   "userAgent": {
     "android": "安卓",
     "chrome": "Chrome",
@@ -495,9 +426,5 @@
     "safari": "Safari",
     "windows": "Windows"
   },
-  "view": {
-    "mode": "显示模式"
-  },
-  "warn_https": "当前连接不是 HTTPS！您的敏感数据存在严重风险。请立即采取措施确保连接安全！复制操作可能无法使用！",
-  "warn_websocket": "RPC2 请求失败，请检查网络连接或服务器状态！"
+  "warn_https": "当前连接不是 HTTPS！您的敏感数据存在严重风险。请立即采取措施确保连接安全！复制操作可能无法使用！"
 }
