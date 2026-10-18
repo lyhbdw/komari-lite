@@ -174,7 +174,10 @@ export function getDaysUntilExpired(expiredAt: string | number | undefined): num
   if (!expiredDate.isValid())
     return 0
 
-  return Math.round(expiredDate.diff(now, 'day', true))
+  if (expiredDate.isBefore(now))
+    return Math.floor(expiredDate.diff(now, 'day', true))
+
+  return Math.max(1, Math.ceil(expiredDate.diff(now, 'day', true)))
 }
 
 /**
@@ -183,10 +186,19 @@ export function getDaysUntilExpired(expiredAt: string | number | undefined): num
  * @returns 过期状态
  */
 export function getExpireStatus(expiredAt: string | number | undefined): ExpireStatus {
-  const days = getDaysUntilExpired(expiredAt)
+  if (!expiredAt)
+    return 'normal'
 
-  if (days <= 0)
+  const expiredDate = dayjs(expiredAt)
+  const now = dayjs()
+
+  if (!expiredDate.isValid())
+    return 'normal'
+
+  if (expiredDate.isBefore(now))
     return 'expired'
+
+  const days = Math.ceil(expiredDate.diff(now, 'day', true))
   if (days < EXPIRE_THRESHOLDS.critical)
     return 'critical'
   if (days < EXPIRE_THRESHOLDS.warning)
