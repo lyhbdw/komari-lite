@@ -13,6 +13,10 @@ const router = createRouter({
       name: 'instance-detail',
       component: () => import('@/views/InstanceDetail.vue'),
     },
+    {
+      path: '/:pathMatch(.*)*',
+      redirect: '/',
+    },
   ],
 })
 

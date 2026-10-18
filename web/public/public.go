@@ -106,7 +106,7 @@ func adminAssetRequest(r *http.Request) bool {
 	if err != nil {
 		return false
 	}
-	return strings.HasPrefix(u.Path, "/admin") || strings.HasPrefix(u.Path, "/terminal")
+	return strings.HasPrefix(u.Path, "/admin")
 }
 
 // isSafePath 验证路径是否在指定的基础目录内，防止路径穿透攻击
@@ -222,8 +222,8 @@ func static(r *gin.RouterGroup, noRoute func(handlers ...gin.HandlerFunc), force
 		currentTheme := cfg[config.ThemeKey].(string)
 		shouldReplace := true
 
-		// 特殊页面：/admin 或 /terminal 使用 __admin__ 前端，且不进行内容替换
-		if forceDefaultTheme || strings.HasPrefix(reqPath, "/admin") || strings.HasPrefix(reqPath, "/terminal") {
+		// 特殊页面：/admin 使用 __admin__ 前端，且不进行内容替换
+		if forceDefaultTheme || strings.HasPrefix(reqPath, "/admin") {
 			currentTheme = "__admin__"
 			shouldReplace = false
 		}
@@ -279,7 +279,7 @@ func static(r *gin.RouterGroup, noRoute func(handlers ...gin.HandlerFunc), force
 		cfg := getConfig()
 		themeFaviconPath := path.Join(DistDir, FaviconFile)
 		currentTheme := cfg[config.ThemeKey].(string)
-		if forceDefaultTheme || strings.HasPrefix(c.Request.URL.Path, "/admin") || strings.HasPrefix(c.Request.URL.Path, "/terminal") {
+		if forceDefaultTheme || strings.HasPrefix(c.Request.URL.Path, "/admin") {
 			currentTheme = "__admin__"
 		}
 		content, mimeType, exists := getFileContent(currentTheme, themeFaviconPath)
@@ -300,8 +300,13 @@ func static(r *gin.RouterGroup, noRoute func(handlers ...gin.HandlerFunc), force
 				c.File(localFile)
 				return
 			}
-			content, _, exists := getFileContent("__admin__", path.Join(DistDir, filename))
-			if exists {
+			cfg := getConfig()
+			currentTheme := cfg[config.ThemeKey].(string)
+			if content, _, exists := getFileContent(currentTheme, path.Join(DistDir, filename)); exists {
+				c.Data(http.StatusOK, mimeType, content)
+				return
+			}
+			if content, _, exists := getFileContent("__admin__", path.Join(DistDir, filename)); exists {
 				c.Data(http.StatusOK, mimeType, content)
 				return
 			}
@@ -309,7 +314,9 @@ func static(r *gin.RouterGroup, noRoute func(handlers ...gin.HandlerFunc), force
 		}
 	}
 	r.GET("/favicon.svg", serveStaticIcon("favicon.svg", "image/svg+xml"))
+	r.HEAD("/favicon.svg", serveStaticIcon("favicon.svg", "image/svg+xml"))
 	r.GET("/apple-touch-icon.png", serveStaticIcon("apple-touch-icon.png", "image/png"))
+	r.HEAD("/apple-touch-icon.png", serveStaticIcon("apple-touch-icon.png", "image/png"))
 
 	// 2. 静态资源路由 /themes/:id/*path
 	// 允许访问 /themes/MyTheme/theme.json 和 /themes/MyTheme/dist/assets/a.js
@@ -349,7 +356,7 @@ func static(r *gin.RouterGroup, noRoute func(handlers ...gin.HandlerFunc), force
 
 		// SPA 静态资源回退
 		distPath := path.Join(DistDir, reqPath)
-		isAdminAsset := forceDefaultTheme || strings.HasPrefix(reqPath, "/admin") || strings.HasPrefix(reqPath, "/terminal") || adminAssetRequest(c.Request)
+		isAdminAsset := forceDefaultTheme || strings.HasPrefix(reqPath, "/admin") || adminAssetRequest(c.Request)
 
 		// 静态资源优先按来源匹配：Admin 发起的请求优先查 __admin__，否则优先查当前主题
 		if isAdminAsset {
