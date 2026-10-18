@@ -156,7 +156,9 @@ func registerAdminRoutes(r *gin.Engine) {
 	// settings
 	settings := g.Group("/settings")
 	{
+		settings.GET("", jsonRpc.Bind("admin:getSettings"))
 		settings.GET("/", jsonRpc.Bind("admin:getSettings"))
+		settings.POST("", jsonRpc.Bind("admin:editSettings"))
 		settings.POST("/", jsonRpc.Bind("admin:editSettings"))
 		settings.POST("/message-sender", jsonRpc.Bind("admin:setMessageSenderProvider"))
 		settings.GET("/message-sender", jsonRpc.Bind("admin:getMessageSenderProvider", jsonRpc.WithQuery("provider")))
@@ -203,6 +205,7 @@ func registerAdminRoutes(r *gin.Engine) {
 	// ping tasks
 	pingTask := g.Group("/ping")
 	{
+		pingTask.GET("", jsonRpc.Bind("admin:getAllPingTasks"))
 		pingTask.GET("/", jsonRpc.Bind("admin:getAllPingTasks"))
 		pingTask.POST("/add", jsonRpc.Bind("admin:addPingTask"))
 		pingTask.POST("/delete", jsonRpc.Bind("admin:deletePingTask"))
