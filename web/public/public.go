@@ -222,8 +222,8 @@ func static(r *gin.RouterGroup, noRoute func(handlers ...gin.HandlerFunc), force
 		currentTheme := cfg[config.ThemeKey].(string)
 		shouldReplace := true
 
-		// 特殊页面：强制使用 default 主题，且不进行内容替换
-		if forceDefaultTheme || strings.HasPrefix(reqPath, "/admin") || strings.HasPrefix(reqPath, "/terminal") || adminAssetRequest(c.Request) {
+		// 特殊页面：/admin 或 /terminal 使用 __admin__ 前端，且不进行内容替换
+		if forceDefaultTheme || strings.HasPrefix(reqPath, "/admin") || strings.HasPrefix(reqPath, "/terminal") {
 			currentTheme = "__admin__"
 			shouldReplace = false
 		}
@@ -339,33 +339,46 @@ func static(r *gin.RouterGroup, noRoute func(handlers ...gin.HandlerFunc), force
 
 	// 3. SPA 路由 (noRoute)
 	noRoute(func(c *gin.Context) {
-		if c.Request.Method != http.MethodGet {
+		if c.Request.Method != http.MethodGet && c.Request.Method != http.MethodHead {
 			c.Status(http.StatusNotFound)
 			return
 		}
 		reqPath := c.Request.URL.Path
 		cfg := getConfig()
 		currentTheme := cfg[config.ThemeKey].(string)
-		if forceDefaultTheme || strings.HasPrefix(reqPath, "/admin") || strings.HasPrefix(reqPath, "/terminal") || adminAssetRequest(c.Request) {
-			currentTheme = "__admin__"
-		}
 
 		// SPA 静态资源回退
 		distPath := path.Join(DistDir, reqPath)
-		if strings.HasPrefix(reqPath, "/assets/") {
+		isAdminAsset := forceDefaultTheme || strings.HasPrefix(reqPath, "/admin") || strings.HasPrefix(reqPath, "/terminal") || adminAssetRequest(c.Request)
+
+		// 静态资源优先按来源匹配：Admin 发起的请求优先查 __admin__，否则优先查当前主题
+		if isAdminAsset {
+			if content, mimeType, exists := getFileContent("__admin__", distPath); exists {
+				c.Data(http.StatusOK, mimeType, content)
+				return
+			}
+			if content, mimeType, exists := getFileContent(currentTheme, distPath); exists {
+				c.Data(http.StatusOK, mimeType, content)
+				return
+			}
+		} else {
+			if content, mimeType, exists := getFileContent(currentTheme, distPath); exists {
+				c.Data(http.StatusOK, mimeType, content)
+				return
+			}
 			if content, mimeType, exists := getFileContent("__admin__", distPath); exists {
 				c.Data(http.StatusOK, mimeType, content)
 				return
 			}
 		}
 
-		content, mimeType, exists := getFileContent(currentTheme, distPath)
-		if exists {
-			c.Data(http.StatusOK, mimeType, content)
+		// 静态资源（如 /assets/）未找到时直接返回 404，避免回退返回 HTML
+		if strings.HasPrefix(reqPath, "/assets/") {
+			c.Status(http.StatusNotFound)
 			return
 		}
 
-		// 路由 (如 /dashboard, /settings) -> 返回 index.html
+		// 路由 (如 /, /instance/:id, /admin, /admin/settings) -> 返回 index.html
 		serveIndex(c)
 	})
 }
