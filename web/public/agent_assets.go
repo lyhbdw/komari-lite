@@ -1,12 +1,16 @@
 package public
 
 import (
+	"bytes"
+	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/lyhbdw/komari-lite/database/clients"
+	"github.com/lyhbdw/komari-lite/internal/config"
 )
 
 const (
@@ -89,4 +93,77 @@ func ServeAgentAsset(c *gin.Context) {
 	c.Header("CDN-Cache-Control", "public, max-age=31536000")
 	c.Header("Cloudflare-CDN-Cache-Control", "public, max-age=31536000")
 	c.DataFromReader(http.StatusOK, info.Size(), contentType, file, nil)
+}
+
+// IsValidToken validates that the token string contains only alphanumeric
+// and URL/safe characters and is of reasonable length.
+func IsValidToken(token string) bool {
+	if len(token) < 8 || len(token) > 128 {
+		return false
+	}
+	for _, r := range token {
+		if !((r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '-' || r == '_') {
+			return false
+		}
+	}
+	return true
+}
+
+func shellQuote(s string) string {
+	return "'" + strings.ReplaceAll(s, "'", "'\"'\"'") + "'"
+}
+
+// ResolveEndpoint determines the public URL endpoint for Komari agents.
+// It prioritizes the explicitly configured script_domain, then falls back to the
+// incoming request's scheme and host.
+func ResolveEndpoint(c *gin.Context) string {
+	if domain, err := config.GetAs[string]("script_domain", ""); err == nil {
+		domain = strings.TrimSpace(domain)
+		if domain != "" {
+			if strings.HasPrefix(domain, "http://") || strings.HasPrefix(domain, "https://") {
+				return strings.TrimRight(domain, "/")
+			}
+			return "https://" + strings.TrimRight(domain, "/")
+		}
+	}
+	proto := "http"
+	if c.Request.TLS != nil || c.GetHeader("X-Forwarded-Proto") == "https" || c.GetHeader("Cf-Visitor") != "" {
+		proto = "https"
+	}
+	host := c.Request.Host
+	if fwdHost := c.GetHeader("X-Forwarded-Host"); fwdHost != "" {
+		host = fwdHost
+	}
+	return proto + "://" + strings.TrimRight(host, "/")
+}
+
+// ServeDynamicInstallScript serves a tailored agent install script with AGENT_ENDPOINT
+// and AGENT_TOKEN dynamically embedded.
+func ServeDynamicInstallScript(c *gin.Context) {
+	rawToken := c.Param("token")
+	token := strings.TrimSpace(strings.TrimSuffix(rawToken, ".sh"))
+	if !IsValidToken(token) {
+		c.String(http.StatusBadRequest, "Invalid token format\n")
+		return
+	}
+
+	// Verify token exists in database
+	uuid, err := clients.GetClientUUIDByToken(token)
+	if err != nil || uuid == "" {
+		c.String(http.StatusNotFound, "Node not found\n")
+		return
+	}
+
+	endpoint := ResolveEndpoint(c)
+	header := fmt.Sprintf("#!/bin/sh\n# Tailored installation script for Komari Agent\nAGENT_ENDPOINT=%s\nAGENT_TOKEN=%s\n\n", shellQuote(endpoint), shellQuote(token))
+
+	baseScript := AgentInstallScript
+	if idx := bytes.IndexByte(baseScript, '\n'); idx != -1 {
+		baseScript = baseScript[idx+1:]
+	}
+
+	tailored := append([]byte(header), baseScript...)
+
+	c.Header("Cache-Control", "no-store, no-cache, must-revalidate")
+	c.Data(http.StatusOK, "text/x-shellscript; charset=utf-8", tailored)
 }

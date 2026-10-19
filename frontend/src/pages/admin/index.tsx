@@ -1917,15 +1917,16 @@ function GenerateCommandButton({
       }
       return `http://${settings.script_domain.replace(/\/+$/, "")}`;
     }();
-    const args = buildAgentInstallArgs({
-      endpoint: host,
-      token: nodeToken,
+    const hasCustomOptions = enableInterval || enableIncludeNics || enableExcludeNics;
+    if (!hasCustomOptions) {
+      return `curl -sL ${host}/i/${nodeToken} | bash`;
+    }
+    const extraArgs = buildAgentInstallArgs({
       interval: enableInterval ? installOptions.interval : undefined,
       includeNics: enableIncludeNics ? installOptions.includeNics : undefined,
       excludeNics: enableExcludeNics ? installOptions.excludeNics : undefined,
     });
-    const scriptUrl = `${host}/download/agent-install.sh`;
-    return `curl -fsSL ${JSON.stringify(scriptUrl)} | bash -s -- ${quoteShellArgs(args)}`;
+    return `curl -sL ${host}/i/${nodeToken} | bash -s -- ${quoteShellArgs(extraArgs)}`;
   };
 
   const copyToClipboardHandler = async (text: string) => {

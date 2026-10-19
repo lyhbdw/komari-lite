@@ -133,3 +133,32 @@ func TestServeAgentAssetAllowsOnlyPinnedFiles(t *testing.T) {
 		})
 	}
 }
+
+func TestIsValidToken(t *testing.T) {
+	valid := []string{
+		"vco9vC6XWJRontAVajsJLU",
+		"abcdefgh",
+		"12345678",
+		"node_token-123",
+	}
+	for _, tk := range valid {
+		if !IsValidToken(tk) {
+			t.Errorf("expected token %q to be valid", tk)
+		}
+	}
+
+	invalid := []string{
+		"",
+		"short",
+		"token with spaces",
+		"token;rm -rf /",
+		"token$(whoami)",
+		"token`id`",
+		strings.Repeat("a", 130),
+	}
+	for _, tk := range invalid {
+		if IsValidToken(tk) {
+			t.Errorf("expected token %q to be invalid", tk)
+		}
+	}
+}

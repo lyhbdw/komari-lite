@@ -146,6 +146,7 @@ extract_token_argument() {
     rebuilt=""
     skip_next=false
     next_is_endpoint=false
+    has_endpoint_arg=false
     for arg in "$@"; do
         if [ "$skip_next" = true ]; then
             agent_token="$arg"
@@ -158,12 +159,14 @@ extract_token_argument() {
         fi
         case "$arg" in
             -e|--endpoint)
+                has_endpoint_arg=true
                 next_is_endpoint=true
                 quoted=$(shell_quote "$arg")
                 if [ -n "$rebuilt" ]; then rebuilt="$rebuilt "; fi
                 rebuilt="$rebuilt$quoted"
                 ;;
             --endpoint=*)
+                has_endpoint_arg=true
                 agent_endpoint=${arg#--endpoint=}
                 quoted=$(shell_quote "$arg")
                 if [ -n "$rebuilt" ]; then rebuilt="$rebuilt "; fi
@@ -191,6 +194,12 @@ extract_token_argument() {
     if [ "$skip_next" = true ]; then
         log_error "Token argument is missing a value"
         exit 1
+    fi
+    if [ "$has_endpoint_arg" = false ] && [ -n "$agent_endpoint" ]; then
+        quoted_e=$(shell_quote "-e")
+        quoted_ep=$(shell_quote "$agent_endpoint")
+        if [ -n "$rebuilt" ]; then rebuilt="$rebuilt "; fi
+        rebuilt="$rebuilt$quoted_e $quoted_ep"
     fi
     komari_args="$rebuilt"
 }
@@ -816,6 +825,9 @@ if [ "$effective_uid" -eq 0 ] && [ "$service_user" != "root" ]; then
 fi
 umask 077
 printf 'export AGENT_TOKEN=%s\n' "$(shell_quote "$agent_token")" > "$credential_file"
+if [ -n "$agent_endpoint" ]; then
+    printf 'export AGENT_ENDPOINT=%s\n' "$(shell_quote "$agent_endpoint")" >> "$credential_file"
+fi
 chmod 0600 "$credential_file"
 cat > "$runner_file" << EOF
 #!/bin/sh
