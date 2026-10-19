@@ -27,8 +27,8 @@ const router = useRouter()
 const appStore = useAppStore()
 const nodesStore = useNodesStore()
 const { formatBytes, formatBytesPerSecond, formatUptime } = useNodeFormatters()
-const exchangeRates = ref(financeHelper.DEFAULT_EXCHANGE_RATES)
-const financeBaseCurrency = ref<CurrencyCode>('CNY')
+const exchangeRates = ref(financeHelper.sharedExchangeRates.value)
+const financeBaseCurrency = ref<CurrencyCode>(financeHelper.getStoredFinanceCurrency())
 
 onMounted(async () => {
   window.scrollTo({ top: 0, behavior: 'instant' })

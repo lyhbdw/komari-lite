@@ -102,11 +102,11 @@ export const sharedFinanceCurrency = ref<CurrencyCode>(getStoredFinanceCurrency(
 
 const EXCHANGE_RATE_APIS = [
   {
-    url: 'https://api.frankfurter.app/latest?from=CNY',
+    url: 'https://open.er-api.com/v6/latest/CNY',
     parse: (data: unknown) => (data as { rates?: unknown }).rates,
   },
   {
-    url: 'https://open.er-api.com/v6/latest/CNY',
+    url: 'https://api.frankfurter.app/latest?from=CNY',
     parse: (data: unknown) => (data as { rates?: unknown }).rates,
   },
 ] as const

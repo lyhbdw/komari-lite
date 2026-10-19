@@ -28,9 +28,9 @@ const NodeEarthMaps = defineAsyncComponent(() => import('@/components/NodeEarthM
 
 const appStore = useAppStore()
 const nodesStore = useNodesStore()
-const exchangeRates = ref(financeHelper.DEFAULT_EXCHANGE_RATES)
-const exchangeRateBaseCurrency = ref<CurrencyCode>('CNY')
-const excludeFreeNodes = ref(true)
+const exchangeRates = ref(financeHelper.sharedExchangeRates.value)
+const exchangeRateBaseCurrency = ref<CurrencyCode>(financeHelper.getStoredFinanceCurrency())
+const excludeFreeNodes = ref(financeHelper.shouldExcludeFreeNodes())
 const financeRateCurrencies: readonly CurrencyCode[] = financeHelper.DISPLAY_FINANCE_CURRENCIES
 const summaryNodes = computed(() => props.nodes ?? nodesStore.nodes)
 const summaryTransitionKey = computed(() => props.transitionKey ?? 'all')
@@ -425,7 +425,7 @@ onMounted(async () => {
                   资产与汇率详情
                 </DialogTitle>
                 <DialogDescription class="text-xs text-muted-foreground mt-0.5">
-                  所有节点的剩余价值与溢价汇总及今日实时汇率
+                  {{ summaryTransitionKey !== 'all' ? `当前分组（${summaryTransitionKey}）节点的剩余价值与溢价汇总及今日实时汇率` : '所有节点的剩余价值与溢价汇总及今日实时汇率' }}
                 </DialogDescription>
               </div>
             </div>

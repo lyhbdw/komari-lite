@@ -34,7 +34,13 @@ const useAppStore = defineStore('app', () => {
   const themeMode = useStorageAsync<ThemeMode>('themeMode', 'auto', localStorage)
   const lang = ref<Lang>('zh-CN')
   const publicSettings = useStorageAsync<PublicSettings | undefined>('kml_public_settings', undefined, localStorage)
-  const nodeSelectedGroup = useStorageAsync<string>('nodeSelectedGroup', 'all', localStorage)
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.removeItem('nodeSelectedGroup')
+    }
+    catch {}
+  }
+  const nodeSelectedGroup = ref<string>('all')
   const isLoggedIn = ref<boolean>(false)
   const connectionError = ref<boolean>(false)
 

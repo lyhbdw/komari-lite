@@ -38,8 +38,21 @@ const FINANCE_CURRENCY_CONFIG = {
 } as const;
 
 export type CurrencyCode = keyof typeof FINANCE_CURRENCY_CONFIG;
+const SUPPORTED_FINANCE_CURRENCIES = Object.keys(
+  FINANCE_CURRENCY_CONFIG
+) as CurrencyCode[];
 
 export type ExchangeRates = Record<CurrencyCode, number>;
+type ExchangeRateSource = "cache" | "network" | "stale-cache" | "default";
+
+interface ExchangeRatesCache {
+  base: "CNY";
+  date: string;
+  fetchedAt: number;
+  rates: Partial<Record<CurrencyCode, number>>;
+}
+
+const CACHE_KEY = "komari_finance_exchange_rates_cny_v1";
 
 export const DEFAULT_EXCHANGE_RATES = Object.fromEntries(
   Object.entries(FINANCE_CURRENCY_CONFIG).map(([currency, config]) => [
@@ -54,6 +67,17 @@ const CURRENCY_SYMBOLS = Object.fromEntries(
     config.symbol,
   ])
 ) as Record<CurrencyCode, string>;
+
+const EXCHANGE_RATE_APIS = [
+  {
+    url: "https://open.er-api.com/v6/latest/CNY",
+    parse: (data: unknown) => (data as { rates?: unknown }).rates,
+  },
+  {
+    url: "https://api.frankfurter.app/latest?from=CNY",
+    parse: (data: unknown) => (data as { rates?: unknown }).rates,
+  },
+] as const;
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const LONG_TERM_YEARS = 100;
@@ -71,6 +95,36 @@ const EXPLICIT_CURRENCY_ALIASES: Record<string, CurrencyCode> = {
   "￥": "CNY",
   "JP¥": "JPY",
 };
+const CURRENCY_SYMBOL_ALIASES = createCurrencySymbolAliases();
+
+function isSupportedCurrency(currency: string): currency is CurrencyCode {
+  return (SUPPORTED_FINANCE_CURRENCIES as readonly string[]).includes(currency);
+}
+
+function createCurrencySymbolAliases(): Record<string, CurrencyCode> {
+  const symbolEntries = Object.entries(FINANCE_CURRENCY_CONFIG).map(
+    ([currency, config]) =>
+      [config.symbol.trim().toUpperCase(), currency as CurrencyCode] as const
+  );
+
+  const symbolCounts = symbolEntries.reduce<Record<string, number>>(
+    (counts, [symbol]) => {
+      counts[symbol] = (counts[symbol] || 0) + 1;
+      return counts;
+    },
+    {}
+  );
+
+  return symbolEntries.reduce<Record<string, CurrencyCode>>(
+    (aliases, [symbol, currency]) => {
+      if (symbol && symbolCounts[symbol] === 1) {
+        aliases[symbol] = currency;
+      }
+      return aliases;
+    },
+    {}
+  );
+}
 
 function normalizeCurrency(
   currency: string | null | undefined
@@ -78,10 +132,166 @@ function normalizeCurrency(
   const value = String(currency || "CNY")
     .trim()
     .toUpperCase();
-  if (value in FINANCE_CURRENCY_CONFIG) {
-    return value as CurrencyCode;
+  if (isSupportedCurrency(value)) {
+    return value;
   }
-  return EXPLICIT_CURRENCY_ALIASES[value] || "CNY";
+  return (
+    EXPLICIT_CURRENCY_ALIASES[value] ||
+    CURRENCY_SYMBOL_ALIASES[value] ||
+    "CNY"
+  );
+}
+
+function getTodayDateKey(date = new Date()): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+export function shouldExcludeFreeNodes(): boolean {
+  const value = getLocalStorageItem("fin_exclude_free");
+  return value === null ? true : value === "true";
+}
+
+export function getStoredFinanceCurrency(): CurrencyCode {
+  return normalizeCurrency(getLocalStorageItem("fin_currency") || "CNY");
+}
+
+export function getInitialExchangeRates(): ExchangeRates {
+  return readCachedExchangeRates()?.rates || DEFAULT_EXCHANGE_RATES;
+}
+
+export async function getDailyExchangeRates(): Promise<{
+  rates: ExchangeRates;
+  source: ExchangeRateSource;
+}> {
+  const today = getTodayDateKey();
+  const cached = readCachedExchangeRates();
+
+  if (cached && cached.date === today) {
+    return {
+      rates: cached.rates,
+      source: "cache",
+    };
+  }
+
+  const fetchedRates = await fetchExchangeRates();
+  if (fetchedRates) {
+    writeCachedExchangeRates(fetchedRates, today);
+    return {
+      rates: fetchedRates,
+      source: "network",
+    };
+  }
+
+  if (cached) {
+    return {
+      rates: cached.rates,
+      source: "stale-cache",
+    };
+  }
+
+  return {
+    rates: DEFAULT_EXCHANGE_RATES,
+    source: "default",
+  };
+}
+
+async function fetchExchangeRates(): Promise<ExchangeRates | null> {
+  for (const api of EXCHANGE_RATE_APIS) {
+    try {
+      const response = await fetchWithTimeout(api.url);
+      if (!response.ok) continue;
+
+      const data = await response.json();
+      const rates = sanitizeExchangeRates(api.parse(data));
+      if (rates) return rates;
+    } catch (error) {
+      console.warn(`获取汇率失败: ${api.url}`, error);
+    }
+  }
+
+  return null;
+}
+
+async function fetchWithTimeout(
+  url: string,
+  timeoutMs = 5000
+): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    return await fetch(url, { signal: controller.signal });
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
+}
+
+function readCachedExchangeRates(): {
+  date: string;
+  rates: ExchangeRates;
+} | null {
+  try {
+    const rawValue = getLocalStorageItem(CACHE_KEY);
+    if (!rawValue) return null;
+
+    const cache = JSON.parse(rawValue) as ExchangeRatesCache;
+    const rates = sanitizeExchangeRates(cache.rates);
+    if (cache.base !== "CNY" || !cache.date || !rates) return null;
+
+    return {
+      date: cache.date,
+      rates,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function writeCachedExchangeRates(rates: ExchangeRates, date: string): void {
+  const cache: ExchangeRatesCache = {
+    base: "CNY",
+    date,
+    fetchedAt: Date.now(),
+    rates,
+  };
+  setLocalStorageItem(CACHE_KEY, JSON.stringify(cache));
+}
+
+function sanitizeExchangeRates(rates: unknown): ExchangeRates | null {
+  if (!rates || typeof rates !== "object") return null;
+
+  const record = rates as Record<string, unknown>;
+  const result = { CNY: 1 } as ExchangeRates;
+
+  for (const currency of SUPPORTED_FINANCE_CURRENCIES) {
+    if (currency === "CNY") continue;
+
+    const value = Number(record[currency]);
+    if (!Number.isFinite(value) || value <= 0) return null;
+
+    result[currency] = value;
+  }
+
+  return result;
+}
+
+function getLocalStorageItem(key: string): string | null {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function setLocalStorageItem(key: string, value: string): void {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    // ignore storage errors
+  }
 }
 
 const FREE_NODE_REGEX = /白嫖|免费|free/i;

@@ -617,52 +617,93 @@ const MetricsOverview = ({
     isLoading: true,
   });
 
+  const [exchangeRates, setExchangeRates] = useState<financeHelper.ExchangeRates>(
+    () => financeHelper.getInitialExchangeRates()
+  );
+  const [baseCurrency, setBaseCurrency] = useState<financeHelper.CurrencyCode>(
+    () => financeHelper.getStoredFinanceCurrency()
+  );
+  const [excludeFreeNodes, setExcludeFreeNodes] = useState<boolean>(() =>
+    financeHelper.shouldExcludeFreeNodes()
+  );
+
+  useEffect(() => {
+    let active = true;
+    const syncFinancePrefs = () => {
+      setExcludeFreeNodes(financeHelper.shouldExcludeFreeNodes());
+      setBaseCurrency(financeHelper.getStoredFinanceCurrency());
+    };
+    syncFinancePrefs();
+    financeHelper.getDailyExchangeRates().then(({ rates }) => {
+      if (active) {
+        setExchangeRates(rates);
+      }
+    });
+    window.addEventListener("storage", syncFinancePrefs);
+    return () => {
+      active = false;
+      window.removeEventListener("storage", syncFinancePrefs);
+    };
+  }, []);
+
+  const targetExchangeRate = exchangeRates[baseCurrency] || 1;
+
   const remainingStats = React.useMemo(() => {
     if (!Array.isArray(nodes)) {
-      return { total: "¥0.00", base: "¥0.00", premium: "¥0.00", hasPremium: false };
+      const zeroFmt = financeHelper.formatFinanceAmount(0, baseCurrency);
+      const zeroStr = `${zeroFmt.symbol}${zeroFmt.value}`;
+      return { total: zeroStr, base: zeroStr, premium: zeroStr, hasPremium: false };
     }
-    const totalRemaining = financeHelper.calculateTotalRemainingValueCNY(
-      nodes,
-      financeHelper.DEFAULT_EXCHANGE_RATES,
-      false
-    );
-    const baseRemaining = financeHelper.calculateTotalBaseRemainingValueCNY(
-      nodes,
-      financeHelper.DEFAULT_EXCHANGE_RATES,
-      false
-    );
-    const totalPremium = financeHelper.calculateTotalPremiumCNY(
-      nodes,
-      financeHelper.DEFAULT_EXCHANGE_RATES,
-      false
-    );
-    const fmtTotal = financeHelper.formatFinanceAmount(totalRemaining, "CNY");
-    const fmtBase = financeHelper.formatFinanceAmount(baseRemaining, "CNY");
-    const fmtPrem = financeHelper.formatFinanceAmount(totalPremium, "CNY");
+    const totalRemaining =
+      financeHelper.calculateTotalRemainingValueCNY(
+        nodes,
+        exchangeRates,
+        excludeFreeNodes
+      ) * targetExchangeRate;
+    const baseRemaining =
+      financeHelper.calculateTotalBaseRemainingValueCNY(
+        nodes,
+        exchangeRates,
+        excludeFreeNodes
+      ) * targetExchangeRate;
+    const totalPremium =
+      financeHelper.calculateTotalPremiumCNY(
+        nodes,
+        exchangeRates,
+        excludeFreeNodes
+      ) * targetExchangeRate;
+    const fmtTotal = financeHelper.formatFinanceAmount(totalRemaining, baseCurrency);
+    const fmtBase = financeHelper.formatFinanceAmount(baseRemaining, baseCurrency);
+    const fmtPrem = financeHelper.formatFinanceAmount(totalPremium, baseCurrency);
     return {
       total: `${fmtTotal.symbol}${fmtTotal.value}`,
       base: `${fmtBase.symbol}${fmtBase.value}`,
       premium: `${fmtPrem.symbol}${fmtPrem.value}`,
       hasPremium: totalPremium > 0,
     };
-  }, [nodes]);
+  }, [nodes, exchangeRates, excludeFreeNodes, baseCurrency, targetExchangeRate]);
 
   const monthlyCostStats = React.useMemo(() => {
     if (!Array.isArray(nodes)) {
-      return { totalCNY: "¥0.00/月", yearCNY: "年均 ¥0.00" };
+      const zeroFmt = financeHelper.formatFinanceAmount(0, baseCurrency);
+      return {
+        totalCNY: `${zeroFmt.symbol}${zeroFmt.value}/月`,
+        yearCNY: `年均 ${zeroFmt.symbol}${zeroFmt.value}`,
+      };
     }
-    const totalCNY = financeHelper.calculateTotalMonthlyAverageCostCNY(
-      nodes,
-      financeHelper.DEFAULT_EXCHANGE_RATES,
-      false
-    );
-    const fmtTotal = financeHelper.formatFinanceAmount(totalCNY, "CNY");
-    const fmtYear = financeHelper.formatFinanceAmount(totalCNY * 12, "CNY");
+    const totalAmount =
+      financeHelper.calculateTotalMonthlyAverageCostCNY(
+        nodes,
+        exchangeRates,
+        excludeFreeNodes
+      ) * targetExchangeRate;
+    const fmtTotal = financeHelper.formatFinanceAmount(totalAmount, baseCurrency);
+    const fmtYear = financeHelper.formatFinanceAmount(totalAmount * 12, baseCurrency);
     return {
       totalCNY: `${fmtTotal.symbol}${fmtTotal.value}/月`,
       yearCNY: `年均 ${fmtYear.symbol}${fmtYear.value}`,
     };
-  }, [nodes]);
+  }, [nodes, exchangeRates, excludeFreeNodes, baseCurrency, targetExchangeRate]);
 
   useEffect(() => {
     let isMounted = true;
