@@ -3,21 +3,13 @@ import type { ByteDecimalsConfig } from '@/utils/helper'
 import { usePreferredDark, useStorageAsync } from '@vueuse/core'
 import { defineStore } from 'pinia'
 import { computed, ref, watch } from 'vue'
+import { DEFAULT_BYTE_DECIMALS } from '@/utils/helper'
 
 export type ThemeMode = 'auto' | 'light' | 'dark'
 type Lang = 'zh-CN' | 'en-US'
 type NodeViewMode = 'card' | 'list'
 type RpcTransportMode = 'websocket' | 'http'
 type EarthViewMode = 'earth' | 'earth-stop' | 'maps' | 'cards' | 'hide'
-
-/** 固定的字节精度配置 */
-const BYTE_DECIMALS: ByteDecimalsConfig = {
-  B: 0,
-  KB: 0,
-  MB: 1,
-  GB: 1,
-  TB: 2,
-}
 
 function isValidThemeMode(value: unknown): value is ThemeMode {
   return value === 'auto' || value === 'light' || value === 'dark'
@@ -93,8 +85,8 @@ const useAppStore = defineStore('app', () => {
     return 'websocket'
   })
 
-  // 字节格式化精度（固定配置）
-  const byteDecimals: ByteDecimalsConfig = { ...BYTE_DECIMALS }
+  // 字节格式化精度（前后台共享统一配置）
+  const byteDecimals: ByteDecimalsConfig = { ...DEFAULT_BYTE_DECIMALS }
 
   const earthViewMode = computed<EarthViewMode>(() => {
     const settings = publicSettings.value?.theme_settings

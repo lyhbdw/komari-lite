@@ -15,7 +15,11 @@ import {
 import { useAppStore } from '@/stores/app'
 import { useNodesStore } from '@/stores/nodes'
 import * as financeHelper from '@/utils/financeHelper'
-import { formatBytesPerSecondSplit, formatBytesSplit } from '@/utils/helper'
+import {
+  calculateTrafficAndSpeedStats,
+  formatBytesPerSecondSplit,
+  formatBytesSplit,
+} from '@/utils/helper'
 
 const props = defineProps<{
   nodes?: NodeData[]
@@ -54,25 +58,14 @@ function setExchangeRateBaseCurrency(event: Event): void {
   financeHelper.setStoredFinanceCurrency(exchangeRateBaseCurrency.value)
 }
 
-const totalSpeed = computed(() => {
-  const onlineNodes = summaryNodes.value.filter(node => node.online)
-  const up = onlineNodes.reduce((sum, node) => sum + (node.net_out || 0), 0)
-  const down = onlineNodes.reduce((sum, node) => sum + (node.net_in || 0), 0)
-  return { up, down }
-})
+const trafficAndSpeed = computed(() => calculateTrafficAndSpeedStats(summaryNodes.value))
 
-const totalTraffic = computed(() => {
-  const up = summaryNodes.value.reduce((sum, node) => sum + (node.net_total_up || 0), 0)
-  const down = summaryNodes.value.reduce((sum, node) => sum + (node.net_total_down || 0), 0)
-  return { up, down }
-})
+const formattedTrafficUp = computed(() => formatBytesSplit(trafficAndSpeed.value.totalUp, appStore.byteDecimals))
+const formattedTrafficDown = computed(() => formatBytesSplit(trafficAndSpeed.value.totalDown, appStore.byteDecimals))
+const totalTrafficTooltip = computed(() => formatBytesSplit(trafficAndSpeed.value.totalBytes, appStore.byteDecimals))
 
-const formattedTrafficUp = computed(() => formatBytesSplit(totalTraffic.value.up, appStore.byteDecimals))
-const formattedTrafficDown = computed(() => formatBytesSplit(totalTraffic.value.down, appStore.byteDecimals))
-const totalTrafficTooltip = computed(() => formatBytesSplit(totalTraffic.value.up + totalTraffic.value.down, appStore.byteDecimals))
-
-const formattedSpeedUp = computed(() => formatBytesPerSecondSplit(totalSpeed.value.up, appStore.byteDecimals))
-const formattedSpeedDown = computed(() => formatBytesPerSecondSplit(totalSpeed.value.down, appStore.byteDecimals))
+const formattedSpeedUp = computed(() => formatBytesPerSecondSplit(trafficAndSpeed.value.speedUp, appStore.byteDecimals))
+const formattedSpeedDown = computed(() => formatBytesPerSecondSplit(trafficAndSpeed.value.speedDown, appStore.byteDecimals))
 
 // ==================== 内存 / 硬盘 汇总 ====================
 // 离线节点的 ram / disk 为 0，不影响 used 求和；mem_total / disk_total 是静态库存信息，按全量统计

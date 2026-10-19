@@ -79,7 +79,12 @@ import {
   DrawerTitle,
   DrawerTrigger,
 } from "@/components/ui/drawer";
-import { formatBytes, formatBytesPerSecond, stringToBytes } from "@/utils/unitHelper";
+import {
+  calculateTrafficAndSpeedFromStatusMap,
+  formatBytes,
+  formatBytesPerSecond,
+  stringToBytes,
+} from "@/utils/unitHelper";
 import * as financeHelper from "@/utils/financeHelper";
 import PriceTags from "@/components/PriceTags";
 import Loading from "@/components/loading";
@@ -705,6 +710,13 @@ const MetricsOverview = ({
     };
   }, [nodes, exchangeRates, excludeFreeNodes, baseCurrency, targetExchangeRate]);
 
+  const nodeUuidsRef = React.useRef<string[]>([]);
+  useEffect(() => {
+    nodeUuidsRef.current = Array.isArray(nodes)
+      ? nodes.map((n) => n.uuid).filter(Boolean)
+      : [];
+  }, [nodes]);
+
   useEffect(() => {
     let isMounted = true;
     let inFlight = false;
@@ -726,30 +738,14 @@ const MetricsOverview = ({
 
         if (!res.ok) return;
         const data = await res.json();
-        const statusMap = data.result || {};
-        let up = 0;
-        let down = 0;
-        let sUp = 0;
-        let sDown = 0;
-
-        Object.values(statusMap).forEach((st: any) => {
-          if (st) {
-            up += Number(st.net_total_up || 0);
-            down += Number(st.net_total_down || 0);
-            if (st.online) {
-              sUp += Number(st.net_out || 0);
-              sDown += Number(st.net_in || 0);
-            }
-          }
-        });
+        const stats = calculateTrafficAndSpeedFromStatusMap(
+          data.result,
+          nodeUuidsRef.current
+        );
 
         if (isMounted) {
           setTrafficStats({
-            totalUp: up,
-            totalDown: down,
-            totalBytes: up + down,
-            speedUp: sUp,
-            speedDown: sDown,
+            ...stats,
             isLoading: false,
           });
         }
