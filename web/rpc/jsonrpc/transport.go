@@ -74,12 +74,14 @@ func dispatchWithSensitive(ctx context.Context, c *gin.Context, meta *rpc.Contex
 // extractRequestTwoFACode 从单条 RPC 请求的命名参数中提取 2FA code。
 // 仅支持对象(map)形式的 params;按 2fa_code / two_factor_code / otp 顺序查找。
 func extractRequestTwoFACode(req *rpc.JsonRpcRequest) string {
-	for _, key := range []string{"2fa_code", "two_factor_code", "otp"} {
-		if v, ok := rpc.GetParamAs[string](req, key); ok && v != "" {
-			return v
-		}
+	if req == nil {
+		return ""
 	}
-	return ""
+	params, ok := req.Params.(map[string]any)
+	if !ok {
+		return ""
+	}
+	return security.ExtractTwoFACodeFromParams(params)
 }
 
 // wsSessionStillValid 重校验建立连接时的主体身份是否仍然有效。

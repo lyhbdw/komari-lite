@@ -1,6 +1,7 @@
 package clients
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	logger "github.com/lyhbdw/komari-lite/utils/log"
@@ -17,10 +18,10 @@ import (
 )
 
 var (
-	clientsCacheMu   sync.RWMutex
-	cachedClients    []models.Client
-	clientsCachedAt  time.Time
-	clientsCacheTTL  = 3 * time.Second
+	clientsCacheMu  sync.RWMutex
+	cachedClients   []models.Client
+	clientsCachedAt time.Time
+	clientsCacheTTL = 3 * time.Second
 )
 
 func InvalidateClientsCache() {
@@ -208,6 +209,15 @@ func GetClientTokenByUUID(uuid string) (token string, err error) {
 }
 
 func GetAllClientBasicInfo() (clients []models.Client, err error) {
+	return GetAllClientBasicInfoWithContext(context.Background())
+}
+
+// GetAllClientBasicInfoWithContext preserves caller cancellation/deadlines for
+// cache misses while serving cache hits without database work.
+func GetAllClientBasicInfoWithContext(ctx context.Context) (clients []models.Client, err error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	clientsCacheMu.RLock()
 	if cachedClients != nil && time.Since(clientsCachedAt) < clientsCacheTTL {
 		result := make([]models.Client, len(cachedClients))
@@ -217,7 +227,7 @@ func GetAllClientBasicInfo() (clients []models.Client, err error) {
 	}
 	clientsCacheMu.RUnlock()
 
-	db := dbcore.GetDBInstance()
+	db := dbcore.GetDBInstance().WithContext(ctx)
 	err = db.Find(&clients).Error
 	if err != nil {
 		return nil, err

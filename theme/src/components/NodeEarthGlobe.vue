@@ -13,7 +13,8 @@ import createGlobe from 'cobe'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useAppStore } from '@/stores/app'
 import { useNodesStore } from '@/stores/nodes'
-import { getCoordByCode, getCountryCodeFromRegion } from '@/utils/geoHelper'
+import { getCoordByCode } from '@/utils/geoHelper'
+import { aggregateNodesByRegion, countNodeAvailability } from '@/utils/regionAggregation'
 import { formatBytesPerSecondSplit } from '@/utils/helper'
 
 const props = defineProps<{
@@ -110,43 +111,13 @@ interface RegionRate {
 }
 
 // 节点按地区聚合
-const regionClusters = computed<RegionCluster[]>(() => {
-  const map = new Map<string, RegionCluster>()
-  for (const node of displayNodes.value) {
-    const code = getCountryCodeFromRegion(node.region)
-    if (!code)
-      continue
-    const coord = getCoordByCode(code)
-    if (!coord)
-      continue
-
-    let entry = map.get(code)
-    if (!entry) {
-      entry = { code, coord, servers: 0, onlineServers: 0 }
-      map.set(code, entry)
-    }
-    entry.servers += 1
-    if (node.online)
-      entry.onlineServers += 1
-  }
-  return Array.from(map.values()).sort((a, b) => b.servers - a.servers)
-})
+const regionAggregates = computed(() => aggregateNodesByRegion(displayNodes.value))
+const regionClusters = computed<RegionCluster[]>(() => regionAggregates.value)
 
 const regionRates = computed<Map<string, RegionRate>>(() => {
   const map = new Map<string, RegionRate>()
-  for (const node of displayNodes.value) {
-    if (!node.online)
-      continue
-    const code = getCountryCodeFromRegion(node.region)
-    if (!code)
-      continue
-    let entry = map.get(code)
-    if (!entry) {
-      entry = { up: 0, down: 0 }
-      map.set(code, entry)
-    }
-    entry.up += node.net_out || 0
-    entry.down += node.net_in || 0
+  for (const aggregate of regionAggregates.value) {
+    map.set(aggregate.code, { up: aggregate.up, down: aggregate.down })
   }
   return map
 })
@@ -458,9 +429,10 @@ function onPointerUp(e: PointerEvent) {
   syncRafState()
 }
 
-const totalServers = computed(() => displayNodes.value.length)
-const onlineServers = computed(() => displayNodes.value.filter(node => node.online).length)
-const offlineServers = computed(() => totalServers.value - onlineServers.value)
+const availability = computed(() => countNodeAvailability(displayNodes.value))
+const totalServers = computed(() => availability.value.totalServers)
+const onlineServers = computed(() => availability.value.onlineServers)
+const offlineServers = computed(() => availability.value.offlineServers)
 
 function rateFor(code: string): RegionRate {
   return regionRates.value.get(code) ?? { up: 0, down: 0 }

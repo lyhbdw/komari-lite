@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/lyhbdw/komari-lite/database/dbcore"
+	"github.com/lyhbdw/komari-lite/database/clients"
 	"github.com/lyhbdw/komari-lite/database/models"
 	"github.com/lyhbdw/komari-lite/internal/metricstore"
 	"github.com/lyhbdw/komari-lite/pkg/metric"
@@ -506,16 +506,10 @@ func clonePublicMetricTags(tags map[string]string) map[string]string {
 	return out
 }
 
-func publicMetricEntityIDs(ctx context.Context, requested []string) ([]string, *rpc.JsonRpcError) {
-	var allClients []models.Client
-	err := dbcore.GetDBInstance().WithContext(ctx).Select("uuid", "hidden").Find(&allClients).Error
-	if err != nil {
-		return nil, rpc.MakeError(rpc.InternalError, "Failed to retrieve client information: "+err.Error(), nil)
-	}
-	isLogin := isLoginFromCtx(ctx)
+func selectPublicMetricEntityIDs(requested []string, allClients []models.Client, isLogin bool) []string {
 	hidden := make(map[string]bool, len(allClients))
 	visible := make(map[string]bool, len(allClients))
-	var allVisible []string
+	allVisible := make([]string, 0, len(allClients))
 	for _, client := range allClients {
 		if client.Hidden {
 			hidden[client.UUID] = true
@@ -527,10 +521,7 @@ func publicMetricEntityIDs(ctx context.Context, requested []string) ([]string, *
 		allVisible = append(allVisible, client.UUID)
 	}
 	if len(requested) == 0 {
-		if len(allVisible) > maxPublicMetricQueryEntities {
-			return nil, rpc.MakeError(rpc.InvalidParams, "too many entities after expansion", nil)
-		}
-		return allVisible, nil
+		return allVisible
 	}
 	out := make([]string, 0, len(requested))
 	for _, entityID := range requested {
@@ -540,6 +531,19 @@ func publicMetricEntityIDs(ctx context.Context, requested []string) ([]string, *
 		if visible[entityID] || !hidden[entityID] {
 			out = append(out, entityID)
 		}
+	}
+	return out
+}
+
+func publicMetricEntityIDs(ctx context.Context, requested []string) ([]string, *rpc.JsonRpcError) {
+	allClients, err := clients.GetAllClientBasicInfoWithContext(ctx)
+	if err != nil {
+		return nil, rpc.MakeError(rpc.InternalError, "Failed to retrieve client information: "+err.Error(), nil)
+	}
+	isLogin := isLoginFromCtx(ctx)
+	out := selectPublicMetricEntityIDs(requested, allClients, isLogin)
+	if len(requested) == 0 && len(out) > maxPublicMetricQueryEntities {
+		return nil, rpc.MakeError(rpc.InvalidParams, "too many entities after expansion", nil)
 	}
 	return out, nil
 }

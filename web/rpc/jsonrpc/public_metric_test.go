@@ -63,6 +63,29 @@ func TestPublicMetricQueryLimitsHoursAndPoints(t *testing.T) {
 	}
 }
 
+func TestSelectPublicMetricEntityIDsRespectsHiddenNodes(t *testing.T) {
+	clients := []models.Client{
+		{UUID: "visible-a"},
+		{UUID: "hidden-b", Hidden: true},
+		{UUID: "visible-c"},
+	}
+
+	anonymousAll := selectPublicMetricEntityIDs(nil, clients, false)
+	if got, want := strings.Join(anonymousAll, ","), "visible-a,visible-c"; got != want {
+		t.Fatalf("anonymous all = %q, want %q", got, want)
+	}
+
+	anonymousRequested := selectPublicMetricEntityIDs([]string{"visible-c", "hidden-b", "unknown"}, clients, false)
+	if got, want := strings.Join(anonymousRequested, ","), "visible-c,unknown"; got != want {
+		t.Fatalf("anonymous requested = %q, want %q", got, want)
+	}
+
+	adminRequested := selectPublicMetricEntityIDs([]string{"hidden-b", "visible-a"}, clients, true)
+	if got, want := strings.Join(adminRequested, ","), "hidden-b,visible-a"; got != want {
+		t.Fatalf("admin requested = %q, want %q", got, want)
+	}
+}
+
 func TestPublicMetricQueryLimitsKeysAndEntities(t *testing.T) {
 	params := publicMetricQueryParams{}
 	for i := 0; i < maxPublicMetricQueryKeys+1; i++ {

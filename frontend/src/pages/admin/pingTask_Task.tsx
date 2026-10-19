@@ -1,4 +1,5 @@
 import NodeSelectorDialog from "@/components/NodeSelectorDialog";
+import { PingTaskForm, type PingTaskFormValue } from "@/components/PingTaskForm";
 import {
   Table,
   TableBody,
@@ -30,7 +31,6 @@ import {
   Button,
   Dialog,
   Flex,
-  Select,
 } from "@/components/ui/radix-shim";
 import { GripVertical, Pencil, Settings2, Trash2 } from "lucide-react";
 import React from "react";
@@ -212,16 +212,16 @@ const Row = ({
   const [editSaving, setEditSaving] = React.useState(false);
   const [deleteOpen, setDeleteOpen] = React.useState(false);
   const [deleteLoading, setDeleteLoading] = React.useState(false);
-  const [form, setForm] = React.useState({
+  const [form, setForm] = React.useState<PingTaskFormValue>({
     name: task.name || "",
-    type: task.type || "icmp",
+    type: task.type === "tcp" || task.type === "http" ? task.type : "icmp",
     target: task.target || "",
     clients: task.clients || [],
     default_on: task.default_on || false,
     interval: task.interval || 60,
   });
 
-  const submitEdit = (newForm: typeof form) => {
+  const submitEdit = (newForm: PingTaskFormValue) => {
     if (!newForm.default_on && newForm.clients.length === 0) {
       toast.error(t("ping.default_on_description", "请至少勾选默认全网开启或指定执行节点"));
       return;
@@ -377,119 +377,18 @@ const Row = ({
                   修改探测任务的协议、目标地址、频率与节点执行范围。
                 </Dialog.Description>
               </Dialog.Header>
-              <form onSubmit={handleEdit} className="grid gap-3.5 my-0.5 text-xs">
-                <div className="grid gap-1.5">
-                  <div className="flex items-center h-5">
-                    <label htmlFor={`edit-task-name-${task.id}`} className="text-xs font-medium leading-none text-foreground">
-                      任务名称
-                    </label>
-                  </div>
-                  <input
-                    id={`edit-task-name-${task.id}`}
-                    value={form.name}
-                    onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                    required
-                    className="w-full h-9 px-3 text-sm rounded-lg border border-input bg-transparent text-foreground outline-none focus-visible:ring-1 focus-visible:ring-ring shadow-xs"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="grid gap-1.5">
-                    <div className="flex items-center h-5">
-                      <label htmlFor={`edit-task-type-${task.id}`} className="text-xs font-medium leading-none text-foreground">
-                        协议类型
-                      </label>
-                    </div>
-                    <Select.Root
-                      value={form.type}
-                      onValueChange={(v) => setForm((f) => ({ ...f, type: v as any }))}
-                    >
-                      <Select.Trigger id={`edit-task-type-${task.id}`} className="w-full h-9 cursor-pointer text-sm" />
-                      <Select.Content>
-                        <Select.Item value="tcp">TCP (端口握手)</Select.Item>
-                        <Select.Item value="icmp">ICMP (Ping 报文)</Select.Item>
-                        <Select.Item value="http">HTTP (网页探测)</Select.Item>
-                      </Select.Content>
-                    </Select.Root>
-                  </div>
-                  <div className="grid gap-1.5">
-                    <div className="flex items-center h-5">
-                      <label htmlFor={`edit-task-interval-${task.id}`} className="text-xs font-medium leading-none text-foreground">
-                        探测频率 (秒/次)
-                      </label>
-                    </div>
-                    <input
-                      id={`edit-task-interval-${task.id}`}
-                      type="number"
-                      min={1}
-                      value={form.interval}
-                      onChange={(e) => setForm((f) => ({ ...f, interval: Number(e.target.value) }))}
-                      required
-                      className="w-full h-9 px-3 text-sm rounded-lg border border-input bg-transparent text-foreground outline-none focus-visible:ring-1 focus-visible:ring-ring shadow-xs font-mono"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid gap-1.5">
-                  <div className="flex items-center h-5">
-                    <label htmlFor={`edit-task-target-${task.id}`} className="text-xs font-medium leading-none text-foreground">
-                      目标地址 (Target)
-                    </label>
-                  </div>
-                  <input
-                    id={`edit-task-target-${task.id}`}
-                    value={form.target}
-                    onChange={(e) => setForm((f) => ({ ...f, target: e.target.value }))}
-                    required
-                    className="w-full h-9 px-3 text-sm rounded-lg border border-input bg-transparent text-foreground outline-none focus-visible:ring-1 focus-visible:ring-ring shadow-xs font-mono"
-                  />
-                </div>
-
-                <div className="p-3 rounded-lg border border-border/60 bg-muted/20 space-y-2.5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-medium text-foreground">
-                      执行节点范围
-                    </span>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-muted-foreground font-mono">
-                        已选 {form.clients.length} 台
-                      </span>
-                      <NodeSelectorDialog
-                        value={form.clients}
-                        onChange={(v) => setForm((f) => ({ ...f, clients: v }))}
-                      />
-                    </div>
-                  </div>
-                  <div className="pt-2 border-t border-border/40 flex items-start gap-2">
-                    <input
-                      type="checkbox"
-                      id={`edit_ping_default_on_${task.id}`}
-                      checked={form.default_on}
-                      onChange={(e) => setForm((f) => ({ ...f, default_on: e.target.checked }))}
-                      className="size-4 mt-0.5 cursor-pointer accent-foreground"
-                    />
-                    <div className="flex flex-col">
-                      <label htmlFor={`edit_ping_default_on_${task.id}`} className="text-xs font-medium text-foreground cursor-pointer">
-                        {t("ping.default_on", "默认全网开启")}
-                      </label>
-                      <span className="text-[11px] text-muted-foreground leading-relaxed">
-                        {t("ping.default_on_description", "所有现有服务器及新加入节点均会自动执行该探测任务。")}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <Dialog.Footer className="pt-2 border-t border-border/50 flex flex-row justify-end gap-2">
-                  <Dialog.Close asChild>
-                    <Button variant="outline" type="button" className="cursor-pointer">
-                      {t("common.cancel", "取消")}
-                    </Button>
-                  </Dialog.Close>
-                  <Button type="submit" disabled={editSaving} className="cursor-pointer">
-                    {editSaving ? "保存中..." : t("common.save", "保存修改")}
-                  </Button>
-                </Dialog.Footer>
-              </form>
+              <PingTaskForm
+                value={form}
+                onChange={setForm}
+                onSubmit={handleEdit}
+                submitting={editSaving}
+                submitLabel={t("common.save", "保存修改")}
+                nameId={`edit-task-name-${task.id}`}
+                typeId={`edit-task-type-${task.id}`}
+                intervalId={`edit-task-interval-${task.id}`}
+                targetId={`edit-task-target-${task.id}`}
+                defaultOnId={`edit_ping_default_on_${task.id}`}
+              />
             </Dialog.Content>
           </Dialog.Root>
 

@@ -90,6 +90,11 @@ import {
   calculateNextRenewalDate,
   isNodeExpiringSoon,
 } from "../../../../theme/src/utils/billingCore";
+import {
+  isNodeInGroup,
+  isNodeUngrouped,
+  parseNodeGroups,
+} from "../../../../theme/src/utils/groupCore";
 import PriceTags from "@/components/PriceTags";
 import Loading from "@/components/loading";
 import Tips from "@/components/ui/tips";
@@ -156,10 +161,8 @@ const Layout = () => {
   const availableGroups = React.useMemo(() => {
     if (!Array.isArray(nodeDetail)) return [];
     const groups = new Set<string>();
-    nodeDetail.forEach((n) => {
-      if (n.group && n.group.trim()) {
-        groups.add(n.group.trim());
-      }
+    nodeDetail.forEach((node) => {
+      parseNodeGroups(node.group).forEach((group) => groups.add(group));
     });
     return Array.from(groups);
   }, [nodeDetail]);
@@ -174,12 +177,10 @@ const Layout = () => {
         if (selectedStatus === "expiring" && !isExpiringSoon(node)) return false;
 
         // 分组筛选
-        if (selectedGroup !== "all") {
-          if (selectedGroup === "_ungrouped_") {
-            if (node.group && node.group.trim()) return false;
-          } else if (node.group !== selectedGroup) {
-            return false;
-          }
+        if (selectedGroup === "_ungrouped_") {
+          if (!isNodeUngrouped(node.group)) return false;
+        } else if (!isNodeInGroup(node.group, selectedGroup)) {
+          return false;
         }
 
         // 文本搜索

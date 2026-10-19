@@ -2,12 +2,11 @@
 import type { NodeData } from '@/stores/nodes'
 import { Icon } from '@iconify/vue'
 import { computed } from 'vue'
-import { Badge } from '@/components/ui/badge'
+import NodePingSummary from '@/components/NodePingSummary.vue'
 import { CardX } from '@/components/ui/card-x'
 import { DataTooltip } from '@/components/ui/data-tooltip'
 import { ProgressThin } from '@/components/ui/progress-thin'
 import { useNodeFormatters } from '@/composables/useNodeFormatters'
-import { useNodePingDisplay } from '@/composables/useNodePingDisplay'
 import { useAppStore } from '@/stores/app'
 import * as financeHelper from '@/utils/financeHelper'
 import { sharedExchangeRates, sharedFinanceCurrency } from '@/utils/financeHelper'
@@ -44,17 +43,6 @@ const isHighLoad = computed(() => {
   const mem = memPercentage.value
   return cpu >= 85 || mem >= 85
 })
-
-const {
-  latencyRenderBars,
-  lossRenderBars,
-  latencyDisplay,
-  lossDisplay,
-  latencyPanelTooltip,
-  lossPanelTooltip,
-  topPingNetworks,
-  isAllBlocked,
-} = useNodePingDisplay(() => props.node.uuid)
 
 const trafficUsedPercentage = computed(() => getTrafficUsedPercentage(props.node))
 const trafficUsed = computed(() => getTrafficUsed(props.node))
@@ -430,94 +418,11 @@ function openPingDialog() {
                 </div>
               </DataTooltip>
             </div>
-            <div class="flex items-center justify-between">
-              <span class="truncate tracking-wide text-muted-foreground">
-                三网
-              </span>
-              <div v-if="isAllBlocked" class="flex items-center">
-                <DataTooltip
-                  placement="top"
-                  :content="appStore.lang === 'zh-CN' ? '国内探测点全量丢包（IP 可能已被墙或未响应 ICMP）' : '100% loss from mainland probes (IP may be blocked)'"
-                  content-class="whitespace-pre-wrap w-max px-2 py-1 text-[10.5px]"
-                >
-                  <Badge
-                    variant="outline"
-                    class="!h-4.5 !px-1.5 !py-0 !text-[10px] font-mono border-rose-500/30 bg-rose-500/8 text-rose-600 dark:text-rose-400 gap-1 inline-flex items-center cursor-default rounded-md hover:bg-rose-500/12 transition-colors"
-                  >
-                    <span class="size-1 rounded-full bg-rose-500 inline-block animate-pulse" />
-                    <span>{{ appStore.lang === 'zh-CN' ? '国内阻断' : 'Blocked' }}</span>
-                  </Badge>
-                </DataTooltip>
-              </div>
-              <div v-else-if="topPingNetworks.length > 0" class="flex flex-row items-center gap-1.5">
-                <DataTooltip
-                  v-for="net in topPingNetworks" :key="net.name" placement="top"
-                  :content="`${net.name}\n${net.latency}`" content-class="whitespace-pre-wrap w-max px-1.5 !leading-[1.2] text-[10.5px]"
-                >
-                  <div class="truncate flex items-center gap-0.5">
-                    <span class="text-[9.5px] text-muted-foreground/75 font-normal">{{ net.shortName }}</span>
-                    <span :class="net.toneClass">{{ net.latency }}</span>
-                  </div>
-                </DataTooltip>
-              </div>
-              <div v-else class="truncate text-muted-foreground/60">
-                -
-              </div>
-            </div>
-            <div class="grid grid-cols-6 gap-x-3 pt-0.5">
-              <!-- 延迟 -->
-              <div
-                role="button" tabindex="0"
-                class="group/panel relative col-span-3 flex h-5 cursor-pointer flex-col gap-1 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                :title="latencyPanelTooltip" :aria-label="`${props.node.name} 延迟`" @click.stop="openPingDialog"
-                @keydown.enter.stop.prevent="openPingDialog" @keydown.space.stop.prevent="openPingDialog"
-              >
-                <div class="flex items-center justify-between text-[10px] leading-none relative">
-                  <span class="text-muted-foreground">延迟</span>
-                  <span class="font-medium font-mono tabular-nums" :class="isAllBlocked ? 'text-muted-foreground/60' : 'text-foreground/85'">{{ latencyDisplay }}</span>
-                </div>
-                <div
-                  class="grid h-full items-end gap-[1px]"
-                  :style="{ gridTemplateColumns: `repeat(${latencyRenderBars.length}, minmax(0, 1fr))` }"
-                >
-                  <DataTooltip
-                    v-for="bar in latencyRenderBars" :key="bar.key" placement="top" :content="bar.tooltip"
-                    class="h-full w-full" content-class="whitespace-pre-wrap w-max px-1.5 !leading-[1.2] text-[10.5px]"
-                  >
-                    <span
-                      class="block h-full w-full rounded-[1px] transition-transform duration-150 group-hover/data-tooltip:scale-y-200"
-                      :class="bar.className"
-                    />
-                  </DataTooltip>
-                </div>
-              </div>
-              <!-- 丢包 -->
-              <div
-                role="button" tabindex="0"
-                class="group/panel relative col-span-3 flex h-5 cursor-pointer flex-col gap-1 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                :title="lossPanelTooltip" :aria-label="`${props.node.name} 丢包`" @click.stop="openPingDialog"
-                @keydown.enter.stop.prevent="openPingDialog" @keydown.space.stop.prevent="openPingDialog"
-              >
-                <div class="flex items-center justify-between text-[10px] leading-none">
-                  <span class="text-muted-foreground">丢包</span>
-                  <span class="font-medium font-mono tabular-nums" :class="isAllBlocked ? 'text-muted-foreground/80' : 'text-foreground/85'">{{ lossDisplay }}</span>
-                </div>
-                <div
-                  class="grid h-full items-end gap-[1px]"
-                  :style="{ gridTemplateColumns: `repeat(${lossRenderBars.length}, minmax(0, 1fr))` }"
-                >
-                  <DataTooltip
-                    v-for="bar in lossRenderBars" :key="bar.key" placement="top" :content="bar.tooltip"
-                    class="h-full w-full" content-class="whitespace-pre-wrap w-max px-1.5 !leading-[1.2] text-[10.5px] font-mono tabular-nums"
-                  >
-                    <span
-                      class="block h-full w-full rounded-[1px] transition-transform duration-150 group-hover/data-tooltip:scale-y-200"
-                      :class="bar.className"
-                    />
-                  </DataTooltip>
-                </div>
-              </div>
-            </div>
+            <NodePingSummary
+              :uuid="props.node.uuid"
+              interactive
+              @click="openPingDialog"
+            />
           </div>
         </div>
       </div>

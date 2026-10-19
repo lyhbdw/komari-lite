@@ -81,12 +81,7 @@ func get2FACode(c *gin.Context) string {
 	if err := json.Unmarshal(bodyBytes, &body); err != nil {
 		return ""
 	}
-	for _, key := range []string{"2fa_code", "two_factor_code", "otp"} {
-		if value, ok := body[key].(string); ok && value != "" {
-			return value
-		}
-	}
-	return ""
+	return security.ExtractTwoFACodeFromParams(body)
 }
 
 func err2FARequired() error {

@@ -1,5 +1,6 @@
-import React from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { useFetchedResource } from "@/contexts/useFetchedResource";
 
 /**
  * API utility functions for settings management
@@ -21,41 +22,44 @@ export interface SettingsResponse {
 }
 
 
+const defaultSettings: SettingsResponse = {
+  sitename: "",
+  description: "",
+  geo_ip_enabled: false,
+  geo_ip_provider: "",
+  ssrf_protection_enabled: false,
+  CreatedAt: "",
+  UpdatedAt: "",
+};
+
+function sanitizeSettingsResponse(payload: unknown): SettingsResponse {
+  const response = payload as { data?: unknown };
+  const settingsPayload = response?.data;
+  if (
+    typeof settingsPayload !== "object" ||
+    settingsPayload === null ||
+    Array.isArray(settingsPayload)
+  ) {
+    throw new Error("Invalid settings response payload");
+  }
+
+  return Object.fromEntries(
+    Object.entries(settingsPayload).filter(
+      ([key]) => !["CreatedAt", "UpdatedAt", "id"].includes(key),
+    ),
+  ) as SettingsResponse;
+}
+
 /**
  * Fetch settings from the API
  * @returns Promise containing the settings data
  */
 async function getSettings(): Promise<SettingsResponse> {
-  try {
-    const response = await fetch("/api/admin/settings");
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const data = await response.json();
-    const settingsPayload = data["data"];
-
-    if (
-      typeof settingsPayload !== "object" ||
-      settingsPayload === null ||
-      Array.isArray(settingsPayload)
-    ) {
-      throw new Error("Invalid settings response payload");
-    }
-
-    // Remove database metadata fields that are not needed for UI
-    const settings = Object.fromEntries(
-      Object.entries(settingsPayload).filter(
-        ([key]) => !["CreatedAt", "UpdatedAt", "id"].includes(key),
-      ),
-    );
-
-    return settings as SettingsResponse;
-  } catch (error) {
-    console.error("Failed to fetch settings:", error);
-    throw error;
+  const response = await fetch("/api/admin/settings");
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`);
   }
+  return sanitizeSettingsResponse(await response.json());
 }
 
 /**
@@ -111,100 +115,66 @@ export async function updateSettingsWithToast(
 }
 
 /**
- * Update a single setting field
- * @param key - The setting key to update
- * @param value - The new value for the setting
- * @param currentSettings - The current settings object (to merge with)
- * @returns Promise containing the response
- */
-async function updateSingleSetting<K extends keyof SettingsResponse>(
-  key: K,
-  value: SettingsResponse[K],
-  currentSettings: SettingsResponse
-): Promise<void> {
-  const updatedSettings = { ...currentSettings, [key]: value };
-  return updateSettings(updatedSettings);
-}
-
-/**
  * Hook for managing settings state and API calls
  */
 export function useSettings() {
-  const [settings, setSettings] = React.useState<SettingsResponse>({
-    sitename: "",
-    description: "",
-    geo_ip_enabled: false,
-    geo_ip_provider: "",
-    ssrf_protection_enabled: false,
-    CreatedAt: "",
-    UpdatedAt: "",
+  const {
+    data: settings,
+    loading,
+    errorString: error,
+    refresh,
+  } = useFetchedResource<SettingsResponse>({
+    url: "/api/admin/settings",
+    initialData: defaultSettings,
+    errorMessage: "Failed to fetch settings",
+    initialLoading: true,
+    transform: sanitizeSettingsResponse,
   });
+  const [settingsOverride, setSettingsOverride] = useState<SettingsResponse | null>(null);
+  useEffect(() => {
+    setSettingsOverride(null);
+  }, [settings]);
+  const activeSettings = settingsOverride ?? settings;
+  const settingsRef = useRef(activeSettings);
+  settingsRef.current = activeSettings;
 
-  const [loading, setLoading] = React.useState(true);
-  const [error, setError] = React.useState<string | null>(null);
-
-  // Fetch settings on mount
-  React.useEffect(() => {
-    const fetchSettings = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const data = await getSettings();
-        setSettings(data);
-      } catch (err) {
-        setError(
-          err instanceof Error ? err.message : "Failed to fetch settings"
-        );
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchSettings();
+  const setSettings = useCallback((updater: React.SetStateAction<SettingsResponse>) => {
+    setSettingsOverride((current) => {
+      const base = current ?? settingsRef.current;
+      return typeof updater === "function"
+        ? (updater as (previous: SettingsResponse) => SettingsResponse)(base)
+        : updater;
+    });
   }, []);
 
-  // Update a single setting
   const updateSetting = async <K extends keyof SettingsResponse>(
     key: K,
     value: SettingsResponse[K]
   ) => {
     try {
-      await updateSingleSetting(key, value, settings);
-      setSettings((prev) => ({ ...prev, [key]: value }));
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : `Failed to update ${String(key)}`
-      );
-      throw err;
-    }
-  };
-
-  // Update multiple settings
-  const updateMultipleSettings = async (
-    newSettings: Partial<SettingsResponse>
-  ) => {
-    try {
-      const updatedSettings = { ...settings, ...newSettings };
+      const updatedSettings = { ...settingsRef.current, [key]: value };
       await updateSettings(updatedSettings);
       setSettings(updatedSettings);
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to update settings"
-      );
       throw err;
     }
   };
 
+  const updateMultipleSettings = async (
+    newSettings: Partial<SettingsResponse>
+  ) => {
+    const updatedSettings = { ...settingsRef.current, ...newSettings };
+    await updateSettings(updatedSettings);
+    setSettings(updatedSettings);
+  };
+
   return {
-    settings,
+    settings: activeSettings,
     loading,
     error,
     setSettings,
     updateSetting,
     updateMultipleSettings,
-    refetch: async () => {
-      const data = await getSettings();
-      setSettings(data);
-    },
+    refetch: refresh,
   };
 }

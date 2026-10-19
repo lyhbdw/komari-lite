@@ -8,7 +8,7 @@ import { Spinner } from '@/components/ui/spinner'
 import { useAppStore } from '@/stores/app'
 import { useNodesStore } from '@/stores/nodes'
 import { ensureWorldMapRegistered } from '@/utils/echartsWorldMap'
-import { getCoordByCode, getCountryCodeFromRegion } from '@/utils/geoHelper'
+import { aggregateNodesByRegion, countNodeAvailability } from '@/utils/regionAggregation'
 import { getRegionDisplayName } from '@/utils/regionHelper'
 import { MapChart, ScatterChart } from 'echarts/charts'
 import { GeoComponent } from 'echarts/components'
@@ -72,37 +72,20 @@ function resolveCountryDisplayName(region: string, code: string): string {
 }
 
 const points = computed<EarthMapPoint[]>(() => {
-  const map = new Map<string, EarthMapPoint>()
-  for (const node of displayNodes.value) {
-    const code = getCountryCodeFromRegion(node.region)
-    if (!code)
-      continue
-    const coord = getCoordByCode(code)
-    if (!coord)
-      continue
-    const current = map.get(code)
-    if (!current) {
-      map.set(code, {
-        code,
-        name: resolveCountryDisplayName(node.region, code),
-        coord,
-        online: node.online ? 1 : 0,
-        offline: node.online ? 0 : 1,
-        total: 1,
-      })
-      continue
-    }
-    current.total += 1
-    current.online += node.online ? 1 : 0
-    current.offline += node.online ? 0 : 1
-  }
-
-  return Array.from(map.values()).sort((a, b) => b.online - a.online || b.total - a.total)
+  return aggregateNodesByRegion(displayNodes.value).map(aggregate => ({
+    code: aggregate.code,
+    name: resolveCountryDisplayName(aggregate.code, aggregate.code),
+    coord: aggregate.coord,
+    online: aggregate.onlineServers,
+    offline: aggregate.offlineServers,
+    total: aggregate.servers,
+  }))
 })
 
-const totalServers = computed(() => displayNodes.value.length)
-const onlineServers = computed(() => displayNodes.value.filter(node => node.online).length)
-const offlineServers = computed(() => totalServers.value - onlineServers.value)
+const availability = computed(() => countNodeAvailability(displayNodes.value))
+const totalServers = computed(() => availability.value.totalServers)
+const onlineServers = computed(() => availability.value.onlineServers)
+const offlineServers = computed(() => availability.value.offlineServers)
 
 const chartThemeColors = computed(() => ({
   areaColor: appStore.isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(15, 23, 42, 0.06)',

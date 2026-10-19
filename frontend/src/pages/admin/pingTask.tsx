@@ -1,5 +1,5 @@
 import Loading from "@/components/loading";
-import NodeSelectorDialog from "@/components/NodeSelectorDialog";
+import { PingTaskForm, type PingTaskFormValue } from "@/components/PingTaskForm";
 import { NodeDetailsProvider } from "@/contexts/NodeDetailsContext";
 import { useNodeDetails } from "@/contexts/useNodeDetails";
 import { PingTaskProvider } from "@/contexts/PingTaskContext";
@@ -8,7 +8,6 @@ import {
   Button,
   Dialog,
   Flex,
-  Select,
 } from "@/components/ui/radix-shim";
 import React from "react";
 import { useTranslation } from "react-i18next";
@@ -104,36 +103,36 @@ const InnerLayout = () => {
 const AddButton: React.FC = () => {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = React.useState(false);
-  const [name, setName] = React.useState("");
-  const [target, setTarget] = React.useState("");
-  const [interval, setInterval] = React.useState(60);
-  const [selectedType, setSelectedType] = React.useState<"icmp" | "tcp" | "http">("tcp");
-  const [selected, setSelected] = React.useState<string[]>([]);
-  const [defaultOn, setDefaultOn] = React.useState(true);
+  const [form, setForm] = React.useState<PingTaskFormValue>({
+    name: "",
+    target: "",
+    interval: 60,
+    type: "tcp",
+    clients: [],
+    default_on: true,
+  });
   const [saving, setSaving] = React.useState(false);
   const { refresh } = usePingTask();
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!name.trim()) {
+    if (!form.name.trim()) {
       toast.error("请输入任务名称");
       return;
     }
-    if (!target.trim()) {
+    if (!form.target.trim()) {
       toast.error("请输入探测目标");
       return;
     }
-    if (!defaultOn && selected.length === 0) {
+    if (!form.default_on && form.clients.length === 0) {
       toast.error(t("ping.default_on_description", "请至少勾选默认全网开启或指定执行节点"));
       return;
     }
     const payload = {
-      name: name.trim(),
-      type: selectedType,
-      target: target.trim(),
-      default_on: defaultOn,
-      clients: selected,
-      interval: interval || 60,
+      ...form,
+      name: form.name.trim(),
+      target: form.target.trim(),
+      interval: form.interval || 60,
     };
     setSaving(true);
     fetch("/api/admin/ping/add", {
@@ -146,12 +145,14 @@ const AddButton: React.FC = () => {
       .then(async (response) => {
         if (response.ok) {
           setIsOpen(false);
-          setName("");
-          setTarget("");
-          setInterval(60);
-          setSelected([]);
-          setDefaultOn(true);
-          setSelectedType("tcp");
+          setForm({
+            name: "",
+            target: "",
+            interval: 60,
+            type: "tcp",
+            clients: [],
+            default_on: true,
+          });
           toast.success(t("common.success", "添加成功"));
         } else {
           const data = await response.json().catch(() => ({}));
@@ -188,129 +189,18 @@ const AddButton: React.FC = () => {
             创建 ICMP、TCP 或 HTTP 延迟监测任务，并下发给指定服务器节点。
           </Dialog.Description>
         </Dialog.Header>
-        <form onSubmit={handleSubmit} className="grid gap-3.5 my-0.5 text-xs">
-          {/* 任务名称 */}
-          <div className="grid gap-1.5">
-            <div className="flex items-center h-5">
-              <label htmlFor="ping_name" className="text-xs font-medium leading-none text-foreground">
-                任务名称
-              </label>
-            </div>
-            <input
-              id="ping_name"
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="例如：江苏电信v4、Cloudflare Anycast"
-              required
-              autoFocus
-              className="w-full h-9 px-3 text-sm rounded-lg border border-input bg-transparent text-foreground outline-none focus-visible:ring-1 focus-visible:ring-ring shadow-xs"
-            />
-          </div>
-
-          {/* 协议与间隔 */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="grid gap-1.5">
-              <div className="flex items-center h-5">
-                <label htmlFor="ping_type" className="text-xs font-medium leading-none text-foreground">
-                  协议类型
-                </label>
-              </div>
-              <Select.Root
-                value={selectedType}
-                onValueChange={(value) => setSelectedType(value as "icmp" | "tcp" | "http")}
-              >
-                <Select.Trigger id="ping_type" className="w-full h-9 cursor-pointer text-sm" />
-                <Select.Content>
-                  <Select.Item value="tcp">TCP (端口握手)</Select.Item>
-                  <Select.Item value="icmp">ICMP (Ping 报文)</Select.Item>
-                  <Select.Item value="http">HTTP (网页探测)</Select.Item>
-                </Select.Content>
-              </Select.Root>
-            </div>
-            <div className="grid gap-1.5">
-              <div className="flex items-center h-5">
-                <label htmlFor="ping_interval" className="text-xs font-medium leading-none text-foreground">
-                  探测频率 (秒/次)
-                </label>
-              </div>
-              <input
-                id="ping_interval"
-                type="number"
-                value={interval}
-                onChange={(e) => setInterval(Number(e.target.value))}
-                min={1}
-                required
-                className="w-full h-9 px-3 text-sm rounded-lg border border-input bg-transparent text-foreground outline-none focus-visible:ring-1 focus-visible:ring-ring shadow-xs font-mono"
-              />
-            </div>
-          </div>
-
-          {/* 目标端点 */}
-          <div className="grid gap-1.5">
-            <div className="flex items-center h-5">
-              <label htmlFor="ping_target" className="text-xs font-medium leading-none text-foreground">
-                目标地址 (Target)
-              </label>
-            </div>
-            <input
-              id="ping_target"
-              type="text"
-              value={target}
-              onChange={(e) => setTarget(e.target.value)}
-              placeholder="1.1.1.1:80 或 example.com:443 或 http://..."
-              required
-              className="w-full h-9 px-3 text-sm rounded-lg border border-input bg-transparent text-foreground outline-none focus-visible:ring-1 focus-visible:ring-ring shadow-xs font-mono"
-            />
-            <p className="text-[11px] text-muted-foreground leading-relaxed">
-              TCP 需包含端口（如 1.1.1.1:80）；ICMP 填写 IP 或纯域名；HTTP 需带完整 URL。
-            </p>
-          </div>
-
-          {/* 执行节点范围 */}
-          <div className="p-3 rounded-lg border border-border/60 bg-muted/20 space-y-2.5">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-foreground">
-                执行节点范围
-              </span>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground font-mono">
-                  已选 {selected.length} 台
-                </span>
-                <NodeSelectorDialog value={selected} onChange={setSelected} />
-              </div>
-            </div>
-
-            <div className="pt-2 border-t border-border/40 flex items-start gap-2">
-              <input
-                type="checkbox"
-                id="ping_default_on"
-                checked={defaultOn}
-                onChange={(e) => setDefaultOn(e.target.checked)}
-                className="size-4 mt-0.5 cursor-pointer accent-foreground"
-              />
-              <div className="flex flex-col">
-                <label htmlFor="ping_default_on" className="text-xs font-medium text-foreground cursor-pointer">
-                  {t("ping.default_on", "默认全网开启")}
-                </label>
-                <span className="text-[11px] text-muted-foreground leading-relaxed">
-                  {t("ping.default_on_description", "所有现有服务器及新加入节点均会自动执行该探测任务。")}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <Dialog.Footer className="pt-2 border-t border-border/50 flex flex-row justify-end gap-2">
-            <Dialog.Close asChild>
-              <Button variant="outline" type="button" className="cursor-pointer">
-                {t("common.cancel", "取消")}
-              </Button>
-            </Dialog.Close>
-            <Button disabled={saving} type="submit" className="cursor-pointer">
-              {saving ? "添加中..." : t("common.add", "添加任务")}
-            </Button>
-          </Dialog.Footer>
-        </form>
+        <PingTaskForm
+          value={form}
+          onChange={setForm}
+          onSubmit={handleSubmit}
+          submitting={saving}
+          submitLabel={t("common.add", "添加任务")}
+          nameId="ping_name"
+          typeId="ping_type"
+          intervalId="ping_interval"
+          targetId="ping_target"
+          defaultOnId="ping_default_on"
+        />
       </Dialog.Content>
     </Dialog.Root>
   );
