@@ -25,5 +25,12 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": ["src", "../theme/src/utils/financeCore.ts", "../theme/src/utils/unitCore.ts"]
+  "include": [
+    "src",
+    "../theme/src/utils/financeCore.ts",
+    "../theme/src/utils/unitCore.ts",
+    "../theme/src/utils/billingCore.ts",
+    "../theme/src/utils/regionCore.ts",
+    "../theme/src/lib/utils.ts"
+  ]
 }

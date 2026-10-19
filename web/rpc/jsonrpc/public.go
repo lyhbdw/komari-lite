@@ -4,11 +4,11 @@ import (
 	"context"
 
 	"github.com/lyhbdw/komari-lite/database"
-	"github.com/lyhbdw/komari-lite/database/dbcore"
-	"github.com/lyhbdw/komari-lite/database/models"
+	"github.com/lyhbdw/komari-lite/database/clients"
 	"github.com/lyhbdw/komari-lite/database/tasks"
 	"github.com/lyhbdw/komari-lite/pkg/rpc"
 	"github.com/lyhbdw/komari-lite/utils"
+	agent_runtime "github.com/lyhbdw/komari-lite/web/agent"
 )
 
 // public.go
@@ -66,16 +66,29 @@ func publicGetMe(ctx context.Context, _ *rpc.JsonRpcRequest) (any, *rpc.JsonRpcE
 	}, nil
 }
 
-// hiddenClientUUIDMap 返回所有隐藏节点 uuid 的集合（查询失败时返回空集合，宁可少泄露）。
+// hiddenClientUUIDMap 返回所有隐藏节点 uuid 的集合（复用内存缓存，避免重复查库）。
 func hiddenClientUUIDMap() map[string]bool {
 	hidden := map[string]bool{}
-	var hiddenClients []models.Client
-	db := dbcore.GetDBInstance()
-	_ = db.Select("uuid").Where("hidden = ?", true).Find(&hiddenClients).Error
-	for _, cli := range hiddenClients {
-		hidden[cli.UUID] = true
+	cinfo, err := clients.GetAllClientBasicInfo()
+	if err != nil {
+		return hidden
+	}
+	for _, cli := range cinfo {
+		if cli.Hidden {
+			hidden[cli.UUID] = true
+		}
 	}
 	return hidden
+}
+
+// onlineClientUUIDMap 返回当前在线节点 uuid 的集合。
+func onlineClientUUIDMap() map[string]bool {
+	onlineUUIDs := agent_runtime.GetAllOnlineUUIDs()
+	onlineSet := make(map[string]bool, len(onlineUUIDs))
+	for _, uuid := range onlineUUIDs {
+		onlineSet[uuid] = true
+	}
+	return onlineSet
 }
 
 func publicGetPublicPingTasks(ctx context.Context, _ *rpc.JsonRpcRequest) (any, *rpc.JsonRpcError) {

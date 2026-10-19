@@ -1,28 +1,16 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React from "react";
 import { AccountContext, type Account } from "./account-context";
+import { useFetchedResource } from "./useFetchedResource";
 
-export const AccountProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [account, setAccount] = useState<Account | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
-
-  const refresh = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await fetch("/api/me");
-      if (!response.ok) throw new Error("Failed to fetch account data");
-      setAccount(await response.json());
-    } catch (err) {
-      setError(err as Error);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void refresh();
-  }, [refresh]);
+export const AccountProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
+  const { data: account, loading, error, refresh } = useFetchedResource<Account | null>({
+    url: "/api/me",
+    initialData: null,
+    errorMessage: "Failed to fetch account data",
+    initialLoading: true,
+  });
 
   return (
     <AccountContext.Provider value={{ account, loading, error, refresh }}>

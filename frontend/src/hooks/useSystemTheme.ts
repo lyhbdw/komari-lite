@@ -1,28 +1,12 @@
 import { useEffect, useState, useCallback } from 'react';
+import {
+  getNextThemeMode,
+  getResolvedTheme,
+  getStoredThemeMode,
+  type ThemeMode,
+} from '../../../theme/src/utils/unitCore';
 
-export type ThemeMode = 'auto' | 'light' | 'dark';
-
-const getStoredThemeMode = (): ThemeMode => {
-  if (typeof window === 'undefined') return 'auto';
-  try {
-    const stored = localStorage.getItem('themeMode');
-    if (stored === 'light' || stored === 'dark' || stored === 'auto') {
-      return stored;
-    }
-  } catch {
-    /* ignore */
-  }
-  return 'auto';
-};
-
-const getResolvedTheme = (mode: ThemeMode): 'light' | 'dark' => {
-  if (mode === 'light') return 'light';
-  if (mode === 'dark') return 'dark';
-  if (typeof window !== 'undefined' && window.matchMedia) {
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-  }
-  return 'light';
-};
+export type { ThemeMode };
 
 export const useSystemTheme = (): 'light' | 'dark' => {
   const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>(() =>
@@ -97,14 +81,7 @@ export const useThemeMode = () => {
   }, []);
 
   const toggleThemeMode = useCallback(() => {
-    const nextMode: Record<ThemeMode, ThemeMode> = {
-      auto: 'light',
-      light: 'dark',
-      dark: 'auto',
-    };
-    const current = getStoredThemeMode();
-    const next = nextMode[current] || 'auto';
-    setThemeMode(next);
+    setThemeMode(getNextThemeMode(getStoredThemeMode()));
   }, [setThemeMode]);
 
   return {

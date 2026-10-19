@@ -1,11 +1,4 @@
-import dayjs from 'dayjs'
-import { CURRENCY_SYMBOLS, normalizeCurrency } from '@/utils/financeHelper'
-
-/** 计费周期类型 */
-type BillingCycleType = 'monthly' | 'quarterly' | 'semi_annual' | 'annual' | 'biennial' | 'triennial' | 'quinquennial' | 'once' | 'custom'
-
-/** 过期状态类型 */
-type ExpireStatus = 'expired' | 'critical' | 'warning' | 'normal' | 'long_term'
+export * from './billingCore'
 
 /** 支持的标签颜色 */
 type TagColor
@@ -96,164 +89,9 @@ const TAG_COLOR_HEX_MAP: Record<TagColor, string> = {
   sky: '#00A6ED',
 }
 
-/** 计费周期范围配置（天） */
-const BILLING_CYCLE_RANGES: Array<{ type: BillingCycleType, min: number, max: number }> = [
-  { type: 'monthly', min: 27, max: 32 },
-  { type: 'quarterly', min: 87, max: 95 },
-  { type: 'semi_annual', min: 175, max: 185 },
-  { type: 'annual', min: 360, max: 370 },
-  { type: 'biennial', min: 720, max: 750 },
-  { type: 'triennial', min: 1080, max: 1150 },
-  { type: 'quinquennial', min: 1800, max: 1850 },
-]
-
-/** 过期状态阈值配置（天） */
-const EXPIRE_THRESHOLDS = {
-  critical: 7, // 7天内过期显示红色
-  warning: 15, // 15天内过期显示橙色
-  long_term: 36500, // 约100年视为长期
-} as const
-
 const TAG_COLOR_SUFFIX_REGEX = /<(\w+)>$/
 const TAG_COLOR_SUFFIX_REMOVE_REGEX = /<\w+>$/
 
-/**
- * 解析计费周期类型
- * @param billingCycle 计费周期（天）
- * @returns 计费周期类型
- */
-function parseBillingCycleType(billingCycle: number): BillingCycleType {
-  if (billingCycle === -1)
-    return 'once'
-
-  for (const range of BILLING_CYCLE_RANGES) {
-    if (billingCycle >= range.min && billingCycle <= range.max) {
-      return range.type
-    }
-  }
-
-  return 'custom'
-}
-
-/**
- * 获取计费周期的显示文本
- * @param billingCycle 计费周期（天）
- * @param lang 语言
- * @returns 显示文本
- */
-function getBillingCycleText(billingCycle: number, lang: 'zh-CN' | 'en-US' = 'zh-CN'): string {
-  const type = parseBillingCycleType(billingCycle)
-
-  const texts: Record<BillingCycleType, Record<'zh-CN' | 'en-US', string>> = {
-    monthly: { 'zh-CN': '月', 'en-US': 'Month' },
-    quarterly: { 'zh-CN': '季', 'en-US': 'Quarter' },
-    semi_annual: { 'zh-CN': '半年', 'en-US': 'Semi-Annual' },
-    annual: { 'zh-CN': '年', 'en-US': 'Year' },
-    biennial: { 'zh-CN': '两年', 'en-US': 'Biennial' },
-    triennial: { 'zh-CN': '三年', 'en-US': 'Triennial' },
-    quinquennial: { 'zh-CN': '五年', 'en-US': 'Quinquennial' },
-    once: { 'zh-CN': '一次性', 'en-US': 'Once' },
-    custom: { 'zh-CN': `${billingCycle} 天`, 'en-US': `${billingCycle} Days` },
-  }
-
-  return texts[type][lang]
-}
-
-/**
- * 计算距离过期的天数
- * @param expiredAt 过期时间（字符串或时间戳）
- * @returns 距离过期的天数，负数表示已过期
- */
-export function getDaysUntilExpired(expiredAt: string | number | undefined): number {
-  if (!expiredAt)
-    return 0
-
-  const expiredDate = dayjs(expiredAt)
-  const now = dayjs()
-
-  if (!expiredDate.isValid())
-    return 0
-
-  if (expiredDate.isBefore(now))
-    return Math.floor(expiredDate.diff(now, 'day', true))
-
-  return Math.max(1, Math.ceil(expiredDate.diff(now, 'day', true)))
-}
-
-/**
- * 获取过期状态
- * @param expiredAt 过期时间
- * @returns 过期状态
- */
-export function getExpireStatus(expiredAt: string | number | undefined): ExpireStatus {
-  if (!expiredAt)
-    return 'normal'
-
-  const expiredDate = dayjs(expiredAt)
-  const now = dayjs()
-
-  if (!expiredDate.isValid())
-    return 'normal'
-
-  if (expiredDate.isBefore(now))
-    return 'expired'
-
-  const days = Math.ceil(expiredDate.diff(now, 'day', true))
-  if (days < EXPIRE_THRESHOLDS.critical)
-    return 'critical'
-  if (days < EXPIRE_THRESHOLDS.warning)
-    return 'warning'
-  if (days > EXPIRE_THRESHOLDS.long_term)
-    return 'long_term'
-  return 'normal'
-}
-
-/**
- * 获取过期时间的文本颜色类
- * @param expiredAt 过期时间
- * @returns Tailwind 文本颜色类
- */
-export function getExpireTextClass(expiredAt: string | number | undefined): string {
-  const status = getExpireStatus(expiredAt)
-
-  if (status === 'expired' || status === 'critical')
-    return 'text-rose-600 dark:text-rose-400 font-bold'
-  if (status === 'warning')
-    return 'text-amber-600 dark:text-amber-400 font-medium'
-  if (status === 'long_term')
-    return 'text-muted-foreground'
-  return 'text-foreground'
-}
-
-/**
- * 获取过期时间的显示文本
- * @param expiredAt 过期时间
- * @param lang 语言
- * @returns 显示文本
- */
-export function getExpireText(expiredAt: string | number | undefined, lang: 'zh-CN' | 'en-US' = 'zh-CN'): string {
-  const days = getDaysUntilExpired(expiredAt)
-  const status = getExpireStatus(expiredAt)
-
-  if (status === 'expired') {
-    return lang === 'zh-CN' ? '已过期' : 'Expired'
-  }
-
-  if (status === 'long_term') {
-    return lang === 'zh-CN' ? '长期' : 'Long-term'
-  }
-
-  if (lang === 'zh-CN') {
-    return `${days} 天`
-  }
-  return `${days} days`
-}
-
-/**
- * 解析带颜色的标签
- * @param tag 标签字符串，支持格式 "文本<颜色>"
- * @returns 解析后的标签对象
- */
 function parseTagWithColor(tag: string): { text: string, color: TagColor | null } {
   const colorMatch = tag.match(TAG_COLOR_SUFFIX_REGEX)
   if (colorMatch && colorMatch[1]) {
@@ -266,19 +104,12 @@ function parseTagWithColor(tag: string): { text: string, color: TagColor | null 
   return { text: tag, color: null }
 }
 
-/**
- * 获取标签颜色对应的 HEX 值
- * @param color 标签颜色
- * @returns HEX 颜色值
- */
 function getTagColorHex(color: TagColor): string {
   return TAG_COLOR_HEX_MAP[color]
 }
 
 /**
  * 解析标签字符串为标签列表
- * @param tags 标签字符串，用分号分隔
- * @returns 标签数组
  */
 export function parseTags(tags: string | undefined): Array<{ text: string, color: TagColor, hex: string }> {
   if (!tags || tags.trim() === '')
@@ -296,40 +127,4 @@ export function parseTags(tags: string | undefined): Array<{ text: string, color
       hex: getTagColorHex(resolvedColor),
     }
   })
-}
-
-/**
- * 格式化价格显示
- * @param price 价格
- * @param currency 货币代码或符号
- * @param lang 语言
- * @returns 价格显示文本
- */
-function formatPrice(price: number, currency: string = 'CNY', lang: 'zh-CN' | 'en-US' = 'zh-CN'): string {
-  if (price === 0)
-    return lang === 'zh-CN' ? '免费' : 'Free'
-  if (price === -1)
-    return lang === 'zh-CN' ? '免费' : 'Free'
-  const code = normalizeCurrency(currency)
-  const symbol = CURRENCY_SYMBOLS[code]
-  return `${symbol}${price}`
-}
-
-/**
- * 格式化价格和计费周期
- * @param price 价格
- * @param billingCycle 计费周期（天）
- * @param currency 货币代码或符号
- * @param lang 语言
- * @returns 完整的价格显示文本
- */
-export function formatPriceWithCycle(
-  price: number,
-  billingCycle: number,
-  currency: string = 'CNY',
-  lang: 'zh-CN' | 'en-US' = 'zh-CN',
-): string {
-  const priceText = formatPrice(price, currency, lang)
-  const cycleText = getBillingCycleText(billingCycle, lang)
-  return price > 0 ? `${priceText}/${cycleText}` : priceText
 }

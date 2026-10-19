@@ -233,17 +233,10 @@ func adminGetClient(_ context.Context, req *rpc.JsonRpcRequest) (any, *rpc.JsonR
 	if err != nil {
 		return nil, rpc.MakeError(rpc.InternalError, err.Error(), nil)
 	}
-	onlineUUIDs := agent_runtime.GetAllOnlineUUIDs()
-	isOnline := false
-	for _, u := range onlineUUIDs {
-		if u == params.UUID {
-			isOnline = true
-			break
-		}
-	}
+	onlineSet := onlineClientUUIDMap()
 	return AdminClientItem{
 		Client: result,
-		Online: isOnline,
+		Online: onlineSet[params.UUID],
 	}, nil
 }
 
@@ -252,11 +245,7 @@ func adminListClients(_ context.Context, _ *rpc.JsonRpcRequest) (any, *rpc.JsonR
 	if err != nil {
 		return nil, rpc.MakeError(rpc.InternalError, err.Error(), nil)
 	}
-	onlineUUIDs := agent_runtime.GetAllOnlineUUIDs()
-	onlineSet := make(map[string]bool, len(onlineUUIDs))
-	for _, u := range onlineUUIDs {
-		onlineSet[u] = true
-	}
+	onlineSet := onlineClientUUIDMap()
 	result := make([]AdminClientItem, len(cls))
 	for i, c := range cls {
 		result[i] = AdminClientItem{

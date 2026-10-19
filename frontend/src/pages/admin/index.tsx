@@ -86,6 +86,10 @@ import {
   stringToBytes,
 } from "@/utils/unitHelper";
 import * as financeHelper from "@/utils/financeHelper";
+import {
+  calculateNextRenewalDate,
+  isNodeExpiringSoon,
+} from "../../../../theme/src/utils/billingCore";
 import PriceTags from "@/components/PriceTags";
 import Loading from "@/components/loading";
 import Tips from "@/components/ui/tips";
@@ -139,13 +143,10 @@ const Layout = () => {
   };
 
   // 判定是否为 7 天内即将到期机器
-  const isExpiringSoon = React.useCallback((node: NodeDetail) => {
-    if (!node.expired_at) return false;
-    const exp = new Date(node.expired_at);
-    const now = new Date();
-    const sevenDaysLater = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-    return exp > now && exp <= sevenDaysLater;
-  }, []);
+  const isExpiringSoon = React.useCallback(
+    (node: NodeDetail) => isNodeExpiringSoon(node.expired_at),
+    []
+  );
 
   const expiringCount = React.useMemo(() => {
     if (!Array.isArray(nodeDetail)) return 0;
@@ -1389,13 +1390,7 @@ const ServerRow = ({
         <ActionButtons
           node={node}
           settings={settings}
-          isExpiring={(() => {
-            if (!node.expired_at) return false;
-            const exp = new Date(node.expired_at);
-            const now = new Date();
-            const sevenDaysLater = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-            return exp > now && exp <= sevenDaysLater;
-          })()}
+          isExpiring={isNodeExpiringSoon(node.expired_at)}
         />
       </TableCell>
     </TableRow>
@@ -1711,22 +1706,7 @@ function RenewDialog({
   const [loading, setLoading] = useState(false);
 
   const cycleDays = Number(node.billing_cycle) > 0 ? Number(node.billing_cycle) : 30;
-
-  // 计算新的到期时间
-  const calculateNewExpiry = () => {
-    const now = new Date();
-    let baseTime = now.getTime();
-    if (node.expired_at) {
-      const expTime = new Date(node.expired_at).getTime();
-      if (expTime > now.getTime()) {
-        baseTime = expTime;
-      }
-    }
-    const newTimestamp = baseTime + cycleDays * 24 * 60 * 60 * 1000;
-    return new Date(newTimestamp);
-  };
-
-  const newExpiry = calculateNewExpiry();
+  const newExpiry = calculateNextRenewalDate(node.expired_at, cycleDays);
   const currentDateStr = node.expired_at
     ? new Date(node.expired_at).toLocaleDateString()
     : "未设置";

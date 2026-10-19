@@ -11,7 +11,7 @@ import { useBackgroundSurface } from '@/composables/useBackgroundSurface'
 import { useNodeFormatters } from '@/composables/useNodeFormatters'
 import { useAppStore } from '@/stores/app'
 import { formatDateTime, getStatus, getStatusTextClass } from '@/utils/helper'
-import { formatOfflineTime, getCustomTags, getPriceTags, getRemainingTimeTagClass, getTrafficUsed, getTrafficUsedPercentage, hasRegion, showTrafficProgress } from '@/utils/nodeHelpers'
+import { formatOfflineTime, getCustomTags, getDiskPercentage, getMemPercentage, getPriceTags, getRemainingTimeTagClass, getTrafficUsed, getTrafficUsedPercentage, hasRegion, showTrafficProgress } from '@/utils/nodeHelpers'
 import { getOSImage, getOSName } from '@/utils/osImageHelper'
 import { getFlagSrc, getRegionDisplayName } from '@/utils/regionHelper'
 
@@ -88,8 +88,8 @@ const sortedNodes = computed(() => {
         return dir * (va < vb ? -1 : va > vb ? 1 : 0)
       }
       case 'cpu': return dir * ((a.cpu ?? 0) - (b.cpu ?? 0))
-      case 'mem': return dir * ((a.ram ?? 0) / (a.mem_total || 1) - (b.ram ?? 0) / (b.mem_total || 1))
-      case 'disk': return dir * ((a.disk ?? 0) / (a.disk_total || 1) - (b.disk ?? 0) / (b.disk_total || 1))
+      case 'mem': return dir * (getMemPercentage(a) - getMemPercentage(b))
+      case 'disk': return dir * (getDiskPercentage(a) - getDiskPercentage(b))
       case 'traffic':
         return dir * (getTrafficUsedPercentage(a) - getTrafficUsedPercentage(b))
       case 'rate':
@@ -294,16 +294,16 @@ function getRowTransitionKey(node: NodeData): string {
                 <DataTooltip placement="top" class="block" :content-class="[!node.swap && '!hidden']">
                   <div class="space-y-1">
                     <div class="text-[10px] text-muted-foreground truncate font-mono tabular-nums text-right">
-                      <span class="inline group-hover:hidden font-medium" :class="getStatusTextClass((node.ram ?? 0) / (node.mem_total || 1) * 100)">
-                        {{ ((node.ram ?? 0) / (node.mem_total || 1) * 100).toFixed(1) }}%
+                      <span class="inline group-hover:hidden font-medium" :class="getStatusTextClass(getMemPercentage(node))">
+                        {{ getMemPercentage(node).toFixed(1) }}%
                       </span>
                       <span class="hidden group-hover:inline">
                         {{ formatBytes(node.ram ?? 0) }} / {{ formatBytes(node.mem_total ?? 0) }}
                       </span>
                     </div>
                     <ProgressThin
-                      :percentage="(node.ram ?? 0) / (node.mem_total || 1) * 100"
-                      :status="getStatus((node.ram ?? 0) / (node.mem_total || 1) * 100)" :height="4"
+                      :percentage="getMemPercentage(node)"
+                      :status="getStatus(getMemPercentage(node))" :height="4"
                     />
                   </div>
                   <template #content>
@@ -319,16 +319,16 @@ function getRowTransitionKey(node: NodeData): string {
               <div v-else-if="col.key === 'disk'" class="group text-right">
                 <div class="space-y-1">
                   <div class="text-[10px] text-muted-foreground truncate font-mono tabular-nums text-right">
-                    <span class="inline group-hover:hidden font-medium" :class="getStatusTextClass((node.disk ?? 0) / (node.disk_total || 1) * 100)">
-                      {{ ((node.disk ?? 0) / (node.disk_total || 1) * 100).toFixed(1) }}%
+                    <span class="inline group-hover:hidden font-medium" :class="getStatusTextClass(getDiskPercentage(node))">
+                      {{ getDiskPercentage(node).toFixed(1) }}%
                     </span>
                     <span class="hidden group-hover:inline">
                       {{ formatBytes(node.disk ?? 0) }} / {{ formatBytes(node.disk_total ?? 0) }}
                     </span>
                   </div>
                   <ProgressThin
-                    :percentage="(node.disk ?? 0) / (node.disk_total || 1) * 100"
-                    :status="getStatus((node.disk ?? 0) / (node.disk_total || 1) * 100)" :height="4"
+                    :percentage="getDiskPercentage(node)"
+                    :status="getStatus(getDiskPercentage(node))" :height="4"
                   />
                 </div>
               </div>

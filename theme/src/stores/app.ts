@@ -1,19 +1,15 @@
 import type { PublicSettings } from '@/utils/api'
-import type { ByteDecimalsConfig } from '@/utils/helper'
+import type { ByteDecimalsConfig, ThemeMode } from '@/utils/helper'
 import { usePreferredDark, useStorageAsync } from '@vueuse/core'
 import { defineStore } from 'pinia'
 import { computed, ref, watch } from 'vue'
-import { DEFAULT_BYTE_DECIMALS } from '@/utils/helper'
+import { DEFAULT_BYTE_DECIMALS, getNextThemeMode, isValidThemeMode } from '@/utils/helper'
 
-export type ThemeMode = 'auto' | 'light' | 'dark'
+export type { ThemeMode }
 type Lang = 'zh-CN' | 'en-US'
 type NodeViewMode = 'card' | 'list'
 type RpcTransportMode = 'websocket' | 'http'
 type EarthViewMode = 'earth' | 'earth-stop' | 'maps' | 'cards' | 'hide'
-
-function isValidThemeMode(value: unknown): value is ThemeMode {
-  return value === 'auto' || value === 'light' || value === 'dark'
-}
 
 function isValidEarthViewMode(value: unknown): value is EarthViewMode {
   return value === 'earth' || value === 'earth-stop' || value === 'maps' || value === 'cards' || value === 'hide'
@@ -156,15 +152,7 @@ const useAppStore = defineStore('app', () => {
       themeMode.value = isValidThemeMode(mode) ? mode : 'auto'
       return
     }
-
-    const nextMode: Record<ThemeMode, ThemeMode> = {
-      auto: 'light',
-      light: 'dark',
-      dark: 'auto',
-    }
-
-    const currentMode = isValidThemeMode(themeMode.value) ? themeMode.value : 'auto'
-    themeMode.value = nextMode[currentMode]
+    themeMode.value = getNextThemeMode(themeMode.value)
   }
 
   function updateLoginState(loggedIn: boolean) {

@@ -11,8 +11,8 @@ import { useNodeFormatters } from '@/composables/useNodeFormatters'
 import { useAppStore } from '@/stores/app'
 import { useNodesStore } from '@/stores/nodes'
 import * as financeHelper from '@/utils/financeHelper'
-import { formatDateTime } from '@/utils/helper'
-import { getTrafficUsed } from '@/utils/nodeHelpers'
+import { copyTextToClipboard, formatDateTime } from '@/utils/helper'
+import { getTrafficUsed, getTrafficUsedPercentage, showTrafficProgress } from '@/utils/nodeHelpers'
 import { getOSImage, getOSName } from '@/utils/osImageHelper'
 import { getFlagSrc, getRegionDisplayName } from '@/utils/regionHelper'
 import { getExpireText, getExpireTextClass } from '@/utils/tagHelper'
@@ -217,15 +217,9 @@ const trafficUsed = computed(() => {
   return getTrafficUsed(data.value)
 })
 
-const hasTrafficLimit = computed(() => (data.value?.traffic_limit ?? 0) > 0)
+const hasTrafficLimit = computed(() => data.value ? showTrafficProgress(data.value) : false)
 
-const trafficUsedPercentage = computed(() => {
-  const trafficLimit = data.value?.traffic_limit ?? 0
-  if (trafficLimit <= 0)
-    return 0
-
-  return Math.min((trafficUsed.value / trafficLimit) * 100, 100)
-})
+const trafficUsedPercentage = computed(() => data.value ? getTrafficUsedPercentage(data.value) : 0)
 
 const trafficUsageText = computed(() => {
   if (!hasTrafficLimit.value)
@@ -240,10 +234,13 @@ const trafficProgressStyle = computed(() => ({
 
 function copyText(text?: string, label?: string) {
   if (!text || text === '-') return
-  navigator.clipboard.writeText(text).then(() => {
-    toast.success(`${label || '内容'} 已复制`)
-  }).catch(() => {
-    toast.error('复制失败')
+  copyTextToClipboard(text).then((ok) => {
+    if (ok) {
+      toast.success(`${label || '内容'} 已复制`)
+    }
+    else {
+      toast.error('复制失败')
+    }
   })
 }
 </script>

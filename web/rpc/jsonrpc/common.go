@@ -8,16 +8,13 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/lyhbdw/komari-lite/database"
 	"github.com/lyhbdw/komari-lite/database/clients"
-	"github.com/lyhbdw/komari-lite/database/dbcore"
 	"github.com/lyhbdw/komari-lite/database/models"
 	"github.com/lyhbdw/komari-lite/database/tasks"
 	"github.com/lyhbdw/komari-lite/internal/metricstore"
 	"github.com/lyhbdw/komari-lite/pkg/metric"
 	"github.com/lyhbdw/komari-lite/pkg/rpc"
 	v2 "github.com/lyhbdw/komari-lite/protocol/v2"
-	"github.com/lyhbdw/komari-lite/utils"
 	agent_runtime "github.com/lyhbdw/komari-lite/web/agent"
 
 	"github.com/lyhbdw/komari-lite/utils/ttlcache"
@@ -234,8 +231,8 @@ func init() {
 			Returns: "Record | { [uuid]: Record }",
 		},
 	)
-	Register("getPublicInfo", getPublicInfo)
-	Register("getVersion", getVersion)
+	Register("getPublicInfo", publicGetPublicSettings)
+	Register("getVersion", publicGetVersion)
 	Register("getNodeRecentStatus", getNodeRecentStatus)
 }
 
@@ -248,9 +245,8 @@ func getNodes(ctx context.Context, req *rpc.JsonRpcRequest) (any, *rpc.JsonRpcEr
 	if err != nil {
 		return nil, rpc.MakeError(rpc.InternalError, "Failed to get client info", cinfo)
 	}
-	meta := rpc.MetaFromContext(ctx)
 
-	if meta.Principal == nil || !meta.Principal.HasRole(rpc.RoleAdmin) {
+	if !isLoginFromCtx(ctx) {
 		// 过滤 Hidden 节点并隐藏敏感字段
 		filtered := make([]models.Client, 0, len(cinfo))
 		for _, node := range cinfo {
@@ -291,14 +287,6 @@ func gpuUsageFromReport(rep *v2.Report) float32 {
 	return float32(rep.GPU.AverageUsage)
 }
 
-func getPublicInfo(_ context.Context, _ *rpc.JsonRpcRequest) (any, *rpc.JsonRpcError) {
-	info, err := database.GetPublicInfo()
-	if err != nil {
-		return nil, rpc.MakeError(rpc.InternalError, "Failed to get public info", err.Error())
-	}
-	return info, nil
-}
-
 func getNodesLatestStatus(ctx context.Context, req *rpc.JsonRpcRequest) (any, *rpc.JsonRpcError) {
 	var params struct {
 		UUID  string   `json:"uuid"`
@@ -306,26 +294,12 @@ func getNodesLatestStatus(ctx context.Context, req *rpc.JsonRpcRequest) (any, *r
 	}
 	req.BindParams(&params)
 
-	meta := rpc.MetaFromContext(ctx)
 	latest := agent_runtime.GetLatestReport()
-	onlineUUIDs := agent_runtime.GetAllOnlineUUIDs()
-	onlineSet := make(map[string]bool, len(onlineUUIDs))
-	for _, uuid := range onlineUUIDs {
-		onlineSet[uuid] = true
-	}
+	onlineSet := onlineClientUUIDMap()
 
 	// Hidden 过滤
-	if meta.Principal == nil || !meta.Principal.HasRole(rpc.RoleAdmin) {
-		cinfo, err := clients.GetAllClientBasicInfo()
-		if err != nil {
-			return nil, rpc.MakeError(rpc.InternalError, "Failed to get client info", err.Error())
-		}
-		hidden := make(map[string]bool, len(cinfo))
-		for _, c := range cinfo {
-			if c.Hidden {
-				hidden[c.UUID] = true
-			}
-		}
+	if !isLoginFromCtx(ctx) {
+		hidden := hiddenClientUUIDMap()
 		for uuid := range latest {
 			if hidden[uuid] {
 				delete(latest, uuid)
@@ -437,16 +411,6 @@ func getNodesLatestStatus(ctx context.Context, req *rpc.JsonRpcRequest) (any, *r
 	return respMap, nil
 }
 
-func getVersion(_ context.Context, _ *rpc.JsonRpcRequest) (any, *rpc.JsonRpcError) {
-	return struct {
-		Version string `json:"version"`
-		Hash    string `json:"hash"`
-	}{
-		Version: utils.CurrentVersion,
-		Hash:    utils.VersionHash,
-	}, nil
-}
-
 func getNodeRecentStatus(ctx context.Context, req *rpc.JsonRpcRequest) (any, *rpc.JsonRpcError) {
 	var params struct {
 		UUID string `json:"uuid"`
@@ -455,25 +419,12 @@ func getNodeRecentStatus(ctx context.Context, req *rpc.JsonRpcRequest) (any, *rp
 	if params.UUID == "" {
 		return nil, rpc.MakeError(rpc.InvalidParams, "UUID is required", params)
 	}
-	meta := rpc.MetaFromContext(ctx)
-	// 登录状态检查
-	isLogin := false
-	if meta.Principal != nil && meta.Principal.HasRole(rpc.RoleAdmin) {
-		isLogin = true
-	}
 
 	// 仅在未登录时需要 Hidden 信息做过滤
-	hiddenMap := map[string]bool{}
-	if !isLogin {
-		var hiddenClients []models.Client
-		db := dbcore.GetDBInstance()
-		_ = db.Select("uuid").Where("hidden = ?", true).Find(&hiddenClients).Error
-		for _, cli := range hiddenClients {
-			hiddenMap[cli.UUID] = true
-		}
-
+	if !isLoginFromCtx(ctx) {
+		hiddenMap := hiddenClientUUIDMap()
 		if hiddenMap[params.UUID] {
-			return nil, rpc.MakeError(rpc.InvalidParams, "UUID is required", params) //防止未登录用户获取隐藏客户端数据
+			return nil, rpc.MakeError(rpc.InvalidParams, "UUID is required", params) // 防止未登录用户获取隐藏客户端数据
 		}
 	}
 

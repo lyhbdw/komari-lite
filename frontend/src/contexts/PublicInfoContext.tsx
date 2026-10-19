@@ -1,37 +1,21 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React from "react";
 import { PublicInfoContext, type PublicInfo } from "./public-info-context";
-
-type Response = {
-  data: PublicInfo;
-  message: string;
-  status: string;
-};
+import { useFetchedResource } from "./useFetchedResource";
 
 export const PublicInfoProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const [publicInfo, setPublicInfo] = useState<PublicInfo | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const refresh = useCallback(async () => {
-    setError(null);
-    setIsLoading(true);
-    try {
-      const response = await fetch("/api/public");
-      if (!response.ok) throw new Error("Failed to fetch public info");
-      const resp = (await response.json()) as Response;
-      setPublicInfo(resp?.data ?? null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void refresh();
-  }, [refresh]);
+  const {
+    data: publicInfo,
+    loading: isLoading,
+    errorString: error,
+    refresh,
+  } = useFetchedResource<PublicInfo | null>({
+    url: "/api/public",
+    initialData: null,
+    errorMessage: "Failed to fetch public info",
+    transform: (resp) => resp?.data ?? null,
+  });
 
   return (
     <PublicInfoContext.Provider value={{ publicInfo, isLoading, error, refresh }}>

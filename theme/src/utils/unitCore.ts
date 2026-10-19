@@ -335,3 +335,72 @@ export function getStatusTextClass(percentage: number): string {
     return 'text-amber-600 dark:text-amber-400 font-semibold'
   return 'text-foreground/90 font-medium'
 }
+
+/**
+ * 跨浏览器剪贴板复制（支持 Clipboard API 与 textarea execCommand 降级）
+ */
+export async function copyTextToClipboard(text: string): Promise<boolean> {
+  if (!text)
+    return false
+  try {
+    if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text)
+    }
+    else if (typeof document !== 'undefined') {
+      const textarea = document.createElement('textarea')
+      textarea.value = text
+      textarea.style.position = 'fixed'
+      textarea.style.opacity = '0'
+      document.body.appendChild(textarea)
+      textarea.select()
+      document.execCommand('copy')
+      document.body.removeChild(textarea)
+    }
+    else {
+      return false
+    }
+    return true
+  }
+  catch {
+    return false
+  }
+}
+
+export type ThemeMode = 'auto' | 'light' | 'dark'
+
+export function isValidThemeMode(value: unknown): value is ThemeMode {
+  return value === 'auto' || value === 'light' || value === 'dark'
+}
+
+export function getStoredThemeMode(): ThemeMode {
+  if (typeof window === 'undefined')
+    return 'auto'
+  try {
+    const stored = localStorage.getItem('themeMode')
+    if (isValidThemeMode(stored))
+      return stored
+  }
+  catch {}
+  return 'auto'
+}
+
+export function getResolvedTheme(mode: ThemeMode): 'light' | 'dark' {
+  if (mode === 'light')
+    return 'light'
+  if (mode === 'dark')
+    return 'dark'
+  if (typeof window !== 'undefined' && window.matchMedia) {
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+  }
+  return 'light'
+}
+
+export function getNextThemeMode(current: unknown): ThemeMode {
+  const nextMode: Record<ThemeMode, ThemeMode> = {
+    auto: 'light',
+    light: 'dark',
+    dark: 'auto',
+  }
+  const normalized = isValidThemeMode(current) ? current : 'auto'
+  return nextMode[normalized]
+}

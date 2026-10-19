@@ -1,4 +1,4 @@
-import { emojiToRegionMap } from '@/utils/regionHelper'
+import { resolveRegionCode } from '@/utils/regionHelper'
 
 /** 国家/地区 ISO 代码 → [lat, lng] */
 const COORD_MAP: Record<string, [number, number]> = {
@@ -255,28 +255,12 @@ const COORD_MAP: Record<string, [number, number]> = {
   XK: [42.6026, 20.903],
 }
 
-const ISO_CODE_REGEX = /^[A-Z]{2}$/
-
-/**
- * 从节点 region 字段提取 ISO 2 字母代码。
- * 支持：emoji 国旗、ISO 代码字符串、大小写、空白填充。
- */
 export function getCountryCodeFromRegion(region: string | undefined | null): string | null {
   if (!region)
     return null
-  const trimmed = region.trim()
-  if (!trimmed)
-    return null
-
-  // 国旗 emoji → ISO 代码
-  const info = emojiToRegionMap[trimmed]
-  if (info)
-    return info.code
-
-  const upper = trimmed.toUpperCase()
-  if (ISO_CODE_REGEX.test(upper) && upper in COORD_MAP)
-    return upper
-
+  const code = resolveRegionCode(region, '')
+  if (code && code in COORD_MAP)
+    return code
   return null
 }
 

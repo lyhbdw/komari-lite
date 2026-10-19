@@ -6,7 +6,6 @@ import (
 	"sort"
 	"time"
 
-	"github.com/lyhbdw/komari-lite/database/clients"
 	"github.com/lyhbdw/komari-lite/database/models"
 	recordsdb "github.com/lyhbdw/komari-lite/database/records"
 	"github.com/lyhbdw/komari-lite/database/tasks"
@@ -37,7 +36,6 @@ func getRecords(ctx context.Context, req *rpc.JsonRpcRequest) (any, *rpc.JsonRpc
 		return nil, admissionErr
 	}
 	defer release()
-	meta := rpc.MetaFromContext(ctx)
 	var params struct {
 		Type     string     `json:"type"`      // "load" | "ping"; default "load"
 		UUID     string     `json:"uuid"`      // client uuid; empty = all clients
@@ -75,18 +73,10 @@ func getRecords(ctx context.Context, req *rpc.JsonRpcRequest) (any, *rpc.JsonRpc
 	}
 
 	// Hidden filtering for non-admin
-	isAdmin := meta.Principal != nil && meta.Principal.HasRole(rpc.RoleAdmin)
-	hidden := map[string]bool{}
+	isAdmin := isLoginFromCtx(ctx)
+	var hidden map[string]bool
 	if !isAdmin {
-		cinfo, err := clients.GetAllClientBasicInfo()
-		if err != nil {
-			return nil, rpc.MakeError(rpc.InternalError, "Failed to get client info", err.Error())
-		}
-		for _, c := range cinfo {
-			if c.Hidden {
-				hidden[c.UUID] = true
-			}
-		}
+		hidden = hiddenClientUUIDMap()
 		if params.UUID != "" && hidden[params.UUID] {
 			return nil, rpc.MakeError(rpc.InvalidParams, "UUID not found", params.UUID)
 		}
@@ -122,30 +112,10 @@ func getRecords(ctx context.Context, req *rpc.JsonRpcRequest) (any, *rpc.JsonRpc
 		// optional load_type filtering -> group by client
 		if params.LoadType != "" && params.LoadType != "all" {
 			items := filterRecordsByLoadType(recs, params.LoadType)
-			grouped := make(map[string][]flatRecord)
-			for _, it := range items {
-				grouped[it.Client] = append(grouped[it.Client], it)
-			}
-			// sort and count
-			total := 0
-			groupsMeta := make([]allocationGroup[string], 0, len(grouped))
-			for name := range grouped {
-				arr := grouped[name]
-				sort.Slice(arr, func(i, j int) bool { return arr[i].Time.Before(arr[j].Time) })
-				grouped[name] = arr
-				l := len(arr)
-				total += l
-				groupsMeta = append(groupsMeta, allocationGroup[string]{key: name, length: l})
-			}
-			// downsample across all clients proportionally
-			if maxCount != -1 && total > maxCount {
-				targets := allocateTargets(groupsMeta, maxCount)
-				total = 0
-				for name, k := range targets {
-					grouped[name] = sampleEvenly(grouped[name], k)
-					total += len(grouped[name])
-				}
-			}
+			grouped, total := groupSortAndDownsample(items, maxCount,
+				func(it flatRecord) string { return it.Client },
+				func(it flatRecord) time.Time { return it.Time },
+			)
 			return struct {
 				Count    int                     `json:"count"`
 				Records  map[string][]flatRecord `json:"records"`
@@ -155,28 +125,10 @@ func getRecords(ctx context.Context, req *rpc.JsonRpcRequest) (any, *rpc.JsonRpc
 			}{Count: total, Records: grouped, LoadType: params.LoadType, From: startTime.UTC(), To: endTime.UTC()}, nil
 		}
 		// default: return full records, grouped by client
-		grouped := make(map[string][]models.Record)
-		for _, r := range recs {
-			grouped[r.Client] = append(grouped[r.Client], r)
-		}
-		total := 0
-		groupsMeta := make([]allocationGroup[string], 0, len(grouped))
-		for name := range grouped {
-			arr := grouped[name]
-			sort.Slice(arr, func(i, j int) bool { return arr[i].Time.Before(arr[j].Time) })
-			grouped[name] = arr
-			l := len(arr)
-			total += l
-			groupsMeta = append(groupsMeta, allocationGroup[string]{key: name, length: l})
-		}
-		if maxCount != -1 && total > maxCount {
-			targets := allocateTargets(groupsMeta, maxCount)
-			total = 0
-			for name, k := range targets {
-				grouped[name] = sampleEvenly(grouped[name], k)
-				total += len(grouped[name])
-			}
-		}
+		grouped, total := groupSortAndDownsample(recs, maxCount,
+			func(r models.Record) string { return r.Client },
+			func(r models.Record) time.Time { return r.Time },
+		)
 		return struct {
 			Count   int                        `json:"count"`
 			Records map[string][]models.Record `json:"records"`
@@ -410,36 +362,14 @@ func getRecords(ctx context.Context, req *rpc.JsonRpcRequest) (any, *rpc.JsonRpc
 		response.Tasks = toList
 		// maxCount was clamped earlier
 		if len(response.Records) > maxCount {
-			// group records by TaskId for proportional downsampling
-			taskGroups := make(map[uint][]RecordsResp)
-			for _, r := range response.Records {
-				taskGroups[r.TaskId] = append(taskGroups[r.TaskId], r)
-			}
-
-			// sort each group by time
-			for taskId := range taskGroups {
-				sort.Slice(taskGroups[taskId], func(i, j int) bool {
-					return taskGroups[taskId][i].Time.Before(taskGroups[taskId][j].Time)
-				})
-			}
-
-			groupsMeta := make([]allocationGroup[uint], 0, len(taskGroups))
-			for taskId, records := range taskGroups {
-				groupsMeta = append(groupsMeta, allocationGroup[uint]{
-					key:    taskId,
-					length: len(records),
-				})
-			}
-			targets := allocateTargets(groupsMeta, maxCount)
-
-			// downsample each task group
+			taskGroups, _ := groupSortAndDownsample(response.Records, maxCount,
+				func(r RecordsResp) uint { return r.TaskId },
+				func(r RecordsResp) time.Time { return r.Time },
+			)
 			downsampledRecords := make([]RecordsResp, 0, maxCount)
-			for taskId, records := range taskGroups {
-				targetCount := targets[taskId]
-				sampled := sampleEvenly(records, targetCount)
-				downsampledRecords = append(downsampledRecords, sampled...)
+			for _, records := range taskGroups {
+				downsampledRecords = append(downsampledRecords, records...)
 			}
-
 			response.Records = downsampledRecords
 		}
 		response.Count = len(response.Records)
@@ -471,6 +401,39 @@ func getLoadRecordsCombined(uuid string, start, end time.Time) ([]models.Record,
 type allocationGroup[K comparable] struct {
 	key    K
 	length int
+}
+
+// groupSortAndDownsample groups items by keyOf, sorts each group by timeOf ascending,
+// and proportionally downsamples across groups if total count exceeds maxCount.
+func groupSortAndDownsample[K comparable, T any](
+	items []T,
+	maxCount int,
+	keyOf func(T) K,
+	timeOf func(T) time.Time,
+) (map[K][]T, int) {
+	grouped := make(map[K][]T)
+	for _, it := range items {
+		k := keyOf(it)
+		grouped[k] = append(grouped[k], it)
+	}
+	total := 0
+	groupsMeta := make([]allocationGroup[K], 0, len(grouped))
+	for k, arr := range grouped {
+		sort.Slice(arr, func(i, j int) bool { return timeOf(arr[i]).Before(timeOf(arr[j])) })
+		grouped[k] = arr
+		l := len(arr)
+		total += l
+		groupsMeta = append(groupsMeta, allocationGroup[K]{key: k, length: l})
+	}
+	if maxCount != -1 && total > maxCount {
+		targets := allocateTargets(groupsMeta, maxCount)
+		total = 0
+		for k, targetCount := range targets {
+			grouped[k] = sampleEvenly(grouped[k], targetCount)
+			total += len(grouped[k])
+		}
+	}
+	return grouped, total
 }
 
 // allocateTargets splits maxTotal across groups proportionally to their lengths.

@@ -1,4 +1,5 @@
 import { toast } from "sonner";
+import { copyTextToClipboard } from "../../../theme/src/utils/unitCore";
 
 export async function copyToClipboard(
   text: string,
@@ -8,25 +9,13 @@ export async function copyToClipboard(
   }
 ): Promise<boolean> {
   if (!text) return false;
-  try {
-    if (navigator?.clipboard?.writeText) {
-      await navigator.clipboard.writeText(text);
-    } else {
-      const textarea = document.createElement("textarea");
-      textarea.value = text;
-      textarea.style.position = "fixed";
-      textarea.style.opacity = "0";
-      document.body.appendChild(textarea);
-      textarea.select();
-      document.execCommand("copy");
-      document.body.removeChild(textarea);
-    }
+  const ok = await copyTextToClipboard(text);
+  if (ok) {
     if (options?.successMessage) {
       toast.success(options.successMessage);
     }
     return true;
-  } catch {
-    toast.error(options?.errorMessage ?? "复制失败，请手动复制");
-    return false;
   }
+  toast.error(options?.errorMessage ?? "复制失败，请手动复制");
+  return false;
 }
