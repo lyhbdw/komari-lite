@@ -6,6 +6,7 @@ import (
 
 	"github.com/lyhbdw/komari-lite/database/accounts"
 	"github.com/lyhbdw/komari-lite/database/auditlog"
+	"github.com/lyhbdw/komari-lite/database/clients"
 	"github.com/lyhbdw/komari-lite/database/dbcore"
 	"github.com/lyhbdw/komari-lite/database/models"
 	"github.com/lyhbdw/komari-lite/database/records"
@@ -196,7 +197,10 @@ func adminOrderClients(ctx context.Context, req *rpc.JsonRpcRequest) (any, *rpc.
 	}
 	db := dbcore.GetDBInstance()
 	for uuid, weight := range order {
-		if err := db.Model(&models.Client{}).Where("uuid = ?", uuid).Update("weight", weight).Error; err != nil {
+		err := db.Model(&models.Client{}).Where("uuid = ?", uuid).Update("weight", weight).Error
+		// A later failure must not leave earlier committed weights cached.
+		clients.InvalidateClientsCache()
+		if err != nil {
 			return nil, rpc.MakeError(rpc.InternalError, "Failed to update client weight: "+err.Error(), nil)
 		}
 	}

@@ -3,6 +3,7 @@ package tasks
 import (
 	"context"
 	"sort"
+	"sync"
 	"time"
 
 	"github.com/lyhbdw/komari-lite/database/dbcore"
@@ -11,6 +12,33 @@ import (
 	"github.com/lyhbdw/komari-lite/utils"
 	"gorm.io/gorm"
 )
+
+var (
+	pingTasksCacheMu         sync.RWMutex
+	cachedPingTasks          []models.PingTask
+	pingTasksCacheDB         *gorm.DB
+	pingTasksCacheGeneration uint64
+)
+
+func InvalidatePingTasksCache() {
+	pingTasksCacheMu.Lock()
+	pingTasksCacheGeneration++
+	cachedPingTasks = nil
+	pingTasksCacheDB = nil
+	pingTasksCacheMu.Unlock()
+}
+
+func clonePingTasks(src []models.PingTask) []models.PingTask {
+	out := make([]models.PingTask, len(src))
+	for i, t := range src {
+		if t.Clients != nil {
+			t.Clients = make(models.StringArray, len(src[i].Clients))
+			copy(t.Clients, src[i].Clients)
+		}
+		out[i] = t
+	}
+	return out
+}
 
 // AddPingTask 创建延迟监测任务。defaultOn 表示新加入的服务器是否自动开启此监测。
 func AddPingTask(clients []string, defaultOn bool, name string, target, task_type string, interval int) (uint, error) {
@@ -78,6 +106,11 @@ func EditPingTask(tasks []*models.PingTask) error {
 			"interval":    task.Interval,
 		}
 		result := db.Model(&models.PingTask{}).Where("id = ?", task.Id).Updates(updates)
+		// Earlier updates may already be committed when a later one fails.
+		InvalidatePingTasksCache()
+		if result.Error != nil {
+			return result.Error
+		}
 		if result.RowsAffected == 0 {
 			return gorm.ErrRecordNotFound
 		}
@@ -96,10 +129,28 @@ func normalizePingClients(clients models.StringArray) models.StringArray {
 
 func GetAllPingTasks() ([]models.PingTask, error) {
 	db := dbcore.GetDBInstance()
+	pingTasksCacheMu.RLock()
+	if cachedPingTasks != nil && pingTasksCacheDB == db {
+		result := clonePingTasks(cachedPingTasks)
+		pingTasksCacheMu.RUnlock()
+		return result, nil
+	}
+	generation := pingTasksCacheGeneration
+	pingTasksCacheMu.RUnlock()
+
 	var tasks []models.PingTask
 	if err := db.Order("weight ASC").Order("id ASC").Find(&tasks).Error; err != nil {
 		return nil, err
 	}
+
+	pingTasksCacheMu.Lock()
+	// A write may have invalidated/refreshed the cache during this query.
+	if generation == pingTasksCacheGeneration {
+		cachedPingTasks = clonePingTasks(tasks)
+		pingTasksCacheDB = db
+	}
+	pingTasksCacheMu.Unlock()
+
 	return tasks, nil
 }
 
@@ -161,6 +212,7 @@ func DeleteAllPingRecords() error {
 }
 
 func ReloadPingSchedule() error {
+	InvalidatePingTasksCache()
 	pingTasks, err := GetAllPingTasks()
 	if err != nil {
 		return err
@@ -195,7 +247,9 @@ func AddDefaultOnClientUUID(uuid string) error {
 		}
 		next := append(models.StringArray{}, task.Clients...)
 		next = append(next, uuid)
-		if err := db.Model(&models.PingTask{}).Where("id = ?", task.Id).Update("clients", next).Error; err != nil {
+		err := db.Model(&models.PingTask{}).Where("id = ?", task.Id).Update("clients", next).Error
+		InvalidatePingTasksCache()
+		if err != nil {
 			return err
 		}
 		changed = true

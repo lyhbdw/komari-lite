@@ -93,10 +93,6 @@ func replaceHTMLLanguage(htmlStr, language string) string {
 	return htmlStr
 }
 
-func stripServiceWorkerRegistration(html string) string {
-	return strings.ReplaceAll(html, `<script id="vite-plugin-pwa:register-sw" src="/registerSW.js"></script>`, "")
-}
-
 func adminAssetRequest(r *http.Request) bool {
 	referrer := r.Referer()
 	if referrer == "" {
@@ -142,25 +138,10 @@ func isSafePath(basePath, targetPath string) bool {
 
 // Static 注册静态资源和 SPA 路由处理
 func Static(r *gin.RouterGroup, noRoute func(handlers ...gin.HandlerFunc)) {
-	static(r, noRoute, false)
-}
-
-func static(r *gin.RouterGroup, noRoute func(handlers ...gin.HandlerFunc), forceDefaultTheme bool) {
 	// 初始化嵌入式文件系统，指向 defaultTheme 根目录。
 	defaultThemeFS, err := fs.Sub(PublicFS, "defaultTheme")
 	if err != nil {
 		panic("embedded default theme metadata is unavailable: " + err.Error())
-	}
-
-	getConfig := func() map[string]any {
-		cfg, _ := config.GetMany(map[string]any{
-			config.DescriptionKey: "A simple server monitor tool.",
-
-			config.SitenameKey: "Komari Monitor",
-			config.ThemeKey:    DefaultTheme,
-		})
-		cfg[config.ThemeKey] = DefaultTheme
-		return cfg
 	}
 
 	// 核心逻辑：获取文件内容
@@ -217,13 +198,11 @@ func static(r *gin.RouterGroup, noRoute func(handlers ...gin.HandlerFunc), force
 	// 核心逻辑：渲染 Index.html
 	serveIndex := func(c *gin.Context) {
 		reqPath := c.Request.URL.Path
-		cfg := getConfig()
-
-		currentTheme := cfg[config.ThemeKey].(string)
+		currentTheme := DefaultTheme
 		shouldReplace := true
 
 		// 特殊页面：/admin 使用 __admin__ 前端，且不进行内容替换
-		if forceDefaultTheme || strings.HasPrefix(reqPath, "/admin") {
+		if strings.HasPrefix(reqPath, "/admin") {
 			currentTheme = "__admin__"
 			shouldReplace = false
 		}
@@ -238,9 +217,6 @@ func static(r *gin.RouterGroup, noRoute func(handlers ...gin.HandlerFunc), force
 		}
 
 		htmlStr := string(content)
-		if forceDefaultTheme {
-			htmlStr = stripServiceWorkerRegistration(htmlStr)
-		}
 		if language, err := c.Cookie(LanguageCookieName); err == nil {
 			htmlStr = replaceHTMLLanguage(htmlStr, language)
 		}
@@ -252,6 +228,10 @@ func static(r *gin.RouterGroup, noRoute func(handlers ...gin.HandlerFunc), force
 		}
 
 		// 执行 HTML 内容替换
+		cfg, _ := config.GetMany(map[string]any{
+			config.DescriptionKey: "A simple server monitor tool.",
+			config.SitenameKey:    "Komari Monitor",
+		})
 		sitename := cfg[config.SitenameKey].(string)
 		replacer := strings.NewReplacer(
 			"<title>Komari Monitor</title>", "<title>"+sitename+"</title>",
@@ -268,21 +248,14 @@ func static(r *gin.RouterGroup, noRoute func(handlers ...gin.HandlerFunc), force
 	serveFavicon := func(c *gin.Context) {
 		// 优先：./data/favicon.ico
 		localFavicon := filepath.Join(DataDir, FaviconFile)
-		if !forceDefaultTheme {
-			if _, err := os.Stat(localFavicon); err == nil {
-				c.File(localFavicon)
-				return
-			}
+		if _, err := os.Stat(localFavicon); err == nil {
+			c.File(localFavicon)
+			return
 		}
 
-		// 其次：当前主题的 dist/favicon.ico 或 theme_root/favicon.ico ?
-		cfg := getConfig()
+		// 其次：Lite 主题的 dist/favicon.ico。
 		themeFaviconPath := path.Join(DistDir, FaviconFile)
-		currentTheme := cfg[config.ThemeKey].(string)
-		if forceDefaultTheme || strings.HasPrefix(c.Request.URL.Path, "/admin") {
-			currentTheme = "__admin__"
-		}
-		content, mimeType, exists := getFileContent(currentTheme, themeFaviconPath)
+		content, mimeType, exists := getFileContent(DefaultTheme, themeFaviconPath)
 		if exists {
 			c.Data(http.StatusOK, mimeType, content)
 			return
@@ -300,9 +273,7 @@ func static(r *gin.RouterGroup, noRoute func(handlers ...gin.HandlerFunc), force
 				c.File(localFile)
 				return
 			}
-			cfg := getConfig()
-			currentTheme := cfg[config.ThemeKey].(string)
-			if content, _, exists := getFileContent(currentTheme, path.Join(DistDir, filename)); exists {
+			if content, _, exists := getFileContent(DefaultTheme, path.Join(DistDir, filename)); exists {
 				c.Data(http.StatusOK, mimeType, content)
 				return
 			}
@@ -326,13 +297,6 @@ func static(r *gin.RouterGroup, noRoute func(handlers ...gin.HandlerFunc), force
 			c.Status(http.StatusNotFound)
 			return
 		}
-		if forceDefaultTheme && themeID != "__admin__" && themeID != DefaultTheme {
-			c.Status(http.StatusNotFound)
-			return
-		}
-		if forceDefaultTheme {
-			themeID = "__admin__"
-		}
 		// c.Param("path") 包含了开头的 /，getFileContent 会处理
 		filePath := c.Param("path")
 
@@ -351,25 +315,23 @@ func static(r *gin.RouterGroup, noRoute func(handlers ...gin.HandlerFunc), force
 			return
 		}
 		reqPath := c.Request.URL.Path
-		cfg := getConfig()
-		currentTheme := cfg[config.ThemeKey].(string)
 
 		// SPA 静态资源回退
 		distPath := path.Join(DistDir, reqPath)
-		isAdminAsset := forceDefaultTheme || strings.HasPrefix(reqPath, "/admin") || adminAssetRequest(c.Request)
+		isAdminAsset := strings.HasPrefix(reqPath, "/admin") || adminAssetRequest(c.Request)
 
-		// 静态资源优先按来源匹配：Admin 发起的请求优先查 __admin__，否则优先查当前主题
+		// 静态资源优先按来源匹配：Admin 发起的请求优先查 __admin__，否则优先查 Lite。
 		if isAdminAsset {
 			if content, mimeType, exists := getFileContent("__admin__", distPath); exists {
 				c.Data(http.StatusOK, mimeType, content)
 				return
 			}
-			if content, mimeType, exists := getFileContent(currentTheme, distPath); exists {
+			if content, mimeType, exists := getFileContent(DefaultTheme, distPath); exists {
 				c.Data(http.StatusOK, mimeType, content)
 				return
 			}
 		} else {
-			if content, mimeType, exists := getFileContent(currentTheme, distPath); exists {
+			if content, mimeType, exists := getFileContent(DefaultTheme, distPath); exists {
 				c.Data(http.StatusOK, mimeType, content)
 				return
 			}

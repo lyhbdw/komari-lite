@@ -1,10 +1,12 @@
 package server
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"math"
 	"net/http"
@@ -217,7 +219,7 @@ func postV2RequestContext(ctx context.Context, payload []byte) (*v2.Response, er
 }
 
 func processV2ResponseEvents(resp *v2.Response) {
-	if resp == nil || resp.Result == nil {
+	if resp == nil || len(resp.Result) == 0 {
 		return
 	}
 	var result v2.EventResult
@@ -333,10 +335,21 @@ func handleWebSocketMessages(conn *ws.SafeConn, done chan<- struct{}) {
 			log.Println("WebSocket read error:", err)
 			return
 		}
-		var message v2.Request
-		err = json.Unmarshal(message_raw, &message)
+		var message struct {
+			JSONRPC string          `json:"jsonrpc"`
+			Method  string          `json:"method"`
+			Params  json.RawMessage `json:"params,omitempty"`
+			ID      interface{}     `json:"id,omitempty"`
+		}
+		decoder := json.NewDecoder(bytes.NewReader(message_raw))
+		decoder.UseNumber()
+		err = decoder.Decode(&message)
 		if err != nil {
 			log.Println("Bad ws message:", err)
+			continue
+		}
+		if err := decoder.Decode(new(interface{})); err != io.EOF {
+			log.Println("Bad ws message: trailing data")
 			continue
 		}
 		if message.JSONRPC != v2.Version {

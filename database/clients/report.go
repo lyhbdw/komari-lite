@@ -1,22 +1,27 @@
 package clients
 
 import (
+	"context"
 	"fmt"
 	"math"
 
-	"github.com/lyhbdw/komari-lite/database/dbcore"
-	"github.com/lyhbdw/komari-lite/database/models"
 	v2 "github.com/lyhbdw/komari-lite/protocol/v2"
+	"gorm.io/gorm"
 )
 
 func GetClientUUIDByToken(token string) (clientUUID string, err error) {
-	db := dbcore.GetDBInstance()
-	var client models.Client
-	err = db.Where("token = ?", token).First(&client).Error
+	if token == "" {
+		return "", gorm.ErrRecordNotFound
+	}
+	metadata, err := getClientMetadata(context.Background())
 	if err != nil {
 		return "", err
 	}
-	return client.UUID, nil
+	i, ok := metadata.byToken[token]
+	if !ok {
+		return "", gorm.ErrRecordNotFound
+	}
+	return metadata.clients[i].UUID, nil
 }
 
 func checkFloat64(name string, val float64) error {

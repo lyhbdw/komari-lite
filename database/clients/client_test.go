@@ -1,29 +1,25 @@
 package clients
 
 import (
-	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/lyhbdw/komari-lite/cmd/flags"
 	"github.com/lyhbdw/komari-lite/database/dbcore"
 	"github.com/lyhbdw/komari-lite/database/models"
+	"github.com/lyhbdw/komari-lite/database/tasks"
 )
 
 func TestCreateClientEntrypoints(t *testing.T) {
-	oldFile, oldType := flags.DatabaseFile, flags.DatabaseType
-	flags.DatabaseFile = filepath.Join(t.TempDir(), "clients.db")
-	flags.DatabaseType = "sqlite"
-	t.Cleanup(func() {
-		InvalidateClientsCache()
-		_ = dbcore.Close()
-		flags.DatabaseFile, flags.DatabaseType = oldFile, oldType
-	})
-	if err := dbcore.Initialize(); err != nil {
+	db := dbcore.OpenTestDB(t)
+	if err := db.AutoMigrate(&models.Client{}, &models.PingTask{}); err != nil {
 		t.Fatal(err)
 	}
-	db := dbcore.GetDBInstance()
+	dbcore.SwapInstance(t, db)
+	InvalidateClientsCache()
+	t.Cleanup(InvalidateClientsCache)
+	tasks.InvalidatePingTasksCache()
+	t.Cleanup(tasks.InvalidatePingTasksCache)
 	on := models.PingTask{Name: "default-on", DefaultOn: true, Clients: models.StringArray{"existing"}, Target: "localhost"}
 	off := models.PingTask{Name: "default-off", Clients: models.StringArray{"existing"}, Target: "localhost"}
 	for _, task := range []*models.PingTask{&on, &off} {
@@ -63,6 +59,14 @@ func TestCreateClientEntrypoints(t *testing.T) {
 			}
 			if client.Name != wantName || token == "" || client.Token != token {
 				t.Fatalf("creation fields mismatch: name=%q token match=%v", client.Name, token != "" && client.Token == token)
+			}
+			gotUUID, err := GetClientUUIDByToken(token)
+			if err != nil || gotUUID != id {
+				t.Fatalf("GetClientUUIDByToken(%q) = %q, %v; want %q", token, gotUUID, err, id)
+			}
+			gotToken, err := GetClientTokenByUUID(id)
+			if err != nil || gotToken != token {
+				t.Fatalf("GetClientTokenByUUID(%q) = %q, %v; want %q", id, gotToken, err, token)
 			}
 			for _, stamp := range []time.Time{client.CreatedAt, client.UpdatedAt} {
 				_, offset := stamp.Zone()

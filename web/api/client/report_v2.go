@@ -51,7 +51,29 @@ func readLimited(r io.Reader, limit int64) ([]byte, error) {
 	return data, nil
 }
 
+type inboundV2Request struct {
+	JSONRPC string          `json:"jsonrpc"`
+	Method  string          `json:"method"`
+	Params  json.RawMessage `json:"params,omitempty"`
+	ID      any             `json:"id,omitempty"`
+}
+
+// Keep numeric IDs exact while params stay opaque until the method is known.
+func (req *inboundV2Request) UnmarshalJSON(data []byte) error {
+	type request inboundV2Request
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.UseNumber()
+	return decoder.Decode((*request)(req))
+}
+
 func bindV2Params[T any](raw any, target *T) error {
+	if b, ok := raw.(json.RawMessage); ok {
+		if len(b) == 0 {
+			b = json.RawMessage("null")
+		}
+		return json.Unmarshal(b, target)
+	}
+	// handleV2RPC also accepts typed Request.Params from internal callers.
 	b, err := json.Marshal(raw)
 	if err != nil {
 		return err
@@ -126,7 +148,7 @@ func UploadV2RPC(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, v2.Error(nil, -32700, "invalid compressed body", err.Error()))
 		return
 	}
-	var req v2.Request
+	var req inboundV2Request
 	if err := json.Unmarshal(bytesBody, &req); err != nil {
 		c.JSON(http.StatusBadRequest, v2.Error(nil, -32700, "parse error", err.Error()))
 		return
@@ -136,7 +158,7 @@ func UploadV2RPC(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, v2.Error(req.ID, -32001, "invalid token", nil))
 		return
 	}
-	resp := handleV2RPC(uuid, req, true, false)
+	resp := handleV2RPC(uuid, v2.Request{JSONRPC: req.JSONRPC, Method: req.Method, Params: req.Params, ID: req.ID}, true, false)
 	status := http.StatusOK
 	if resp.Error != nil {
 		status = http.StatusBadRequest
@@ -205,12 +227,12 @@ func WebSocketV2RPC(c *gin.Context) {
 			return
 		}
 		message = bytes.TrimSpace(message)
-		var req v2.Request
+		var req inboundV2Request
 		if err := json.Unmarshal(message, &req); err != nil {
 			conn.WriteJSON(v2.Error(nil, -32700, "parse error", err.Error()))
 			continue
 		}
-		resp := handleV2RPC(uuid, req, false, true)
+		resp := handleV2RPC(uuid, v2.Request{JSONRPC: req.JSONRPC, Method: req.Method, Params: req.Params, ID: req.ID}, false, true)
 		if req.ID != nil {
 			if err := conn.WriteJSON(resp); err != nil {
 				logger.Errorf("client-api", "failed to write v2 rpc response: %v", err)

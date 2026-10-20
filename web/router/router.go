@@ -43,9 +43,6 @@ func registerPublicRoutes(r *gin.Engine) {
 	r.GET("/download/agent/:version/:asset", public.ServeAgentAsset)
 	r.POST("/api/logout", public_api.Logout)
 	registerLiteDisabledRoutes(r)
-	// /api/clients 是 WebSocket 端点（客户端发 "get"/"get <uuid>" 拉取在线列表与最新上报），
-	// 非 JSON-RPC，保留为 WS handler。
-	r.GET("/api/clients", api.GetClients)
 
 	// JSON 接口 -> RPC2。
 	r.GET("/api/me", jsonRpc.Bind("public:getMe", jsonRpc.WithRaw()))
@@ -73,6 +70,7 @@ func registerLiteDisabledRoutes(r *gin.Engine) {
 		c.AbortWithStatusJSON(404, gin.H{"status": "error", "message": "Not found"})
 	}
 	for _, path := range []string{
+		"/api/clients",
 		"/api/clients/v1/rpc",
 		"/api/oauth",
 		"/api/oauth_callback",

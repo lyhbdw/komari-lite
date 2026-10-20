@@ -15,23 +15,51 @@ import (
 	"github.com/lyhbdw/komari-lite/utils"
 
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
+// A snapshot is immutable after publication; indexes keep token/UUID hits O(1).
+type clientMetadata struct {
+	clients []models.Client
+	byUUID  map[string]int
+	byToken map[string]int
+}
+
 var (
-	clientsCacheMu  sync.RWMutex
-	cachedClients   []models.Client
-	clientsCachedAt time.Time
-	clientsCacheTTL = 3 * time.Second
+	clientsCacheMu         sync.RWMutex
+	cachedClients          *clientMetadata
+	clientsCacheDB         *gorm.DB
+	clientsCachedAt        time.Time
+	clientsCacheTTL        = 3 * time.Second
+	clientsCacheGeneration uint64
 )
 
 func InvalidateClientsCache() {
 	clientsCacheMu.Lock()
+	clientsCacheGeneration++
 	cachedClients = nil
+	clientsCacheDB = nil
 	clientsCacheMu.Unlock()
 }
 
+func cloneClient(client models.Client) models.Client {
+	if client.ExpiredAt != nil {
+		expires := *client.ExpiredAt
+		client.ExpiredAt = &expires
+	}
+	return client
+}
+
+func cloneClients(src []models.Client) []models.Client {
+	result := make([]models.Client, len(src))
+	for i, client := range src {
+		result[i] = cloneClient(client)
+	}
+	return result
+}
+
 func DeleteClient(clientUuid string) error {
-	InvalidateClientsCache()
+	defer InvalidateClientsCache()
 	db := dbcore.GetDBInstance()
 	err := db.Delete(&models.Client{}, "uuid = ?", clientUuid).Error
 	if err != nil {
@@ -130,7 +158,7 @@ func SaveClientInfo(update map[string]interface{}) error {
 		return err
 	}
 
-	InvalidateClientsCache()
+	defer InvalidateClientsCache()
 	err := db.Model(&models.Client{}).Where("uuid = ?", clientUUID).Updates(update).Error
 	if err != nil {
 		return err
@@ -159,7 +187,7 @@ func createClient(name string) (clientUUID, token string, err error) {
 		UpdatedAt: time.Now().UTC(),
 	}
 
-	InvalidateClientsCache()
+	defer InvalidateClientsCache()
 	err = db.Create(&client).Error
 	if err != nil {
 		return "", "", err
@@ -175,18 +203,19 @@ func CreateClientWithName(name string) (clientUUID, token string, err error) {
 }
 
 func GetClientByUUID(uuid string) (client models.Client, err error) {
-	db := dbcore.GetDBInstance()
-	err = db.Where("uuid = ?", uuid).First(&client).Error
+	metadata, err := getClientMetadata(context.Background())
 	if err != nil {
 		return models.Client{}, err
 	}
-	return client, nil
+	i, ok := metadata.byUUID[uuid]
+	if !ok {
+		return models.Client{}, gorm.ErrRecordNotFound
+	}
+	return cloneClient(metadata.clients[i]), nil
 }
 
 func GetClientTokenByUUID(uuid string) (token string, err error) {
-	db := dbcore.GetDBInstance()
-	var client models.Client
-	err = db.Where("uuid = ?", uuid).First(&client).Error
+	client, err := GetClientByUUID(uuid)
 	if err != nil {
 		return "", err
 	}
@@ -200,31 +229,51 @@ func GetAllClientBasicInfo() (clients []models.Client, err error) {
 // GetAllClientBasicInfoWithContext preserves caller cancellation/deadlines for
 // cache misses while serving cache hits without database work.
 func GetAllClientBasicInfoWithContext(ctx context.Context) (clients []models.Client, err error) {
-	if ctx == nil {
-		ctx = context.Background()
-	}
-	clientsCacheMu.RLock()
-	if cachedClients != nil && time.Since(clientsCachedAt) < clientsCacheTTL {
-		result := make([]models.Client, len(cachedClients))
-		copy(result, cachedClients)
-		clientsCacheMu.RUnlock()
-		return result, nil
-	}
-	clientsCacheMu.RUnlock()
-
-	db := dbcore.GetDBInstance().WithContext(ctx)
-	err = db.Find(&clients).Error
+	metadata, err := getClientMetadata(ctx)
 	if err != nil {
 		return nil, err
 	}
+	return cloneClients(metadata.clients), nil
+}
 
+func getClientMetadata(ctx context.Context) (*clientMetadata, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	rawDB := dbcore.GetDBInstance()
+	clientsCacheMu.RLock()
+	if cachedClients != nil && clientsCacheDB == rawDB && time.Since(clientsCachedAt) < clientsCacheTTL {
+		metadata := cachedClients
+		clientsCacheMu.RUnlock()
+		return metadata, nil
+	}
+	generation := clientsCacheGeneration
+	clientsCacheMu.RUnlock()
+
+	var clients []models.Client
+	if err := rawDB.WithContext(ctx).Find(&clients).Error; err != nil {
+		return nil, err
+	}
+
+	metadata := &clientMetadata{
+		clients: clients,
+		byUUID:  make(map[string]int, len(clients)),
+		byToken: make(map[string]int, len(clients)),
+	}
+	for i, client := range clients {
+		metadata.byUUID[client.UUID] = i
+		metadata.byToken[client.Token] = i
+	}
 	clientsCacheMu.Lock()
-	cachedClients = make([]models.Client, len(clients))
-	copy(cachedClients, clients)
-	clientsCachedAt = time.Now()
+	// Do not republish a pre-write snapshot after invalidation.
+	if generation == clientsCacheGeneration {
+		cachedClients = metadata
+		clientsCacheDB = rawDB
+		clientsCachedAt = time.Now()
+	}
 	clientsCacheMu.Unlock()
 
-	return clients, nil
+	return metadata, nil
 }
 
 func SaveClient(updates map[string]interface{}) error {
@@ -271,7 +320,7 @@ func SaveClient(updates map[string]interface{}) error {
 
 	updates["updated_at"] = time.Now().UTC()
 
-	InvalidateClientsCache()
+	defer InvalidateClientsCache()
 	err := db.Model(&models.Client{}).Where("uuid = ?", clientUUID).Updates(updates).Error
 	if err != nil {
 		return err

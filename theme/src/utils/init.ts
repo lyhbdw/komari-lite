@@ -16,17 +16,11 @@ interface InitConfig {
   wsReconnectInterval?: number
   /** WebSocket 最大重连次数（失败后回落 POST） */
   wsMaxReconnectAttempts?: number
-  /** 后端健康检查超时（毫秒） */
-  healthCheckTimeout?: number
-  /** POST 模式连续失败次数阈值 */
-  postFailureThreshold?: number
 }
 
 const DEFAULT_CONFIG: Required<InitConfig> = {
   wsReconnectInterval: 3000,
   wsMaxReconnectAttempts: 5,
-  healthCheckTimeout: 5000,
-  postFailureThreshold: 3,
 }
 
 /** 初始化状态管理 */
@@ -380,15 +374,13 @@ class InitManager {
       // 静态节点元数据（名称、硬件、分组）低频刷新（约 60 秒一次），大幅降低轮询压力
       const shouldFetchClients = (this.clientPollTick % 20 === 1) || this.nodesStore.nodes.length === 0
 
-      // 并行执行请求
-      const [, clientsResult, statusesResult] = await Promise.all([
-        // 1. Ping 测试服务器状态
-        this.rpc.ping(),
-        // 2. 获取节点信息（按需）
+      // 并行执行请求（getNodesLatestStatus 已验证服务可用性，无需重复发送 rpc.ping）
+      const [clientsResult, statusesResult] = await Promise.all([
+        // 1. 获取节点信息（按需）
         shouldFetchClients
           ? (this.rpc.getNodes() as Promise<Record<string, Client>>)
           : Promise.resolve(null),
-        // 3. 获取节点最新状态
+        // 2. 获取节点最新状态
         this.rpc.getNodesLatestStatus() as Promise<Record<string, NodeStatus>>,
       ])
 

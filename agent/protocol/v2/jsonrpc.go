@@ -1,6 +1,7 @@
 package v2
 
 import (
+	"bytes"
 	"encoding/json"
 	"time"
 )
@@ -29,10 +30,17 @@ type UpdateParams struct {
 }
 
 type Response struct {
-	JSONRPC string      `json:"jsonrpc"`
-	ID      interface{} `json:"id,omitempty"`
-	Result  interface{} `json:"result,omitempty"`
-	Error   *RPCError   `json:"error,omitempty"`
+	JSONRPC string          `json:"jsonrpc"`
+	ID      interface{}     `json:"id,omitempty"`
+	Result  json.RawMessage `json:"result,omitempty"`
+	Error   *RPCError       `json:"error,omitempty"`
+}
+
+func (resp *Response) UnmarshalJSON(data []byte) error {
+	type response Response
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.UseNumber()
+	return decoder.Decode((*response)(resp))
 }
 
 type RPCError struct {
@@ -42,11 +50,11 @@ type RPCError struct {
 }
 
 type Event struct {
-	ID        string      `json:"id"`
-	Method    string      `json:"method"`
-	Params    interface{} `json:"params,omitempty"`
-	CreatedAt time.Time   `json:"created_at"`
-	ExpiresAt time.Time   `json:"expires_at"`
+	ID        string          `json:"id"`
+	Method    string          `json:"method"`
+	Params    json.RawMessage `json:"params,omitempty"`
+	CreatedAt time.Time       `json:"created_at"`
+	ExpiresAt time.Time       `json:"expires_at"`
 }
 
 type EventResult struct {
@@ -95,6 +103,14 @@ func BuildPingResultPayload(taskID uint, pingType string, value int, finishedAt 
 }
 
 func BindParams(raw interface{}, target interface{}) error {
+	// Decoded event params/results are already JSON. Other callers may still
+	// supply typed values (including []byte, whose JSON form is base64).
+	if b, ok := raw.(json.RawMessage); ok {
+		if len(b) == 0 {
+			b = json.RawMessage("null")
+		}
+		return json.Unmarshal(b, target)
+	}
 	b, err := json.Marshal(raw)
 	if err != nil {
 		return err

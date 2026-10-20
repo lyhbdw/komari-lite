@@ -3,14 +3,10 @@ package api
 import (
 	"fmt"
 	"net/http"
-	"strings"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	"github.com/lyhbdw/komari-lite/internal/config"
-	v2 "github.com/lyhbdw/komari-lite/protocol/v2"
-	agent_runtime "github.com/lyhbdw/komari-lite/web/agent"
 	"github.com/lyhbdw/komari-lite/web/connection"
 	"github.com/lyhbdw/komari-lite/web/security"
 )
@@ -63,70 +59,4 @@ func checkWebSocketOriginForContext(c *gin.Context, r *http.Request) bool {
 	}
 	allowlist, _ := config.GetAs[string](config.WsAllowedOriginsKey, "")
 	return security.OriginInAllowlist(origin, allowlist)
-}
-
-func GetClients(c *gin.Context) {
-	if !IsWebSocketUpgrade(c) {
-		c.JSON(http.StatusBadRequest, gin.H{"status": "error", "error": "Require WebSocket upgrade"})
-		return
-	}
-	conn, err := UpgradeSafeConn(c)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"status": "error", "error": "Failed to upgrade to WebSocket." + err.Error()})
-		return
-	}
-	defer conn.Close()
-	conn.GetConn().SetReadLimit(1 << 20)
-	_ = conn.SetReadDeadline(time.Now().Add(60 * time.Second))
-
-	for {
-		var resp struct {
-			Online []string             `json:"online"` // 已建立连接的客户端uuid列表
-			Data   map[string]v2.Report `json:"data"`   // 最后上报的数据
-		}
-
-		resp.Online = []string{}
-		resp.Data = map[string]v2.Report{}
-
-		_, data, err := conn.ReadMessage()
-		if err != nil {
-			return
-		}
-		_ = conn.SetReadDeadline(time.Now().Add(60 * time.Second))
-		message := string(data)
-
-		uuID := ""
-		if message != "get" {
-			if strings.HasPrefix(message, "get ") {
-				uuID = strings.TrimSpace(strings.TrimPrefix(message, "get "))
-			} else {
-				conn.WriteJSON(gin.H{"status": "error", "error": "Invalid message"})
-				continue
-			}
-		}
-
-		for _, key := range agent_runtime.GetAllOnlineUUIDs() {
-			if uuID != "" && key != uuID {
-				continue
-			}
-			resp.Online = append(resp.Online, key)
-		}
-
-		for key, report := range agent_runtime.GetLatestReport() {
-			if uuID != "" && key != uuID {
-				continue
-			}
-
-			report.UUID = ""
-			if report.CPU.Usage == 0 {
-				report.CPU.Usage = 0.01
-			}
-			resp.Data[key] = *report
-		}
-
-		err = conn.WriteJSON(gin.H{"status": "success", "data": resp})
-		if err != nil {
-			return
-		}
-	}
 }
