@@ -46,7 +46,7 @@ function emitKeydown(event: KeyboardEvent) {
 
 <template>
   <div :class="compact ? 'flex flex-col' : 'contents'">
-    <div v-if="isAllBlocked" :class="compact ? 'flex items-center py-0.5' : 'flex items-center'">
+    <div v-if="isAllBlocked" :class="compact ? 'flex items-center py-0.5' : 'flex items-center justify-end w-full'">
       <DataTooltip
         placement="top"
         :content="appStore.lang === 'zh-CN' ? '国内探测点全量丢包（IP 可能已被墙或未响应 ICMP）' : '100% loss from mainland probes (IP may be blocked)'"
@@ -63,19 +63,19 @@ function emitKeydown(event: KeyboardEvent) {
         </Badge>
       </DataTooltip>
     </div>
-    <div v-else-if="topPingNetworks.length > 0" class="flex flex-row items-center gap-1.5">
+    <div v-else-if="topPingNetworks.length > 0" :class="compact ? 'flex flex-row items-center gap-1.5' : 'flex flex-row items-center justify-end gap-1.5 w-full'">
       <DataTooltip
         v-for="net in topPingNetworks" :key="net.name" placement="top"
         :content="`${net.name}\n${net.latency}`"
         :content-class="compact ? 'whitespace-pre-wrap w-max px-1.5 !leading-[1.2] text-[11px]' : 'whitespace-pre-wrap w-max px-1.5 !leading-[1.2] text-[10.5px]'"
       >
-        <div :class="compact ? 'truncate text-[10px] font-mono tabular-nums flex items-center gap-0.5' : 'truncate flex items-center gap-0.5'">
+        <div :class="compact ? 'truncate text-[10px] font-mono tabular-nums flex items-center gap-0.5' : 'truncate flex items-center gap-0.5 font-mono tabular-nums text-[10.5px]'">
           <span :class="compact ? 'text-[9px] text-muted-foreground/75 font-normal' : 'text-[9.5px] text-muted-foreground/75 font-normal'">{{ net.shortName }}</span>
           <span :class="net.toneClass">{{ net.latency }}</span>
         </div>
       </DataTooltip>
     </div>
-    <div v-else :class="compact ? 'truncate text-[10px] font-mono text-muted-foreground/40 py-0.5' : 'truncate text-muted-foreground/60'">
+    <div v-else :class="compact ? 'truncate text-[10px] font-mono text-muted-foreground/40 py-0.5' : 'truncate text-right text-muted-foreground/60 w-full'">
       -
     </div>
 

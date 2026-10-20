@@ -50,8 +50,7 @@ import { Skeleton } from '@/components/ui/skeleton'
             <Skeleton class="h-2.5 w-8" />
             <Skeleton class="h-2.5 w-24" />
           </div>
-          <div class="flex justify-between items-center">
-            <Skeleton class="h-2.5 w-8" />
+          <div class="flex justify-end items-center">
             <Skeleton class="h-2.5 w-24" />
           </div>
           <div class="grid grid-cols-2 gap-3 pt-0.5">
