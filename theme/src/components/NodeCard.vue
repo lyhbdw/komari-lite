@@ -272,7 +272,7 @@ function openPingDialog() {
           <!-- CPU -->
           <div class="flex flex-col gap-0.5">
             <div class="w-full text-xs flex flex-row justify-between items-baseline leading-none">
-              <span class="text-muted-foreground text-[10.5px] font-medium tracking-wide">
+              <span class="text-muted-foreground text-[11px] font-medium tracking-wide">
                 CPU
               </span>
               <span class="font-mono tabular-nums text-[11px] font-semibold" :class="cpuTextClass">{{ (props.node.cpu ?? 0).toFixed(1) }}%</span>
@@ -280,7 +280,7 @@ function openPingDialog() {
             <ProgressThin :percentage="props.node.cpu ?? 0" :status="cpuStatus" :height="3.5" class="my-0.5" />
             <DataTooltip placement="top" :content="`负载均值 (1/5/15m): ${props.node.load?.toFixed(2) ?? 0}, ${props.node.load5?.toFixed(2) ?? 0}, ${props.node.load15?.toFixed(2) ?? 0}`">
               <div class="text-[10px] text-muted-foreground/80 truncate font-mono tabular-nums cursor-pointer leading-tight">
-                {{ props.node.cpu_cores ? `${props.node.cpu_cores} 核心` : '单核' }}
+                {{ props.node.cpu_cores ? (appStore.lang === 'zh-CN' ? `${props.node.cpu_cores} 核心` : `${props.node.cpu_cores} Cores`) : (appStore.lang === 'zh-CN' ? '单核' : '1 Core') }}
               </div>
             </DataTooltip>
           </div>
@@ -288,8 +288,8 @@ function openPingDialog() {
           <!-- 内存 -->
           <div class="flex flex-col gap-0.5">
             <div class="w-full text-xs flex flex-row justify-between items-baseline leading-none">
-              <span class="text-muted-foreground text-[10.5px] font-medium tracking-wide">
-                内存
+              <span class="text-muted-foreground text-[11px] font-medium tracking-wide">
+                {{ appStore.lang === 'zh-CN' ? '内存' : 'RAM' }}
               </span>
               <span class="font-mono tabular-nums text-[11px] font-semibold" :class="memTextClass">{{ memPercentage.toFixed(1) }}%</span>
             </div>
@@ -310,8 +310,8 @@ function openPingDialog() {
           <!-- 硬盘 -->
           <div class="flex flex-col gap-0.5">
             <div class="w-full text-xs flex flex-row justify-between items-baseline leading-none">
-              <span class="text-muted-foreground text-[10.5px] font-medium tracking-wide">
-                硬盘
+              <span class="text-muted-foreground text-[11px] font-medium tracking-wide">
+                {{ appStore.lang === 'zh-CN' ? '硬盘' : 'Disk' }}
               </span>
               <span class="font-mono tabular-nums text-[11px] font-semibold" :class="diskTextClass">{{ diskPercentage.toFixed(1) }}%</span>
             </div>
@@ -324,8 +324,8 @@ function openPingDialog() {
           <!-- 流量进度条 -->
           <div class="flex flex-col gap-0.5">
             <div class="w-full text-xs flex flex-row justify-between items-baseline leading-none">
-              <span class="text-muted-foreground text-[10.5px] font-medium tracking-wide">
-                流量
+              <span class="text-muted-foreground text-[11px] font-medium tracking-wide">
+                {{ appStore.lang === 'zh-CN' ? '流量' : 'Traffic' }}
               </span>
               <span class="font-mono tabular-nums text-[11px] font-semibold">{{ trafficUsedPercentage.toFixed(1) }}%</span>
             </div>
@@ -359,7 +359,7 @@ function openPingDialog() {
         </div>
 
         <!-- 下半区（紧凑精简） -->
-        <div class="relative text-[10.5px] text-muted-foreground pt-2.5 border-t border-border/50">
+        <div class="relative pt-2.5 border-t border-border/50">
           <div
             v-if="!props.node.online"
             class="absolute inset-0 z-10 flex flex-col items-center justify-center space-y-1 rounded-b-xl backdrop-blur-[1.5px] bg-background/50"
@@ -372,11 +372,11 @@ function openPingDialog() {
             </div>
           </div>
           <div class="flex flex-col gap-y-1.5" :class="[!props.node.online && 'blur-xs opacity-60 pointer-events-none']">
-            <div class="flex items-center justify-between">
-              <span class="truncate tracking-wide text-muted-foreground">
-                速率
+            <div class="flex items-center justify-between min-h-[18px]">
+              <span class="truncate tracking-wide text-muted-foreground font-medium text-[11px]">
+                {{ appStore.lang === 'zh-CN' ? '速率' : 'Speed' }}
               </span>
-              <div class="truncate flex flex-row gap-2 font-mono tabular-nums text-[10.5px]">
+              <div class="truncate flex flex-row items-center gap-2 font-mono tabular-nums text-[11px]">
                 <div class="text-emerald-600 dark:text-emerald-400 font-medium flex flex-row items-center gap-0.5">
                   <Icon icon="tabler:arrow-narrow-up" width="12" height="12" class="text-emerald-500 shrink-0" />
                   {{ formatBytesPerSecond(props.node.net_out ?? 0) }}
@@ -387,27 +387,27 @@ function openPingDialog() {
                 </div>
               </div>
             </div>
-            <div class="flex items-center justify-between">
-              <span class="truncate tracking-wide text-muted-foreground">
-                在线
+            <div class="flex items-center justify-between min-h-[18px]">
+              <span class="truncate tracking-wide text-muted-foreground font-medium text-[11px]">
+                {{ appStore.lang === 'zh-CN' ? '在线' : 'Uptime' }}
               </span>
-              <span class="truncate font-mono tabular-nums text-foreground/85">
+              <span class="truncate font-mono tabular-nums text-[11px] text-foreground/85 font-medium">
                 {{ props.node.uptime > 0 ? formatUptime(props.node.uptime) : '-' }}
               </span>
             </div>
-            <div class="flex items-center justify-between">
-              <span class="truncate tracking-wide text-muted-foreground">
+            <div class="flex items-center justify-between min-h-[18px]">
+              <span class="truncate tracking-wide text-muted-foreground font-medium text-[11px]">
                 {{ appStore.lang === 'zh-CN' ? '费用' : 'Billing' }}
               </span>
               <DataTooltip placement="left" :content="billingTooltip" content-class="whitespace-pre-wrap right-0 mr-0 text-left max-w-xs text-[10.5px]">
-                <div class="truncate flex flex-row items-center gap-1 font-mono tabular-nums text-[10.5px] cursor-pointer">
+                <div class="truncate flex flex-row items-center gap-1 font-mono tabular-nums text-[11px] cursor-pointer">
                   <!-- 每月多少钱 -->
-                  <span class="text-foreground/85">
+                  <span class="text-foreground/85 font-medium">
                     {{ monthlyCostInfo.text }}
                   </span>
                   <span class="text-muted-foreground/40">·</span>
                   <!-- 剩余时间 -->
-                  <span :class="remainingTimeInfo.colorClass">
+                  <span :class="remainingTimeInfo.colorClass" class="font-medium">
                     {{ remainingTimeInfo.text }}
                   </span>
                   <!-- 溢价 (有溢价时展示) -->

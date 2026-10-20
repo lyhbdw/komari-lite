@@ -35,23 +35,24 @@ import { Skeleton } from '@/components/ui/skeleton'
 
         <!-- 下半区骨架 -->
         <div class="flex flex-col gap-y-1.5 pt-2.5 border-t border-border/50">
-          <div class="flex justify-between items-center">
+          <div class="flex justify-between items-center min-h-[18px]">
             <Skeleton class="h-2.5 w-8" />
             <div class="flex gap-2">
               <Skeleton class="h-2.5 w-12" />
               <Skeleton class="h-2.5 w-12" />
             </div>
           </div>
-          <div class="flex justify-between items-center">
+          <div class="flex justify-between items-center min-h-[18px]">
             <Skeleton class="h-2.5 w-8" />
             <Skeleton class="h-2.5 w-14" />
           </div>
-          <div class="flex justify-between items-center">
+          <div class="flex justify-between items-center min-h-[18px]">
             <Skeleton class="h-2.5 w-8" />
             <Skeleton class="h-2.5 w-24" />
           </div>
-          <div class="flex justify-end items-center">
-            <Skeleton class="h-2.5 w-24" />
+          <div class="flex justify-between items-center min-h-[18px]">
+            <Skeleton class="h-2.5 w-8" />
+            <Skeleton class="h-2.5 w-20" />
           </div>
           <div class="grid grid-cols-2 gap-3 pt-0.5">
             <div class="flex flex-col gap-1">
