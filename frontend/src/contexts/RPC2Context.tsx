@@ -11,7 +11,7 @@ export const RPC2Provider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const [client] = useState(() => {
     if (!rpc2State.singleton) {
-      rpc2State.singleton = new RPC2Client("/api/rpc2", { autoConnect: true });
+      rpc2State.singleton = new RPC2Client("/api/rpc2", { autoConnect: false });
     }
     return rpc2State.singleton;
   });
@@ -38,15 +38,8 @@ export const RPC2Provider: React.FC<{ children: React.ReactNode }> = ({
       },
     });
 
-    if (client.state === "disconnected") {
-      client.connect().catch((err) => {
-        setError(
-          err instanceof Error ? err.message : i18n.t("rpc2.connection_failed"),
-        );
-        setConnectionState(client.state);
-      });
-    }
-
+    // Ordinary admin RPC calls use HTTP; connect() remains an explicit opt-in
+    // for screens that need a persistent channel.
     return () => {
       rpc2State.refcount = Math.max(0, rpc2State.refcount - 1);
       if (rpc2State.refcount === 0) {

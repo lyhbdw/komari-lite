@@ -122,9 +122,8 @@ export default defineConfig({
           if (id.includes('node_modules/@vueuse/')) {
             return 'vueuse'
           }
-          if (id.includes('node_modules/echarts/') || id.includes('node_modules/zrender/')) {
-            return 'echarts'
-          }
+          // Let Rollup share ECharts internals naturally: forcing one vendor
+          // chunk also pulls optional map/scatter code into basic line charts.
           if (id.includes('node_modules/cobe/')) {
             return 'cobe'
           }

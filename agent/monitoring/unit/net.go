@@ -214,6 +214,10 @@ func NetworkSpeed() (totalUp, totalDown, upSpeed, downSpeed uint64, err error) {
 			return fallbackUp, fallbackDown, fallbackUpSpeed, fallbackDownSpeed, fmt.Errorf("failed to call GetTotalTrafficBetween: %w", err)
 		}
 
+		// Refresh from current counter names before filtering historical/monthly totals too.
+		if counters, sampleErr := netsample.Counters(); sampleErr == nil {
+			refreshNetworkTopology(counters, includeNics, excludeNics)
+		}
 		for interfaceName, stats := range nicStatics {
 			if shouldInclude(interfaceName, includeNics, excludeNics) {
 				totalUp += stats.Tx
@@ -255,6 +259,11 @@ func collectNetworkTotals(includeNics, excludeNics map[string]struct{}) (totalUp
 		return 0, 0, nil, fmt.Errorf("no network interfaces found")
 	}
 
+	return networkTotalsFromCounters(ioCounters, includeNics, excludeNics)
+}
+
+func networkTotalsFromCounters(ioCounters []net.IOCountersStat, includeNics, excludeNics map[string]struct{}) (totalUp, totalDown uint64, countedNics []string, err error) {
+	refreshNetworkTopology(ioCounters, includeNics, excludeNics)
 	for _, interfaceStats := range ioCounters {
 		if shouldInclude(interfaceStats.Name, includeNics, excludeNics) {
 			totalUp += interfaceStats.BytesSent
@@ -400,6 +409,7 @@ func InterfaceList() ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
+	refreshNetworkTopology(ioCounters, includeNics, excludeNics)
 	for _, interfaceStats := range ioCounters {
 		if shouldInclude(interfaceStats.Name, includeNics, excludeNics) {
 			interfaces = append(interfaces, interfaceStats.Name)

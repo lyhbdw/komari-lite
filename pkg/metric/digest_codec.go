@@ -30,14 +30,24 @@ var (
 
 func getDigestEncoder() (*zstd.Encoder, error) {
 	digestEncoderOnce.Do(func() {
-		digestEncoder, digestEncoderErr = zstd.NewWriter(nil, zstd.WithEncoderLevel(zstd.EncoderLevelFromZstd(1)))
+		// Each independently encoded sketch is only a few KiB. Streaming-sized
+		// windows and GOMAXPROCS worker pools waste memory for these tiny rows.
+		digestEncoder, digestEncoderErr = zstd.NewWriter(nil,
+			zstd.WithEncoderLevel(zstd.SpeedFastest),
+			zstd.WithEncoderConcurrency(1),
+			zstd.WithWindowSize(8<<10),
+			zstd.WithLowerEncoderMem(true),
+		)
 	})
 	return digestEncoder, digestEncoderErr
 }
 
 func getDigestDecoder() (*zstd.Decoder, error) {
 	digestDecoderOnce.Do(func() {
-		digestDecoder, digestDecoderErr = zstd.NewReader(nil)
+		digestDecoder, digestDecoderErr = zstd.NewReader(nil,
+			zstd.WithDecoderConcurrency(1),
+			zstd.WithDecoderLowmem(true),
+		)
 	})
 	return digestDecoder, digestDecoderErr
 }

@@ -1,7 +1,8 @@
 import type { MaybeRefOrGetter } from 'vue'
 import type { PublicPingTaskOrderItem } from '@/utils/pingTaskOrder'
 import { useThrottleFn } from '@vueuse/core'
-import { computed, onScopeDispose, ref, shallowRef, toValue, watch } from 'vue'
+import { computed, getCurrentInstance, onActivated, onDeactivated, onScopeDispose, ref, shallowRef, toValue, watch } from 'vue'
+import { useViewActivity } from '@/composables/useViewActivity'
 import {
 
   sortTasksByPublicOrder,
@@ -461,11 +462,22 @@ export function useNodePingStats(
 ) {
   const loading = ref(false)
   const error = ref<string | null>(null)
+  const viewActive = useViewActivity()
+  const active = ref(true)
+  if (getCurrentInstance()) {
+    onActivated(() => {
+      active.value = true
+    })
+    onDeactivated(() => {
+      active.value = false
+    })
+  }
 
   const resolved = computed(() => ({
     uuid: toValue(uuid),
     hours: Math.max(1, Math.floor(toValue(options?.hours) ?? 24)),
     enabled: toValue(options?.enabled) ?? true,
+    active: active.value && viewActive.value,
   }))
 
   let activeHours: number | null = null
@@ -516,8 +528,8 @@ export function useNodePingStats(
         cancelled = true
       })
 
-      const { uuid: nodeUuid, hours, enabled } = next
-      if (!enabled || !nodeUuid.trim()) {
+      const { uuid: nodeUuid, hours, enabled, active: isActive } = next
+      if (!isActive || !enabled || !nodeUuid.trim()) {
         syncSharedRecordsSubscription(null)
         loading.value = false
         error.value = null

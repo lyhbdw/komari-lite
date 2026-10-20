@@ -4,23 +4,23 @@ import { Icon } from '@iconify/vue'
 import { useDebounceFn } from '@vueuse/core'
 import { computed, defineAsyncComponent, nextTick, onActivated, onDeactivated, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import NodeCard from '@/components/NodeCard.vue'
+import NodeCardSkeleton from '@/components/NodeCardSkeleton.vue'
+import NodeGeneralCards from '@/components/NodeGeneralCards.vue'
+import NodeGeneralCardsSkeleton from '@/components/NodeGeneralCardsSkeleton.vue'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Empty } from '@/components/ui/empty'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useBackgroundSurface } from '@/composables/useBackgroundSurface'
+import { provideViewActivity } from '@/composables/useViewActivity'
 import { useAppStore } from '@/stores/app'
 import { useNodesStore } from '@/stores/nodes'
 import { isNodeInGroup, parseNodeGroups } from '@/utils/nodeHelpers'
 import { isRegionMatch } from '@/utils/regionHelper'
 
 defineOptions({ name: 'HomeView' })
-
-import NodeCard from '@/components/NodeCard.vue'
-import NodeCardSkeleton from '@/components/NodeCardSkeleton.vue'
-import NodeGeneralCards from '@/components/NodeGeneralCards.vue'
-import NodeGeneralCardsSkeleton from '@/components/NodeGeneralCardsSkeleton.vue'
 
 const NodeList = defineAsyncComponent(() => import('@/components/NodeList.vue'))
 const PingChart = defineAsyncComponent(() => import('@/components/PingChart.vue'))
@@ -29,6 +29,8 @@ const appStore = useAppStore()
 const { pickSurfaceClass } = useBackgroundSurface()
 const nodesStore = useNodesStore()
 const router = useRouter()
+
+provideViewActivity()
 
 onActivated(() => {
   if (appStore.homeScrollPosition > 0) {
