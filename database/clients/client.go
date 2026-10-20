@@ -140,36 +140,17 @@ func SaveClientInfo(update map[string]interface{}) error {
 
 // CreateClient 创建新客户端
 func CreateClient() (clientUUID, token string, err error) {
-	db := dbcore.GetDBInstance()
-	token = utils.GenerateToken()
-	clientUUID = uuid.New().String()
-
-	client := models.Client{
-		UUID:      clientUUID,
-		Token:     token,
-		Name:      "client_" + clientUUID[0:8],
-		CreatedAt: time.Now().UTC(),
-		UpdatedAt: time.Now().UTC(),
-	}
-
-	InvalidateClientsCache()
-	err = db.Create(&client).Error
-	if err != nil {
-		return "", "", err
-	}
-	if err := tasks.AddDefaultOnClientUUID(clientUUID); err != nil {
-		logger.ErrorArgs("clients", "Failed to apply default-on ping tasks to new client:", err)
-	}
-	return clientUUID, token, nil
+	return createClient("")
 }
 
-func CreateClientWithName(name string) (clientUUID, token string, err error) {
-	if name == "" {
-		return CreateClient()
-	}
+func createClient(name string) (clientUUID, token string, err error) {
 	db := dbcore.GetDBInstance()
 	token = utils.GenerateToken()
 	clientUUID = uuid.New().String()
+	if name == "" {
+		name = "client_" + clientUUID[0:8]
+	}
+
 	client := models.Client{
 		UUID:      clientUUID,
 		Token:     token,
@@ -187,6 +168,10 @@ func CreateClientWithName(name string) (clientUUID, token string, err error) {
 		logger.ErrorArgs("clients", "Failed to apply default-on ping tasks to new client:", err)
 	}
 	return clientUUID, token, nil
+}
+
+func CreateClientWithName(name string) (clientUUID, token string, err error) {
+	return createClient(name)
 }
 
 func GetClientByUUID(uuid string) (client models.Client, err error) {

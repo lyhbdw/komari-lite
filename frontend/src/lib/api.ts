@@ -21,7 +21,6 @@ export interface SettingsResponse {
   [key: string]: any;
 }
 
-
 const defaultSettings: SettingsResponse = {
   sitename: "",
   description: "",
@@ -48,18 +47,6 @@ function sanitizeSettingsResponse(payload: unknown): SettingsResponse {
       ([key]) => !["CreatedAt", "UpdatedAt", "id"].includes(key),
     ),
   ) as SettingsResponse;
-}
-
-/**
- * Fetch settings from the API
- * @returns Promise containing the settings data
- */
-async function getSettings(): Promise<SettingsResponse> {
-  const response = await fetch("/api/admin/settings");
-  if (!response.ok) {
-    throw new Error(`HTTP error! status: ${response.status}`);
-  }
-  return sanitizeSettingsResponse(await response.json());
 }
 
 /**
@@ -151,13 +138,9 @@ export function useSettings() {
     key: K,
     value: SettingsResponse[K]
   ) => {
-    try {
-      const updatedSettings = { ...settingsRef.current, [key]: value };
-      await updateSettings(updatedSettings);
-      setSettings(updatedSettings);
-    } catch (err) {
-      throw err;
-    }
+    const updatedSettings = { ...settingsRef.current, [key]: value };
+    await updateSettings(updatedSettings);
+    setSettings(updatedSettings);
   };
 
   const updateMultipleSettings = async (

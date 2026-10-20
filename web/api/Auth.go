@@ -102,10 +102,6 @@ func GetRole(c *gin.Context) string {
 	return RoleGuest
 }
 
-func extractClientToken(c *gin.Context) string {
-	return ExtractClientTokenFromRequest(c.Request)
-}
-
 // legacyQueryTokenWarnMu 节流 URL query token 的兼容警告，
 // 避免高频上报的 agent 刷爆日志。
 var legacyQueryTokenWarnMu sync.Mutex

@@ -47,9 +47,7 @@ type tables struct {
 	//
 	// definitions 是指标定义表。
 	definitions string
-	// points and watermarks name legacy tables read only by the explicit
-	// structure rebuild. The normalized schema never creates either table.
-	points string
+
 	// series interns the name/entity/tag/tag-hash tuple.
 	series string
 	// resolutions interns rollup intervals in milliseconds.
@@ -59,9 +57,8 @@ type tables struct {
 	// rollups is the downsampled rollups table.
 	//
 	// rollups 是降采样 rollup 表。
-	rollups    string
-	watermarks string
-	state      string
+	rollups string
+	state   string
 }
 
 // newDialect returns the SQL dialect implementation.
@@ -183,5 +180,3 @@ func sqlJSONPathQuoted(key string) string {
 func (sqliteDialect) jsonExtractEquals(column, key, placeholder string) string {
 	return fmt.Sprintf("json_extract(%s, '%s') = %s", column, sqlJSONPathQuoted(key), placeholder)
 }
-
-

@@ -43,7 +43,6 @@ type httpClientKey struct {
 	timeout          time.Duration
 	ignoreUnsafeCert bool
 	preferIPVersion  string
-	forceHTTP2       bool
 }
 
 // SetCustomDNSServer 设置自定义DNS服务器
@@ -124,10 +123,10 @@ func GetCustomResolver() *net.Resolver {
 // GetHTTPClientWithPreference 返回一个使用自定义解析器并按指定 IP 版本排序的 HTTP 客户端。
 // preferIPVersion 为 "4" 或 "6" 时固定优先对应地址；为空时保留自动选择逻辑。
 func GetHTTPClientWithPreference(timeout time.Duration, preferIPVersion string) *http.Client {
-	return getHTTPClient(timeout, normalizeIPVersionPreference(preferIPVersion), true)
+	return getHTTPClient(timeout, normalizeIPVersionPreference(preferIPVersion))
 }
 
-func buildTransportWithPreferenceAndHTTP2(timeout time.Duration, tlsConfig *tls.Config, preferIPVersion string, forceHTTP2 bool) *http.Transport {
+func buildTransportWithPreference(timeout time.Duration, tlsConfig *tls.Config, preferIPVersion string) *http.Transport {
 	if timeout <= 0 {
 		timeout = 30 * time.Second
 	}
@@ -164,30 +163,25 @@ func buildTransportWithPreferenceAndHTTP2(timeout time.Duration, tlsConfig *tls.
 		TLSHandshakeTimeout:   10 * time.Second,
 		ExpectContinueTimeout: 1 * time.Second,
 		TLSClientConfig:       tlsConfig,
-		ForceAttemptHTTP2:     forceHTTP2,
-	}
-	if !forceHTTP2 {
-		// A non-nil empty TLSNextProto map explicitly disables the automatic
-		// HTTP/2 protocol upgrade in net/http.
-		transport.TLSNextProto = map[string]func(string, *tls.Conn) http.RoundTripper{}
+		ForceAttemptHTTP2:     true,
 	}
 	return transport
 }
 
-func getHTTPClient(timeout time.Duration, preferIPVersion string, forceHTTP2 bool) *http.Client {
+func getHTTPClient(timeout time.Duration, preferIPVersion string) *http.Client {
 	if timeout <= 0 {
 		timeout = 30 * time.Second
 	}
-	key := httpClientKey{timeout: timeout, ignoreUnsafeCert: flags.IgnoreUnsafeCert, preferIPVersion: preferIPVersion, forceHTTP2: forceHTTP2}
+	key := httpClientKey{timeout: timeout, ignoreUnsafeCert: flags.IgnoreUnsafeCert, preferIPVersion: preferIPVersion}
 	httpClientMu.Lock()
 	defer httpClientMu.Unlock()
 	if client := httpClients[key]; client != nil {
 		return client
 	}
 	client := &http.Client{
-		Transport: buildTransportWithPreferenceAndHTTP2(timeout, &tls.Config{
+		Transport: buildTransportWithPreference(timeout, &tls.Config{
 			InsecureSkipVerify: flags.IgnoreUnsafeCert,
-		}, preferIPVersion, forceHTTP2),
+		}, preferIPVersion),
 		Timeout: timeout,
 	}
 	httpClients[key] = client

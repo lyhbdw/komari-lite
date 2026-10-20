@@ -10,7 +10,6 @@ import (
 
 var (
 	ErrStoreNotInitialized = errors.New("metric store not initialized")
-	ErrStoreBusy           = errors.New("metric store is busy")
 )
 
 // StorageInfo describes the physical storage owned by the active metric store.

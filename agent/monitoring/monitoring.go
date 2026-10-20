@@ -57,17 +57,21 @@ type gpuModelsReport struct {
 }
 
 type gpuReport struct {
-	Count        int               `json:"count"`
-	AverageUsage float64           `json:"average_usage"`
-	DetailedInfo []gpuDeviceReport `json:"detailed_info"`
+	Count        int                    `json:"count"`
+	AverageUsage float64                `json:"average_usage"`
+	DetailedInfo []unit.DetailedGPUInfo `json:"detailed_info"`
 }
 
-type gpuDeviceReport struct {
-	Name        string  `json:"name"`
-	MemoryTotal uint64  `json:"memory_total"`
-	MemoryUsed  uint64  `json:"memory_used"`
-	Utilization float64 `json:"utilization"`
-	Temperature uint64  `json:"temperature"`
+func buildGPUReport(gpuInfo []unit.DetailedGPUInfo) gpuReport {
+	data := gpuReport{Count: len(gpuInfo), DetailedInfo: gpuInfo}
+	if len(gpuInfo) > 0 {
+		totalGPUUsage := 0.0
+		for _, info := range gpuInfo {
+			totalGPUUsage += info.Utilization
+		}
+		data.AverageUsage = totalGPUUsage / float64(len(gpuInfo))
+	}
+	return data
 }
 
 func GenerateReport() []byte {
@@ -125,22 +129,7 @@ func GenerateReport() []byte {
 			}
 		} else if len(gpuInfo) > 0 {
 			// 成功获取详细信息
-			gpuData := make([]gpuDeviceReport, len(gpuInfo))
-			totalGPUUsage := 0.0
-
-			for i, info := range gpuInfo {
-				gpuData[i] = gpuDeviceReport{
-					Name:        info.Name,
-					MemoryTotal: info.MemoryTotal,
-					MemoryUsed:  info.MemoryUsed,
-					Utilization: info.Utilization,
-					Temperature: info.Temperature,
-				}
-				totalGPUUsage += info.Utilization
-			}
-
-			avgGPUUsage := totalGPUUsage / float64(len(gpuInfo))
-			data.GPU = gpuReport{Count: len(gpuInfo), AverageUsage: avgGPUUsage, DetailedInfo: gpuData}
+			data.GPU = buildGPUReport(gpuInfo)
 		}
 	}
 	// 基础模式下，GPU信息已在basicInfo中处理

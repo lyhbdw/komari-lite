@@ -8,6 +8,21 @@ import (
 	"time"
 )
 
+// querier is satisfied by both *sql.DB and *sql.Tx, letting read helpers run
+// either standalone (on the read pool / primary) or inside an existing
+// transaction. Running a read on the owning *sql.Tx is required when the store
+// holds a single connection (e.g. SQLite with MaxOpenConns=1): issuing the read
+// against the pool instead would block forever waiting for the connection the
+// transaction already holds.
+//
+// querier 同时由 *sql.DB 和 *sql.Tx 满足，使读取辅助函数既能独立执行（走读池
+// 或主连接），也能在已有事务中执行。当 Store 只持有单个连接时（例如
+// MaxOpenConns=1 的 SQLite），事务内的读取必须走其所属的 *sql.Tx；否则向连接池
+// 发起读取会永远等待事务已占用的那个连接，造成死锁。
+type querier interface {
+	QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error)
+}
+
 // scanRollupRowsBetween is a test helper for inspecting rollup tier rows.
 func (s *Store) scanRollupRowsBetween(ctx context.Context, metricName, entityID string, tags map[string]string, resolutionMilli, lowerBucket, upperBucket int64, needDigest bool) ([]storedRollup, error) {
 	return s.scanRollupRowsBetweenWith(ctx, s.reader(), metricName, entityID, tags, time.Duration(resolutionMilli)*time.Millisecond, lowerBucket, upperBucket, needDigest)

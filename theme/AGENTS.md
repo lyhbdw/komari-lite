@@ -1,126 +1,46 @@
-# AGENTS.md
+# Theme Development Guide
 
-Repo guide for `komari-theme-emerald`.
+This is the Vue visitor UI inside the Komari Lite monorepo. The React admin UI
+lives in `../frontend`; framework-neutral helpers under `src/utils/*Core.ts`
+are consumed by both. Inspect both consumers before changing these helpers.
 
-## Snapshot
+## Build And Test
 
-- Generated: Wed May 27 2026, Asia/Shanghai
-- Branch: `master`
-- App: Vue 3 + Vite + reka-ui + Tailwind CSS v4 theme for Komari Monitor
-- Package manager: `bun` (>= 1.2)
-- Theme manifest: `komari-theme.json`
+Run commands from `theme/`:
 
-## What this repo is
+- `npm ci` installs the lockfile in `package-lock.json`.
+- `npm test` runs the built-in Node runner through `tests/*.test.mjs`.
+- `npm run type-check` checks Vue/TypeScript, including unused locals/parameters.
+- `npm run build-only` builds Vite and creates the importable theme ZIP.
+- `npm run build` performs type checking and the production build.
+- `npm run lint` fixes ESLint findings; use `npx eslint .` for read-only linting.
 
-- Builds a Komari theme, not a generic web app
-- Release artifact is a zip package Komari can import
-- Runtime app code lives under `src/`
-- Runtime static assets include `public/images/`
-- Release preview image is `docs/preview.png`
+If host Node is missing, use an existing Node 22 container with the monorepo
+mounted so sibling shared-source imports remain available. Bound memory and
+worker concurrency on low-memory hosts.
 
-## Root structure
+## Packaging Contract
 
-- `src/` app source
-- `public/images/` runtime image contract, especially flags and logos
-- `.github/` CI workflow and issue templates
-- `docs/preview.png` release preview image
-- `komari-theme.json` theme manifest consumed by the zip build
-- `vite.config.ts` build, chunking, zip packaging
-- `package.json` root commands and pinned dependency versions
-- `bun.lock` resolved lockfile (managed by bun)
+Keep the actual `vite.config.ts` packaging contract intact:
 
-## Root commands
+- `dist/` contains runtime assets.
+- `komari-theme-lite-build-<sha>.zip` contains `dist/`, `komari-theme.json`, and
+  `preview.png` (from `docs/preview.png`).
+- `komari-theme.json` is the canonical managed configuration manifest. The admin
+  development middleware reads it; `../scripts/build-theme.sh` copies it into
+  the Go embed directory. Preserve that embedded copy.
+- `__BUILD_GIT_HASH__` is used for map asset cache versioning.
+- Root `.github/actions/build-frontend/action.yml` builds both frontends with
+  `npm ci`; GitHub does not execute workflows nested under this subtree.
 
-Run from repo root only.
+## Runtime Conventions
 
-```bash
-bun run dev
-bun run build
-bun run preview
-bun run lint
-```
-
-Notes:
-
-- `bun run build` runs type check plus production build
-- `bun run lint` runs eslint with `--fix --cache`
-- There is no test suite in this repository
-- Do not invent `bun test` or Vitest commands here
-
-## Build and release contract
-
-`bun run build` must preserve the Komari packaging flow defined in `vite.config.ts`.
-
-Expected output:
-
-- `dist/`
-- `komari-theme-emerald-build-<sha>.zip`
-
-Zip contents:
-
-- `dist/`
-- `komari-theme.json`
-- `preview.png`
-
-Current source of packaged preview:
-
-- `docs/preview.png` on disk
-- renamed to `preview.png` inside the zip
-
-Do not change zip naming, manifest filename, or preview filename without updating the real build contract.
-
-## CI facts
-
-Source of truth: `.github/workflows/build-ci.yml`
-
-CI does only:
-
-1. `bun install --frozen-lockfile`
-2. `bun run build`
-
-CI does not run tests, because there is no test suite.
-
-## Where to look
-
-- Start at `package.json` for root commands
-- Check `vite.config.ts` for build behavior, global constants, and zip packaging
-- Check `komari-theme.json` for theme metadata and managed configuration schema
-- Check `src/` for app behavior
-- Check `public/images/` when code references image filenames directly
-- Check `.github/workflows/build-ci.yml` for CI expectations
-- Check `.github/ISSUE_TEMPLATE/` for issue intake shape
-
-Contributor density, useful for triage:
-
-- `src/components/` is a dense UI change area
-- `src/utils/` is a dense logic and helper area
-- `src/stores/` is central state, usually affected by cross-cutting changes
-
-## Conventions seen in this repo
-
-- Use `bun`, not pnpm/npm/yarn
-- Dependency versions are declared directly in `package.json`; add new ones with `bun add` / `bun add -d`
-- Keep root guidance focused on build, packaging, manifest, and repo structure
-- Preserve the `@` alias to `src` defined in `vite.config.ts`
-- Treat `komari-theme.json` as release input, not optional metadata
-- Treat `docs/preview.png` as release input, not just documentation art
-- Respect existing generated outputs and naming patterns, especially `komari-theme-emerald-build-<sha>.zip`
-- Root verification is lint plus build, not tests
-- UI is built on `reka-ui` + Tailwind CSS v4 (shadcn-vue style under `src/components/ui/`). Do **not** reintroduce Naive UI, UnoCSS, or SCSS — they have been removed.
-
-## Repo grounded anti-patterns
-
-- Do not rename `komari-theme.json`
-- Do not move or rename `docs/preview.png` casually
-- Do not add generic framework advice here that belongs in `src/AGENTS.md`
-- Do not duplicate workflow specifics from `.github/AGENTS.md`
-
-## Child guides
-
-For local rules, defer to the nearest child guide:
-
-- `src/AGENTS.md` for app code, component, store, router, and utility changes
-- `.github/AGENTS.md` for workflow and issue template changes
-- `public/images/AGENTS.md` for runtime image asset naming and compatibility rules
-
-If a child guide exists, it overrides this root file for its subtree.
+- Preserve the `@` alias to `src`, the manifest schema, preview filename, and
+  public flag/logo URL contracts. Assets can be selected dynamically.
+- Use reka-ui plus Tailwind CSS v4; do not restore Naive UI, UnoCSS, or SCSS.
+- Keep primary viewport cards statically imported. Load maps/globes/chart
+  alternatives asynchronously, and retain active-view/KeepAlive cleanup.
+- Do not persist privileged node snapshots in identity-agnostic browser storage.
+- `../scripts/build-theme.sh --sync` changes production assets: never run it
+  during source-only cleanup or verification without deployment authorization.
+- Child guides, when present, override this guide in their own subtrees.

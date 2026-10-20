@@ -83,11 +83,9 @@ function komariThemeZip(): Plugin {
   }
 }
 
-const packageJson = require('./package.json')
-
 export default defineConfig({
   define: {
-    __BUILD_VERSION__: JSON.stringify(packageJson.version),
+
     __BUILD_GIT_HASH__: JSON.stringify(getCommitHash()),
   },
   plugins: [

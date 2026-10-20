@@ -31,7 +31,7 @@ func TestWriteBatchKeepsRawInMemoryAndBuildsMinuteRollup(t *testing.T) {
 		t.Fatalf("write samples: %v", err)
 	}
 	var rawTableCount int
-	if err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = ?`, s.tables.points).Scan(&rawTableCount); err != nil {
+	if err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = ?`, tableName(s.cfg.TablePrefix, "points")).Scan(&rawTableCount); err != nil {
 		t.Fatalf("inspect points table: %v", err)
 	}
 	if rawTableCount != 0 {

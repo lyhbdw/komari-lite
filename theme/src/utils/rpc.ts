@@ -86,22 +86,6 @@ function buildWebSocketUrl(baseUrl: string): string {
   return resolvedUrl.toString()
 }
 
-/** RPC 方法元数据 */
-export interface MethodMeta {
-  name: string
-  summary: string
-  description: string
-  params: ParamMeta[]
-  returns: string
-}
-
-/** 参数元数据 */
-export interface ParamMeta {
-  name: string
-  type: string
-  description: string
-}
-
 /** 节点客户端信息 */
 export interface Client {
   uuid: string
@@ -554,13 +538,6 @@ class RpcClient {
   }
 
   /**
-   * 确保 WebSocket 连接已建立
-   */
-  async ensureWebSocketConnected(): Promise<void> {
-    await this.ensureWebSocketReady()
-  }
-
-  /**
    * 确保 WebSocket 连接已建立并通过 ping 验证
    */
   async ensureWebSocketConnectedWithPing(timeoutMs = 10000): Promise<void> {
@@ -577,20 +554,6 @@ class RpcClient {
       this.rejectPendingRequests(new RpcError(-32000, 'WebSocket closed by client'))
       this.ws.close()
     }
-  }
-
-  /**
-   * 获取 WebSocket 连接状态
-   */
-  getWsReadyState(): number {
-    return this.ws?.readyState ?? WebSocket.CLOSED
-  }
-
-  /**
-   * 获取 WebSocket 实例（用于状态监控）
-   */
-  getWebSocket(): WebSocket | null {
-    return this.ws
   }
 
   onWebSocketClose(listener: (info: RpcWebSocketCloseInfo) => void): () => void {
@@ -629,20 +592,6 @@ export class KomariRpc {
   }
 
   // ==================== 内置方法 ====================
-
-  /**
-   * 获取所有可用方法
-   */
-  async getMethods(): Promise<string[]> {
-    return this.client.call<string[]>('rpc.getMethods')
-  }
-
-  /**
-   * 获取帮助信息
-   */
-  async getHelp(): Promise<MethodMeta[]> {
-    return this.client.call<MethodMeta[]>('rpc.getHelp')
-  }
 
   /**
    * Ping 测试

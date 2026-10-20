@@ -119,11 +119,6 @@ const useNodesStore = defineStore('nodes', () => {
   let lastEarthSnapshotAt = 0
 
   // ===== 计算属性 =====
-  /** 在线节点数量 */
-  const onlineCount = computed(() => nodes.value.filter(n => n.online).length)
-
-  /** 总节点数量 */
-  const totalCount = computed(() => nodes.value.length)
 
   /** 所有分组 */
   const groups = computed(() => {
@@ -502,15 +497,14 @@ const useNodesStore = defineStore('nodes', () => {
     wsConnectionState,
     wsReconnectAttempts,
     // 计算属性
-    onlineCount,
-    totalCount,
+
     groups,
     nodesByUuid,
     // 方法
     initNodes,
     updateNodeStatuses,
     updateNodeClients,
-    sortNodesByWeight,
+
     updateWsState,
     clearNodes,
   }

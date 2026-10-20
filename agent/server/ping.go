@@ -67,15 +67,6 @@ func resolveCandidateIPs(target string, deadline time.Duration) ([]string, error
 	return ips, nil
 }
 
-// resolveIP 保留对旧调用的兼容，返回候选首个 IP
-func resolveIP(target string) (string, error) {
-	ips, err := resolveCandidateIPs(target, 5*time.Second)
-	if err != nil {
-		return "", err
-	}
-	return ips[0], nil
-}
-
 func icmpPing(target string, timeout time.Duration) (int64, error) {
 	host, _, err := net.SplitHostPort(target)
 	if err != nil {

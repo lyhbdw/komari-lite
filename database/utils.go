@@ -3,8 +3,7 @@ package database
 import (
 	"context"
 	"encoding/json"
-	"os"
-	"path/filepath"
+
 	"sync"
 	"time"
 
@@ -74,17 +73,7 @@ func GetPublicInfo() (map[string]interface{}, error) {
 	if err != nil {
 		logger.Infof("database", "%v", err)
 	}
-	items := themeConfigurationItems(cst.Theme)
-	if cst.Theme != public.DefaultTheme {
-		for _, item := range items {
-			if item.Key == "" {
-				continue
-			}
-			if _, exists := tc_data[item.Key]; !exists {
-				tc_data[item.Key] = managedconfig.DefaultValue(item)
-			}
-		}
-	}
+	items := themeConfigurationItems()
 	if err := managedconfig.ResolveForOutput(tc_data, items); err != nil {
 		return nil, err
 	}
@@ -108,20 +97,13 @@ var (
 	defaultThemeItemsOnce  sync.Once
 )
 
-func themeConfigurationItems(short string) []models.ManagedThemeConfigurationItem {
-	var manifest models.Theme
-	if short == public.DefaultTheme {
-		defaultThemeItemsOnce.Do(func() {
-			data, err := public.PublicFS.ReadFile("defaultTheme/komari-theme.json")
-			if err == nil && json.Unmarshal(data, &manifest) == nil {
-				defaultThemeItemsCache = managedconfig.Items(manifest.Configuration)
-			}
-		})
-		return defaultThemeItemsCache
-	}
-	data, err := os.ReadFile(filepath.Join("./data/theme", short, "komari-theme.json"))
-	if err != nil || json.Unmarshal(data, &manifest) != nil {
-		return nil
-	}
-	return managedconfig.Items(manifest.Configuration)
+func themeConfigurationItems() []models.ManagedThemeConfigurationItem {
+	defaultThemeItemsOnce.Do(func() {
+		var manifest models.Theme
+		data, err := public.PublicFS.ReadFile("defaultTheme/komari-theme.json")
+		if err == nil && json.Unmarshal(data, &manifest) == nil {
+			defaultThemeItemsCache = managedconfig.Items(manifest.Configuration)
+		}
+	})
+	return defaultThemeItemsCache
 }

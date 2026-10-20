@@ -1,13 +1,20 @@
 package dbcore
 
 import (
-	"gorm.io/gorm"
 	"gorm.io/driver/sqlite"
-	"testing"
+	"gorm.io/gorm"
 )
 
+// testContext keeps cross-package fixture helpers compatible with testing.T
+// without importing the testing runtime into the production dependency graph.
+type testContext interface {
+	Helper()
+	Fatalf(string, ...any)
+	Cleanup(func())
+}
+
 // OpenTestDB opens an isolated in-memory SQLite database for tests.
-func OpenTestDB(t *testing.T) *gorm.DB {
+func OpenTestDB(t testContext) *gorm.DB {
 	t.Helper()
 	db, err := gorm.Open(sqlite.Open("file::memory:"), &gorm.Config{})
 	if err != nil {
@@ -23,7 +30,7 @@ func OpenTestDB(t *testing.T) *gorm.DB {
 
 // SwapInstance replaces the global DB instance for the duration of the test
 // and restores the previous value on cleanup.
-func SwapInstance(t *testing.T, db *gorm.DB) {
+func SwapInstance(t testContext, db *gorm.DB) {
 	t.Helper()
 	prev := instance
 	prevErr := initErr

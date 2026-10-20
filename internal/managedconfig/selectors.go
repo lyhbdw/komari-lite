@@ -32,29 +32,6 @@ func Items(configuration models.Configuration) []models.ManagedThemeConfiguratio
 	return items
 }
 
-func DefaultValue(item models.ManagedThemeConfigurationItem) any {
-	value := item.Default
-	if item.Type == "select" && (value == nil || value == "") && item.Options != "" {
-		options := strings.Split(item.Options, ",")
-		if len(options) > 0 {
-			return strings.TrimSpace(options[0])
-		}
-	}
-	if value != nil {
-		return value
-	}
-	switch item.Type {
-	case "number":
-		return float64(0)
-	case "switch":
-		return false
-	case TypeNodes, TypePingTasks:
-		return "[]"
-	default:
-		return ""
-	}
-}
-
 // ResolveForOutput decodes declared selectors, drops deleted references, and
 // returns typed arrays suitable for public theme settings and plugin config.
 func ResolveForOutput(values map[string]any, items []models.ManagedThemeConfigurationItem) error {

@@ -96,7 +96,7 @@ func newPingGroupRunnerWithGate(tasks []models.PingTask, execute func(context.Co
 
 // executePingTask 执行单个PingTask
 func executePingTask(ctx context.Context, task models.PingTask) {
-	for _, clientUUID := range targetPingClientUUIDs(task) {
+	for _, clientUUID := range task.Clients {
 		select {
 		case <-ctx.Done():
 			// Context was canceled, stop sending pings.
@@ -107,11 +107,6 @@ func executePingTask(ctx context.Context, task models.PingTask) {
 
 		agent_runtime.DispatchPing(clientUUID, v2.PingParams{TaskID: task.Id, Type: task.Type, Target: task.Target})
 	}
-}
-
-// targetPingClientUUIDs 根据任务配置计算本次调度需要下发的在线服务器列表。
-func targetPingClientUUIDs(task models.PingTask) []string {
-	return task.Clients
 }
 
 // ReloadPingSchedule 加载或重载时间表

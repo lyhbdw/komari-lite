@@ -10,22 +10,18 @@ import (
 	"github.com/lyhbdw/komari-lite/agent/dnsresolver"
 )
 
-func TestResolveIPDirect(t *testing.T) {
-	// 针对纯 IP 地址，不应产生外部 DNS 查询，直接返回原 IP
-	ip, err := resolveIP("127.0.0.1")
-	if err != nil {
-		t.Fatalf("expected nil error, got %v", err)
-	}
-	if ip != "127.0.0.1" {
-		t.Fatalf("expected 127.0.0.1, got %s", ip)
-	}
-
-	ip6, err := resolveIP("::1")
-	if err != nil {
-		t.Fatalf("expected nil error, got %v", err)
-	}
-	if ip6 != "::1" {
-		t.Fatalf("expected ::1, got %s", ip6)
+func TestResolveCandidateIPsDirect(t *testing.T) {
+	// Literal addresses bypass DNS even with an expired lookup deadline.
+	for _, target := range []string{"127.0.0.1", "::1"} {
+		t.Run(target, func(t *testing.T) {
+			ips, err := resolveCandidateIPs(target, time.Nanosecond)
+			if err != nil {
+				t.Fatalf("expected nil error, got %v", err)
+			}
+			if len(ips) != 1 || ips[0] != target {
+				t.Fatalf("expected singleton %q, got %v", target, ips)
+			}
+		})
 	}
 }
 

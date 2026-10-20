@@ -30,7 +30,6 @@ import { CSS } from "@dnd-kit/utilities";
 import {
   Button,
   Dialog,
-  Flex,
 } from "@/components/ui/radix-shim";
 import { GripVertical, Pencil, Settings2, Trash2 } from "lucide-react";
 import React from "react";

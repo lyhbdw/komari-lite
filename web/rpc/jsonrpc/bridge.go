@@ -26,8 +26,8 @@ const (
 )
 
 type bindConfig struct {
-	render      renderKind
-	successMsg  string
+	render renderKind
+
 	pathParams  []string // 合并到参数对象的路径参数名
 	queryParams []string // 合并到参数对象的查询参数名
 }
@@ -153,7 +153,7 @@ func renderResponse(c *gin.Context, cfg *bindConfig, resp *rpc.JsonRpcResponse) 
 		c.JSON(http.StatusOK, out)
 	default: // renderStandard
 		// 与 api.Response 一致：data 为 nil 时省略该字段（omitempty 语义）。
-		out := gin.H{"status": "success", "message": cfg.successMsg}
+		out := gin.H{"status": "success", "message": ""}
 		if resp.Result != nil {
 			out["data"] = resp.Result
 		}

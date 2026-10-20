@@ -10,7 +10,7 @@ import * as path from "path";
 
 function localKomariThemePlugin(): Plugin {
   const themeRequestPath = "/themes/default/komari-theme.json";
-  const localThemeFile = path.resolve(__dirname, "komari-theme.json");
+  const localThemeFile = path.resolve(__dirname, "../theme/komari-theme.json");
 
   return {
     name: "local-komari-theme",

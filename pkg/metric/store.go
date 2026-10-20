@@ -115,13 +115,13 @@ func Open(ctx context.Context, cfg Config) (*Store, error) {
 		dialect: newDialect(cfg.Driver),
 		tables: tables{
 			definitions: tableName(cfg.TablePrefix, "definitions"),
-			points:      tableName(cfg.TablePrefix, "points"),
+
 			series:      tableName(cfg.TablePrefix, "series"),
 			resolutions: tableName(cfg.TablePrefix, "resolutions"),
 			labels:      tableName(cfg.TablePrefix, "label_sets"),
 			rollups:     tableName(cfg.TablePrefix, "rollups"),
-			watermarks:  tableName(cfg.TablePrefix, "compaction_watermarks"),
-			state:       tableName(cfg.TablePrefix, "store_state"),
+
+			state: tableName(cfg.TablePrefix, "store_state"),
 		},
 		raw:        make(map[rawSeriesKey]*rawSeries),
 		hot:        make(map[hotRollupKey]*rollupBucket),
@@ -414,8 +414,6 @@ func (s *Store) Close() error {
 	return firstErr
 }
 
-
-
 // ListEntityIDs returns every distinct non-empty entity id that has at least
 // one interned series row, regardless of retention tier or time window.
 //
@@ -446,7 +444,6 @@ func (s *Store) ListEntityIDs(ctx context.Context) ([]string, error) {
 	}
 	return ids, rows.Close()
 }
-
 
 // ensureOpen verifies that the Store is not closed.
 //
@@ -686,7 +683,6 @@ func (s *Store) DeleteMetric(ctx context.Context, name string) error {
 	return s.deleteSeriesMemoryState(name, "", nil)
 }
 
-
 // SetMetricRetention updates one metric's retention policy. A value of zero
 // disables persistence for that metric and removes its raw and rollup data.
 // Negative values are invalid.
@@ -743,7 +739,6 @@ func (s *Store) SetMetricRetention(ctx context.Context, name string, retentionDa
 	}
 	return s.GetMetric(ctx, name)
 }
-
 
 // DeleteEntity deletes all raw and rollup data for one entity across every metric.
 //
@@ -973,21 +968,6 @@ func (s *Store) invalidateDefinitionCache() {
 	s.definitionCacheMu.Unlock()
 }
 
-// querier is satisfied by both *sql.DB and *sql.Tx, letting read helpers run
-// either standalone (on the read pool / primary) or inside an existing
-// transaction. Running a read on the owning *sql.Tx is required when the store
-// holds a single connection (e.g. SQLite with MaxOpenConns=1): issuing the read
-// against the pool instead would block forever waiting for the connection the
-// transaction already holds.
-//
-// querier 同时由 *sql.DB 和 *sql.Tx 满足，使读取辅助函数既能独立执行（走读池
-// 或主连接），也能在已有事务中执行。当 Store 只持有单个连接时（例如
-// MaxOpenConns=1 的 SQLite），事务内的读取必须走其所属的 *sql.Tx；否则向连接池
-// 发起读取会永远等待事务已占用的那个连接，造成死锁。
-type querier interface {
-	QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error)
-}
-
 // Query loads exact raw samples from the fixed ten-minute memory window.
 func (s *Store) Query(ctx context.Context, query Query) ([]Point, error) {
 	if err := s.ensureOpen(); err != nil {
@@ -1146,7 +1126,6 @@ func (s *Store) coarseEntityIDs(resolution time.Duration, query Query, seen map[
 	}
 }
 
-
 // LatestBefore returns the newest raw point or rollup representative before an
 // exclusive boundary. The active in-memory minute is included.
 func (s *Store) LatestBefore(ctx context.Context, metricName, entityID string, before time.Time) (Point, bool, error) {
@@ -1182,7 +1161,6 @@ func (s *Store) LatestBefore(ctx context.Context, metricName, entityID string, b
 	return latest, found, nil
 }
 
-
 // pageBuckets applies bucket-level paging to an ordered slice of aggregate
 // points. offset buckets are skipped from the front; at most limit buckets are
 // returned (limit <= 0 means no limit).
@@ -1201,7 +1179,6 @@ func pageBuckets(buckets []AggregatePoint, limit, offset int) []AggregatePoint {
 	}
 	return buckets
 }
-
 
 // DeleteBefore deletes retained raw points and summaries older than a cutoff
 // across every resolution, including matching active in-memory minute buckets.

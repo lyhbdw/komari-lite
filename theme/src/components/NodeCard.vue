@@ -27,7 +27,6 @@ const appStore = useAppStore()
 const { formatBytes, formatBytesPerSecond, formatUptime } = useNodeFormatters()
 
 const offlineTime = computed(() => formatDateTime(props.node.time))
-const expiredDate = computed(() => formatDateTime(props.node.expired_at, 'YYYY-MM-DD'))
 
 const cpuStatus = computed(() => getStatus(props.node.cpu ?? 0))
 const cpuTextClass = computed(() => getStatusTextClass(props.node.cpu ?? 0))

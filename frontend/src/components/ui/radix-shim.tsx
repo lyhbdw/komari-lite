@@ -213,10 +213,6 @@ export const Badge = ({ color, variant, size, className, children, ...props }: a
   );
 };
 
-export const Separator = ({ size, className, ...props }: any) => (
-  <div className={cn("shrink-0 bg-border h-px w-full my-2", className)} {...props} />
-);
-
 export const Dialog = ShadcnDialog;
 export const Switch = ShadcnSwitch;
 
@@ -506,5 +502,4 @@ export const Popover = {
     );
   },
 };
-
 
