@@ -6,7 +6,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 <template>
   <div class="p-4 flex flex-col gap-4">
     <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-      <CardX v-for="i in 4" :key="i" class="h-full border border-border/70 bg-card rounded-lg p-3 shadow-xs">
+      <CardX v-for="i in 4" :key="i" class="h-full border border-border/70 bg-card rounded-xl p-3 shadow-xs">
         <div class="flex flex-col justify-between gap-3 h-full">
           <div class="flex items-center justify-between">
             <Skeleton class="h-3 w-16" />

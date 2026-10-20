@@ -13,7 +13,7 @@ defineProps<{
       v-for="i in (count || 3)"
       :key="i"
       size="small"
-      class="border border-border/80 rounded-lg bg-card p-3 shadow-xs"
+      class="border border-border/70 rounded-xl bg-card p-3 shadow-xs"
     >
       <div class="flex flex-col gap-3 h-56 justify-between">
         <div class="flex items-center justify-between">

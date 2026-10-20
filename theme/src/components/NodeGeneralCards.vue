@@ -204,7 +204,7 @@ onMounted(async () => {
     <div :class="cardGridClass">
       <CardX
         hoverable
-        class="group h-full border border-border bg-card hover:border-foreground/35 hover:shadow-xs rounded-lg transition-all duration-150 shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
+        class="group h-full border border-border/70 bg-card hover:border-foreground/25 hover:shadow-xs rounded-xl transition-all duration-200 shadow-xs"
         :class="[
           showVisualPanel ? 'col-span-4 row-span-1 col-start-1 row-start-1' : 'col-span-1 row-start-1 col-start-1 min-h-18 md:min-h-24 md:row-start-1 md:col-start-1',
         ]"
@@ -215,7 +215,7 @@ onMounted(async () => {
             <span class="text-xs font-medium tracking-wider text-muted-foreground">内存用量</span>
             <Icon
               icon="tabler:cpu" :width="20" :height="20"
-              class="text-slate-500/20 group-hover:text-slate-500 transition-colors"
+              class="text-muted-foreground/35 group-hover:text-foreground/75 transition-colors"
             />
           </div>
           <Transition v-bind="metricSwitchTransitionProps">
@@ -235,7 +235,7 @@ onMounted(async () => {
       </CardX>
       <CardX
         hoverable
-        class="group h-full border border-border bg-card hover:border-foreground/35 hover:shadow-xs rounded-lg transition-all duration-150 shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
+        class="group h-full border border-border/70 bg-card hover:border-foreground/25 hover:shadow-xs rounded-xl transition-all duration-200 shadow-xs"
         :class="[
           showVisualPanel ? 'col-span-4 row-span-1 col-start-1 row-start-2' : 'col-span-1 row-start-2 col-start-1 min-h-18 md:min-h-24 md:row-start-1 md:col-start-2',
         ]"
@@ -246,7 +246,7 @@ onMounted(async () => {
             <span class="text-xs font-medium tracking-wider text-muted-foreground">硬盘用量</span>
             <Icon
               icon="tabler:server-2" :width="20" :height="20"
-              class="text-slate-500/20 group-hover:text-slate-500 transition-colors"
+              class="text-muted-foreground/35 group-hover:text-foreground/75 transition-colors"
             />
           </div>
           <Transition v-bind="metricSwitchTransitionProps">
@@ -270,7 +270,7 @@ onMounted(async () => {
       >
         <CardX
           hoverable
-          class="group h-full border border-border bg-card hover:border-foreground/35 hover:shadow-xs rounded-lg transition-all cursor-pointer shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
+          class="group h-full border border-border/70 bg-card hover:border-foreground/25 hover:shadow-xs rounded-xl transition-all duration-200 cursor-pointer shadow-xs"
           content-class="h-full !p-3" @click="openFinanceDialog = true"
         >
           <div class="flex h-full flex-col justify-between gap-1">
@@ -284,7 +284,7 @@ onMounted(async () => {
               </span>
               <Icon
                 icon="tabler:wallet" :width="20" :height="20"
-                class="text-slate-500/20 group-hover:text-slate-500 transition-colors"
+                class="text-muted-foreground/35 group-hover:text-foreground/75 transition-colors"
               />
             </div>
             <Transition v-bind="metricSwitchTransitionProps">
@@ -308,7 +308,7 @@ onMounted(async () => {
       </div>
       <CardX
         hoverable
-        class="group h-full border border-border bg-card hover:border-foreground/35 hover:shadow-xs rounded-lg transition-all shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
+        class="group h-full border border-border/70 bg-card hover:border-foreground/25 hover:shadow-xs rounded-xl transition-all duration-200 shadow-xs"
         :class="[
           showVisualPanel ? 'col-span-4 row-span-1 col-start-5 row-start-2' : 'col-span-1 row-start-2 col-start-2 min-h-18 md:min-h-24 md:row-start-1 md:col-start-4',
         ]"
@@ -319,7 +319,7 @@ onMounted(async () => {
             <span class="text-xs font-medium tracking-wider text-muted-foreground">累计流量</span>
             <Icon
               icon="tabler:arrows-up-down" :width="20" :height="20"
-              class="text-slate-500/20 group-hover:text-slate-500 transition-colors"
+              class="text-muted-foreground/35 group-hover:text-foreground/75 transition-colors"
             />
           </div>
           <DataTooltip
@@ -346,7 +346,7 @@ onMounted(async () => {
 
       <CardX
         hoverable
-        class="group h-full border border-border bg-card hover:border-foreground/35 hover:shadow-xs rounded-lg transition-all shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
+        class="group h-full border border-border/70 bg-card hover:border-foreground/25 hover:shadow-xs rounded-xl transition-all duration-200 shadow-xs"
         :class="[
           showVisualPanel ? 'col-span-4 row-span-1 col-start-9 row-start-1' : 'col-span-1 row-start-1 col-start-3 min-h-18 md:min-h-24 md:row-start-1 md:col-start-5',
         ]"
@@ -357,7 +357,7 @@ onMounted(async () => {
             <span class="text-xs font-medium tracking-wider text-muted-foreground">实时上行</span>
             <Icon
               icon="tabler:chevrons-up" :width="20" :height="20"
-              class="text-slate-500/20 group-hover:text-slate-500 transition-colors"
+              class="text-muted-foreground/35 group-hover:text-foreground/75 transition-colors"
             />
           </div>
           <Transition v-bind="metricSwitchTransitionProps">
@@ -374,7 +374,7 @@ onMounted(async () => {
       </CardX>
       <CardX
         hoverable
-        class="group h-full border border-border bg-card hover:border-foreground/35 hover:shadow-xs rounded-md transition-all shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
+        class="group h-full border border-border/70 bg-card hover:border-foreground/25 hover:shadow-xs rounded-xl transition-all duration-200 shadow-xs"
         :class="[
           showVisualPanel ? 'col-span-4 row-span-1 col-start-9 row-start-2' : 'col-span-1 row-start-2 col-start-3 min-h-18 md:min-h-24 md:row-start-1 md:col-start-6',
         ]"
@@ -385,7 +385,7 @@ onMounted(async () => {
             <span class="text-xs font-medium tracking-wider text-muted-foreground">实时下行</span>
             <Icon
               icon="tabler:chevrons-down" :width="20" :height="20"
-              class="text-slate-500/20 group-hover:text-slate-500 transition-colors"
+              class="text-muted-foreground/35 group-hover:text-foreground/75 transition-colors"
             />
           </div>
           <Transition v-bind="metricSwitchTransitionProps">
@@ -431,7 +431,7 @@ onMounted(async () => {
             <div
               v-for="(item, index) in financeSummaryItems"
               :key="item.label"
-              class="flex flex-col p-3 rounded-md border border-border bg-card hover:border-foreground/35 hover:shadow-xs transition-all group"
+              class="flex flex-col p-3 rounded-lg border border-border/70 bg-card hover:border-foreground/25 hover:shadow-xs transition-all duration-200 group"
             >
               <div class="flex items-center justify-between gap-1 mb-1.5">
                 <span class="text-[11px] font-medium text-muted-foreground flex items-center gap-1">
@@ -439,7 +439,7 @@ onMounted(async () => {
                 </span>
                 <Icon
                   :icon="item.icon" :width="16" :height="16"
-                  class="text-slate-500/20 group-hover:text-slate-500 transition-colors"
+                  class="text-muted-foreground/35 group-hover:text-foreground/75 transition-colors"
                 />
               </div>
               <Transition v-bind="metricSwitchTransitionProps">

@@ -222,32 +222,32 @@ function openPingDialog() {
   <CardX
     size="small"
     hoverable
-    class="node-card h-full w-full cursor-pointer border transition-all duration-150 rounded-lg bg-card hover:border-foreground/35 hover:shadow-xs hover:z-1 shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
+    class="node-card group/card h-full w-full cursor-pointer border transition-all duration-200 rounded-xl bg-card hover:border-foreground/30 hover:shadow-xs shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
     :class="[
-      !props.node.online ? '!border-destructive/40' : isHighLoad ? 'border-amber-500/50 bg-amber-500/[0.02] dark:border-amber-500/40' : 'border-border',
+      !props.node.online ? '!border-destructive/40 bg-destructive/[0.01]' : isHighLoad ? 'border-amber-500/40 bg-amber-500/[0.02]' : 'border-border/70',
     ]"
     @click="emit('click')"
   >
     <template #header>
       <div class="flex gap-2 min-w-0 items-center">
-        <!-- 紧凑状态点 -->
+        <!-- 紧凑状态点（带圆环柔光） -->
         <div class="relative flex size-2 items-center justify-center shrink-0">
           <span
             class="inline-flex size-2 rounded-full"
             :class="[
               props.node.online
-                ? 'bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.6)]'
-                : 'bg-rose-500 shadow-[0_0_6px_rgba(244,63,94,0.6)]'
+                ? 'bg-emerald-500 ring-2 ring-emerald-500/20'
+                : 'bg-rose-500 ring-2 ring-rose-500/20',
             ]"
           />
         </div>
-        <div class="text-[13px] font-semibold tracking-tight text-foreground flex-1 min-w-0 truncate" :title="props.node.name">
+        <div class="text-sm font-semibold tracking-tight text-foreground flex-1 min-w-0 truncate" :title="props.node.name">
           {{ props.node.name }}
         </div>
         <div v-if="customTags.length > 0" class="flex shrink-0 gap-1 items-center">
           <Badge
             v-for="(tag, index) in customTags" :key="index" variant="outline"
-            class="!text-[9.5px] rounded-full font-mono font-medium text-foreground/80 dark:text-muted-foreground border-border/70 bg-muted/30 px-1.5 py-0"
+            class="h-4.5 px-1.5 py-0 text-[10px] font-mono font-medium rounded-md border-border/70 bg-muted/40 text-muted-foreground hover:bg-muted/60 transition-colors"
           >
             {{ tag }}
           </Badge>
@@ -256,11 +256,11 @@ function openPingDialog() {
     </template>
 
     <template #header-extra>
-      <div class="flex gap-1.5 items-center">
+      <div class="flex gap-1.5 items-center shrink-0">
         <img :src="getOSImage(props.node.os)" :alt="getOSName(props.node.os)" class="size-3.5 shrink-0 transition-opacity hover:opacity-80">
         <img
           v-if="hasRegion(props.node.region)" :src="getFlagSrc(props.node.region)"
-          :alt="getRegionDisplayName(props.node.region)" class="size-4 rounded-[2px] shrink-0 object-cover"
+          :alt="getRegionDisplayName(props.node.region)" class="size-3.5 rounded-[2px] ring-1 ring-border/50 shrink-0 object-cover"
         >
       </div>
     </template>
@@ -268,7 +268,7 @@ function openPingDialog() {
     <template #default>
       <div class="flex flex-col gap-2">
         <!-- 四大核心指标紧凑展示 -->
-        <div class="gap-x-3 gap-y-1.5 grid grid-cols-2">
+        <div class="gap-x-3 gap-y-2 grid grid-cols-2">
           <!-- CPU -->
           <div class="flex flex-col gap-0.5">
             <div class="w-full text-xs flex flex-row justify-between items-baseline leading-none">
@@ -277,9 +277,9 @@ function openPingDialog() {
               </span>
               <span class="font-mono tabular-nums text-[11px] font-semibold" :class="cpuTextClass">{{ (props.node.cpu ?? 0).toFixed(1) }}%</span>
             </div>
-            <ProgressThin :percentage="props.node.cpu ?? 0" :status="cpuStatus" :height="3" class="my-0.5" />
+            <ProgressThin :percentage="props.node.cpu ?? 0" :status="cpuStatus" :height="3.5" class="my-0.5" />
             <DataTooltip placement="top" :content="`负载均值 (1/5/15m): ${props.node.load?.toFixed(2) ?? 0}, ${props.node.load5?.toFixed(2) ?? 0}, ${props.node.load15?.toFixed(2) ?? 0}`">
-              <div class="text-[10px] text-muted-foreground truncate font-mono tabular-nums cursor-pointer leading-tight">
+              <div class="text-[10px] text-muted-foreground/80 truncate font-mono tabular-nums cursor-pointer leading-tight">
                 {{ props.node.cpu_cores ? `${props.node.cpu_cores} 核心` : '单核' }}
               </div>
             </DataTooltip>
@@ -293,9 +293,9 @@ function openPingDialog() {
               </span>
               <span class="font-mono tabular-nums text-[11px] font-semibold" :class="memTextClass">{{ memPercentage.toFixed(1) }}%</span>
             </div>
-            <ProgressThin :percentage="memPercentage" :status="memStatus" :height="3" class="my-0.5" />
+            <ProgressThin :percentage="memPercentage" :status="memStatus" :height="3.5" class="my-0.5" />
             <DataTooltip placement="top" class="block cursor-pointer" :content-class="[!props.node.swap && '!hidden']">
-              <div class="text-[10px] text-muted-foreground truncate font-mono tabular-nums leading-tight">
+              <div class="text-[10px] text-muted-foreground/80 truncate font-mono tabular-nums leading-tight">
                 {{ formatBytes(props.node.ram ?? 0) }} / {{ formatBytes(props.node.mem_total ?? 0) }}
               </div>
               <template #content>
@@ -315,8 +315,8 @@ function openPingDialog() {
               </span>
               <span class="font-mono tabular-nums text-[11px] font-semibold" :class="diskTextClass">{{ diskPercentage.toFixed(1) }}%</span>
             </div>
-            <ProgressThin :percentage="diskPercentage" :status="diskStatus" :height="3" class="my-0.5" />
-            <div class="text-[10px] text-muted-foreground truncate font-mono tabular-nums leading-tight">
+            <ProgressThin :percentage="diskPercentage" :status="diskStatus" :height="3.5" class="my-0.5" />
+            <div class="text-[10px] text-muted-foreground/80 truncate font-mono tabular-nums leading-tight">
               {{ formatBytes(props.node.disk ?? 0) }} / {{ formatBytes(props.node.disk_total ?? 0) }}
             </div>
           </div>
@@ -329,9 +329,9 @@ function openPingDialog() {
               </span>
               <span class="font-mono tabular-nums text-[11px] font-semibold">{{ trafficUsedPercentage.toFixed(1) }}%</span>
             </div>
-            <ProgressThin :percentage="trafficUsedPercentage" status="success" :height="3" class="my-0.5" />
+            <ProgressThin :percentage="trafficUsedPercentage" status="success" :height="3.5" class="my-0.5" />
             <DataTooltip placement="top" class="block cursor-pointer">
-              <div class="whitespace-pre-wrap text-[10px] text-muted-foreground truncate font-mono tabular-nums leading-tight">
+              <div class="whitespace-pre-wrap text-[10px] text-muted-foreground/80 truncate font-mono tabular-nums leading-tight">
                 {{ formatBytes(trafficUsed) }} /
                 <template v-if="showTrafficProgress(props.node)">
                   {{ formatBytes(props.node.traffic_limit) }}
@@ -344,11 +344,11 @@ function openPingDialog() {
                 <div class="flex items-center justify-between gap-3 whitespace-nowrap font-mono tabular-nums">
                   <div class="text-[11px] flex flex-col">
                     <div class="flex flex-row items-center gap-1">
-                      <Icon icon="tabler:chevron-up" width="12" height="12" />
+                      <Icon icon="tabler:arrow-narrow-up" width="12" height="12" />
                       {{ formatBytes(props.node.net_total_up ?? 0) }}
                     </div>
                     <div class="flex flex-row items-center gap-1">
-                      <Icon icon="tabler:chevron-down" width="12" height="12" />
+                      <Icon icon="tabler:arrow-narrow-down" width="12" height="12" />
                       {{ formatBytes(props.node.net_total_down ?? 0) }}
                     </div>
                   </div>
@@ -359,13 +359,15 @@ function openPingDialog() {
         </div>
 
         <!-- 下半区（紧凑精简） -->
-        <div class="relative text-[10.5px] text-muted-foreground pt-2 border-t border-border/40">
+        <div class="relative text-[10.5px] text-muted-foreground pt-2.5 border-t border-border/50">
           <div
             v-if="!props.node.online"
-            class="absolute inset-0 z-10 flex flex-col items-center justify-center space-y-1"
+            class="absolute inset-0 z-10 flex flex-col items-center justify-center space-y-1 rounded-b-xl backdrop-blur-[1.5px] bg-background/50"
           >
-            <span class="text-xs font-semibold text-rose-500 bg-background/90 px-2 py-0.5 rounded-full border border-rose-500/30 shadow-xs">离线</span>
-            <div class="font-mono tabular-nums text-[10px]">
+            <Badge variant="outline" class="h-5 px-2 text-[10.5px] font-mono font-medium border-rose-500/30 bg-background/95 text-rose-600 dark:text-rose-400 shadow-xs">
+              {{ appStore.lang === 'zh-CN' ? '离线' : 'Offline' }}
+            </Badge>
+            <div class="font-mono tabular-nums text-[10px] text-muted-foreground/80">
               {{ offlineTime }}
             </div>
           </div>
@@ -376,11 +378,11 @@ function openPingDialog() {
               </span>
               <div class="truncate flex flex-row gap-2 font-mono tabular-nums text-[10.5px]">
                 <div class="text-emerald-600 dark:text-emerald-400 font-medium flex flex-row items-center gap-0.5">
-                  <Icon icon="tabler:chevron-up" width="11" height="11" class="text-emerald-500 shrink-0" />
+                  <Icon icon="tabler:arrow-narrow-up" width="12" height="12" class="text-emerald-500 shrink-0" />
                   {{ formatBytesPerSecond(props.node.net_out ?? 0) }}
                 </div>
                 <div class="text-sky-600 dark:text-sky-400 font-medium flex flex-row items-center gap-0.5">
-                  <Icon icon="tabler:chevron-down" width="11" height="11" class="text-sky-500 shrink-0" />
+                  <Icon icon="tabler:arrow-narrow-down" width="12" height="12" class="text-sky-500 shrink-0" />
                   {{ formatBytesPerSecond(props.node.net_in ?? 0) }}
                 </div>
               </div>
