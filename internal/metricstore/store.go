@@ -96,6 +96,16 @@ func GetStore() *metric.Store {
 	return store
 }
 
+// StoreReady reports whether the metric store is initialized. Read-only
+// diagnostics use it to label a zeroed metric section as "not open yet"
+// instead of "empty", which are different operational states.
+//
+// StoreReady 报告 metric store 是否已初始化。只读诊断用它把"全零的指标段"
+// 标注为"尚未打开"而不是"本来就是空的"——这是两种不同的运行状态。
+func StoreReady() bool {
+	return GetStore() != nil
+}
+
 // CloseStoreContext stops the asynchronous store migration before taking the
 // store write lock, so shutdown cannot wait forever on the migration's lease.
 func CloseStoreContext(ctx context.Context) error {

@@ -69,6 +69,10 @@ type Store struct {
 	hotMu      sync.RWMutex
 	hot        map[hotRollupKey]*rollupBucket
 	hotReplace map[hotRollupKey]struct{}
+	// hotBaseline holds committed pre-restart minute prefixes while their
+	// post-restart exact samples can still be replaced. It contains summaries,
+	// not recovered exact samples, and expires with the raw window.
+	hotBaseline map[hotRollupKey]*rollupBucket
 	// coarseMu protects in-memory parent buckets. Coarser tiers are only
 	// materialized once their source window has remained closed long enough for
 	// the raw late-arrival window to pass.
@@ -214,6 +218,8 @@ func Open(ctx context.Context, cfg Config) (*Store, error) {
 			return nil, err
 		}
 	}
+
+	s.recoverCoarseRollupsBestEffort(ctx)
 
 	return s, nil
 }

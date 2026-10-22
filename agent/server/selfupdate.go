@@ -26,12 +26,13 @@ import (
 var selfUpdateMu sync.Mutex
 
 // selfupdate.go
-// agent.update 事件处理：从面板下载新版本二进制，sha256 校验后原子自替换，
+// agent.update downloads a release, authenticates its pinned Ed25519 manifest,
+// streams and checks its SHA256, then smoke-tests and atomically replaces it.
 // 然后 exit(0) 交给 systemd (Restart=always) / upstart (respawn) 拉起新版本。
 //
 // 安全边界：
-//   - 只从 agent 自己连接的面板下载（Endpoint 同源），不信任任何第三方源。
-//   - sha256 必须匹配面板提供的 .sha256 文件（或事件内嵌值）才落盘生效。
+//   - Controller and mirror transport are untrusted: only build-pinned keys authorize.
+//   - Unsigned .sha256 sidecars and event hashes never authorize execution.
 //   - 下载到同目录临时文件后 rename，失败不影响正在运行的旧版本。
 
 // assetName 返回当前平台的资产文件名，与服务端 agent-assets 目录布局一致。
@@ -105,17 +106,24 @@ func HandleAgentUpdate(params interface{}) bool {
 		return true
 	}
 
-	go performSelfUpdate(p.Version, p.SHA256)
+	if !releaseTrustConfigured() {
+		log.Printf("selfupdate: release trust key not configured; refusing update")
+		return false
+	}
+	// Reserve before spawning: repeated events cannot create waiting goroutines.
+	if !selfUpdateMu.TryLock() {
+		return false
+	}
+	go func() {
+		defer selfUpdateMu.Unlock()
+		performSelfUpdate(p.Version, p.SHA256)
+	}()
 	return true
 }
 
 // performSelfUpdate 下载、校验并替换自身，成功后退出进程。
 func performSelfUpdate(targetVersion, expectedSHA string) {
-	// 防止并发升级（事件去重已挡掉大部分，这里再兜底）。
-	if !selfUpdateMu.TryLock() {
-		return
-	}
-	defer selfUpdateMu.Unlock()
+	// Admission is reserved by HandleAgentUpdate before this worker starts.
 
 	exePath, err := os.Executable()
 	if err != nil {
@@ -129,31 +137,13 @@ func performSelfUpdate(targetVersion, expectedSHA string) {
 	}
 
 	log.Printf("selfupdate: %s -> %s", version.Current, targetVersion)
+	targetVersion = strings.TrimPrefix(targetVersion, "v")
 
 	base := strings.TrimSuffix(flags.Endpoint, "/")
 	asset := assetName()
 
-	// sha256：优先用事件内嵌值，否则从面板取 .sha256 文件。
-	if expectedSHA == "" {
-		expectedSHA, err = fetchSHA256WithRetry(base, targetVersion, asset)
-		if err != nil {
-			log.Printf("selfupdate: %v", err)
-			return
-		}
-	}
-
-	tmpName, err := downloadBinaryWithRetry(base, targetVersion, asset, filepath.Dir(exePath), expectedSHA)
-	if err != nil {
-		log.Printf("selfupdate: %v", err)
-		return
-	}
-	defer os.Remove(tmpName)
-	if err := smokeTestBinary(tmpName); err != nil {
-		log.Printf("selfupdate: pre-flight smoke test failed (%v), keeping current agent", err)
-		return
-	}
-	if err := os.Rename(tmpName, exePath); err != nil {
-		log.Printf("selfupdate: %v", err)
+	if err := installSignedUpdate(downloadCandidateURLs(base, targetVersion, asset), targetVersion, asset, expectedSHA, exePath); err != nil {
+		log.Printf("selfupdate: signed update failed, keeping current agent: %v", err)
 		return
 	}
 
@@ -179,24 +169,6 @@ func updateHTTPClient(timeout time.Duration) *http.Client {
 	return dnsresolver.GetHTTPClientWithPreference(timeout, flags.PreferIPVersion)
 }
 
-// fetchSHA256WithRetry 在网络抖动下重试获取 sha256（节点到面板的链路
-// 可能不稳定，单次失败直接放弃会让升级事件被白白消费）。
-func fetchSHA256WithRetry(base, targetVersion, asset string) (string, error) {
-	var lastErr error
-	for attempt := 1; attempt <= 3; attempt++ {
-		sha, err := fetchSHA256(base, targetVersion, asset)
-		if err == nil {
-			return sha, nil
-		}
-		lastErr = err
-		log.Printf("selfupdate: fetch sha256 attempt %d failed: %v", attempt, err)
-		if attempt < 3 {
-			time.Sleep(time.Duration(attempt) * 10 * time.Second)
-		}
-	}
-	return "", lastErr
-}
-
 // downloadCandidateURLs 构造多源下载候选列表：
 // 1. 面板 CDN .bin 别名（优先命中 Cloudflare/CDN 缓存）
 // 2. 面板直连原始路径
@@ -219,76 +191,6 @@ func downloadCandidateURLs(base, targetVersion, asset string) []string {
 		fmt.Sprintf("https://github.com/lyhbdw/komari-lite/releases/download/v%s/%s", cleanVersion, asset),
 	)
 	return urls
-}
-
-// downloadBinaryWithRetry 在网络抖动下尝试多源下载（面板 CDN、面板直连、国内加速镜像）。
-func downloadBinaryWithRetry(base, targetVersion, asset, dir, expectedSHA string) (string, error) {
-	candidates := downloadCandidateURLs(base, targetVersion, asset)
-	var lastErr error
-	for _, candidateURL := range candidates {
-		bin, err := downloadBinary(candidateURL, dir, expectedSHA)
-		if err == nil {
-			return bin, nil
-		}
-		lastErr = err
-		log.Printf("selfupdate: download from %s failed: %v", candidateURL, err)
-	}
-	return "", lastErr
-}
-
-// fetchSHA256 从面板或国内镜像多源获取 sha256 校验值。
-func fetchSHA256(base, targetVersion, asset string) (string, error) {
-	cleanVersion := strings.TrimPrefix(targetVersion, "v")
-	urls := []string{
-		fmt.Sprintf("%s/download/agent/%s/%s.bin.sha256", base, targetVersion, asset),
-		fmt.Sprintf("%s/download/agent/%s/%s.sha256", base, targetVersion, asset),
-	}
-	for _, mirror := range []string{"https://ghfast.top", "https://ghproxy.net"} {
-		urls = append(urls,
-			fmt.Sprintf("%s/https://github.com/lyhbdw/komari-lite/releases/download/%s/%s.sha256", mirror, cleanVersion, asset),
-			fmt.Sprintf("%s/https://github.com/lyhbdw/komari-lite/releases/download/v%s/%s.sha256", mirror, cleanVersion, asset),
-		)
-	}
-	urls = append(urls,
-		fmt.Sprintf("https://github.com/lyhbdw/komari-lite/releases/download/%s/%s.sha256", cleanVersion, asset),
-		fmt.Sprintf("https://github.com/lyhbdw/komari-lite/releases/download/v%s/%s.sha256", cleanVersion, asset),
-	)
-	for _, u := range urls {
-		if sum, err := fetchSingleSHA256(u); err == nil {
-			return sum, nil
-		}
-	}
-	return "", fmt.Errorf("failed to fetch sha256 from controller or mirrors")
-}
-
-func fetchSingleSHA256(url string) (string, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		return "", err
-	}
-	resp, err := updateHTTPClient(30 * time.Second).Do(req)
-	if err != nil {
-		return "", fmt.Errorf("fetch sha256: %w", err)
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("fetch sha256: status %d", resp.StatusCode)
-	}
-	body, err := io.ReadAll(io.LimitReader(resp.Body, 513))
-	if err != nil {
-		return "", fmt.Errorf("fetch sha256: %w", err)
-	}
-	if len(body) > 512 {
-		return "", fmt.Errorf("fetch sha256: response exceeds 512 bytes")
-	}
-	// 格式：<hex>  <filename>（sha256sum 输出格式）
-	fields := strings.Fields(string(body))
-	if len(fields) == 0 {
-		return "", fmt.Errorf("fetch sha256: empty response")
-	}
-	return validateSHA256(fields[0])
 }
 
 const maxUpdateBinaryBytes int64 = 100 << 20

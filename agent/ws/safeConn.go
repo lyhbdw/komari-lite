@@ -1,6 +1,7 @@
 package ws
 
 import (
+	"io"
 	"sync"
 	"time"
 
@@ -12,8 +13,9 @@ import (
 const writeTimeout = 15 * time.Second
 
 type SafeConn struct {
-	conn *websocket.Conn
-	mu   sync.Mutex
+	conn      *websocket.Conn
+	mu        sync.Mutex
+	readLimit int64
 }
 
 func NewSafeConn(conn *websocket.Conn) *SafeConn {
@@ -47,7 +49,31 @@ func (sc *SafeConn) Close() error {
 	return sc.conn.Close()
 }
 func (sc *SafeConn) ReadMessage() (int, []byte, error) {
-	return sc.conn.ReadMessage()
+	if sc.readLimit <= 0 {
+		return sc.conn.ReadMessage()
+	}
+	messageType, reader, err := sc.conn.NextReader()
+	if err != nil {
+		return messageType, nil, err
+	}
+	// Gorilla's limit counts compressed frame bytes. Bound the expanded
+	// message as well, before allocating or decoding the complete payload.
+	data, err := io.ReadAll(io.LimitReader(reader, sc.readLimit+1))
+	if err != nil {
+		return messageType, nil, err
+	}
+	if int64(len(data)) > sc.readLimit {
+		_ = sc.conn.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseMessageTooBig, "message too big"), time.Now().Add(time.Second))
+		_ = sc.conn.Close()
+		return messageType, nil, websocket.ErrReadLimit
+	}
+	return messageType, data, nil
+}
+
+// SetReadLimit must be called before starting the connection's reader.
+func (sc *SafeConn) SetReadLimit(limit int64) {
+	sc.readLimit = limit
+	sc.conn.SetReadLimit(limit)
 }
 
 func (sc *SafeConn) SetReadDeadline(t time.Time) error {

@@ -1,6 +1,8 @@
 import { quoteShellArgs } from "@/utils/shellQuote";
 import { buildAgentInstallArgs } from "@/utils/agentInstallCommand";
 import { copyToClipboard } from "@/utils/clipboard";
+import type { BatchResult } from "@/utils/batchNodes";
+import { remainingSelection, runBatchNodes } from "@/utils/batchNodes";
 import React, { useEffect, useState } from "react";
 import { NodeDetailsProvider } from "@/contexts/NodeDetailsContext";
 import { useNodeDetails } from "@/contexts/useNodeDetails";
@@ -255,38 +257,22 @@ const Layout = () => {
     });
   };
 
-  const handleBatchGroupConfirm = async (newGroup: string) => {
-    try {
-      await Promise.all(
-        selectedNodes.map((uuid) =>
-          fetch(`/api/admin/client/${uuid}/edit`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ group: newGroup }),
-          })
-        )
-      );
-      toast.success(`已批量将 ${selectedNodes.length} 台服务器分组设为：${newGroup || "默认"}`);
-      setSelectedNodes([]);
-      refresh();
-    } catch (err) {
-      toast.error(`批量修改失败: ${err instanceof Error ? err.message : String(err)}`);
+  const applyBatchResult = (result: BatchResult, label: string) => {
+    setSelectedNodes(current => remainingSelection(current, result));
+    if (result.failed.length) {
+      toast.error(`${label}：成功 ${result.succeeded.length} 台，失败 ${result.failed.length} 台；失败项已保留选择。${result.failed.map(item => `${item.uuid}: ${item.message}`).join("；")}`);
+    } else if (result.succeeded.length) {
+      toast.success(`${label}成功：${result.succeeded.length} 台服务器`);
     }
+    if (result.succeeded.length) refresh();
+  };
+
+  const handleBatchGroupConfirm = async (newGroup: string) => {
+    applyBatchResult(await runBatchNodes(selectedNodes, "group", newGroup), "批量修改分组");
   };
 
   const handleBatchDeleteConfirm = async () => {
-    try {
-      await Promise.all(
-        selectedNodes.map((uuid) =>
-          fetch(`/api/admin/client/${uuid}/remove`, { method: "POST" })
-        )
-      );
-      toast.success(`已成功删除 ${selectedNodes.length} 台服务器`);
-      setSelectedNodes([]);
-      refresh();
-    } catch (err) {
-      toast.error(`批量删除失败: ${err instanceof Error ? err.message : String(err)}`);
-    }
+    applyBatchResult(await runBatchNodes(selectedNodes, "delete"), "批量删除");
   };
 
   useEffect(() => {

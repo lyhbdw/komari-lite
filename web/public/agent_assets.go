@@ -14,20 +14,24 @@ import (
 )
 
 const (
-	AgentAssetVersion = "v1.1.7"
+	AgentAssetVersion = "v1.1.8"
 	agentAssetDirEnv  = "KOMARI_AGENT_ASSET_DIR"
 	defaultAssetDir   = "/app/agent-assets"
 )
 
 var allowedAgentAssets = map[string]string{
-	"komari-agent-linux-amd64":            "application/octet-stream",
-	"komari-agent-linux-amd64.sha256":     "text/plain; charset=utf-8",
-	"komari-agent-linux-amd64.bin":        "application/octet-stream",
-	"komari-agent-linux-amd64.bin.sha256": "text/plain; charset=utf-8",
-	"komari-agent-linux-arm64":            "application/octet-stream",
-	"komari-agent-linux-arm64.sha256":     "text/plain; charset=utf-8",
-	"komari-agent-linux-arm64.bin":        "application/octet-stream",
-	"komari-agent-linux-arm64.bin.sha256": "text/plain; charset=utf-8",
+	"komari-agent-linux-amd64.sig.json":     "application/json",
+	"komari-agent-linux-amd64.bin.sig.json": "application/json",
+	"komari-agent-linux-arm64.sig.json":     "application/json",
+	"komari-agent-linux-arm64.bin.sig.json": "application/json",
+	"komari-agent-linux-amd64":              "application/octet-stream",
+	"komari-agent-linux-amd64.sha256":       "text/plain; charset=utf-8",
+	"komari-agent-linux-amd64.bin":          "application/octet-stream",
+	"komari-agent-linux-amd64.bin.sha256":   "text/plain; charset=utf-8",
+	"komari-agent-linux-arm64":              "application/octet-stream",
+	"komari-agent-linux-arm64.sha256":       "text/plain; charset=utf-8",
+	"komari-agent-linux-arm64.bin":          "application/octet-stream",
+	"komari-agent-linux-arm64.bin.sha256":   "text/plain; charset=utf-8",
 }
 
 func isValidVersion(v string) bool {
@@ -73,8 +77,20 @@ func ServeAgentAsset(c *gin.Context) {
 	if err != nil && strings.HasSuffix(asset, ".bin") {
 		assetPath = filepath.Join(assetDir, targetVersion, strings.TrimSuffix(asset, ".bin"))
 		info, err = os.Lstat(assetPath)
+	} else if err != nil && strings.HasSuffix(asset, ".bin.sig.json") {
+		assetPath = filepath.Join(assetDir, targetVersion, strings.TrimSuffix(asset, ".bin.sig.json")+".sig.json")
+		info, err = os.Lstat(assetPath)
 	} else if err != nil && strings.HasSuffix(asset, ".bin.sha256") {
 		assetPath = filepath.Join(assetDir, targetVersion, strings.TrimSuffix(asset, ".bin.sha256")+".sha256")
+		info, err = os.Lstat(assetPath)
+	} else if err != nil && strings.HasSuffix(asset, ".sig.json") {
+		assetPath = filepath.Join(assetDir, targetVersion, strings.TrimSuffix(asset, ".sig.json")+".bin.sig.json")
+		info, err = os.Lstat(assetPath)
+	} else if err != nil && strings.HasSuffix(asset, ".sha256") {
+		assetPath = filepath.Join(assetDir, targetVersion, strings.TrimSuffix(asset, ".sha256")+".bin.sha256")
+		info, err = os.Lstat(assetPath)
+	} else if err != nil {
+		assetPath = filepath.Join(assetDir, targetVersion, asset+".bin")
 		info, err = os.Lstat(assetPath)
 	}
 	if err != nil || !info.Mode().IsRegular() {

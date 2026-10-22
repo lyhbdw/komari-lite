@@ -24,15 +24,17 @@ import (
 
 var (
 	v2AckMu       sync.Mutex
+	v2DispatchMu  sync.Mutex
 	v2AckEventIDs []string
 	v2SeenEvents  = make(map[string]time.Time)
 )
 
 const (
-	v2SeenEventTTL   = 10 * time.Minute
-	v2SeenEventLimit = 4096
-	pongWait         = 60 * time.Second
-	pingPeriod       = 25 * time.Second
+	v2SeenEventTTL         = 10 * time.Minute
+	v2SeenEventLimit       = 4096
+	pongWait               = 60 * time.Second
+	pingPeriod             = 25 * time.Second
+	maxAgentWSMessageBytes = 64 << 10
 )
 
 func EstablishWebSocketConnection() {
@@ -318,6 +320,7 @@ func connectWebSocket(websocketEndpoint string) (*ws.SafeConn, error) {
 	}
 
 	safe := ws.NewSafeConn(conn)
+	safe.SetReadLimit(maxAgentWSMessageBytes)
 	_ = safe.SetReadDeadline(time.Now().Add(pongWait))
 	safe.SetPongHandler(func(string) error {
 		_ = safe.SetReadDeadline(time.Now().Add(pongWait))
@@ -360,10 +363,26 @@ func handleWebSocketMessages(conn *ws.SafeConn, done chan<- struct{}) {
 	}
 }
 
-func processV2Event(conn *ws.SafeConn, method string, params interface{}, eventID string) bool {
-	if !markV2EventSeen(eventID) {
+func processV2Event(conn *ws.SafeConn, method string, params interface{}, eventID string) (accepted bool) {
+	// Serialize admission with deduplication across simultaneous POST/pull/WS
+	// dispatch. Only accepted events enter the seen cache.
+	v2DispatchMu.Lock()
+	defer v2DispatchMu.Unlock()
+	v2AckMu.Lock()
+	seenAt, seen := v2SeenEvents[eventID]
+	if seen && time.Since(seenAt) > v2SeenEventTTL {
+		delete(v2SeenEvents, eventID)
+		seen = false
+	}
+	v2AckMu.Unlock()
+	if eventID != "" && seen {
 		return true
 	}
+	defer func() {
+		if accepted {
+			markV2EventSeen(eventID)
+		}
+	}()
 	switch method {
 	case v2.MethodAgentPing:
 		var p struct {
@@ -372,8 +391,10 @@ func processV2Event(conn *ws.SafeConn, method string, params interface{}, eventI
 			Target string `json:"ping_target"`
 		}
 		if err := v2.BindParams(params, &p); err == nil {
-			go NewPingTask(conn, p.TaskID, p.Type, p.Target)
-			return true
+			if p.TaskID == 0 || p.Target == "" || len(p.Target) > 4096 || (p.Type != "tcp" && p.Type != "http" && p.Type != "icmp") {
+				return false
+			}
+			return pingAdmission.submit(pingJob{conn: conn, taskID: p.TaskID, kind: p.Type, target: p.Target})
 		} else {
 			log.Printf("bad v2 ping params: %v", err)
 		}

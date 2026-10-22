@@ -36,6 +36,13 @@ type hotRollup struct {
 func (s *Store) writePreparedHotRollups(ctx context.Context, prepared []preparedMetricPoint, now time.Time, rebuild map[hotRollupKey]struct{}) error {
 	minuteMillis := time.Minute.Milliseconds()
 	compression := s.cfg.RollupPolicy.compression()
+	s.hotMu.Lock()
+	for key := range s.hotBaseline {
+		if key.bucket < rawMemoryCutoff(now) {
+			delete(s.hotBaseline, key)
+		}
+	}
+	s.hotMu.Unlock()
 	if len(rebuild) > 0 {
 		s.rollupViewMu.Lock()
 		defer s.rollupViewMu.Unlock()
@@ -123,6 +130,9 @@ func (s *Store) rebuildHotRollupsLocked(keys map[hotRollupKey]struct{}, compress
 				bucket.labelsJSON = series.labelsJSON[sample.labelID]
 				bucket.addPoint(sample.value, sample.timestamp)
 			}
+		}
+		if baseline := s.hotBaseline[key]; baseline != nil {
+			bucket.mergeStored(baseline)
 		}
 		s.hot[key] = bucket
 		s.hotReplace[key] = struct{}{}
@@ -314,6 +324,18 @@ func (s *Store) deleteHotRollups(metricName, entityID string, tags map[string]st
 	var cutoffMilli int64
 	if cutoff != nil {
 		cutoffMilli = cutoff.UTC().UnixMilli()
+	}
+	for key, bucket := range s.hotBaseline {
+		if metricName != "" && key.metricName != metricName || entityID != "" && key.entityID != entityID || cutoff != nil && key.bucket >= cutoffMilli {
+			continue
+		}
+		_, ok, err := matchRawTags(bucket.tagsJSON, tags)
+		if err != nil {
+			return 0, err
+		}
+		if ok {
+			delete(s.hotBaseline, key)
+		}
 	}
 	matched := make([]hotRollupKey, 0)
 	for key, bucket := range s.hot {

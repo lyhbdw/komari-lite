@@ -23,7 +23,8 @@ type Request struct {
 	ID      interface{} `json:"id,omitempty"`
 }
 
-// UpdateParams 是 agent.update 事件的参数。
+// UpdateParams carries a target version and optional extra hash constraint.
+// The updater independently requires a build-pinned Ed25519 .sig.json manifest.
 type UpdateParams struct {
 	Version string `json:"version"`
 	SHA256  string `json:"sha256,omitempty"`

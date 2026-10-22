@@ -63,6 +63,13 @@ func (s *Store) Flush(ctx context.Context, now time.Time) (int, error) {
 	defer s.ingestMu.Unlock()
 	now = now.UTC()
 	s.trimRawWindow(now)
+	s.hotMu.Lock()
+	for key := range s.hotBaseline {
+		if key.bucket < rawMemoryCutoff(now) {
+			delete(s.hotBaseline, key)
+		}
+	}
+	s.hotMu.Unlock()
 	written, err := s.flushClosedHotRollups(ctx, now)
 	if err != nil {
 		return 0, err
@@ -171,6 +178,9 @@ func (s *Store) mergeRollupBucketBatchTx(ctx context.Context, metricName string,
 			stored.mergeStored(bucket)
 			bucket = stored
 		}
+		// The coarse accumulator replaces a whole child, not a delta. Return
+		// the committed merged minute to persistHotRollups after the commit.
+		buckets[key] = bucket
 		if bucket == nil {
 			continue
 		}

@@ -3,6 +3,8 @@
  * @see https://www.komari.wiki/dev/rpc.html
  */
 
+import { scheduleHistory } from './historyRequests'
+
 // ==================== 类型定义 ====================
 
 /** JSON-RPC 2.0 请求结构 */
@@ -277,7 +279,7 @@ class RpcClient {
   /**
    * 调用 RPC 方法（HTTP POST）
    */
-  private async callHttp<T>(method: string, params?: Record<string, unknown> | unknown[]): Promise<T> {
+  private async callHttp<T>(method: string, params?: Record<string, unknown> | unknown[], signal?: AbortSignal): Promise<T> {
     const id = ++this.requestId
     const request: JsonRpcRequest = {
       jsonrpc: '2.0',
@@ -286,8 +288,14 @@ class RpcClient {
       id,
     }
 
+    if (signal?.aborted) {
+      throw new DOMException('Request cancelled', 'AbortError')
+    }
+
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), this.timeout)
+    const onAbort = () => controller.abort()
+    signal?.addEventListener('abort', onAbort, { once: true })
 
     try {
       const response = await fetch(this.baseUrl, {
@@ -298,6 +306,7 @@ class RpcClient {
       })
 
       clearTimeout(timeoutId)
+      signal?.removeEventListener('abort', onAbort)
 
       if (!response.ok) {
         throw new RpcError(response.status, `HTTP error: ${response.status}`)
@@ -308,6 +317,10 @@ class RpcClient {
     }
     catch (error) {
       clearTimeout(timeoutId)
+      signal?.removeEventListener('abort', onAbort)
+      if (signal?.aborted) {
+        throw new DOMException('Request cancelled', 'AbortError')
+      }
       if (error instanceof RpcError)
         throw error
       throw new RpcError(-32000, `Network error: ${error instanceof Error ? error.message : String(error)}`)
@@ -517,11 +530,14 @@ class RpcClient {
   /**
    * 调用 RPC 方法
    */
-  async call<T>(method: string, params?: Record<string, unknown> | unknown[]): Promise<T> {
-    if (this.useWebSocket) {
-      return this.callWebSocket<T>(method, params)
+  async call<T>(method: string, params?: Record<string, unknown> | unknown[], signal?: AbortSignal): Promise<T> {
+    const run = () => this.useWebSocket ? this.callWebSocket<T>(method, params) : this.callHttp<T>(method, params, signal)
+    if (['public:queryMetrics', 'public:getPingMetricStats', 'common:getRecords'].includes(method)) {
+      return scheduleHistory(run, signal)
     }
-    return this.callHttp<T>(method, params)
+    if (signal?.aborted)
+      throw new DOMException('Request cancelled', 'AbortError')
+    return run()
   }
 
   /**

@@ -132,8 +132,9 @@ type PingParams struct {
 	Target string `json:"ping_target"`
 }
 
-// UpdateParams 是 agent.update 事件的参数：目标版本与可选的 sha256。
-// sha256 为空时 agent 下载 .sha256 文件自行校验。
+// UpdateParams carries the target version and an optional additional hash constraint.
+// Agent >=1.1.8 always requires a pinned-key signed .sig.json release manifest;
+// this event hash (and an unsigned .sha256 sidecar) cannot authorize execution.
 type UpdateParams struct {
 	Version string `json:"version"`
 	SHA256  string `json:"sha256,omitempty"`

@@ -19,9 +19,9 @@ if command -v npm >/dev/null 2>&1; then
 elif command -v docker >/dev/null 2>&1; then
     if [ ! -d "node_modules" ]; then
         echo "node_modules not found, running npm ci via docker..."
-        docker run --rm -v "${THEME_DIR}:/workspace" -w /workspace node:22-alpine npm ci
+        docker run --rm -v "${ROOT_DIR}:/workspace" -w /workspace/theme node:22-alpine npm ci
     fi
-    docker run --rm -v "${THEME_DIR}:/workspace" -w /workspace node:22-alpine npm run build
+    docker run --rm -v "${ROOT_DIR}:/workspace" -w /workspace/theme node:22-alpine npm run build
 else
     echo "Error: neither npm nor docker is available" >&2
     exit 1

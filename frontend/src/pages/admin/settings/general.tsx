@@ -1,3 +1,4 @@
+import ResourceBudget from "@/components/admin/ResourceBudget";
 import { useTranslation } from "react-i18next";
 import { Switch } from "@/components/ui/switch";
 import { updateSettingsWithToast, useSettings } from "@/lib/api";
@@ -78,6 +79,8 @@ export default function GeneralSettings() {
           </p>
         </div>
       </div>
+
+      <ResourceBudget />
 
       {/* 核心卡片: GeoIP 服务配置 */}
       <div className="rounded-xl border border-border/70 bg-card p-4 sm:p-5 shadow-2xs space-y-4">

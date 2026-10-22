@@ -2,7 +2,7 @@
 import type { PublicPingTaskOrderItem } from '@/utils/pingTaskOrder'
 import { Icon } from '@iconify/vue'
 import dayjs from 'dayjs'
-import { computed, onMounted, ref, shallowRef, watch } from 'vue'
+import { computed, onActivated, onDeactivated, onMounted, onUnmounted, ref, shallowRef, watch } from 'vue'
 import VChart from 'vue-echarts'
 import { Button } from '@/components/ui/button'
 import { DataTooltip } from '@/components/ui/data-tooltip'
@@ -166,6 +166,8 @@ const loading = ref(false)
 const error = ref<string | null>(null)
 let fetchRequestId = 0
 let metricRpcSupported: boolean | null = null
+let requestController: AbortController | null = null
+let active = true
 
 // 任务选择
 const selectedTaskIds = ref<number[]>([])
@@ -237,36 +239,23 @@ function pushLatencyMetricPoint(
   })
 }
 
-async function fetchMetricRecords(uuid: string, hours: number): Promise<PingChartData> {
-  const [metricResult, statsResult, lossResult, publicTasks] = await Promise.all([
+async function fetchMetricRecords(uuid: string, hours: number, signal: AbortSignal): Promise<PingChartData> {
+  const [metricResult, statsResult, publicTasks] = await Promise.all([
     rpc.getClient().call<MetricQueryResponse>('public:queryMetrics', {
-      // 与官方主题一致：延迟曲线只吃 ping.latency_ms；丢包率走 getPingMetricStats
-      metric_keys: ['ping.latency_ms'],
+      metric_keys: ['ping.latency_ms', 'ping.loss'],
       entity_id: uuid,
       hours,
       max_points: HISTORY_MAX_POINTS,
       aggregation: 'avg',
-      // 官方默认开启：空桶补 null，并把 latency=-1 规范为 null
       fill_empty: true,
-    }),
+    }, signal),
     rpc.getClient().call<PingMetricStatsResponse>('public:getPingMetricStats', {
       entity_id: uuid,
       uuid,
       hours,
       max_points: HISTORY_MAX_POINTS,
-    }),
-    // 超过 6 小时后延迟降采样不再含负数，独立查询 ping.loss 供丢包标记使用
-    rpc.getClient().call<MetricQueryResponse>('public:queryMetrics', {
-      metric_keys: ['ping.loss'],
-      entity_id: uuid,
-      hours,
-      max_points: HISTORY_MAX_POINTS,
-      aggregation: 'avg',
-      fill_empty: true,
-    }).catch(() => null),
-    // getPingMetricStats 按 task_id 排序，后台拖拽顺序在 weight 上；
-    // 与官方主题一致，用 getPublicPingTasks（weight ASC, id ASC）重排展示顺序
-    rpc.getClient().call<PublicPingTaskOrderItem[]>('public:getPublicPingTasks').catch(() => []),
+    }, signal),
+    rpc.getClient().call<PublicPingTaskOrderItem[]>('public:getPublicPingTasks', undefined, signal).catch(() => []),
   ])
 
   const records: PingRecord[] = []
@@ -284,7 +273,7 @@ async function fetchMetricRecords(uuid: string, hours: number): Promise<PingChar
   }
 
   const lossRecords: LossRecord[] = []
-  for (const series of lossResult?.series ?? []) {
+  for (const series of metricResult?.series ?? []) {
     if (series.metric_key !== 'ping.loss')
       continue
 
@@ -332,14 +321,14 @@ async function fetchMetricRecords(uuid: string, hours: number): Promise<PingChar
   }
 }
 
-async function fetchLegacyRecords(uuid: string, hours: number): Promise<PingChartData> {
+async function fetchLegacyRecords(uuid: string, hours: number, signal: AbortSignal): Promise<PingChartData> {
   const [result, publicTasks] = await Promise.all([
     rpc.getClient().call<PingRecordsResponse>('common:getRecords', {
       type: 'ping',
       uuid,
       hours,
-    }),
-    rpc.getClient().call<PublicPingTaskOrderItem[]>('public:getPublicPingTasks').catch(() => []),
+    }, signal),
+    rpc.getClient().call<PublicPingTaskOrderItem[]>('public:getPublicPingTasks', undefined, signal).catch(() => []),
   ])
 
   const publicTaskList = Array.isArray(publicTasks) ? publicTasks : []
@@ -352,9 +341,12 @@ async function fetchLegacyRecords(uuid: string, hours: number): Promise<PingChar
 }
 
 async function fetchRecords() {
-  if (!props.uuid)
+  if (!props.uuid || !active)
     return
 
+  requestController?.abort()
+  requestController = new AbortController()
+  const signal = requestController.signal
   const requestId = ++fetchRequestId
   const uuid = props.uuid
   const hours = selectedHours.value
@@ -365,11 +357,11 @@ async function fetchRecords() {
   try {
     let result: PingChartData
     if (metricRpcSupported === false) {
-      result = await fetchLegacyRecords(uuid, hours)
+      result = await fetchLegacyRecords(uuid, hours, signal)
     }
     else {
       try {
-        result = await fetchMetricRecords(uuid, hours)
+        result = await fetchMetricRecords(uuid, hours, signal)
         metricRpcSupported = true
       }
       catch (err) {
@@ -377,11 +369,11 @@ async function fetchRecords() {
           throw err
 
         metricRpcSupported = false
-        result = await fetchLegacyRecords(uuid, hours)
+        result = await fetchLegacyRecords(uuid, hours, signal)
       }
     }
 
-    if (requestId !== fetchRequestId)
+    if (!active || signal.aborted || requestId !== fetchRequestId)
       return
 
     const records = result.records
@@ -396,7 +388,7 @@ async function fetchRecords() {
     }
   }
   catch (err) {
-    if (requestId !== fetchRequestId)
+    if (!active || signal.aborted || requestId !== fetchRequestId)
       return
 
     error.value = err instanceof Error ? err.message : '获取数据失败'
@@ -405,7 +397,7 @@ async function fetchRecords() {
     tasks.value = []
   }
   finally {
-    if (requestId === fetchRequestId) {
+    if (active && !signal.aborted && requestId === fetchRequestId) {
       loading.value = false
     }
   }
@@ -805,6 +797,20 @@ const pingChartOption = computed(() => {
 })
 
 // ==================== 生命周期 ====================
+
+function cancelRequests() {
+  active = false
+  fetchRequestId++
+  requestController?.abort()
+}
+onUnmounted(cancelRequests)
+onDeactivated(cancelRequests)
+onActivated(() => {
+  if (!active) {
+    active = true
+    void fetchRecords()
+  }
+})
 
 watch(selectedView, () => {
   selectedTaskIds.value = []
