@@ -215,10 +215,32 @@ func adminRemoveClient(ctx context.Context, req *rpc.JsonRpcRequest) (any, *rpc.
 	return nil, nil
 }
 
-// AdminClientItem 为管理端节点列表与详情附带实时在线状态。
+// AdminClientItem 为管理端节点列表附带实时在线状态。
 type AdminClientItem struct {
 	models.Client
 	Online bool `json:"online"`
+}
+
+// AdminClientDetailItem adds region diagnostics only to an explicitly requested
+// admin detail response; the periodically refreshed client list stays smaller.
+type AdminClientDetailItem struct {
+	models.Client
+	Online        bool            `json:"online"`
+	GoogleRegions json.RawMessage `json:"google_regions"`
+}
+
+func adminClientItem(client models.Client, online bool) AdminClientItem {
+	return AdminClientItem{Client: client, Online: online}
+}
+
+func adminClientDetailItem(client models.Client, online bool) AdminClientDetailItem {
+	item := AdminClientDetailItem{Client: client, Online: online}
+	if json.Valid([]byte(client.GoogleRegions)) {
+		item.GoogleRegions = json.RawMessage(client.GoogleRegions)
+	} else {
+		item.GoogleRegions = json.RawMessage("null")
+	}
+	return item
 }
 
 func adminGetClient(_ context.Context, req *rpc.JsonRpcRequest) (any, *rpc.JsonRpcError) {
@@ -234,10 +256,7 @@ func adminGetClient(_ context.Context, req *rpc.JsonRpcRequest) (any, *rpc.JsonR
 		return nil, rpc.MakeError(rpc.InternalError, err.Error(), nil)
 	}
 	onlineSet := onlineClientUUIDMap()
-	return AdminClientItem{
-		Client: result,
-		Online: onlineSet[params.UUID],
-	}, nil
+	return adminClientDetailItem(result, onlineSet[params.UUID]), nil
 }
 
 func adminListClients(_ context.Context, _ *rpc.JsonRpcRequest) (any, *rpc.JsonRpcError) {
@@ -248,10 +267,7 @@ func adminListClients(_ context.Context, _ *rpc.JsonRpcRequest) (any, *rpc.JsonR
 	onlineSet := onlineClientUUIDMap()
 	result := make([]AdminClientItem, len(cls))
 	for i, c := range cls {
-		result[i] = AdminClientItem{
-			Client: c,
-			Online: onlineSet[c.UUID],
-		}
+		result[i] = adminClientItem(c, onlineSet[c.UUID])
 	}
 	return result, nil
 }

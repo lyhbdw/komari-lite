@@ -7,7 +7,8 @@ import React, { useEffect, useState } from "react";
 import { NodeDetailsProvider } from "@/contexts/NodeDetailsContext";
 import { useNodeDetails } from "@/contexts/useNodeDetails";
 import { useAccount } from "@/contexts/useAccount";
-import type { NodeDetail } from "@/contexts/node-details-context";
+import { useRPC2Call } from "@/contexts/useRPC2";
+import type { GoogleRegionChecks, NodeDetail, RegionProbe } from "@/contexts/node-details-context";
 import {
   Flex,
   TextField,
@@ -2370,9 +2371,49 @@ function EditButton({ node }: { node: NodeDetail }) {
 function DetailView({ node }: { node: NodeDetail }) {
   const { t } = useTranslation();
   const isMobile = useIsMobile();
+  const { call } = useRPC2Call();
+  const [googleRegions, setGoogleRegions] = useState<GoogleRegionChecks | undefined>(node.google_regions);
+  const refreshRegionChecks = React.useCallback(async () => {
+    try {
+      const detail = await call<{ uuid: string }, { google_regions?: GoogleRegionChecks }>("admin:getClient", { uuid: node.uuid });
+      setGoogleRegions(detail.google_regions);
+    } catch {
+      setGoogleRegions(undefined);
+    }
+  }, [call, node.uuid]);
+  const regionReasonLabel = (reason?: string) => {
+    const labels: Record<string, string> = {
+      not_checked: t("admin.nodeDetail.googleRegion.notChecked", "尚未检测"),
+      captcha: t("admin.nodeDetail.googleRegion.challenge", "遇到验证码或访问挑战"),
+      marker_missing: t("admin.nodeDetail.googleRegion.markerMissing", "未识别到地区字段"),
+      marker_invalid: t("admin.nodeDetail.googleRegion.markerInvalid", "地区字段格式异常"),
+      rate_limited: t("admin.nodeDetail.googleRegion.rateLimited", "请求被限流"),
+      blocked: t("admin.nodeDetail.googleRegion.blocked", "请求被拒绝"),
+      timeout: t("admin.nodeDetail.googleRegion.timeout", "请求超时"),
+      network_error: t("admin.nodeDetail.googleRegion.networkError", "网络错误"),
+      response_too_large: t("admin.nodeDetail.googleRegion.responseTooLarge", "响应超限"),
+      proxy_egress_unknown: t("admin.nodeDetail.googleRegion.proxyUnknown", "代理环境无法确认出口地址族"),
+    };
+    if (!reason) return t("admin.nodeDetail.googleRegion.unknown", "未知");
+    if (reason.startsWith("http_")) return `HTTP ${reason.slice(5)}`;
+    return labels[reason] ?? t("admin.nodeDetail.googleRegion.unknown", "未知");
+  };
+  const regionProbeLabel = (probe: RegionProbe | undefined) => {
+    if (!probe || probe.status !== "ok" || !probe.country) {
+      const reason = regionReasonLabel(probe?.reason);
+      return probe?.country
+        ? `${t("admin.nodeDetail.googleRegion.lastKnown", "上次")} ${probe.country} · ${t("admin.nodeDetail.googleRegion.currentUnknown", "当前未知")} · ${reason}`
+        : `${t("admin.nodeDetail.googleRegion.unknown", "未知")} · ${reason}`;
+    }
+    return probe.country === "CN" ? t("admin.nodeDetail.googleRegion.possibleChina", "CN · 可能送中") : probe.country;
+  };
+  const regionProbeClass = (probe: RegionProbe | undefined) =>
+    probe?.status === "ok" && probe.country === "CN"
+      ? "text-rose-600 dark:text-rose-400 font-semibold"
+      : "text-foreground/90";
 
   return (
-    <Drawer direction={isMobile ? "bottom" : "right"}>
+    <Drawer direction={isMobile ? "bottom" : "right"} onOpenChange={(open) => { if (open) void refreshRegionChecks(); }}>
       <DrawerTrigger asChild>
         <div className="flex items-center gap-2.5 py-1 hover:underline cursor-pointer group">
           <div className="relative shrink-0 w-6 h-5 flex items-center justify-center">
@@ -2432,6 +2473,36 @@ function DetailView({ node }: { node: NodeDetail }) {
         </DrawerHeader>
         <div className="flex flex-col gap-4 overflow-y-auto px-4 text-sm">
           <form className="flex flex-col gap-4">
+            <section className="flex flex-col gap-2 rounded-md border border-border/70 p-3" aria-label={t("admin.nodeDetail.googleRegion.title", "Google 区域检测")}>
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-medium">{t("admin.nodeDetail.googleRegion.title", "Google / YouTube 地区信号")}</span>
+                <span className="text-xs text-muted-foreground">{t("admin.nodeDetail.googleRegion.caption", "服务地区信号，不代表账号或搜索最终判定")}</span>
+              </div>
+              {(["ipv4", "ipv6"] as const).map((family) => {
+                const checks = googleRegions?.[family];
+                const familyLabel = family === "ipv4" ? t("admin.nodeDetail.googleRegion.ipv4", "IPv4") : t("admin.nodeDetail.googleRegion.ipv6", "IPv6");
+                return (
+                  <div key={family} className="grid grid-cols-[3.5rem_repeat(3,minmax(0,1fr))] items-baseline gap-x-2 gap-y-1.5 text-xs">
+                    <span className="row-span-2 font-mono text-muted-foreground">{familyLabel}</span>
+                    {(["google_accounts", "youtube", "youtube_premium"] as const).map((source) => {
+                      const probe = checks?.[source];
+                      const sourceLabel = source === "google_accounts" ? t("admin.nodeDetail.googleRegion.account", "Google 账号页") : source === "youtube" ? t("admin.nodeDetail.googleRegion.youtube", "YouTube") : t("admin.nodeDetail.googleRegion.premium", "Premium");
+                      return (
+                        <div key={source} className="flex min-w-0 flex-col gap-1">
+                          <span className="text-[10px] text-muted-foreground">{sourceLabel}</span>
+                          <span className={`break-words ${regionProbeClass(probe)}`}>
+                            {regionProbeLabel(probe)}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })}
+              <span className="text-[11px] text-muted-foreground">
+                {t("admin.nodeDetail.googleRegion.checkedAt", "最近检测")}：{googleRegions?.checked_at ? new Date(googleRegions.checked_at).toLocaleString() : t("admin.nodeDetail.googleRegion.notChecked", "尚未检测")}
+              </span>
+            </section>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="flex flex-col gap-3">
                 <label htmlFor="detail-ip">

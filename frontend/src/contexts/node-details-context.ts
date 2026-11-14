@@ -1,5 +1,25 @@
 import React from "react";
 
+export type RegionProbe = {
+  country?: string;
+  status: "ok" | "unknown";
+  reason?: string;
+  checked_at?: string;
+  detected_at?: string;
+};
+
+export type RegionFamilyChecks = {
+  google_accounts: RegionProbe;
+  youtube: RegionProbe;
+  youtube_premium: RegionProbe;
+};
+
+export type GoogleRegionChecks = {
+  ipv4: RegionFamilyChecks;
+  ipv6: RegionFamilyChecks;
+  checked_at?: string;
+};
+
 export type NodeDetail = {
   uuid: string;
   token: string;
@@ -28,6 +48,7 @@ export type NodeDetail = {
   created_at: string;
   updated_at: string;
   online?: boolean;
+  google_regions?: GoogleRegionChecks;
   [key: string]: any;
 };
 

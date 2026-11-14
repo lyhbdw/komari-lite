@@ -21,6 +21,7 @@ export interface NodeData {
   ipv4?: string
   ipv6?: string
   region: string
+  possible_china?: boolean | null
   public_remark: string
   mem_total: number
   swap_total: number
@@ -157,6 +158,7 @@ const useNodesStore = defineStore('nodes', () => {
       ipv4: client.ipv4,
       ipv6: client.ipv6,
       region: client.region,
+      possible_china: client.possible_china ?? null,
       public_remark: client.public_remark,
       mem_total: client.mem_total,
       swap_total: client.swap_total,
@@ -433,6 +435,7 @@ const useNodesStore = defineStore('nodes', () => {
         const staticKeys: (keyof Client)[] = [
           'name', 'cpu_name', 'virtualization', 'arch', 'cpu_cores',
           'os', 'kernel_version', 'gpu_name', 'ipv4', 'ipv6', 'region',
+          'possible_china',
           'public_remark', 'mem_total', 'swap_total', 'disk_total', 'version',
           'weight', 'price', 'premium', 'premium_currency', 'billing_cycle',
           'auto_renewal', 'currency', 'expired_at', 'group', 'tags',
@@ -444,6 +447,8 @@ const useNodesStore = defineStore('nodes', () => {
             if (key === 'weight')
               structureChanged = true
             if (key === 'region')
+              regionChanged = true
+            if (key === 'possible_china')
               regionChanged = true
             ;(currentNode as any)[key] = nextVal
           }

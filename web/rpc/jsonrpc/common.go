@@ -55,6 +55,45 @@ type cachedPingSummary struct {
 	Stats       map[string]pingStat
 }
 
+type commonNodeItem struct {
+	models.Client
+	PossibleChina *bool `json:"possible_china"`
+}
+
+func commonNode(client models.Client) commonNodeItem {
+	return commonNodeItem{Client: client, PossibleChina: publicPossibleChina(client.GoogleRegions)}
+}
+
+func publicPossibleChina(encoded string) *bool {
+	if encoded == "" {
+		return nil
+	}
+	var checks models.GoogleRegionChecks
+	if err := json.Unmarshal([]byte(encoded), &checks); err != nil || checks.CheckedAt == nil {
+		return nil
+	}
+	probes := []models.GoogleRegionProbe{
+		checks.IPv4.GoogleAccounts, checks.IPv4.YouTube, checks.IPv4.YouTubePremium,
+		checks.IPv6.GoogleAccounts, checks.IPv6.YouTube, checks.IPv6.YouTubePremium,
+	}
+	complete := true
+	for _, probe := range probes {
+		if probe.Status != models.GoogleRegionStatusOK || len(probe.Country) != 2 {
+			complete = false
+			continue
+		}
+		if probe.Country == "CN" {
+			possibleChina := true
+			return &possibleChina
+		}
+	}
+	if !complete {
+		return nil
+	}
+	possibleChina := false
+	return &possibleChina
+}
+
 func getPingStatsForNodeContext(ctx context.Context, uuid string, pingTasks []models.PingTask) map[string]pingStat {
 	if ctx.Err() != nil {
 		return map[string]pingStat{}
@@ -266,16 +305,16 @@ func getNodes(ctx context.Context, req *rpc.JsonRpcRequest) (any, *rpc.JsonRpcEr
 	if params.UUID != "" {
 		for _, node := range cinfo {
 			if node.UUID == params.UUID {
-				return node, nil
+				return commonNode(node), nil
 			}
 		}
 		return nil, rpc.MakeError(rpc.InvalidParams, "Node not found", params.UUID)
 	}
 
 	// 返回以 uuid 为键的字典（每个 value 自身也包含 uuid 字段）
-	nodeMap := make(map[string]models.Client, len(cinfo))
+	nodeMap := make(map[string]commonNodeItem, len(cinfo))
 	for _, node := range cinfo {
-		nodeMap[node.UUID] = node
+		nodeMap[node.UUID] = commonNode(node)
 	}
 	return nodeMap, nil
 }

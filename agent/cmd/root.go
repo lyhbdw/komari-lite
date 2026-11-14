@@ -216,6 +216,7 @@ func run() error {
 		http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 	}
 	go server.DoUploadBasicInfoWorks()
+	go server.DoGoogleRegionCheckWorks()
 	for {
 		server.EstablishWebSocketConnection()
 	}

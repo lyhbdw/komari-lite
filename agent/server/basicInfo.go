@@ -56,7 +56,7 @@ var basicInfoUpload struct {
 
 func cachedBasicInfo() map[string]interface{} {
 	staticBasicInfo.Do(func() { staticBasicInfo.data = collectStaticBasicInfo() })
-	data := make(map[string]interface{}, len(staticBasicInfo.data)+2)
+	data := make(map[string]interface{}, len(staticBasicInfo.data)+3)
 	for k, v := range staticBasicInfo.data {
 		data[k] = v
 	}
@@ -88,6 +88,9 @@ func uploadBasicInfo() error {
 	data := cachedBasicInfo()
 	ipv4, ipv6, _ := monitoring.GetIPAddress()
 	data["ipv4"], data["ipv6"] = ipv4, ipv6
+	if checks := currentGoogleRegionChecks(); checks.CheckedAt != nil {
+		data["google_regions"] = checks
+	}
 	payload, err := json.Marshal(data)
 	if err != nil {
 		return err

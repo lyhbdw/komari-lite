@@ -256,6 +256,19 @@ function openPingDialog() {
 
     <template #header-extra>
       <div class="flex gap-1.5 items-center shrink-0">
+        <Badge
+          variant="outline"
+          class="h-4.5 px-1.5 py-0 text-[10px] font-mono font-medium rounded-md"
+          :class="props.node.possible_china === true
+            ? 'border-rose-500/30 bg-rose-500/5 text-rose-600 dark:text-rose-400'
+            : 'border-border/70 bg-muted/40 text-muted-foreground'"
+        >
+          {{ props.node.possible_china === true
+            ? (appStore.lang === 'zh-CN' ? '可能送中' : 'Possible reroute')
+            : props.node.possible_china === false
+              ? (appStore.lang === 'zh-CN' ? '未发现' : 'Not detected')
+              : (appStore.lang === 'zh-CN' ? '未知' : 'Unknown') }}
+        </Badge>
         <img :src="getOSImage(props.node.os)" :alt="getOSName(props.node.os)" class="size-3.5 shrink-0 transition-opacity hover:opacity-80">
         <img
           v-if="hasRegion(props.node.region)" :src="getFlagSrc(props.node.region)"
@@ -418,6 +431,24 @@ function openPingDialog() {
                   </template>
                 </div>
               </DataTooltip>
+            </div>
+            <div class="flex items-center justify-between min-h-[18px]">
+              <span class="truncate tracking-wide text-muted-foreground font-medium text-[11px]">
+                {{ appStore.lang === 'zh-CN' ? '是否送中' : 'China reroute' }}
+              </span>
+              <Badge
+                variant="outline"
+                class="h-4.5 px-1.5 py-0 text-[10px] font-mono font-medium rounded-md"
+                :class="props.node.possible_china === true
+                  ? 'border-rose-500/30 bg-rose-500/5 text-rose-600 dark:text-rose-400'
+                  : 'border-border/70 bg-muted/40 text-muted-foreground'"
+              >
+                {{ props.node.possible_china === true
+                  ? (appStore.lang === 'zh-CN' ? '可能送中' : 'Possible')
+                  : props.node.possible_china === false
+                    ? (appStore.lang === 'zh-CN' ? '未发现' : 'Not detected')
+                    : (appStore.lang === 'zh-CN' ? '未知' : 'Unknown') }}
+              </Badge>
             </div>
             <NodePingSummary
               :uuid="props.node.uuid"

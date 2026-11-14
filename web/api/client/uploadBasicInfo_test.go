@@ -1,11 +1,13 @@
 package client
 
 import (
+	"encoding/json"
 	"net"
 	"testing"
 	"time"
 
 	"github.com/lyhbdw/komari-lite/cmd/flags"
+	"github.com/lyhbdw/komari-lite/database/clients"
 	"github.com/lyhbdw/komari-lite/database/dbcore"
 	"github.com/lyhbdw/komari-lite/database/models"
 	"github.com/lyhbdw/komari-lite/internal/config"
@@ -82,5 +84,95 @@ func TestV2BasicInfoFillsRegionFromGeoIP(t *testing.T) {
 	want := geoip.GetRegionUnicodeEmoji("SG")
 	if got.Region != want {
 		t.Fatalf("expected GeoIP region to be saved, got %q", got.Region)
+	}
+}
+
+func TestSaveClientBasicInfoPersistsValidatedGoogleRegions(t *testing.T) {
+	db := dbcore.OpenTestDB(t)
+	if err := db.AutoMigrate(&models.Client{}); err != nil {
+		t.Fatal(err)
+	}
+	dbcore.SwapInstance(t, db)
+	clients.InvalidateClientsCache()
+	t.Cleanup(clients.InvalidateClientsCache)
+	if err := db.Create(&models.Client{UUID: "region-node", Token: "region-token", Name: "region-node"}).Error; err != nil {
+		t.Fatal(err)
+	}
+	now := time.Date(2026, 11, 15, 0, 0, 0, 0, time.UTC)
+	regions := models.GoogleRegionChecks{
+		IPv4: models.GoogleRegionFamilyChecks{
+			GoogleAccounts: models.GoogleRegionProbe{Country: "CN", Status: models.GoogleRegionStatusOK, CheckedAt: &now, DetectedAt: &now},
+			YouTube:        models.GoogleRegionProbe{Country: "US", Status: models.GoogleRegionStatusOK, CheckedAt: &now, DetectedAt: &now},
+			YouTubePremium: models.GoogleRegionProbe{Country: "CN", Status: models.GoogleRegionStatusOK, CheckedAt: &now, DetectedAt: &now},
+		},
+		IPv6: models.GoogleRegionFamilyChecks{
+			GoogleAccounts: models.GoogleRegionProbe{Status: models.GoogleRegionStatusUnknown, Reason: "timeout", CheckedAt: &now},
+			YouTube:        models.GoogleRegionProbe{Country: "US", Status: models.GoogleRegionStatusOK, CheckedAt: &now, DetectedAt: &now},
+			YouTubePremium: models.GoogleRegionProbe{Country: "US", Status: models.GoogleRegionStatusOK, CheckedAt: &now, DetectedAt: &now},
+		},
+		CheckedAt: &now,
+	}
+	encoded, err := json.Marshal(regions)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := saveClientBasicInfo(map[string]interface{}{"google_regions": json.RawMessage(encoded)}, "region-node", ""); err != nil {
+		t.Fatalf("save valid Google region checks: %v", err)
+	}
+	var stored models.Client
+	if err := db.First(&stored, "uuid = ?", "region-node").Error; err != nil {
+		t.Fatal(err)
+	}
+	var got models.GoogleRegionChecks
+	if err := json.Unmarshal([]byte(stored.GoogleRegions), &got); err != nil {
+		t.Fatalf("decode stored Google region checks %q: %v", stored.GoogleRegions, err)
+	}
+	if got.IPv4.GoogleAccounts.Country != "CN" || got.IPv4.YouTube.Country != "US" || got.IPv6.GoogleAccounts.Status != models.GoogleRegionStatusUnknown {
+		t.Fatalf("stored Google region checks mismatch: %+v", got)
+	}
+
+	updatedAt := now.Add(6 * time.Hour)
+	got.CheckedAt = &updatedAt
+	got.IPv4.GoogleAccounts = models.GoogleRegionProbe{Status: models.GoogleRegionStatusUnknown, Reason: "timeout", CheckedAt: &updatedAt}
+	updated, err := json.Marshal(got)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := saveClientBasicInfo(map[string]interface{}{"google_regions": json.RawMessage(updated)}, "region-node", ""); err != nil {
+		t.Fatalf("save failed refresh: %v", err)
+	}
+	if err := db.First(&stored, "uuid = ?", "region-node").Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal([]byte(stored.GoogleRegions), &got); err != nil {
+		t.Fatal(err)
+	}
+	probe := got.IPv4.GoogleAccounts
+	if probe.Status != models.GoogleRegionStatusUnknown || probe.Country != "CN" || probe.DetectedAt == nil || !probe.DetectedAt.Equal(now) {
+		t.Fatalf("failed refresh discarded last successful country: %+v", probe)
+	}
+}
+
+func TestSaveClientBasicInfoRejectsInvalidGoogleRegionChecks(t *testing.T) {
+	db := dbcore.OpenTestDB(t)
+	if err := db.AutoMigrate(&models.Client{}); err != nil {
+		t.Fatal(err)
+	}
+	dbcore.SwapInstance(t, db)
+	clients.InvalidateClientsCache()
+	t.Cleanup(clients.InvalidateClientsCache)
+	if err := db.Create(&models.Client{UUID: "invalid-region-node", Token: "invalid-region-token", Name: "invalid-region-node"}).Error; err != nil {
+		t.Fatal(err)
+	}
+	invalid := `{"ipv4":{"google_accounts":{"country":"CN","status":"sent_to_china"}}}`
+	if err := saveClientBasicInfo(map[string]interface{}{"google_regions": json.RawMessage(invalid)}, "invalid-region-node", ""); err == nil {
+		t.Fatal("invalid region status was accepted")
+	}
+	var stored models.Client
+	if err := db.First(&stored, "uuid = ?", "invalid-region-node").Error; err != nil {
+		t.Fatal(err)
+	}
+	if stored.GoogleRegions != "" {
+		t.Fatalf("invalid region report changed stored value to %q", stored.GoogleRegions)
 	}
 }

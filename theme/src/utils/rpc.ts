@@ -124,6 +124,7 @@ export interface Client {
   traffic_limit_type: string
   created_at: string
   updated_at: string
+  possible_china?: boolean | null
 }
 
 /** 版本信息 */
