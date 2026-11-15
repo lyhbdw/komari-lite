@@ -125,6 +125,8 @@ export interface Client {
   created_at: string
   updated_at: string
   possible_china?: boolean | null
+  possible_china_ipv4?: boolean | null
+  possible_china_ipv6?: boolean | null
 }
 
 /** 版本信息 */

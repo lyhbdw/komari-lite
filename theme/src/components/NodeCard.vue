@@ -46,6 +46,10 @@ const isHighLoad = computed(() => {
 const trafficUsedPercentage = computed(() => getTrafficUsedPercentage(props.node))
 const trafficUsed = computed(() => getTrafficUsed(props.node))
 const customTags = computed(() => getCustomTags(props.node))
+const familyVerdicts = computed(() => [
+  { label: 'IPv4', verdict: props.node.possible_china_ipv4 ?? null },
+  { label: 'IPv6', verdict: props.node.possible_china_ipv6 ?? null },
+])
 
 const monthlyCostInfo = computed(() => {
   const node = props.node
@@ -228,27 +232,46 @@ function openPingDialog() {
     @click="emit('click')"
   >
     <template #header>
-      <div class="flex gap-2 min-w-0 items-center">
-        <!-- 紧凑状态点（带圆环柔光） -->
-        <div class="relative flex size-2 items-center justify-center shrink-0">
-          <span
-            class="inline-flex size-2 rounded-full"
-            :class="[
-              props.node.online
-                ? 'bg-emerald-500 ring-2 ring-emerald-500/20'
-                : 'bg-rose-500 ring-2 ring-rose-500/20',
-            ]"
-          />
+      <div class="flex min-w-0 flex-col gap-1.5">
+        <div class="flex gap-2 min-w-0 items-center">
+          <!-- 紧凑状态点（带圆环柔光） -->
+          <div class="relative flex size-2 items-center justify-center shrink-0">
+            <span
+              class="inline-flex size-2 rounded-full"
+              :class="[
+                props.node.online
+                  ? 'bg-emerald-500 ring-2 ring-emerald-500/20'
+                  : 'bg-rose-500 ring-2 ring-rose-500/20',
+              ]"
+            />
+          </div>
+          <div class="text-sm font-semibold tracking-tight text-foreground flex-1 min-w-0 truncate" :title="props.node.name">
+            {{ props.node.name }}
+          </div>
+          <div v-if="customTags.length > 0" class="flex shrink-0 gap-1 items-center">
+            <Badge
+              v-for="(tag, index) in customTags" :key="index" variant="outline"
+              class="h-4.5 px-1.5 py-0 text-[10px] font-mono font-medium rounded-md border-border/70 bg-muted/40 text-muted-foreground hover:bg-muted/60 transition-colors"
+            >
+              {{ tag }}
+            </Badge>
+          </div>
         </div>
-        <div class="text-sm font-semibold tracking-tight text-foreground flex-1 min-w-0 truncate" :title="props.node.name">
-          {{ props.node.name }}
-        </div>
-        <div v-if="customTags.length > 0" class="flex shrink-0 gap-1 items-center">
+        <div class="flex flex-wrap gap-1.5 items-center">
           <Badge
-            v-for="(tag, index) in customTags" :key="index" variant="outline"
-            class="h-4.5 px-1.5 py-0 text-[10px] font-mono font-medium rounded-md border-border/70 bg-muted/40 text-muted-foreground hover:bg-muted/60 transition-colors"
+            v-for="family in familyVerdicts"
+            :key="family.label"
+            variant="outline"
+            class="h-4.5 px-1.5 py-0 text-[10px] font-mono font-medium rounded-md"
+            :class="family.verdict === true
+              ? 'border-rose-500/30 bg-rose-500/5 text-rose-600 dark:text-rose-400'
+              : 'border-border/70 bg-muted/40 text-muted-foreground'"
           >
-            {{ tag }}
+            {{ family.label }}：{{ family.verdict === true
+              ? (appStore.lang === 'zh-CN' ? '送中' : 'Possible reroute')
+              : family.verdict === false
+                ? (appStore.lang === 'zh-CN' ? '未送中' : 'Not detected')
+                : (appStore.lang === 'zh-CN' ? '未检测' : 'Unknown') }}
           </Badge>
         </div>
       </div>
@@ -256,19 +279,6 @@ function openPingDialog() {
 
     <template #header-extra>
       <div class="flex gap-1.5 items-center shrink-0">
-        <Badge
-          variant="outline"
-          class="h-4.5 px-1.5 py-0 text-[10px] font-mono font-medium rounded-md"
-          :class="props.node.possible_china === true
-            ? 'border-rose-500/30 bg-rose-500/5 text-rose-600 dark:text-rose-400'
-            : 'border-border/70 bg-muted/40 text-muted-foreground'"
-        >
-          {{ props.node.possible_china === true
-            ? (appStore.lang === 'zh-CN' ? '可能送中' : 'Possible reroute')
-            : props.node.possible_china === false
-              ? (appStore.lang === 'zh-CN' ? '未发现' : 'Not detected')
-              : (appStore.lang === 'zh-CN' ? '未知' : 'Unknown') }}
-        </Badge>
         <img :src="getOSImage(props.node.os)" :alt="getOSName(props.node.os)" class="size-3.5 shrink-0 transition-opacity hover:opacity-80">
         <img
           v-if="hasRegion(props.node.region)" :src="getFlagSrc(props.node.region)"
@@ -431,24 +441,6 @@ function openPingDialog() {
                   </template>
                 </div>
               </DataTooltip>
-            </div>
-            <div class="flex items-center justify-between min-h-[18px]">
-              <span class="truncate tracking-wide text-muted-foreground font-medium text-[11px]">
-                {{ appStore.lang === 'zh-CN' ? '是否送中' : 'China reroute' }}
-              </span>
-              <Badge
-                variant="outline"
-                class="h-4.5 px-1.5 py-0 text-[10px] font-mono font-medium rounded-md"
-                :class="props.node.possible_china === true
-                  ? 'border-rose-500/30 bg-rose-500/5 text-rose-600 dark:text-rose-400'
-                  : 'border-border/70 bg-muted/40 text-muted-foreground'"
-              >
-                {{ props.node.possible_china === true
-                  ? (appStore.lang === 'zh-CN' ? '可能送中' : 'Possible')
-                  : props.node.possible_china === false
-                    ? (appStore.lang === 'zh-CN' ? '未发现' : 'Not detected')
-                    : (appStore.lang === 'zh-CN' ? '未知' : 'Unknown') }}
-              </Badge>
             </div>
             <NodePingSummary
               :uuid="props.node.uuid"

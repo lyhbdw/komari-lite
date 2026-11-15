@@ -40,15 +40,16 @@ func assetName() string {
 	return fmt.Sprintf("komari-agent-%s-%s", runtime.GOOS, runtime.GOARCH)
 }
 
-// versionLess 比较两个点分版本号：a < b 返回 true。
-// 任一段解析失败（非纯数字）时按字符串比较，避免畸形版本号被
-// Sscanf 宽松解析成意外数值（如 "1.0.5x" 被当作 5）。
+// versionLess compares strict numeric cores and SemVer prerelease identifiers.
+// Malformed labels keep conservative lexical ordering; release binaries always
+// compare above snapshots and never accept a snapshot target as an upgrade.
 func versionLess(a, b string) bool {
-	ai, aok := parseVersion(a)
-	bi, bok := parseVersion(b)
+	ai, aPrerelease, aok := parseComparableVersion(a)
+	bi, bPrerelease, bok := parseComparableVersion(b)
 	if !aok || !bok {
-		// 当前运行快照/开发版本，而目标版本是正式点分版本时，正式版本始终被视为更新（不小于当前）
-		if aok && !bok && strings.HasPrefix(strings.ToLower(b), "snapshot") {
+		// Keep legacy snapshot tags unordered relative to numeric releases.
+		if (!aok && bok && strings.HasPrefix(strings.ToLower(a), "snapshot")) ||
+			(aok && !bok && strings.HasPrefix(strings.ToLower(b), "snapshot")) {
 			return false
 		}
 		return a < b
@@ -58,7 +59,57 @@ func versionLess(a, b string) bool {
 			return ai[i] < bi[i]
 		}
 	}
-	return len(ai) < len(bi)
+	if len(ai) != len(bi) {
+		return len(ai) < len(bi)
+	}
+	if len(aPrerelease) == 0 || len(bPrerelease) == 0 {
+		return len(aPrerelease) > 0 && len(bPrerelease) == 0
+	}
+	for i := 0; i < len(aPrerelease) && i < len(bPrerelease); i++ {
+		left, right := aPrerelease[i], bPrerelease[i]
+		if left == right {
+			continue
+		}
+		leftNum, leftErr := strconv.ParseUint(left, 10, 64)
+		rightNum, rightErr := strconv.ParseUint(right, 10, 64)
+		if leftErr == nil && rightErr == nil {
+			return leftNum < rightNum
+		}
+		if leftErr == nil {
+			return true
+		}
+		if rightErr == nil {
+			return false
+		}
+		return left < right
+	}
+	return len(aPrerelease) < len(bPrerelease)
+}
+
+func parseComparableVersion(value string) ([]int, []string, bool) {
+	core, prereleaseText, hasPrerelease := strings.Cut(value, "-")
+	parts, ok := parseVersion(core)
+	if !ok {
+		return nil, nil, false
+	}
+	if !hasPrerelease {
+		return parts, nil, true
+	}
+	if prereleaseText == "" {
+		return nil, nil, false
+	}
+	identifiers := strings.Split(prereleaseText, ".")
+	for _, identifier := range identifiers {
+		if identifier == "" {
+			return nil, nil, false
+		}
+		for _, char := range identifier {
+			if (char < '0' || char > '9') && (char < 'A' || char > 'Z') && (char < 'a' || char > 'z') && char != '-' {
+				return nil, nil, false
+			}
+		}
+	}
+	return parts, identifiers, true
 }
 
 // parseVersion 严格解析点分数字版本号，允许一个合法的小写 v 前缀。

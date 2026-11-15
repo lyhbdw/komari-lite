@@ -47,6 +47,11 @@ func TestParseYouTubePremiumRegion(t *testing.T) {
 	}{
 		{name: "US", status: http.StatusOK, body: `{"contentRegion":"US"}`, want: "US"},
 		{name: "CN", status: http.StatusOK, body: `{"contentRegion":"CN"}`, want: "CN"},
+		// Reduced from a normal Premium response: the site key is page config, not a challenge.
+		{name: "normal recaptcha site key config", status: http.StatusOK, body: `<html><head><title>YouTube Premium</title></head><script>ytcfg.set({"RECAPTCHA_V3_SITEKEY":"public-site-key"});</script><script>var ytInitialData={"contentRegion":"US"};</script></html>`, want: "US"},
+		{name: "recaptcha widget with country marker", status: http.StatusOK, body: `<html><div class="g-recaptcha" data-sitekey="public-site-key"></div><script>var ytInitialData={"contentRegion":"US"};</script></html>`, wantErr: true},
+		{name: "site key without country marker", status: http.StatusOK, body: `<script>ytcfg.set({"RECAPTCHA_V3_SITEKEY":"public-site-key"});</script>`, wantErr: true},
+		{name: "consent with country marker", status: http.StatusOK, body: `<html>Before you continue to YouTube<script>var ytInitialData={"contentRegion":"US"};</script></html>`, wantErr: true},
 		{name: "challenge", status: http.StatusOK, body: `unusual traffic /sorry/`, wantErr: true},
 		{name: "missing marker", status: http.StatusOK, body: `<html>YouTube Premium</html>`, wantErr: true},
 		{name: "invalid code", status: http.StatusOK, body: `{"contentRegion":"USA"}`, wantErr: true},

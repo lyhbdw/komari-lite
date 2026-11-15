@@ -57,25 +57,52 @@ type cachedPingSummary struct {
 
 type commonNodeItem struct {
 	models.Client
-	PossibleChina *bool `json:"possible_china"`
+	PossibleChina     *bool `json:"possible_china"`
+	PossibleChinaIPv4 *bool `json:"possible_china_ipv4"`
+	PossibleChinaIPv6 *bool `json:"possible_china_ipv6"`
 }
 
 func commonNode(client models.Client) commonNodeItem {
-	return commonNodeItem{Client: client, PossibleChina: publicPossibleChina(client.GoogleRegions)}
+	ipv4, ipv6 := publicPossibleChinaFamilies(client.GoogleRegions)
+	return commonNodeItem{
+		Client:            client,
+		PossibleChina:     combinedPossibleChina(ipv4, ipv6),
+		PossibleChinaIPv4: ipv4,
+		PossibleChinaIPv6: ipv6,
+	}
 }
 
 func publicPossibleChina(encoded string) *bool {
-	if encoded == "" {
+	ipv4, ipv6 := publicPossibleChinaFamilies(encoded)
+	return combinedPossibleChina(ipv4, ipv6)
+}
+
+func combinedPossibleChina(ipv4, ipv6 *bool) *bool {
+	if ipv4 != nil && *ipv4 {
+		return ipv4
+	}
+	if ipv6 != nil && *ipv6 {
+		return ipv6
+	}
+	if ipv4 == nil || ipv6 == nil {
 		return nil
+	}
+	return ipv4
+}
+
+func publicPossibleChinaFamilies(encoded string) (*bool, *bool) {
+	if encoded == "" {
+		return nil, nil
 	}
 	var checks models.GoogleRegionChecks
 	if err := json.Unmarshal([]byte(encoded), &checks); err != nil || checks.CheckedAt == nil {
-		return nil
+		return nil, nil
 	}
-	probes := []models.GoogleRegionProbe{
-		checks.IPv4.GoogleAccounts, checks.IPv4.YouTube, checks.IPv4.YouTubePremium,
-		checks.IPv6.GoogleAccounts, checks.IPv6.YouTube, checks.IPv6.YouTubePremium,
-	}
+	return familyPossibleChina(checks.IPv4), familyPossibleChina(checks.IPv6)
+}
+
+func familyPossibleChina(checks models.GoogleRegionFamilyChecks) *bool {
+	probes := []models.GoogleRegionProbe{checks.GoogleAccounts, checks.YouTube, checks.YouTubePremium}
 	complete := true
 	for _, probe := range probes {
 		if probe.Status != models.GoogleRegionStatusOK || len(probe.Country) != 2 {

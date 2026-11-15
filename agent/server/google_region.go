@@ -154,7 +154,6 @@ func containsRegionChallenge(body []byte) bool {
 	text := strings.ToLower(string(body))
 	return strings.Contains(text, "unusual traffic") ||
 		strings.Contains(text, "/sorry/") ||
-		strings.Contains(text, "recaptcha") ||
 		strings.Contains(text, "g-recaptcha") ||
 		strings.Contains(text, "before you continue") ||
 		strings.Contains(text, "consent.google.com") ||

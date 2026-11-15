@@ -22,6 +22,8 @@ export interface NodeData {
   ipv6?: string
   region: string
   possible_china?: boolean | null
+  possible_china_ipv4?: boolean | null
+  possible_china_ipv6?: boolean | null
   public_remark: string
   mem_total: number
   swap_total: number
@@ -159,6 +161,8 @@ const useNodesStore = defineStore('nodes', () => {
       ipv6: client.ipv6,
       region: client.region,
       possible_china: client.possible_china ?? null,
+      possible_china_ipv4: client.possible_china_ipv4 ?? null,
+      possible_china_ipv6: client.possible_china_ipv6 ?? null,
       public_remark: client.public_remark,
       mem_total: client.mem_total,
       swap_total: client.swap_total,
@@ -433,13 +437,39 @@ const useNodesStore = defineStore('nodes', () => {
       if (currentNode) {
         const baseNode = createNodeFromClient(client)
         const staticKeys: (keyof Client)[] = [
-          'name', 'cpu_name', 'virtualization', 'arch', 'cpu_cores',
-          'os', 'kernel_version', 'gpu_name', 'ipv4', 'ipv6', 'region',
+          'name',
+          'cpu_name',
+          'virtualization',
+          'arch',
+          'cpu_cores',
+          'os',
+          'kernel_version',
+          'gpu_name',
+          'ipv4',
+          'ipv6',
+          'region',
           'possible_china',
-          'public_remark', 'mem_total', 'swap_total', 'disk_total', 'version',
-          'weight', 'price', 'premium', 'premium_currency', 'billing_cycle',
-          'auto_renewal', 'currency', 'expired_at', 'group', 'tags',
-          'traffic_limit', 'traffic_limit_type', 'created_at', 'updated_at',
+          'possible_china_ipv4',
+          'possible_china_ipv6',
+          'public_remark',
+          'mem_total',
+          'swap_total',
+          'disk_total',
+          'version',
+          'weight',
+          'price',
+          'premium',
+          'premium_currency',
+          'billing_cycle',
+          'auto_renewal',
+          'currency',
+          'expired_at',
+          'group',
+          'tags',
+          'traffic_limit',
+          'traffic_limit_type',
+          'created_at',
+          'updated_at',
         ]
         for (const key of staticKeys) {
           const nextVal = (baseNode as any)[key]
