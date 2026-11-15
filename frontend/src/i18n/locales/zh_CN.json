@@ -88,7 +88,7 @@
       "upgradeTargetVersion": "目标版本",
       "upgradeConfirm": "确认升级",
       "upgrading": "下发中...",
-      "upgradeSuccess": "升级事件已下发（v{{version}}，{{dispatched}} 个节点）",
+      "upgradeSuccess": "升级事件已下发（{{version}}，{{dispatched}} 个节点）",
       "addNode": "添加节点",
       "autoRenewal": "自动续费",
       "autoRenewalDescription": "开启后，机器到期时将按设定的周期自动顺延下次续费时间。",
