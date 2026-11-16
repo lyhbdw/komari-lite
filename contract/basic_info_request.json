@@ -1,0 +1,16 @@
+{
+  "jsonrpc": "2.0",
+  "method": "agent.basicInfo",
+  "params": {
+    "info": {
+      "os": "Debian GNU/Linux 13 (trixie)",
+      "arch": "amd64",
+      "cpu_name": "AMD EPYC 9554",
+      "cpu_cores": 4,
+      "version": "1.1.14",
+      "ipv4": "10.91.0.2",
+      "ipv6": "::cafe::2"
+    }
+  },
+  "id": "req-3"
+}

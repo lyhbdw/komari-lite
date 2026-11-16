@@ -1,6 +1,7 @@
 package rpc
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"reflect"
@@ -15,6 +16,17 @@ type JsonRpcRequest struct {
 	Method  string `json:"method"`           // 方法名；以 "rpc." 前缀的为保留内部方法
 	Params  any    `json:"params,omitempty"` // 参数(位置数组或命名对象)
 	ID      any    `json:"id,omitempty"`     // 字符串 / 数值 / null；Notification 时省略
+}
+
+// UnmarshalJSON 以 UseNumber 解码 params/id。
+// 默认解码会把 JSON 数字变成 float64，BindParams 重新编码时 >2^53 的整数
+// （如流量计数器 totalUp/totalDown）会丢精度；json.Number 保留原始数字串，
+// 重新 marshal 时逐位还原，int64/uint 字段精确落位。
+func (r *JsonRpcRequest) UnmarshalJSON(data []byte) error {
+	type request JsonRpcRequest
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.UseNumber()
+	return decoder.Decode((*request)(r))
 }
 
 // HasID 判断是否包含 id（Notification 没有 id，不需要返回）

@@ -1,0 +1,9 @@
+{
+  "jsonrpc": "2.0",
+  "id": "req-4",
+  "error": {
+    "code": -32000,
+    "message": "failed to save report",
+    "data": "disk full"
+  }
+}

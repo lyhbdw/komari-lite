@@ -1,0 +1,29 @@
+{
+  "jsonrpc": "2.0",
+  "method": "agent.report",
+  "params": {
+    "report": {
+      "uuid": "9f634fd9-3180-45cc-82b3-11b19d6d3780",
+      "cpu": { "name": "AMD EPYC 9554", "cores": 4, "arch": "x86_64", "usage": 12.5 },
+      "ram": { "total": 3221225472, "used": 1610612736 },
+      "swap": { "total": 1073741824, "used": 0 },
+      "load": { "load1": 0.15, "load5": 0.22, "load15": 0.31 },
+      "disk": { "total": 21474836480, "used": 8589934592 },
+      "network": { "up": 1024, "down": 2048, "totalUp": 9007199254740993, "totalDown": 9007199254740992 },
+      "connections": { "tcp": 120, "udp": 45 },
+      "gpu": {
+        "count": 1,
+        "average_usage": 33.3,
+        "detailed_info": [
+          { "name": "NVIDIA RTX 4090", "memory_total": 24564, "memory_used": 1024, "utilization": 33.3, "temperature": 55 }
+        ]
+      },
+      "uptime": 864000,
+      "process": 180,
+      "message": "",
+      "updated_at": "2026-11-16T12:00:00Z"
+    },
+    "ack_event_ids": ["evt-1", "evt-2"]
+  },
+  "id": "req-1"
+}

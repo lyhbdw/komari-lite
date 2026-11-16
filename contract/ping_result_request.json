@@ -1,0 +1,11 @@
+{
+  "jsonrpc": "2.0",
+  "method": "agent.pingResult",
+  "params": {
+    "task_id": 42,
+    "ping_type": "tcp",
+    "value": 23,
+    "finished_at": "2026-11-16T12:00:00.123456789Z"
+  },
+  "id": "req-2"
+}
