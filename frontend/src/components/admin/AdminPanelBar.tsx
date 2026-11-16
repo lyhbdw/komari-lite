@@ -77,8 +77,9 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
   }, [mergedBaseMenuItems]);
 
   const mainItems = useMemo(() => {
-    return mergedBaseMenuItems.filter((item) => !item.bottom);
-  }, [mergedBaseMenuItems]);
+    // 未登录时隐藏需要权限的导航项，只保留底部公共入口（主页等）
+    return mergedBaseMenuItems.filter((item) => !item.bottom && Boolean(account?.logged_in));
+  }, [mergedBaseMenuItems, account]);
 
   // 侧边栏开合：用 CSS transition 实现（替代 motion 弹簧动画）
   const sidebarWidth = sidebarOpen ? (isMobile ? "100vw" : "240px") : 0;
@@ -182,7 +183,15 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
             <LoginDialog
               autoOpen={true}
               showSettings={false}
-              trigger={<span className="hidden" />}
+              trigger={
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 px-2.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                >
+                  {t("login.title", "登录")}
+                </Button>
+              }
               onLoginSuccess={() => {
                 window.location.reload();
               }}
@@ -214,16 +223,18 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
 
           <div className="h-3.5 w-px bg-border/60 mx-1 hidden sm:block" />
 
-          <Button
-            variant="ghost"
-            size="icon"
-            className="size-8 km-admin-panel-account text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
-            onClick={logout}
-            title={t("common.logout", "Logout")}
-            aria-label={t("common.logout", "Logout")}
-          >
-            <LogOut size={16} />
-          </Button>
+          {account?.logged_in && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-8 km-admin-panel-account text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
+              onClick={logout}
+              title={t("common.logout", "Logout")}
+              aria-label={t("common.logout", "Logout")}
+            >
+              <LogOut size={16} />
+            </Button>
+          )}
         </div>
       </header>
 
@@ -279,6 +290,12 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
                     reloadDocument={item.reloadDocument}
                   />
                 ))}
+                {mainItems.length === 0 && (
+                  <p className="px-3 py-2 text-xs leading-relaxed text-muted-foreground/70">
+                    {t("login.title", "登录")}
+                    {"后显示管理功能"}
+                  </p>
+                )}
               </div>
 
               {/* Bottom Docked Items */}

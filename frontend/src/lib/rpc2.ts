@@ -10,6 +10,7 @@ import type {
 } from "../types/rpc2";
 import { RPC2ConnectionState } from "../types/rpc2";
 import i18n from "../i18n/config";
+import { notifyUnauthorized } from "./auth-events";
 
 /**
  * RPC2 客户端类
@@ -281,6 +282,10 @@ export class RPC2Client {
         signal: requestAbort.signal,
       });
 
+      if (response.status === 401) {
+        // 会话过期：通知全局翻转为未登录态（弹出登录框）
+        notifyUnauthorized();
+      }
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
@@ -330,6 +335,10 @@ export class RPC2Client {
         signal: requestAbort.signal,
       });
 
+      if (response.status === 401) {
+        // 会话过期：通知全局翻转为未登录态（弹出登录框）
+        notifyUnauthorized();
+      }
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }

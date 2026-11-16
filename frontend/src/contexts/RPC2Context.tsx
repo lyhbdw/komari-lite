@@ -32,9 +32,8 @@ export const RPC2Provider: React.FC<{ children: React.ReactNode }> = ({
         setError(err.message);
         setConnectionState(client.state);
       },
-      onReconnecting: (attempt) => {
+      onReconnecting: () => {
         setConnectionState(client.state);
-        console.log(`RPC2 重连尝试 ${attempt}`);
       },
     });
 

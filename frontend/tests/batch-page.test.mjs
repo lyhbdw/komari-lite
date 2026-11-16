@@ -40,7 +40,7 @@ try{
    else if(args.path==='sonner')code+='export const toast=s.toast;';
    else {
     if(hasDefault)code+='export default s.generic;';
-    for(const name of names)code+=`export const ${name}=s.hooks[${JSON.stringify(name)}]??s.generic;`;
+    for(const name of names)code+=`export const ${name}=s.hooks[${JSON.stringify(name)}]??(()=>{const f=function(){};Object.defineProperty(f,"name",{value:${JSON.stringify(name)},configurable:true});return f;})();`;
     if(namespace){
      const alias=ast.statements.find(node=>ts.isImportDeclaration(node)&&node.moduleSpecifier.text===args.path).importClause.namedBindings.name.text;
      const members=new Set();

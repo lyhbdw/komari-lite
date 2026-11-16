@@ -146,7 +146,7 @@ const LogPage = () => {
               setLimit(Number(e.target.value));
               setPage(1);
             }}
-            className="h-7 px-2 text-xs rounded-md border border-border bg-card text-foreground outline-none focus:border-foreground/50 cursor-pointer shadow-2xs font-mono"
+            className="h-8 px-2 text-xs rounded-md border border-border bg-card text-foreground outline-none focus:border-foreground/50 cursor-pointer shadow-2xs font-mono"
           >
             {[10, 15, 20, 50, 100].map((n) => (
               <option key={n} value={n}>

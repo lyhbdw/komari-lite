@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { notifyUnauthorized, SESSION_EXPIRED_MESSAGE } from "@/lib/auth-events";
+
 interface UseFetchedResourceOptions<T> {
   url: string;
   initialData: T;
@@ -31,6 +33,11 @@ export function useFetchedResource<T>({
     setError(null);
     try {
       const response = await fetch(url);
+      if (response.status === 401) {
+        // 会话过期：通知全局翻转为未登录态（弹出登录框），并给出可读的错误信息
+        notifyUnauthorized();
+        throw new Error(SESSION_EXPIRED_MESSAGE);
+      }
       if (!response.ok) throw new Error(errorMessage);
       const json = await response.json();
       setData(transformRef.current ? transformRef.current(json) : (json as T));
