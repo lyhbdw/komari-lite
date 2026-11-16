@@ -10,9 +10,11 @@ import { toast } from "sonner";
 import { formatBytes, stringToBytes } from "@/utils/unitHelper";
 import Tips from "@/components/ui/tips";
 
-function EditButton({ node }: { node: NodeDetail }) {
+function EditButton({ node, open: controlledOpen, onOpenChange }: { node: NodeDetail; open?: boolean; onOpenChange?: (open: boolean) => void }) {
   const { t } = useTranslation();
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen ?? internalOpen;
+  const setOpen = onOpenChange ?? setInternalOpen;
   const { refresh } = useNodeDetails();
   const nameRef = React.useRef<HTMLInputElement>(null);
   const groupRef = React.useRef<HTMLInputElement>(null);
@@ -59,15 +61,17 @@ function EditButton({ node }: { node: NodeDetail }) {
 
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
-      <Dialog.Trigger asChild>
-        <button
-          type="button"
-          className="size-7 rounded-md border border-border/60 text-muted-foreground hover:text-foreground hover:bg-muted inline-flex items-center justify-center transition-colors cursor-pointer shadow-2xs"
-          title={t("admin.nodeEdit.editInfo", "编辑信息")}
-        >
-          <Pencil size={13} />
-        </button>
-      </Dialog.Trigger>
+      {controlledOpen === undefined && (
+        <Dialog.Trigger asChild>
+          <button
+            type="button"
+            className="size-7 rounded-md border border-border/60 text-muted-foreground hover:text-foreground hover:bg-muted inline-flex items-center justify-center transition-colors cursor-pointer shadow-2xs"
+            title={t("admin.nodeEdit.editInfo", "编辑信息")}
+          >
+            <Pencil size={13} />
+          </button>
+        </Dialog.Trigger>
+      )}
       <Dialog.Content className="sm:max-w-[460px] p-6 gap-5">
         <Dialog.Header className="space-y-1.5 text-left">
           <Dialog.Title className="flex items-center gap-2 text-base font-semibold leading-none tracking-tight text-foreground">

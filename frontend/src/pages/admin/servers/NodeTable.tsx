@@ -2,8 +2,8 @@ import { copyToClipboard } from "@/utils/clipboard";
 import React from "react";
 import { useState } from "react";
 import type { NodeDetail } from "@/contexts/node-details-context";
-import { Checkbox } from "@/components/ui/radix-shim";
-import { CircleDollarSign, Copy, Download, Trash2Icon, CalendarCheck, ArrowUpDown, ArrowUp, ArrowDown, GripVertical } from "lucide-react";
+import { Checkbox, DropdownMenu } from "@/components/ui/radix-shim";
+import { CircleDollarSign, Copy, Download, Trash2Icon, CalendarCheck, ArrowUpDown, ArrowUp, ArrowDown, GripVertical, MoreHorizontal, Pencil } from "lucide-react";
 import { DndContext, closestCenter, useSensor, useSensors, TouchSensor, MouseSensor, KeyboardSensor } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -79,7 +79,7 @@ const ServerRow = ({
       <TableCell className="min-w-0 px-2.5">
         <DetailView node={node} />
       </TableCell>
-      <TableCell className="w-40 px-2">
+      <TableCell className="w-40 px-2 hidden md:table-cell">
         <div className="flex items-center gap-2 flex-nowrap">
           {node.ipv4 ? (
             <div
@@ -107,7 +107,7 @@ const ServerRow = ({
           )}
         </div>
       </TableCell>
-      <TableCell className="w-20 px-1.5 text-center">
+      <TableCell className="w-20 px-1.5 text-center hidden md:table-cell">
         {node.group ? (
           <span className="inline-block text-xs px-2 py-0.5 rounded-md bg-muted/50 text-foreground/80 font-medium border border-border/40 max-w-[76px] truncate" title={node.group}>
             {node.group}
@@ -116,7 +116,7 @@ const ServerRow = ({
           <span className="text-xs text-muted-foreground/40 font-mono">-</span>
         )}
       </TableCell>
-      <TableCell className="w-28 px-2">
+      <TableCell className="w-28 px-2 hidden md:table-cell">
         <PriceTags
           price={node.price}
           billing_cycle={node.billing_cycle}
@@ -285,7 +285,7 @@ const NodeTable = ({
               </TableHead>
               <TableHead
                 onClick={() => onSort("ip")}
-                className="w-40 px-2 text-left cursor-pointer select-none group hover:text-foreground transition-colors"
+                className="w-40 px-2 text-left cursor-pointer select-none group hover:text-foreground transition-colors hidden md:table-cell"
               >
                 <span className="inline-flex items-center">
                   <span>{t("admin.nodeDetail.ipAddress")}</span>
@@ -294,7 +294,7 @@ const NodeTable = ({
               </TableHead>
               <TableHead
                 onClick={() => onSort("group")}
-                className="w-20 px-1.5 text-center cursor-pointer select-none group hover:text-foreground transition-colors"
+                className="w-20 px-1.5 text-center cursor-pointer select-none group hover:text-foreground transition-colors hidden md:table-cell"
               >
                 <span className="inline-flex items-center justify-center">
                   <span>{t("common.group")}</span>
@@ -303,7 +303,7 @@ const NodeTable = ({
               </TableHead>
               <TableHead
                 onClick={() => onSort("billing")}
-                className="w-28 px-2 text-left cursor-pointer select-none group hover:text-foreground transition-colors"
+                className="w-28 px-2 text-left cursor-pointer select-none group hover:text-foreground transition-colors hidden md:table-cell"
               >
                 <span className="inline-flex items-center">
                   <span>{t("admin.nodeTable.billing_col", "账单")}</span>
@@ -348,12 +348,89 @@ const ActionButtons = ({
   isExpiring?: boolean;
 }) => {
   const { t } = useTranslation();
+  const isMobile = useIsMobile();
   const [billingOpen, setBillingOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [renewOpen, setRenewOpen] = useState(false);
   const [installOpen, setInstallOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
 
   const cycleDays = Number(node.billing_cycle) > 0 ? Number(node.billing_cycle) : 30;
+
+  const dialogs = (
+    <>
+      <RenewDialog
+        node={node}
+        open={renewOpen}
+        onOpenChange={setRenewOpen}
+      />
+      <BillingButton
+        node={node}
+        open={billingOpen}
+        onOpenChange={setBillingOpen}
+        trigger={null}
+      />
+      <GenerateCommandButton
+        settings={settings}
+        nodeToken={node.token}
+        open={installOpen}
+        onOpenChange={setInstallOpen}
+        trigger={null}
+      />
+      <DeleteButton
+        node={node}
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        trigger={null}
+      />
+      <EditButton node={node} open={editOpen} onOpenChange={setEditOpen} />
+    </>
+  );
+
+  // 触屏没有 hover，title 提示不可见：移动端收敛为带文字标签的溢出菜单，
+  // 避免 5 个无标签图标按钮难以识别。
+  if (isMobile) {
+    return (
+      <div className="flex items-center justify-center">
+        <DropdownMenu.Root>
+          <DropdownMenu.Trigger>
+            <button
+              type="button"
+              className="size-7 rounded-md border border-border/60 text-muted-foreground hover:text-foreground hover:bg-muted inline-flex items-center justify-center transition-colors cursor-pointer shadow-2xs"
+              title={t("common.actions", "操作")}
+              aria-label={t("common.actions", "操作")}
+            >
+              <MoreHorizontal size={14} />
+            </button>
+          </DropdownMenu.Trigger>
+          <DropdownMenu.Content align="end" className="min-w-[168px]">
+            <DropdownMenu.Item onClick={() => setEditOpen(true)} className="cursor-pointer">
+              <Pencil size={13} className="mr-2 shrink-0" />
+              <span className="truncate">{t("admin.nodeEdit.editInfo", "编辑信息")}</span>
+            </DropdownMenu.Item>
+            <DropdownMenu.Item onClick={() => setRenewOpen(true)} className="cursor-pointer">
+              <CalendarCheck size={13} className="mr-2 shrink-0" />
+              <span className="truncate">{t("admin.nodeTable.renewOneCycle", `快捷续费 (+${cycleDays}天)`)}</span>
+            </DropdownMenu.Item>
+            <DropdownMenu.Item onClick={() => setBillingOpen(true)} className="cursor-pointer">
+              <CircleDollarSign size={13} className="mr-2 shrink-0" />
+              <span className="truncate">{t("admin.nodeTable.billing", "账单管理")}</span>
+            </DropdownMenu.Item>
+            <DropdownMenu.Item onClick={() => setInstallOpen(true)} className="cursor-pointer">
+              <Download size={13} className="mr-2 shrink-0" />
+              <span className="truncate">{t("admin.nodeTable.installCommand", "安装指令")}</span>
+            </DropdownMenu.Item>
+            <DropdownMenu.Separator />
+            <DropdownMenu.Item onClick={() => setDeleteOpen(true)} className="cursor-pointer text-rose-600 dark:text-rose-400">
+              <Trash2Icon size={13} className="mr-2 shrink-0" />
+              <span className="truncate">{t("common.delete", "删除节点")}</span>
+            </DropdownMenu.Item>
+          </DropdownMenu.Content>
+        </DropdownMenu.Root>
+        {dialogs}
+      </div>
+    );
+  }
 
   return (
     <div className="flex items-center justify-center gap-1">
@@ -404,31 +481,7 @@ const ActionButtons = ({
         <Trash2Icon size={13} />
       </button>
 
-      {/* 弹窗部分 */}
-      <RenewDialog
-        node={node}
-        open={renewOpen}
-        onOpenChange={setRenewOpen}
-      />
-      <BillingButton
-        node={node}
-        open={billingOpen}
-        onOpenChange={setBillingOpen}
-        trigger={null}
-      />
-      <GenerateCommandButton
-        settings={settings}
-        nodeToken={node.token}
-        open={installOpen}
-        onOpenChange={setInstallOpen}
-        trigger={null}
-      />
-      <DeleteButton
-        node={node}
-        open={deleteOpen}
-        onOpenChange={setDeleteOpen}
-        trigger={null}
-      />
+      {dialogs}
     </div>
   );
 };
