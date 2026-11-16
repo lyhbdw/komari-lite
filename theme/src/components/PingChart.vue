@@ -842,8 +842,8 @@ onMounted(() => {
         <Icon icon="tabler:network" :width="18" :height="18" class="text-muted-foreground" />
         <span class="text-base font-bold">三网质量与延迟监控</span>
       </div>
-      <div class="flex items-center gap-3">
-        <Tabs v-model="selectedView" class="items-center">
+      <div class="flex flex-wrap items-center gap-3 min-w-0">
+        <Tabs v-model="selectedView" class="flex min-w-0 flex-1 items-center">
           <div class="min-w-0 flex-1 overflow-x-auto pointer-events-auto">
             <TabsList class="w-max h-8 p-0.5 bg-muted/80 dark:bg-muted/60 border border-border/60 rounded-md">
               <TabsTrigger
@@ -855,7 +855,7 @@ onMounted(() => {
             </TabsList>
           </div>
         </Tabs>
-        <div class="flex gap-1.5 items-center">
+        <div class="flex gap-1.5 items-center shrink-0">
           <Button
             variant="ghost" size="xs" class="h-7 px-2.5 rounded-sm border-none bg-background/60 hover:bg-background"
             :class="[selectedTaskIds.length === tasks.length && 'bg-background !text-foreground font-medium']"

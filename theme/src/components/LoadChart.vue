@@ -901,14 +901,16 @@ onUnmounted(() => {
   <div class="flex flex-col gap-4">
     <!-- 时间选择器 -->
     <Tabs v-model="selectedView" class="w-full items-center">
-      <TabsList class="h-8 p-0.5 bg-muted/80 dark:bg-muted/60 border border-border/60 pointer-events-auto rounded-md">
-        <TabsTrigger
-          v-for="view in availableViews" :key="view.label" :value="view.label"
-          class="h-7 px-3 text-xs rounded-[5px] text-muted-foreground transition-all data-[state=active]:text-foreground data-[state=active]:bg-card data-[state=active]:shadow-xs data-[state=active]:font-semibold cursor-pointer"
-        >
-          {{ view.label }}
-        </TabsTrigger>
-      </TabsList>
+      <div class="min-w-0 w-full overflow-x-auto pointer-events-auto">
+        <TabsList class="w-max h-8 p-0.5 bg-muted/80 dark:bg-muted/60 border border-border/60 pointer-events-auto rounded-md">
+          <TabsTrigger
+            v-for="view in availableViews" :key="view.label" :value="view.label"
+            class="h-7 px-3 text-xs rounded-[5px] text-muted-foreground transition-all data-[state=active]:text-foreground data-[state=active]:bg-card data-[state=active]:shadow-xs data-[state=active]:font-semibold cursor-pointer"
+          >
+            {{ view.label }}
+          </TabsTrigger>
+        </TabsList>
+      </div>
     </Tabs>
 
     <!-- 内容区域 -->
