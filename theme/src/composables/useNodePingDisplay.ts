@@ -245,6 +245,10 @@ export function useNodePingDisplay(
   })
 
   const latencyPanelTooltip = computed(() => {
+    // 色阶图例：与 getPingToneClass 阈值保持一致，避免用户猜测颜色含义
+    const legend = appStore.lang === 'zh-CN'
+      ? '\n色阶 ≤60 优 · ≤120 良 · ≤180 中 · ≤240 差 · >240 劣'
+      : '\nTone ≤60 good · ≤120 fair · ≤180 mid · ≤240 poor · >240 bad'
     if (isAllBlocked.value) {
       return appStore.lang === 'zh-CN'
         ? '国内探测点全量丢包（IP 可能已被墙或未开放 ICMP）'
@@ -252,14 +256,14 @@ export function useNodePingDisplay(
     }
     if (hasRealtimePing.value) {
       const lat = effectiveAvgLatency.value
-      return lat >= 0 ? `平均延迟 ${Math.round(lat)} ms` : '暂无延迟数据'
+      return lat >= 0 ? `平均延迟 ${Math.round(lat)} ms${legend}` : '暂无延迟数据'
     }
     if (!pingStats.hasData.value) {
       if (pingStats.loading.value)
         return options.loadingPanelTooltipText?.latency ?? ''
       return options.emptyPanelTooltipText?.latency ?? ''
     }
-    return `平均延迟 ${Math.round(pingStats.avgLatency.value)} ms`
+    return `平均延迟 ${Math.round(pingStats.avgLatency.value)} ms${legend}`
   })
 
   const lossPanelTooltip = computed(() => {

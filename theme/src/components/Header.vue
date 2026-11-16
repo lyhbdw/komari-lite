@@ -83,7 +83,7 @@ const sitename = computed(() => {
               <Button
                 variant="ghost"
                 size="icon-sm"
-                class="size-8 rounded-lg border border-border/60 hover:bg-muted/60 text-muted-foreground hover:text-foreground inline-flex items-center justify-center transition-colors cursor-pointer shadow-2xs"
+                class="size-9 rounded-lg border border-border/60 hover:bg-muted/60 text-muted-foreground hover:text-foreground inline-flex items-center justify-center transition-colors cursor-pointer shadow-2xs"
                 aria-label="切换主题"
               >
                 <Icon

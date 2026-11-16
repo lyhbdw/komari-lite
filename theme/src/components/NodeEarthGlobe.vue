@@ -445,7 +445,7 @@ function formatRate(bytesPerSec: number): string {
 </script>
 
 <template>
-  <div ref="containerRef" class="relative aspect-square w-full max-w-md mx-auto -translate-y-6 md:-translate-y-12">
+  <div ref="containerRef" class="relative aspect-square w-4/5 sm:w-full max-w-md mx-auto -translate-y-6 md:-translate-y-12">
     <canvas
       ref="canvasRef"
       class="earth-globe-canvas absolute inset-0 z-0 w-full h-full select-none touch-none cursor-grab active:cursor-grabbing"
@@ -455,7 +455,7 @@ function formatRate(bytesPerSec: number): string {
     <template v-for="cluster in regionClusters" :key="cluster.code">
       <div
         :ref="bindClusterOverlayRef(cluster.code)"
-        class="absolute -top-7.5 left-0 z-10 pointer-events-none rounded transition-[opacity,filter] duration-500"
+        class="absolute -top-7.5 left-0 z-10 pointer-events-none rounded transition-[opacity,filter] duration-500 hidden sm:block"
       >
         <img
           :src="`/assets/flags/${cluster.code}.svg`" :alt="cluster.code"

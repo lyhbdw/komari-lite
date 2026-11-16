@@ -17,12 +17,16 @@ import { useBackgroundSurface } from '@/composables/useBackgroundSurface'
 import { provideViewActivity } from '@/composables/useViewActivity'
 import { useAppStore } from '@/stores/app'
 import { useNodesStore } from '@/stores/nodes'
-import { isNodeInGroup, parseNodeGroups } from '@/utils/nodeHelpers'
+import * as financeHelper from '@/utils/financeHelper'
+import { sharedExchangeRates } from '@/utils/financeHelper'
+import { getTrafficUsedPercentage, isNodeInGroup, parseNodeGroups } from '@/utils/nodeHelpers'
 import { isRegionMatch } from '@/utils/regionHelper'
+import { getDaysUntilExpired } from '@/utils/tagHelper'
 
 defineOptions({ name: 'HomeView' })
 
 const NodeList = defineAsyncComponent(() => import('@/components/NodeList.vue'))
+const NodeExpiryBanner = defineAsyncComponent(() => import('@/components/NodeExpiryBanner.vue'))
 const PingChart = defineAsyncComponent(() => import('@/components/PingChart.vue'))
 
 const appStore = useAppStore()
@@ -47,6 +51,9 @@ onDeactivated(() => {
 const searchText = ref('')
 const debouncedSearchText = ref('')
 const selectedPingNodeUuid = ref<string | null>(null)
+
+type SortMode = 'default' | 'expiry' | 'cost_desc' | 'cost_asc' | 'traffic'
+const currentSort = ref<SortMode>('default')
 
 const updateDebouncedSearch = useDebounceFn((value: string) => {
   debouncedSearchText.value = value
@@ -101,11 +108,37 @@ const sampledGroupNodeList = computed(() => {
 
 const nodeList = computed(() => {
   let filtered = groupNodeList.value
+
+  // 搜索关键字过滤
   if (debouncedSearchText.value.trim()) {
     filtered = filtered.filter(n => isNodeMatchSearch(n, debouncedSearchText.value))
   }
-  // 稳定排序：在线节点在前、离线节点在后，组内保持原有顺序
-  return [...filtered].sort((a, b) => (a.online === b.online ? 0 : a.online ? -1 : 1))
+
+  // 排序逻辑
+  return [...filtered].sort((a, b) => {
+    if (currentSort.value === 'expiry') {
+      const da = a.expired_at ? getDaysUntilExpired(a.expired_at) : 99999
+      const db = b.expired_at ? getDaysUntilExpired(b.expired_at) : 99999
+      return da - db
+    }
+    if (currentSort.value === 'cost_desc') {
+      const ca = financeHelper.calculateMonthlyAverageCostCNY(a, sharedExchangeRates.value)
+      const cb = financeHelper.calculateMonthlyAverageCostCNY(b, sharedExchangeRates.value)
+      return cb - ca
+    }
+    if (currentSort.value === 'cost_asc') {
+      const ca = financeHelper.calculateMonthlyAverageCostCNY(a, sharedExchangeRates.value)
+      const cb = financeHelper.calculateMonthlyAverageCostCNY(b, sharedExchangeRates.value)
+      return ca - cb
+    }
+    if (currentSort.value === 'traffic') {
+      const ta = getTrafficUsedPercentage(a)
+      const tb = getTrafficUsedPercentage(b)
+      return tb - ta
+    }
+    // 默认稳定排序：在线节点在前、离线节点在后，组内保持原有顺序
+    return (a.online === b.online ? 0 : a.online ? -1 : 1)
+  })
 })
 
 const selectedPingNode = computed(() => {
@@ -156,25 +189,49 @@ function getNodeItemTransitionKey(node: typeof nodesStore.nodes[number]): string
     />
 
     <div class="node-info p-4 pt-0 flex flex-col gap-4 relative z-1" :class="appStore.earthViewMode === 'hide' && 'pt-4'">
+      <!-- 续费与到期预警 Banner -->
+      <NodeExpiryBanner :nodes="nodesStore.nodes" @click="handleNodeClick" />
+
       <div class="nodes">
         <Tabs v-model="appStore.nodeSelectedGroup" class="w-full flex-col gap-3">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+            <!-- 分组标签 -->
             <div class="overflow-x-auto no-scrollbar py-0.5">
-              <TabsList class="w-max h-8 p-0.5 bg-muted/80 dark:bg-muted/60 border border-border/60 rounded-md">
+              <TabsList class="w-max h-9 p-0.5 bg-muted/80 dark:bg-muted/60 border border-border/60 rounded-md">
                 <TabsTrigger
                   v-for="g in groups" :key="g.name" :value="g.name"
-                  class="h-7 px-3 text-xs rounded-[5px] text-muted-foreground transition-all data-[state=active]:text-foreground data-[state=active]:bg-card data-[state=active]:shadow-xs data-[state=active]:font-semibold cursor-pointer"
+                  class="h-8 px-3 text-xs rounded-[5px] text-muted-foreground transition-all data-[state=active]:text-foreground data-[state=active]:bg-card data-[state=active]:shadow-xs data-[state=active]:font-semibold cursor-pointer"
                 >
                   {{ g.tab }}
                 </TabsTrigger>
               </TabsList>
             </div>
-            <div class="flex items-center gap-2 self-end sm:self-auto shrink-0">
-              <div class="flex items-center p-0.5 bg-muted/80 dark:bg-muted/60 border border-border/60 rounded-md h-8">
+
+            <!-- 右侧工具栏：排序、视图模式切换、搜索框 -->
+            <div class="flex flex-wrap items-center gap-2 self-end sm:self-auto shrink-0">
+              <!-- 排序下拉选择 -->
+              <div class="flex items-center h-9 px-2 rounded-md border border-border/60 bg-muted/80 dark:bg-muted/60 text-xs text-muted-foreground">
+                <Icon icon="tabler:arrows-sort" class="size-3.5 mr-1 shrink-0 text-muted-foreground" />
+                <select
+                  v-model="currentSort"
+                  aria-label="节点排序"
+                  class="h-full bg-transparent py-0 text-xs text-foreground font-medium focus:outline-none cursor-pointer pr-1"
+                >
+                  <option value="default" class="bg-card text-foreground">默认排序</option>
+                  <option value="expiry" class="bg-card text-foreground">到期日优先</option>
+                  <option value="cost_desc" class="bg-card text-foreground">月费最高</option>
+                  <option value="cost_asc" class="bg-card text-foreground">月费最低</option>
+                  <option value="traffic" class="bg-card text-foreground">流量使用率</option>
+                </select>
+              </div>
+
+              <!-- 视图模式切换：卡片、列表 -->
+              <div class="flex items-center p-0.5 bg-muted/80 dark:bg-muted/60 border border-border/60 rounded-md h-9">
                 <button
                   type="button"
+                  title="卡片视图"
                   aria-label="卡片视图"
-                  class="h-7 w-7 flex items-center justify-center rounded-[5px] transition-all cursor-pointer"
+                  class="h-8 w-8 flex items-center justify-center rounded-[5px] transition-all cursor-pointer"
                   :class="appStore.nodeViewMode === 'card' ? 'bg-card text-foreground shadow-xs font-semibold' : 'text-muted-foreground hover:text-foreground'"
                   @click="appStore.nodeViewMode = 'card'"
                 >
@@ -182,18 +239,21 @@ function getNodeItemTransitionKey(node: typeof nodesStore.nodes[number]): string
                 </button>
                 <button
                   type="button"
+                  title="列表视图"
                   aria-label="列表视图"
-                  class="h-7 w-7 flex items-center justify-center rounded-[5px] transition-all cursor-pointer"
+                  class="h-8 w-8 flex items-center justify-center rounded-[5px] transition-all cursor-pointer"
                   :class="appStore.nodeViewMode === 'list' ? 'bg-card text-foreground shadow-xs font-semibold' : 'text-muted-foreground hover:text-foreground'"
                   @click="appStore.nodeViewMode = 'list'"
                 >
                   <Icon icon="tabler:table" :width="14" :height="14" />
                 </button>
               </div>
+
+              <!-- 搜索框 -->
               <div class="relative">
                 <Input
                   v-model="searchText" placeholder="搜索节点、地区、系统..."
-                  class="h-8 w-44 sm:w-48 pl-7.5 pr-2.5 rounded-md border border-border/60 bg-muted/80 dark:bg-muted/60 shadow-none text-xs transition-all placeholder:text-muted-foreground/70 focus:w-52 sm:focus:w-56 focus:bg-card focus:border-border focus:ring-1 focus:ring-foreground/20"
+                  class="h-9 w-40 sm:w-48 pl-7.5 pr-2.5 rounded-md border border-border/60 bg-muted/80 dark:bg-muted/60 shadow-none text-xs transition-all placeholder:text-muted-foreground/70 focus:w-48 sm:focus:w-56 focus:bg-card focus:border-border focus:ring-1 focus:ring-foreground/20"
                 />
                 <Icon
                   icon="tabler:search" :width="14" :height="14"
@@ -202,6 +262,7 @@ function getNodeItemTransitionKey(node: typeof nodesStore.nodes[number]): string
               </div>
             </div>
           </div>
+
           <TabsContent :key="appStore.nodeSelectedGroup" :value="appStore.nodeSelectedGroup">
             <!-- 骨架屏加载态 -->
             <div
@@ -224,7 +285,11 @@ function getNodeItemTransitionKey(node: typeof nodesStore.nodes[number]): string
                 :key="getNodeItemTransitionKey(node)"
                 class="min-w-0"
               >
-                <NodeCard :node="node" @click="handleNodeClick(node)" @ping-click="handlePingClick" />
+                <NodeCard
+                  :node="node"
+                  @click="handleNodeClick(node)"
+                  @ping-click="handlePingClick"
+                />
               </div>
             </TransitionGroup>
 
@@ -236,14 +301,16 @@ function getNodeItemTransitionKey(node: typeof nodesStore.nodes[number]): string
               @click="handleNodeClick"
               @ping-click="handlePingClick"
             />
+
             <div v-else class="text-muted-foreground text-center py-8">
-              <Empty description="暂无节点" />
+              <Empty description="暂无匹配节点" />
             </div>
           </TabsContent>
         </Tabs>
       </div>
     </div>
 
+    <!-- Ping 详情弹窗 -->
     <Dialog v-model:open="pingDialogOpen">
       <DialogContent
         v-if="selectedPingNode"

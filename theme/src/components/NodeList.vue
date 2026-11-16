@@ -129,6 +129,14 @@ function openPingDialog(node: NodeData) {
 function getRowTransitionKey(node: NodeData): string {
   return props.transitionKey ? `${props.transitionKey}-${node.uuid}` : node.uuid
 }
+
+function getPossibleChinaLabel(node: NodeData): string {
+  if (node.possible_china === true)
+    return appStore.lang === 'zh-CN' ? '送中' : 'Rerouted'
+  if (node.possible_china === false)
+    return appStore.lang === 'zh-CN' ? '未送中' : 'Not rerouted'
+  return appStore.lang === 'zh-CN' ? '未知' : 'Unknown'
+}
 </script>
 
 <template>
@@ -204,7 +212,7 @@ function getRowTransitionKey(node: NodeData): string {
                     :class="[
                       node.online
                         ? 'bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.6)]'
-                        : 'bg-rose-500 shadow-[0_0_6px_rgba(244,63,94,0.6)]'
+                        : 'bg-rose-500 shadow-[0_0_6px_rgba(244,63,94,0.6)]',
                     ]"
                   />
                 </div>
@@ -251,6 +259,15 @@ function getRowTransitionKey(node: NodeData): string {
                     </div>
                   </DataTooltip>
                 </div>
+                <Badge
+                  variant="outline"
+                  class="mt-1 h-4.5 w-fit px-1.5 py-0 text-[10px] font-mono font-medium rounded-md"
+                  :class="node.possible_china === true
+                    ? 'border-rose-500/30 bg-rose-500/5 text-rose-600 dark:text-rose-400'
+                    : 'border-border/70 bg-muted/40 text-muted-foreground'"
+                >
+                  {{ getPossibleChinaLabel(node) }}
+                </Badge>
               </div>
 
               <!-- 三网 -->
@@ -338,16 +355,19 @@ function getRowTransitionKey(node: NodeData): string {
                 <DataTooltip placement="top" class="flex items-center gap-2" content-class="mb-1.5">
                   <div class="space-y-1 w-full">
                     <div class="text-[10px] text-muted-foreground truncate font-mono tabular-nums text-right">
-                      <span class="inline group-hover:hidden">
+                      <span v-if="showTrafficProgress(node)" class="inline group-hover:hidden">
                         {{ getTrafficUsedPercentage(node).toFixed(1) }}%
                       </span>
-                      <span class="hidden group-hover:inline">
+                      <span v-else class="inline group-hover:hidden">
+                        {{ formatBytes(getTrafficUsed(node)) }} / ∞
+                      </span>
+                      <span v-if="showTrafficProgress(node)" class="hidden group-hover:inline">
                         {{ formatBytes(getTrafficUsed(node)) }} /
-                        <template v-if="showTrafficProgress(node)">{{ formatBytes(node.traffic_limit) }}</template>
-                        <template v-else>∞</template>
+                        {{ formatBytes(node.traffic_limit) }}
                       </span>
                     </div>
                     <TrafficProgress
+                      v-if="showTrafficProgress(node)"
                       :upload="node.net_total_up ?? 0" :download="node.net_total_down ?? 0"
                       :traffic-limit="node.traffic_limit" :traffic-limit-type="(node.traffic_limit_type || 'sum')"
                       height="4px"
@@ -394,6 +414,15 @@ function getRowTransitionKey(node: NodeData): string {
                 <div class="text-xs text-muted-foreground">
                   {{ formatOfflineTime(node) }}
                 </div>
+                <Badge
+                  variant="outline"
+                  class="h-4.5 w-fit px-1.5 py-0 text-[10px] font-mono font-medium rounded-md"
+                  :class="node.possible_china === true
+                    ? 'border-rose-500/30 bg-rose-500/5 text-rose-600 dark:text-rose-400'
+                    : 'border-border/70 bg-muted/40 text-muted-foreground'"
+                >
+                  {{ getPossibleChinaLabel(node) }}
+                </Badge>
               </div>
             </div>
           </div>

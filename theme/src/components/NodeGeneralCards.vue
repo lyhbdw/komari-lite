@@ -133,7 +133,7 @@ const formattedMonthlyAverageCost = computed(() => {
 })
 const financeSummaryItems = computed(() => [
   {
-    label: '剩余价值',
+    label: '基础剩余价值',
     icon: 'tabler:coins',
     value: formattedBaseRemainingValue.value.value,
     symbol: formattedBaseRemainingValue.value.symbol,
@@ -154,7 +154,7 @@ const financeSummaryItems = computed(() => [
     currency: `${formattedMonthlyAverageCost.value.currency}/月`,
   },
   {
-    label: '剩余总价值',
+    label: '含溢价总价值',
     icon: 'tabler:wallet',
     value: formattedRemainingValue.value.value,
     symbol: formattedRemainingValue.value.symbol,
@@ -185,7 +185,7 @@ const wrapperClass = computed(() => showVisualPanel.value
   : 'p-4 grid grid-cols-1 gap-2 h-auto')
 const cardGridClass = computed(() => showVisualPanel.value
   ? 'h-42 -mt-42 md:mt-0 col-span-12 row-start-3 z-9 md:h-auto md:col-span-6 md:row-start-1 grid grid-cols-12 grid-rows-2 gap-2'
-  : 'col-span-1 grid grid-cols-3 md:grid-cols-6 gap-2')
+  : 'col-span-1 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2')
 
 onMounted(async () => {
   exchangeRateBaseCurrency.value = financeHelper.getStoredFinanceCurrency()
@@ -206,7 +206,7 @@ onMounted(async () => {
         hoverable
         class="group h-full border border-border/70 bg-card hover:border-foreground/25 hover:shadow-xs rounded-xl transition-all duration-200 shadow-xs"
         :class="[
-          showVisualPanel ? 'col-span-4 row-span-1 col-start-1 row-start-1' : 'col-span-1 row-start-1 col-start-1 min-h-18 md:min-h-24 md:row-start-1 md:col-start-1',
+          showVisualPanel ? 'col-span-4 row-span-1 col-start-1 row-start-1' : 'col-span-1 min-h-18 md:min-h-24',
         ]"
         content-class="h-full !p-3"
       >
@@ -220,14 +220,14 @@ onMounted(async () => {
           </div>
           <Transition v-bind="metricSwitchTransitionProps">
             <div
-              :key="`memory-${summaryTransitionKey}`" class="flex items-baseline gap-1 min-w-0"
+              :key="`memory-${summaryTransitionKey}`" class="flex flex-col lg:flex-row lg:items-baseline gap-0.5 lg:gap-1 min-w-0"
               :style="getMetricSwitchStyle(0)"
             >
               <span class="text-md md:text-2xl font-bold dark:font-semibold leading-none tracking-tight font-mono tabular-nums">
-                {{ formattedMemoryUsed.value }}
+                {{ formattedMemoryUsed.value }}<span class="ml-0.5 text-[11px] md:text-xs font-medium text-muted-foreground">{{ formattedMemoryUsed.unit }}</span>
               </span>
               <span class="text-[11px] md:text-xs font-medium text-muted-foreground truncate font-mono tabular-nums">
-                {{ formattedMemoryUsed.unit }} / {{ formattedMemoryTotal.value }} {{ formattedMemoryTotal.unit }}
+                / {{ formattedMemoryTotal.value }} {{ formattedMemoryTotal.unit }}
               </span>
             </div>
           </Transition>
@@ -237,7 +237,7 @@ onMounted(async () => {
         hoverable
         class="group h-full border border-border/70 bg-card hover:border-foreground/25 hover:shadow-xs rounded-xl transition-all duration-200 shadow-xs"
         :class="[
-          showVisualPanel ? 'col-span-4 row-span-1 col-start-1 row-start-2' : 'col-span-1 row-start-2 col-start-1 min-h-18 md:min-h-24 md:row-start-1 md:col-start-2',
+          showVisualPanel ? 'col-span-4 row-span-1 col-start-1 row-start-2' : 'col-span-1 min-h-18 md:min-h-24',
         ]"
         content-class="h-full !p-3"
       >
@@ -251,14 +251,14 @@ onMounted(async () => {
           </div>
           <Transition v-bind="metricSwitchTransitionProps">
             <div
-              :key="`disk-${summaryTransitionKey}`" class="flex items-baseline gap-1 min-w-0"
+              :key="`disk-${summaryTransitionKey}`" class="flex flex-col lg:flex-row lg:items-baseline gap-0.5 lg:gap-1 min-w-0"
               :style="getMetricSwitchStyle(1)"
             >
               <span class="text-md md:text-2xl font-bold dark:font-semibold leading-none tracking-tight font-mono tabular-nums">
-                {{ formattedDiskUsed.value }}
+                {{ formattedDiskUsed.value }}<span class="ml-0.5 text-[11px] md:text-xs font-medium text-muted-foreground">{{ formattedDiskUsed.unit }}</span>
               </span>
               <span class="text-[11px] md:text-xs font-medium text-muted-foreground truncate font-mono tabular-nums">
-                {{ formattedDiskUsed.unit }} / {{ formattedDiskTotal.value }} {{ formattedDiskTotal.unit }}
+                / {{ formattedDiskTotal.value }} {{ formattedDiskTotal.unit }}
               </span>
             </div>
           </Transition>
@@ -266,7 +266,7 @@ onMounted(async () => {
       </CardX>
       <div
         class="relative w-full h-full"
-        :class="showVisualPanel ? 'col-span-4 row-span-1 col-start-5 row-start-1' : 'col-span-1 row-start-1 col-start-2 min-h-18 md:min-h-24 md:row-start-1 md:col-start-3'"
+        :class="showVisualPanel ? 'col-span-4 row-span-1 col-start-5 row-start-1' : 'col-span-1 min-h-18 md:min-h-24'"
       >
         <CardX
           hoverable
@@ -276,7 +276,7 @@ onMounted(async () => {
           <div class="flex h-full flex-col justify-between gap-1">
             <div class="flex items-start justify-between">
               <span class="text-xs font-medium tracking-wider text-muted-foreground flex items-center gap-1">
-                剩余总价值
+                含溢价总价值
                 <Icon
                   icon="tabler:arrow-up-right" :width="13" :height="13"
                   class="text-muted-foreground/40 group-hover:text-foreground transition-colors"
@@ -310,7 +310,7 @@ onMounted(async () => {
         hoverable
         class="group h-full border border-border/70 bg-card hover:border-foreground/25 hover:shadow-xs rounded-xl transition-all duration-200 shadow-xs"
         :class="[
-          showVisualPanel ? 'col-span-4 row-span-1 col-start-5 row-start-2' : 'col-span-1 row-start-2 col-start-2 min-h-18 md:min-h-24 md:row-start-1 md:col-start-4',
+          showVisualPanel ? 'col-span-4 row-span-1 col-start-5 row-start-2' : 'col-span-1 min-h-18 md:min-h-24',
         ]"
         content-class="h-full !p-3"
       >
@@ -348,7 +348,7 @@ onMounted(async () => {
         hoverable
         class="group h-full border border-border/70 bg-card hover:border-foreground/25 hover:shadow-xs rounded-xl transition-all duration-200 shadow-xs"
         :class="[
-          showVisualPanel ? 'col-span-4 row-span-1 col-start-9 row-start-1' : 'col-span-1 row-start-1 col-start-3 min-h-18 md:min-h-24 md:row-start-1 md:col-start-5',
+          showVisualPanel ? 'col-span-4 row-span-1 col-start-9 row-start-1' : 'col-span-1 min-h-18 md:min-h-24',
         ]"
         content-class="h-full !p-3"
       >
@@ -376,7 +376,7 @@ onMounted(async () => {
         hoverable
         class="group h-full border border-border/70 bg-card hover:border-foreground/25 hover:shadow-xs rounded-xl transition-all duration-200 shadow-xs"
         :class="[
-          showVisualPanel ? 'col-span-4 row-span-1 col-start-9 row-start-2' : 'col-span-1 row-start-2 col-start-3 min-h-18 md:min-h-24 md:row-start-1 md:col-start-6',
+          showVisualPanel ? 'col-span-4 row-span-1 col-start-9 row-start-2' : 'col-span-1 min-h-18 md:min-h-24',
         ]"
         content-class="h-full !p-3"
       >

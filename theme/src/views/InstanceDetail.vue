@@ -328,7 +328,7 @@ function copyText(text?: string, label?: string) {
                 <button
                   v-if="item.value && item.value !== '-'"
                   type="button"
-                  class="opacity-0 group-hover/item:opacity-100 hover:text-foreground transition-opacity p-0.5 rounded cursor-pointer"
+                  class="opacity-0 group-hover/item:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100 hover:text-foreground transition-opacity p-1.5 -m-1 rounded cursor-pointer"
                   title="复制"
                   @click.stop="copyText(item.value, item.label)"
                 >
@@ -357,7 +357,7 @@ function copyText(text?: string, label?: string) {
                 <button
                   v-if="item.value && item.value !== '-'"
                   type="button"
-                  class="opacity-0 group-hover/item:opacity-100 hover:text-foreground transition-opacity p-0.5 rounded cursor-pointer"
+                  class="opacity-0 group-hover/item:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100 hover:text-foreground transition-opacity p-1.5 -m-1 rounded cursor-pointer"
                   title="复制"
                   @click.stop="copyText(item.value, item.label)"
                 >
@@ -394,7 +394,7 @@ function copyText(text?: string, label?: string) {
                 <button
                   v-if="item.value && item.value !== '-'"
                   type="button"
-                  class="opacity-0 group-hover/item:opacity-100 hover:text-foreground transition-opacity p-0.5 rounded cursor-pointer"
+                  class="opacity-0 group-hover/item:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100 hover:text-foreground transition-opacity p-1.5 -m-1 rounded cursor-pointer"
                   title="复制"
                   @click.stop="copyText(item.value, item.label)"
                 >

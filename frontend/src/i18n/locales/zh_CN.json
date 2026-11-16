@@ -45,7 +45,7 @@
         "markerMissing": "未识别到地区字段",
         "networkError": "网络错误",
         "notChecked": "尚未检测",
-        "possibleChina": "CN · 可能送中",
+        "possibleChina": "CN · 送中",
         "premium": "Premium",
         "proxyUnknown": "代理环境无法确认出口地址族",
         "rateLimited": "请求被限流",

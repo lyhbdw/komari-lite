@@ -3,6 +3,7 @@ import type { NodeData } from '@/stores/nodes'
 import { Icon } from '@iconify/vue'
 import { computed } from 'vue'
 import NodePingSummary from '@/components/NodePingSummary.vue'
+import { Badge } from '@/components/ui/badge'
 import { CardX } from '@/components/ui/card-x'
 import { DataTooltip } from '@/components/ui/data-tooltip'
 import { ProgressThin } from '@/components/ui/progress-thin'
@@ -45,6 +46,7 @@ const isHighLoad = computed(() => {
 
 const trafficUsedPercentage = computed(() => getTrafficUsedPercentage(props.node))
 const trafficUsed = computed(() => getTrafficUsed(props.node))
+const hasTrafficLimit = computed(() => showTrafficProgress(props.node))
 const customTags = computed(() => getCustomTags(props.node))
 const familyVerdicts = computed(() => [
   { label: 'IPv4', verdict: props.node.possible_china_ipv4 ?? null },
@@ -225,6 +227,7 @@ function openPingDialog() {
   <CardX
     size="small"
     hoverable
+    header-class="items-start"
     class="node-card group/card h-full w-full cursor-pointer border transition-all duration-200 rounded-xl bg-card hover:border-foreground/30 hover:shadow-xs shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
     :class="[
       !props.node.online ? '!border-destructive/40 bg-destructive/[0.01]' : isHighLoad ? 'border-amber-500/40 bg-amber-500/[0.02]' : 'border-border/70',
@@ -233,6 +236,7 @@ function openPingDialog() {
   >
     <template #header>
       <div class="flex min-w-0 flex-col gap-1.5">
+        <!-- 名称行：状态点 + 节点名 -->
         <div class="flex gap-2 min-w-0 items-center">
           <!-- 紧凑状态点（带圆环柔光） -->
           <div class="relative flex size-2 items-center justify-center shrink-0">
@@ -245,7 +249,7 @@ function openPingDialog() {
               ]"
             />
           </div>
-          <div class="text-sm font-semibold tracking-tight text-foreground flex-1 min-w-0 truncate" :title="props.node.name">
+          <div class="text-sm font-semibold tracking-tight text-foreground flex-1 min-w-0 truncate leading-snug" :title="props.node.name">
             {{ props.node.name }}
           </div>
           <div v-if="customTags.length > 0" class="flex shrink-0 gap-1 items-center">
@@ -278,7 +282,7 @@ function openPingDialog() {
     </template>
 
     <template #header-extra>
-      <div class="flex gap-1.5 items-center shrink-0">
+      <div class="flex h-5 items-center gap-1.5 shrink-0">
         <img :src="getOSImage(props.node.os)" :alt="getOSName(props.node.os)" class="size-3.5 shrink-0 transition-opacity hover:opacity-80">
         <img
           v-if="hasRegion(props.node.region)" :src="getFlagSrc(props.node.region)"
@@ -290,9 +294,12 @@ function openPingDialog() {
     <template #default>
       <div class="flex flex-col gap-2">
         <!-- 四大核心指标紧凑展示 -->
-        <div class="gap-x-3 gap-y-2 grid grid-cols-2">
+        <div
+          class="gap-x-3 gap-y-2 grid grid-cols-2"
+          :class="!props.node.online && 'opacity-65 saturate-50'"
+        >
           <!-- CPU -->
-          <div class="flex flex-col gap-0.5">
+          <div class="flex flex-col gap-1">
             <div class="w-full text-xs flex flex-row justify-between items-baseline leading-none">
               <span class="text-muted-foreground text-[11px] font-medium tracking-wide">
                 CPU
@@ -301,14 +308,14 @@ function openPingDialog() {
             </div>
             <ProgressThin :percentage="props.node.cpu ?? 0" :status="cpuStatus" :height="3.5" class="my-0.5" />
             <DataTooltip placement="top" :content="`负载均值 (1/5/15m): ${props.node.load?.toFixed(2) ?? 0}, ${props.node.load5?.toFixed(2) ?? 0}, ${props.node.load15?.toFixed(2) ?? 0}`">
-              <div class="text-[10px] text-muted-foreground/80 truncate font-mono tabular-nums cursor-pointer leading-tight">
+              <div class="text-[10px] text-muted-foreground/75 truncate font-mono tabular-nums cursor-pointer leading-tight">
                 {{ props.node.cpu_cores ? (appStore.lang === 'zh-CN' ? `${props.node.cpu_cores} 核心` : `${props.node.cpu_cores} Cores`) : (appStore.lang === 'zh-CN' ? '单核' : '1 Core') }}
               </div>
             </DataTooltip>
           </div>
 
           <!-- 内存 -->
-          <div class="flex flex-col gap-0.5">
+          <div class="flex flex-col gap-1">
             <div class="w-full text-xs flex flex-row justify-between items-baseline leading-none">
               <span class="text-muted-foreground text-[11px] font-medium tracking-wide">
                 {{ appStore.lang === 'zh-CN' ? '内存' : 'RAM' }}
@@ -317,7 +324,7 @@ function openPingDialog() {
             </div>
             <ProgressThin :percentage="memPercentage" :status="memStatus" :height="3.5" class="my-0.5" />
             <DataTooltip placement="top" class="block cursor-pointer" :content-class="[!props.node.swap && '!hidden']">
-              <div class="text-[10px] text-muted-foreground/80 truncate font-mono tabular-nums leading-tight">
+              <div class="text-[10px] text-muted-foreground/75 truncate font-mono tabular-nums leading-tight">
                 {{ formatBytes(props.node.ram ?? 0) }} / {{ formatBytes(props.node.mem_total ?? 0) }}
               </div>
               <template #content>
@@ -330,7 +337,7 @@ function openPingDialog() {
           </div>
 
           <!-- 硬盘 -->
-          <div class="flex flex-col gap-0.5">
+          <div class="flex flex-col gap-1">
             <div class="w-full text-xs flex flex-row justify-between items-baseline leading-none">
               <span class="text-muted-foreground text-[11px] font-medium tracking-wide">
                 {{ appStore.lang === 'zh-CN' ? '硬盘' : 'Disk' }}
@@ -344,16 +351,17 @@ function openPingDialog() {
           </div>
 
           <!-- 流量进度条 -->
-          <div class="flex flex-col gap-0.5">
+          <div class="flex flex-col gap-0.5" data-metric="traffic">
             <div class="w-full text-xs flex flex-row justify-between items-baseline leading-none">
               <span class="text-muted-foreground text-[11px] font-medium tracking-wide">
                 {{ appStore.lang === 'zh-CN' ? '流量' : 'Traffic' }}
               </span>
-              <span class="font-mono tabular-nums text-[11px] font-semibold">{{ trafficUsedPercentage.toFixed(1) }}%</span>
+              <span v-if="hasTrafficLimit" class="font-mono tabular-nums text-[11px] font-semibold">{{ trafficUsedPercentage.toFixed(1) }}%</span>
+              <span v-else class="font-mono tabular-nums text-[11px] font-medium text-muted-foreground/80">∞</span>
             </div>
-            <ProgressThin :percentage="trafficUsedPercentage" status="success" :height="3.5" class="my-0.5" />
+            <ProgressThin v-if="hasTrafficLimit" :percentage="trafficUsedPercentage" status="success" :height="3.5" class="my-0.5" />
             <DataTooltip placement="top" class="block cursor-pointer">
-              <div class="whitespace-pre-wrap text-[10px] text-muted-foreground/80 truncate font-mono tabular-nums leading-tight">
+              <div class="whitespace-pre-wrap text-[10px] text-muted-foreground/75 truncate font-mono tabular-nums leading-tight">
                 {{ formatBytes(trafficUsed) }} /
                 <template v-if="showTrafficProgress(props.node)">
                   {{ formatBytes(props.node.traffic_limit) }}
@@ -390,12 +398,12 @@ function openPingDialog() {
               {{ appStore.lang === 'zh-CN' ? '离线' : 'Offline' }}
             </Badge>
             <div class="font-mono tabular-nums text-[10px] text-muted-foreground/80">
-              {{ offlineTime }}
+              {{ appStore.lang === 'zh-CN' ? '最后上报' : 'Last report' }} · {{ offlineTime }}
             </div>
           </div>
-          <div class="flex flex-col gap-y-1.5" :class="[!props.node.online && 'blur-xs opacity-60 pointer-events-none']">
+          <div class="flex flex-col gap-y-2" :class="[!props.node.online && 'blur-xs opacity-60 pointer-events-none']">
             <div class="flex items-center justify-between min-h-[18px]">
-              <span class="truncate tracking-wide text-muted-foreground font-medium text-[11px]">
+              <span class="w-7 shrink-0 truncate tracking-wide text-muted-foreground font-medium text-[11px]">
                 {{ appStore.lang === 'zh-CN' ? '速率' : 'Speed' }}
               </span>
               <div class="truncate flex flex-row items-center gap-2 font-mono tabular-nums text-[11px]">
@@ -410,7 +418,7 @@ function openPingDialog() {
               </div>
             </div>
             <div class="flex items-center justify-between min-h-[18px]">
-              <span class="truncate tracking-wide text-muted-foreground font-medium text-[11px]">
+              <span class="w-7 shrink-0 truncate tracking-wide text-muted-foreground font-medium text-[11px]">
                 {{ appStore.lang === 'zh-CN' ? '在线' : 'Uptime' }}
               </span>
               <span class="truncate font-mono tabular-nums text-[11px] text-foreground/85 font-medium">
@@ -418,7 +426,7 @@ function openPingDialog() {
               </span>
             </div>
             <div class="flex items-center justify-between min-h-[18px]">
-              <span class="truncate tracking-wide text-muted-foreground font-medium text-[11px]">
+              <span class="w-7 shrink-0 truncate tracking-wide text-muted-foreground font-medium text-[11px]">
                 {{ appStore.lang === 'zh-CN' ? '费用' : 'Billing' }}
               </span>
               <DataTooltip placement="left" :content="billingTooltip" content-class="whitespace-pre-wrap right-0 mr-0 text-left max-w-xs text-[10.5px]">

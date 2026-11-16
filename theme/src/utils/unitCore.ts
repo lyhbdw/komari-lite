@@ -138,8 +138,13 @@ export function formatBytesSplit(bytes: number, config?: ByteDecimalsConfig): { 
     return { value: '0', unit: 'B' }
   }
 
-  const k = 1024
-  const i = Math.min(Math.floor(Math.log(bytes) / Math.log(k)), BYTE_UNITS.length - 1)
+  // 除法递推确定单位，避免 Math.log 在 1023 整数幂附近的浮点边界争议
+  let i = 0
+  let scaled = bytes
+  while (scaled >= 1024 && i < BYTE_UNITS.length - 1) {
+    scaled /= 1024
+    i++
+  }
 
   const unitKey = BYTE_UNITS[i]
   const decimals = (unitKey === 'TB' || unitKey === 'PB') ? mergedConfig.TB : mergedConfig[unitKey as keyof ByteDecimalsConfig]
@@ -150,15 +155,29 @@ export function formatBytesSplit(bytes: number, config?: ByteDecimalsConfig): { 
       const nextDecimals = (nextUnitKey === 'TB' || nextUnitKey === 'PB') ? mergedConfig.TB : mergedConfig[nextUnitKey as keyof ByteDecimalsConfig]
       if (nextDecimals !== -1) {
         const unit = BYTE_UNITS[j]
-        return { value: (bytes / k ** j).toFixed(nextDecimals), unit: `${unit}` }
+        return { value: (bytes / 1024 ** j).toFixed(nextDecimals), unit: `${unit}` }
       }
     }
     const unit = BYTE_UNITS[i] ?? LAST_BYTE_UNIT
-    return { value: (bytes / k ** i).toFixed(1), unit: `${unit}` }
+    return { value: (bytes / 1024 ** i).toFixed(1), unit: `${unit}` }
   }
 
   const unit = BYTE_UNITS[i] ?? LAST_BYTE_UNIT
-  return { value: (bytes / k ** i).toFixed(decimals), unit: `${unit}` }
+  let value = (bytes / 1024 ** i).toFixed(decimals)
+  let resolvedUnit = unit
+
+  // 四舍五入后正好达到下一单位量级时自动升档，
+  // 避免出现 1023.996 MiB 显示为 1024.0 MB 而不是 1.0 GB 的边界观感
+  if (Number(value) >= 1024 && i < BYTE_UNITS.length - 1) {
+    const nextUnitKey = BYTE_UNITS[i + 1]
+    const nextDecimals = (nextUnitKey === 'TB' || nextUnitKey === 'PB') ? mergedConfig.TB : mergedConfig[nextUnitKey as keyof ByteDecimalsConfig]
+    if (nextDecimals !== -1) {
+      resolvedUnit = nextUnitKey
+      value = (bytes / 1024 ** (i + 1)).toFixed(nextDecimals)
+    }
+  }
+
+  return { value, unit: `${resolvedUnit}` }
 }
 
 /**
@@ -180,10 +199,24 @@ export function formatBytes(bytes: number, decimals?: number): string {
   if (!Number.isFinite(bytes) || bytes <= 0)
     return '0 B'
 
-  const k = 1024
-  const i = Math.min(Math.floor(Math.log(bytes) / Math.log(k)), BYTE_UNITS.length - 1)
-  const unit = BYTE_UNITS[i] ?? LAST_BYTE_UNIT
-  return `${(bytes / k ** i).toFixed(decimals)} ${unit}`
+  // 与 formatBytesSplit 保持一致：除法递推确定单位，避免 1023 整数幂被 Math.log 浮点误差降级
+  let i = 0
+  let scaled = bytes
+  while (scaled >= 1024 && i < BYTE_UNITS.length - 1) {
+    scaled /= 1024
+    i++
+  }
+  let value = (bytes / 1024 ** i).toFixed(decimals)
+  let unit = BYTE_UNITS[i] ?? LAST_BYTE_UNIT
+
+  // 四舍五入后达到下一单位量级时升档，保持与 formatBytesSplit 一致的边界观感
+  if (Number(value) >= 1024 && i < BYTE_UNITS.length - 1) {
+    i += 1
+    unit = BYTE_UNITS[i] ?? LAST_BYTE_UNIT
+    value = (bytes / 1024 ** i).toFixed(decimals)
+  }
+
+  return `${value} ${unit}`
 }
 
 /**

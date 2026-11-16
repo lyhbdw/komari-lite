@@ -4,18 +4,23 @@ import { Skeleton } from '@/components/ui/skeleton'
 </script>
 
 <template>
-  <CardX size="small" class="h-full w-full rounded-xl border border-border/70 bg-card shadow-xs">
+  <CardX size="small" header-class="items-start" class="h-full w-full rounded-xl border border-border/70 bg-card shadow-xs">
     <template #header>
-      <div class="flex gap-2 min-w-0 items-center justify-between w-full">
-        <div class="flex items-center gap-2">
-          <Skeleton class="size-2 rounded-full shrink-0" />
-          <Skeleton class="h-4 w-24 sm:w-28 rounded" />
-          <Skeleton class="h-4.5 w-10 rounded-md" />
+      <div class="flex min-w-0 flex-col gap-1.5">
+        <div class="flex min-w-0 items-center gap-2">
+          <Skeleton class="size-2 shrink-0 rounded-full" />
+          <Skeleton class="h-4 w-24 rounded sm:w-28" />
         </div>
-        <div class="flex gap-1.5 items-center">
-          <Skeleton class="size-3.5 rounded" />
-          <Skeleton class="size-3.5 rounded-[2px]" />
+        <div class="flex flex-wrap items-center gap-1.5">
+          <Skeleton class="h-4.5 w-20 rounded-md" />
         </div>
+      </div>
+    </template>
+
+    <template #header-extra>
+      <div class="flex h-5 items-center gap-1.5">
+        <Skeleton class="size-3.5 rounded" />
+        <Skeleton class="size-3.5 rounded-[2px]" />
       </div>
     </template>
 
@@ -34,7 +39,7 @@ import { Skeleton } from '@/components/ui/skeleton'
         </div>
 
         <!-- 下半区骨架 -->
-        <div class="flex flex-col gap-y-1.5 pt-2.5 border-t border-border/50">
+        <div class="flex flex-col gap-y-2 pt-2.5 border-t border-border/50">
           <div class="flex justify-between items-center min-h-[18px]">
             <Skeleton class="h-2.5 w-8" />
             <div class="flex gap-2">
